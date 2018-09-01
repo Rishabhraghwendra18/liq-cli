@@ -6,7 +6,7 @@ work-start() {
 work-merge() {
   local WORKBRANCH=`git branch | (grep '*' || true) | awk '{print $2}'`
   if [ $WORKBRANCH == 'master' ]; then
-    echo "Can't 'merge work' from master branch. Switch to workbranch with 'git checkout'." >&2
+    echoerr "Can't 'merge work' from master branch. Switch to workbranch with 'git checkout'." >&2
     return
   fi
 
