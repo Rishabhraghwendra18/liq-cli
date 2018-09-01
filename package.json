@@ -1,7 +1,7 @@
 {
   "name": "catalyst-gcpproj",
   "version": "0.0.1",
-  "description": "Manages a GCP Project for a Catalyst application.",
+  "description": "Local development and management tool for GCP and Catalyist projects.",
   "main": "index.js",
   "scripts": {
     "install": "cp ./src/completion.sh /usr/local/etc/bash_completion.d/gcproj; echo '\n[ -d /usr/local/etc/bash_completion.d ] && . /usr/local/etc/bash_completion.d/*' >> ~/.bash_profile; echo 'You must open a new shell or execute \". /usr/local/etc/bash_completion.d/gcproj\" for to enable completion.'",
