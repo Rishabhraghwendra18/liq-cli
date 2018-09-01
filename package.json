@@ -1,0 +1,16 @@
+{
+  "name": "catalyst-gcpproj",
+  "version": "0.0.1",
+  "description": "Manages a GCP Project for a Catalyst application.",
+  "main": "index.js",
+  "scripts": {
+    "install": "cp ./src/completion.sh /usr/local/etc/bash_completion.d/gcproj; echo '\n[ -d /usr/local/etc/bash_completion.d ] && . /usr/local/etc/bash_completion.d/*' >> ~/.bash_profile; echo 'You must open a new shell or execute \". /usr/local/etc/bash_completion.d/gcproj\" for to enable completion.'",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Zane Rockenbaugh <zane@liquid-labs.com>",
+  "license": "ISC",
+  "dependencies": {},
+  "bin": {
+    "gcproj": "./src/cli.sh"
+  }
+}
