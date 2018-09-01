@@ -80,3 +80,21 @@ updateGcprojfile() {
     echo
   fi
 }
+
+requireArgs() {
+  local COUNT=$#
+  local I=${COUNT}
+  while (( $I != 0 )); do
+    if [[ -z ${!COUNT:-} ]]; then
+      if [ -z $ACTION ]; then
+        echoerr "Global action '$COMPONENT' requires $COUNT additional arguments."
+      else
+        echoerr "'$COMPONENT $ACTION' requires $COUNT additional arguments."
+      fi
+      return 1
+    fi
+    I=$(( I - 1 ))
+  done
+
+  return 0
+}
