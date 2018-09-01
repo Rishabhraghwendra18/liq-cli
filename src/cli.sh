@@ -11,10 +11,7 @@ function importlibs() {
   # Now we have the installed package location and can start sourcing our files.
   SOURCE_DIR="$( cd "`dirname ${BASH_SOURCE[0]}`/$REAL_CLI_REL_PATH" && pwd )"
 
-  source "$SOURCE_DIR"/lib/usage.sh
-  source "$SOURCE_DIR"/lib/utils.sh
-  source "$SOURCE_DIR"/lib/global-vars.sh
-  # source "$SOURCE_DIR"/traps.sh
+  for f in "${SOURCE_DIR}/lib/"*.sh; do source "$f"; done
   for f in "${SOURCE_DIR}/actions/"*.sh; do source "$f"; done
 }
 importlibs
@@ -50,54 +47,12 @@ CLOUDSQL_DB_TEST="uno_test"
 
 proj() {
 
-
-
-
-  require_opt_arg() {
-    local OFFSET
-    if [ -z $ACTION ]; then
-      OFFSET=1
-    else
-      OFFSET=2
-    fi
-    if [ $1 -ne $(( $OFFSET + $2 )) ]; then
-      if [ -z $ACTION ]; then
-        echo "Global action '$COMPONENT' requires $2 additional arguments."
-      else
-        echo "'$COMPONENT' -> '$ACTION' requires $2 additional arguments."
-      fi
-      return 1
-    else
-      return 0
-    fi
-  }
-
   exitUnknown() {
     echo "${red}${1}${reset}" >&2
   }
 
   exitUnknownAction() {
     exitUnknown "Unknown action '$ACTION' for component '$COMPONENT'."
-  }
-
-  work-merge() {
-    local WORKBRANCH=`git branch | grep '*' | awk '{print $2}'`
-    if [ $WORKBRANCH == 'master' ]; then
-      echo "Can't 'merge-work' from master branch. Switch to workbranch with 'git checkout'." >&2
-      return
-    fi
-
-    # in case the current working dir does not exist in master
-    pushd ${BASE_DIR} \
-    && git checkout master \
-    && git merge --no-ff -m "merge branch $WORKBRANCH" "$WORKBRANCH" \
-    && git branch -d "$WORKBRANCH" \
-    && git push \
-    && popd
-  }
-
-  work-show() {
-    git diff HEAD..$(git merge-base master HEAD)
   }
 
   global-clear-all-logs() {

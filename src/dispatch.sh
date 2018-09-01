@@ -62,11 +62,9 @@ case "$COMPONENT" in
       work)
         case "$ACTION" in
           start)
-            require_opt_arg $# 1 && git checkout -b "`date +%Y-%m-%d`-`whoami`-${3}";;
-          merge)
-            work-merge;;
-          show)
-            work-show;;
+            ${COMPONENT}-${ACTION} "${3:-}";;
+          merge|diff-master)
+            ${COMPONENT}-${ACTION};;
           *) exitUnknownAction
         esac;;
       *)
