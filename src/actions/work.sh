@@ -20,6 +20,6 @@ work-merge() {
   popd
 }
 
-work-show() {
+work-diff-master() {
   git diff HEAD..$(git merge-base master HEAD)
 }

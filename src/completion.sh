@@ -17,7 +17,7 @@ _gcproj()
         webapp)
             opts="audit build start stop view-log";;
         work)
-            opts="start merge show";;
+            opts="start merge diff-master";;
         *)
         ;;
     esac

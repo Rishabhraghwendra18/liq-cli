@@ -63,7 +63,7 @@ case "$COMPONENT" in
         case "$ACTION" in
           start)
             ${COMPONENT}-${ACTION} "${3:-}";;
-          merge|show)
+          merge|diff-master)
             ${COMPONENT}-${ACTION};;
           *) exitUnknownAction
         esac;;
