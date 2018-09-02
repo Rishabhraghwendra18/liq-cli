@@ -47,14 +47,6 @@ CLOUDSQL_DB_TEST="uno_test"
 
 proj() {
 
-  exitUnknown() {
-    echo "${red}${1}${reset}" >&2
-  }
-
-  exitUnknownAction() {
-    exitUnknown "Unknown action '$ACTION' for component '$COMPONENT'."
-  }
-
   global-clear-all-logs() {
     rm "${BASE_DIR}/api-server.log" "${BASE_DIR}/db-proxy.log" "${BASE_DIR}/webapp-dev-server.log" 2> /dev/null
   }
