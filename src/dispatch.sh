@@ -1,10 +1,6 @@
 COMPONENT="${1:-}" # or global command
 ACTION="${2:-}"
 
-for DISPATCH in `find "${SOURCE_DIR}/actions/" -type d -maxdepth 1`; do
-  echo $DISPATCH
-done
-
 case "$COMPONENT" in
   # global actions
   init)
@@ -51,6 +47,12 @@ case "$COMPONENT" in
             db-rebuild "$3";;
           *)
             exitUnknownAction
+        esac;;
+      work)
+        case "$ACTION" in
+          init|set-billing)
+            ${COMPONENT}-${ACTION} "${3:-}";;
+          *) exitUnknownAction
         esac;;
       webapp)
         case "$ACTION" in

@@ -28,8 +28,7 @@ exitUnknownAction() {
   exit 1
 }
 
-sourcegcprojfile() {
-  local SEARCH_DIR="$PWD"
+getProjFile() {
   local PROJFILE
   while [[ $(cd "$SEARCH_DIR"; echo $PWD) != "/" ]]; do
     PROJFILE=`find "$SEARCH_DIR" -maxdepth 1 -mindepth 1 -name "gcprojfile" | grep gcprojfile || true`
@@ -39,6 +38,13 @@ sourcegcprojfile() {
       break
     fi
   done
+
+  echo "$PROJFILE"
+}
+
+sourcegcprojfile() {
+  local SEARCH_DIR="$PWD"
+  local PROJFILE=`getProjFile`
 
   if [ -z "$PROJFILE" ]; then
     echoerr "Could not find project file." >&2

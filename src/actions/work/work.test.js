@@ -50,4 +50,6 @@ afterAll(() => {
   shell.rm('-rf', testOrigin)
 })
 
-  // gitSetupResults = shell.exec('gcproj init project')
+test('project init should clone remote git dir', () => {
+  gitSetupResults = shell.exec('gcproj project init')
+})
