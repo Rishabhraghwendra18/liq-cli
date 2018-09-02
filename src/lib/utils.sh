@@ -13,12 +13,15 @@ colorerr() {
 }
 
 exitUnknownGlobal() {
+  print_usage
   echoerr "No such component or global action '$COMPONENT'."
   exit 1
 }
 
 exitUnknownAction() {
+  print_usage
   echoerr "Unknown action '$ACTION' for component '$COMPONENT'."
+  exit 1
 }
 
 sourcegcprojfile() {
