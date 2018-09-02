@@ -24,13 +24,6 @@ if [[ $# -lt 1 ]]; then
   exit 1
 fi
 
-COMPONENT="$1" # or global command
-if [[ "$COMPONENT" != "init" ]]; then
-  sourcegcprojfile
-else
-  BASE_DIR="$PWD"
-fi
-
 source "$SOURCE_DIR"/dispatch.sh
 
 exit 0

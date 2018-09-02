@@ -19,8 +19,12 @@ exitUnknownGlobal() {
 }
 
 exitUnknownAction() {
-  print_usage
-  echoerr "Unknown action '$ACTION' for component '$COMPONENT'."
+  print_${COMPONENT}_usage
+  if [[ -z "$ACTION" ]]; then
+    echoerr "Must specify action."
+  else
+    echoerr "Unknown action '$ACTION' for component '$COMPONENT'."
+  fi
   exit 1
 }
 

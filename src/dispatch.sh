@@ -1,9 +1,16 @@
+COMPONENT="${1:-}" # or global command
+ACTION="${2:-}"
+
+for DISPATCH in `find "${SOURCE_DIR}/actions/" -type d -maxdepth 1`; do
+  echo $DISPATCH
+done
+
 case "$COMPONENT" in
   # global actions
   init)
     global-init;;
   help)
-    print_usage;;
+    global-help "${2:-}";;
   start)
     global-start;;
   stop)

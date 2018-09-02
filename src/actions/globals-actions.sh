@@ -1,5 +1,14 @@
 _ORG_ID_URL='https://console.cloud.google.com/iam-admin/settings'
 
+global-help() {
+  local HELP_COMPONENT="${1:-}"
+  if [[ -z "$HELP_COMPONENT" ]]; then
+    print_usage
+  else
+    print_${HELP_COMPONENT}_usage
+  fi
+}
+
 global-init() {
   addLineIfNotPresentInFile "${BASE_DIR}/.gitignore" 'gcprojfile'
   if [[ -f "${BASE_DIR}/gcprojfile" ]]; then
