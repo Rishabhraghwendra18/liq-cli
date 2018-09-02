@@ -5,13 +5,6 @@ const execOpts = {
   silent: true,
 }
 
-const randomHex = Math.floor((1 + Math.random()) * 0x1000000000000)
-  .toString(16)
-  .substring(1)
-
-beforeAll(() => { console.log('before: ' + randomHex) })
-afterAll(() => { console.log('after') })
-
 const expectedWorkUsage = expect.stringMatching(new RegExp(`Valid work actions are:\\s+
 start <desc> : creates work branch and switches to it[.\\s]+`, 'm'))
 
@@ -33,3 +26,28 @@ test("'help work' prints work usage", () => {
   expect(result.stderr).toEqual('')
   expect(result.code).toBe(0)
 })
+
+const randomHex = Math.floor((1 + Math.random()) * 0x1000000000000)
+  .toString(16)
+  .substring(1)
+const testCheckout = `/tmp/gcproj-test-checkout-${randomHex}`
+const testOrigin = `/tmp/gcproj-test-origin-${randomHex}`
+
+let gitSetupResults
+beforeAll(() => {
+  if (!shell.which('git')) {
+    throw new Error('git must be installed to execute tests.')
+  }
+  shell.mkdir(testCheckout)
+  shell.mkdir(testOrigin)
+  const { code, stderr } = shell.exec(`cd ${testOrigin} && git init --bare`)
+  if (code !== 0) {
+    throw new Error(`could not initialize test origin: ${stderr}`)
+  }
+})
+afterAll(() => {
+  shell.rm('-rf', testCheckout)
+  shell.rm('-rf', testOrigin)
+})
+
+  // gitSetupResults = shell.exec('gcproj init project')
