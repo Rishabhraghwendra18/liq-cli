@@ -12,6 +12,15 @@ colorerr() {
   (trap 'tput sgr0' EXIT; eval "$* 2> >(echo -n \"${red}\"; cat -;)")
 }
 
+exitUnknownGlobal() {
+  echoerr "No such component or global action '$COMPONENT'."
+  exit 1
+}
+
+exitUnknownAction() {
+  echoerr "Unknown action '$ACTION' for component '$COMPONENT'."
+}
+
 sourcegcprojfile() {
   local SEARCH_DIR="$PWD"
   local PROJFILE

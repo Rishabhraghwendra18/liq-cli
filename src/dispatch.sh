@@ -13,7 +13,7 @@ case "$COMPONENT" in
   clear-all-logs)
     global-clear-all-logs;;
   *)
-    ACTION="$2"
+    ACTION="${2:-}"
     case "$COMPONENT" in
       api)
         case "$ACTION" in
@@ -66,6 +66,6 @@ case "$COMPONENT" in
           *) exitUnknownAction
         esac;;
       *)
-        exitUnknown "No such component or global action '$COMPONENT'."
+        exitUnknownGlobal
     esac
 esac

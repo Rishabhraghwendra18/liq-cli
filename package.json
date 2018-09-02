@@ -5,12 +5,16 @@
   "main": "index.js",
   "scripts": {
     "install": "./install.sh",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "author": "Zane Rockenbaugh <zane@liquid-labs.com>",
   "license": "ISC",
   "dependencies": {},
   "bin": {
     "gcproj": "./src/cli.sh"
+  },
+  "devDependencies": {
+    "jest": "^23.5.0",
+    "shelljs": "^0.8.2"
   }
 }
