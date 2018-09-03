@@ -31,25 +31,28 @@ const randomHex = Math.floor((1 + Math.random()) * 0x1000000000000)
   .toString(16)
   .substring(1)
 const testCheckout = `/tmp/gcproj-test-checkout-${randomHex}`
-const testOrigin = `/tmp/gcproj-test-origin-${randomHex}`
+const testOriginUrl = 'https://github.com/Liquid-Labs/catalyst-cli.git'
 
 let gitSetupResults
 beforeAll(() => {
-  if (!shell.which('git')) {
-    throw new Error('git must be installed to execute tests.')
-  }
   shell.mkdir(testCheckout)
-  shell.mkdir(testOrigin)
-  const { code, stderr } = shell.exec(`cd ${testOrigin} && git init --bare`)
-  if (code !== 0) {
-    throw new Error(`could not initialize test origin: ${stderr}`)
-  }
 })
 afterAll(() => {
   shell.rm('-rf', testCheckout)
-  shell.rm('-rf', testOrigin)
 })
 
 test('project init should clone remote git dir', () => {
-  gitSetupResults = shell.exec('gcproj project init')
+  const initCommand =
+    `gcproj ORIGIN_URL="${testOriginUrl}" ORGANIZATION_ID=1234 BILLING_ACCOUNT_ID=4321 project init`
+  const expectedOutput = expect.stringMatching(
+    new RegExp(`^Cloned 'http[^']+' into '${testCheckout}'.[\s\n]*Updated .+gcprojfile'\.[\s\n]*$`))
+  const result =
+    shell.exec(`cd ${testCheckout} && ${initCommand}`)
+
+  expect(result.stdout).toEqual(expectedOutput)
+  expect(result.stderr).toEqual('')
+  expect(result.code).toEqual(0)
+  const checkFiles = ['README.md', 'dev_notes.md', '.git'].map((i) =>
+    `${testCheckout}/${i}`)
+  expect(shell.ls('-d', checkFiles)).toHaveLength(3)
 })
