@@ -15,6 +15,11 @@ function importlibs() {
   for f in "${SOURCE_DIR}/actions/"*.sh; do source "$f"; done
 }
 importlibs
+# process global overrides of the form 'key="value"'
+while (( $# > 0 )) && [[ $1 == *"="* ]]; do
+  eval ${1%=*}="'${1#*=}'"
+  shift
+done
 
 # see note at bottom of proj function
 # local SAW_ERROR=''
@@ -22,13 +27,6 @@ if [[ $# -lt 1 ]]; then
   print_usage
   echoerr "Invalid invocation. See usage above."
   exit 1
-fi
-
-COMPONENT="$1" # or global command
-if [[ "$COMPONENT" != "init" ]]; then
-  sourcegcprojfile
-else
-  BASE_DIR="$PWD"
 fi
 
 source "$SOURCE_DIR"/dispatch.sh

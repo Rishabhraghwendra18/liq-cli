@@ -5,11 +5,11 @@ const execOpts = {
   silent: true,
 }
 
-const expectedUsage = expect.stringMatching(`Usage:
+const expectedUsage = expect.stringMatching(new RegExp(`Usage:
 
 proj <component | global action> <action> [<action args>]
 
-global actions:\\.+`)
+global actions:.+`))
 
 test('no argument results in usage and error', () => {
   console.error = jest.fn() // supresses err echo from shelljs

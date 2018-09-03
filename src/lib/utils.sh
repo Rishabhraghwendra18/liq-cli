@@ -7,6 +7,13 @@ echoerr() {
   echo "${red}$*${reset}" >&2
 }
 
+echoerrandexit() {
+  local MSG="$1"
+  local EXIT_CODE="${2:-10}"
+  echoerr "$MSG"
+  exit $EXIT_CODE
+}
+
 colorerr() {
   # SAW_ERROR=`cat <(trap 'tput sgr0' EXIT; eval "$* 2> >(echo -n \"${red}\"; cat - >&2; echo 1)")`"$SAW_ERROR"
   (trap 'tput sgr0' EXIT; eval "$* 2> >(echo -n \"${red}\"; cat -;)")
@@ -19,13 +26,16 @@ exitUnknownGlobal() {
 }
 
 exitUnknownAction() {
-  print_usage
-  echoerr "Unknown action '$ACTION' for component '$COMPONENT'."
+  print_${COMPONENT}_usage
+  if [[ -z "$ACTION" ]]; then
+    echoerr "Must specify action."
+  else
+    echoerr "Unknown action '$ACTION' for component '$COMPONENT'."
+  fi
   exit 1
 }
 
-sourcegcprojfile() {
-  local SEARCH_DIR="$PWD"
+getProjFile() {
   local PROJFILE
   while [[ $(cd "$SEARCH_DIR"; echo $PWD) != "/" ]]; do
     PROJFILE=`find "$SEARCH_DIR" -maxdepth 1 -mindepth 1 -name "gcprojfile" | grep gcprojfile || true`
@@ -36,12 +46,20 @@ sourcegcprojfile() {
     fi
   done
 
+  echo "$PROJFILE"
+}
+
+sourceCatalystfile() {
+  local SEARCH_DIR="$PWD"
+  local PROJFILE=`getProjFile`
+
   if [ -z "$PROJFILE" ]; then
     echoerr "Could not find project file." >&2
-    exit 1
+    return 1
   else
     source "$PROJFILE"
     BASE_DIR="$( cd "$( dirname "${PROJFILE}" )" && pwd )"
+    return 0
   fi
 }
 
@@ -79,7 +97,8 @@ yesno() {
 addLineIfNotPresentInFile() {
   local FILE="${1:-}"
   local LINE="${2:-}"
-  grep "$LINE" "$FILE" || echo "$LINE" >> "$FILE"
+  touch "$FILE"
+  grep "$LINE" "$FILE" > /dev/null || echo "$LINE" >> "$FILE"
 }
 
 updateGcprojfile() {

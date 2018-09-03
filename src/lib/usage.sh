@@ -26,7 +26,5 @@ print_usage() {
   echo "  stop"
   echo "  view-log"
   echo "work:"
-  echo "  start <desc> : creates work branch and switches to it"
-  echo "  merge : merges current work branch commits to master and deletes work branch"
-  echo "  show : shows committed changes since branch from 'master'"
+  print_work_usage "  "
 }

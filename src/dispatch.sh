@@ -1,9 +1,10 @@
+COMPONENT="${1:-}" # or global command
+ACTION="${2:-}"
+
 case "$COMPONENT" in
   # global actions
-  init)
-    global-init;;
   help)
-    print_usage;;
+    global-help "${2:-}";;
   start)
     global-start;;
   stop)
@@ -44,6 +45,12 @@ case "$COMPONENT" in
             db-rebuild "$3";;
           *)
             exitUnknownAction
+        esac;;
+      project)
+        case "$ACTION" in
+          init|set-billing)
+            ${COMPONENT}-${ACTION} "${3:-}";;
+          *) exitUnknownAction
         esac;;
       webapp)
         case "$ACTION" in
