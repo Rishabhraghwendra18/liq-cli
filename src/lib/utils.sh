@@ -38,7 +38,7 @@ exitUnknownAction() {
 getProjFile() {
   local PROJFILE
   while [[ $(cd "$SEARCH_DIR"; echo $PWD) != "/" ]]; do
-    PROJFILE=`find "$SEARCH_DIR" -maxdepth 1 -mindepth 1 -name "gcprojfile" | grep gcprojfile || true`
+    PROJFILE=`find "$SEARCH_DIR" -maxdepth 1 -mindepth 1 -name ".catalyst" | grep .catalyst || true`
     if [ -z "$PROJFILE" ]; then
       SEARCH_DIR="$SEARCH_DIR/.."
     else
@@ -101,13 +101,13 @@ addLineIfNotPresentInFile() {
   grep "$LINE" "$FILE" > /dev/null || echo "$LINE" >> "$FILE"
 }
 
-updateGcprojfile() {
+updateCatalystFile() {
   local SUPPRESS_MSG="${1:-}"
-  echo "ORGANIZATION_ID=$ORGANIZATION_ID" > "$BASE_DIR/gcprojfile"
-  echo "BILLING_ACCOUNT_ID=$BILLING_ACCOUNT_ID" >> "$BASE_DIR/gcprojfile"
-  echo "PROJECT_ID=$PROJECT_ID" >> "$BASE_DIR/gcprojfile"
+  echo "ORGANIZATION_ID=$ORGANIZATION_ID" > "$BASE_DIR/.catalyst"
+  echo "BILLING_ACCOUNT_ID=$BILLING_ACCOUNT_ID" >> "$BASE_DIR/.catalyst"
+  echo "PROJECT_ID=$PROJECT_ID" >> "$BASE_DIR/.catalyst"
   if [[ "$SUPPRESS_MSG" != 'suppress-msg' ]]; then
-    echo "Updated '$BASE_DIR/gcprojfile'."
+    echo "Updated '$BASE_DIR/.catalyst'."
     echo
   fi
 }

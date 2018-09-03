@@ -15,14 +15,14 @@ project-init_git_setup() {
     fi
   fi
 
-  addLineIfNotPresentInFile "${BASE_DIR}/.gitignore" 'gcprojfile'
+  addLineIfNotPresentInFile "${BASE_DIR}/.gitignore" '.catalyst'
 }
 
 project-init() {
   local FOUND_PROJECT=Y
   sourceCatalystfile 2> /dev/null || FOUND_PROJECT=N
   if [[ $FOUND_PROJECT == Y ]]; then
-    echoerr "It looks like there's already a gcprojfile in place. Bailing out..."
+    echoerr "It looks like there's already a '.catalyst' file in place. Bailing out..."
     exit 1
   else
     BASE_DIR="$PWD"
@@ -48,7 +48,7 @@ project-init() {
     if [[ $FALLBACK == 'Y' ]]; then handleManual; fi
     read -p 'Organization ID: ' ORGANIZATION_ID
   fi
-  updateGcprojfile 'suppress-msg'
+  updateCatalystFile 'suppress-msg'
 
   if [[ -z "$BILLING_ACCOUNT_ID" ]]; then
     handleBilling() {
@@ -58,11 +58,11 @@ project-init() {
     handleNoBilling() {
       echo "After setting up billing, you can set the billing account with 'gcproj project set-billing'."
       echo
-      updateGcprojfile # so the user gets the update message
+      updateCatalystFile # so the user gets the update message
     }
     yesno "Have you set up billing for this account yet? (Y\n) " Y handleBilling handleNoBilling
   fi
-  updateGcprojfile
+  updateCatalystFile
 }
 
 project-set-billing() {
@@ -78,5 +78,5 @@ project-set-billing() {
   yesno "Would you like me to open the billing page for you? (Y/n) " Y handleOpenBilling handleManual
   if [[ $FALLBACK == 'Y' ]]; then handleManual; fi
   read -p 'Billing account ID: ' BILLING_ACCOUNT_ID
-  updateGcprojfile
+  updateCatalystFile
 }

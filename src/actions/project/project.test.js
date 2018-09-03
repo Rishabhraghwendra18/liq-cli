@@ -44,14 +44,14 @@ test('project init should clone remote git dir', () => {
   const initCommand =
     `gcproj ORIGIN_URL="${testOriginUrl}" ORGANIZATION_ID=1234 BILLING_ACCOUNT_ID=4321 project init`
   const expectedOutput = expect.stringMatching(
-    new RegExp(`^Cloned 'http[^']+' into '${testCheckout}'.[\s\n]*Updated .+gcprojfile'\.[\s\n]*$`))
+    new RegExp(`^Cloned 'http[^']+' into '${testCheckout}'.[\s\n]*Updated .+.catalyst'\.[\s\n]*$`))
   const result =
     shell.exec(`cd ${testCheckout} && ${initCommand}`)
 
   expect(result.stdout).toEqual(expectedOutput)
   expect(result.stderr).toEqual('')
   expect(result.code).toEqual(0)
-  const checkFiles = ['README.md', 'dev_notes.md', '.git', 'gcprojfile'].map((i) =>
+  const checkFiles = ['README.md', 'dev_notes.md', '.git', '.catalyst'].map((i) =>
     `${testCheckout}/${i}`)
   expect(shell.ls('-d', checkFiles)).toHaveLength(4)
 })
