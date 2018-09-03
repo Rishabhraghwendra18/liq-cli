@@ -6,20 +6,22 @@ _catalyst()
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     case "${prev}" in
-        catalyst)
-            global_actions="help init deploy start stop clear-all-logs"
-            components="api db webapp work"
-            opts="${global_actions} ${components}";;
-        api)
-            opts="build get-deps start stop view-log";;
-        db)
-            opts="start-proxy stop-proxy view-proxy-log connect rebuild";;
-        webapp)
-            opts="audit build start stop view-log";;
-        work)
-            opts="start merge diff-master";;
-        *)
-        ;;
+      catalyst)
+        global_actions="help deploy start stop clear-all-logs"
+        components="api db project webapp work"
+        opts="${global_actions} ${components}";;
+      api)
+        opts="build get-deps start stop view-log";;
+      db)
+        opts="start-proxy stop-proxy view-proxy-log connect rebuild";;
+      project)
+        opts="init set-billing";;
+      webapp)
+        opts="audit build start stop view-log";;
+      work)
+        opts="start merge diff-master";;
+      *)
+      ;;
     esac
 
     COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
