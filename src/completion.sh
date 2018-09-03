@@ -1,4 +1,4 @@
-_gcproj()
+_catalyst()
 {
     local cur prev opts
     COMPREPLY=()
@@ -6,7 +6,7 @@ _gcproj()
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     case "${prev}" in
-        gcproj)
+        catalyst)
             global_actions="help init deploy start stop clear-all-logs"
             components="api db webapp work"
             opts="${global_actions} ${components}";;
@@ -26,4 +26,4 @@ _gcproj()
     return 0
 }
 
-complete -F _gcproj gcproj
+complete -F _catalyst catalyst

@@ -56,7 +56,7 @@ project-init() {
       project-set-billing
     }
     handleNoBilling() {
-      echo "After setting up billing, you can set the billing account with 'gcproj project set-billing'."
+      echo "After setting up billing, you can set the billing account with 'catalyst project set-billing'."
       echo
       updateCatalystFile # so the user gets the update message
     }

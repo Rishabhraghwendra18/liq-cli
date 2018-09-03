@@ -1,7 +1,7 @@
 {
-  "name": "gcpproj",
+  "name": "catalyst-cli",
   "version": "0.0.1",
-  "description": "Local development and management tool for GCP and Catalyist projects.",
+  "description": "Local development and management tool for Catalyst projects.",
   "main": "index.js",
   "scripts": {
     "install": "./install.sh",
@@ -11,7 +11,7 @@
   "license": "ISC",
   "dependencies": {},
   "bin": {
-    "gcproj": "./src/cli.sh"
+    "catalyst": "./src/cli.sh"
   },
   "devDependencies": {
     "jest": "^23.5.0",

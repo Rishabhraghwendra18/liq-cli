@@ -13,7 +13,7 @@ global actions:.+`))
 
 test('no argument results in usage and error', () => {
   console.error = jest.fn() // supresses err echo from shelljs
-  const result = shell.exec(`gcproj`, execOpts)
+  const result = shell.exec(`catalyst`, execOpts)
   const expectedErr = expect.stringMatching(
     new RegExp(`Invalid invocation. See usage above.\\s*`))
 
@@ -25,7 +25,7 @@ test('no argument results in usage and error', () => {
 test('invalid global action results in usage and error', () => {
   const badGlobal = 'no-such-global-action'
   console.error = jest.fn() // supresses err echo from shelljs
-  const result = shell.exec(`gcproj ${badGlobal}`, execOpts)
+  const result = shell.exec(`catalyst ${badGlobal}`, execOpts)
   const expectedErr = expect.stringMatching(
     new RegExp(`No such component or global action '${badGlobal}'.\\s*`))
 
@@ -35,7 +35,7 @@ test('invalid global action results in usage and error', () => {
 })
 
 test('help should print usage', () => {
-  const result = shell.exec(`gcproj help`, execOpts)
+  const result = shell.exec(`catalyst help`, execOpts)
 
   expect(result.stdout).toEqual(expectedUsage)
   expect(result.stderr).toEqual('')
