@@ -1,6 +1,10 @@
 work-start() {
   local BRANCH_DESC="${1:-}"
-  (requireArgs "${BRANCH_DESC}" && git checkout -b "`date +%Y-%m-%d`-`whoami`-${BRANCH_DESC}") || true
+  local BRANCH_NAME="`date +%Y-%m-%d`-`whoami`-${BRANCH_DESC}"
+  (requireArgs "${BRANCH_DESC}" \
+   && git checkout -qb "${BRANCH_NAME}" \
+   && echo "Now working on branch '${BRANCH_NAME}'.") \
+  || exit $?
 }
 
 work-merge() {

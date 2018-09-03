@@ -35,24 +35,36 @@ const testOriginUrl = 'https://github.com/Liquid-Labs/catalyst-cli.git'
 
 let gitSetupResults
 beforeAll(() => {
+  // TODO: reuse the checkout from 'project.test.sh'?
+  const initCommand =
+    `gcproj ORIGIN_URL="${testOriginUrl}" ORGANIZATION_ID=1234 BILLING_ACCOUNT_ID=4321 project init`
   shell.mkdir(testCheckout)
+  shell.exec(`cd ${testCheckout} && ${initCommand}`)
 })
 afterAll(() => {
   shell.rm('-rf', testCheckout)
 })
 
-test('project init should clone remote git dir', () => {
-  const initCommand =
-    `gcproj ORIGIN_URL="${testOriginUrl}" ORGANIZATION_ID=1234 BILLING_ACCOUNT_ID=4321 project init`
-  const expectedOutput = expect.stringMatching(
-    new RegExp(`^Cloned 'http[^']+' into '${testCheckout}'.[\s\n]*Updated .+gcprojfile'\.[\s\n]*$`))
-  const result =
-    shell.exec(`cd ${testCheckout} && ${initCommand}`)
+test("'work start' should require additional arguments", () => {
+  const result = shell.exec(`cd ${testCheckout} && gcproj work start`)
+  const expectedErr = expect.stringMatching(
+    new RegExp(`'work start' requires 1 additional arguments.`))
+
+  expect(result.stdout).toEqual('')
+  expect(result.stderr).toEqual(expectedErr)
+  expect(result.code).toEqual(1)
+})
+
+test("'work start add-feature' result in new branch", () => {
+  const result = shell.exec(`cd ${testCheckout} && gcproj work start add-feature`)
+  const expectedOutput = expect.stringMatching(new RegExp(`^Now working on branch '\\d{4}-\\d{2}-\\d{2}-[^-]+-add-feature'.[\\s\\n]*$`))
 
   expect(result.stdout).toEqual(expectedOutput)
   expect(result.stderr).toEqual('')
   expect(result.code).toEqual(0)
-  const checkFiles = ['README.md', 'dev_notes.md', '.git'].map((i) =>
-    `${testCheckout}/${i}`)
-  expect(shell.ls('-d', checkFiles)).toHaveLength(3)
+
+  const branchCheck = shell.exec(`cd ${testCheckout} && git branch | wc -l | awk '{print $1}'`)
+  expect(branchCheck.stdout).toEqual("2\n")
+  expect(branchCheck.stderr).toEqual('')
+  expect(branchCheck.code).toEqual(0)
 })

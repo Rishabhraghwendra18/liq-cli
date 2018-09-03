@@ -52,12 +52,6 @@ case "$COMPONENT" in
             ${COMPONENT}-${ACTION} "${3:-}";;
           *) exitUnknownAction
         esac;;
-      work)
-        case "$ACTION" in
-          init|set-billing)
-            ${COMPONENT}-${ACTION};;
-          *) exitUnknownAction
-        esac;;
       webapp)
         case "$ACTION" in
           audit)
