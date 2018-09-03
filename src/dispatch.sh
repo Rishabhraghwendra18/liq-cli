@@ -3,8 +3,6 @@ ACTION="${2:-}"
 
 case "$COMPONENT" in
   # global actions
-  init)
-    global-init;;
   help)
     global-help "${2:-}";;
   start)
@@ -48,10 +46,16 @@ case "$COMPONENT" in
           *)
             exitUnknownAction
         esac;;
-      work)
+      project)
         case "$ACTION" in
           init|set-billing)
             ${COMPONENT}-${ACTION} "${3:-}";;
+          *) exitUnknownAction
+        esac;;
+      work)
+        case "$ACTION" in
+          init|set-billing)
+            ${COMPONENT}-${ACTION};;
           *) exitUnknownAction
         esac;;
       webapp)
