@@ -31,18 +31,22 @@ const randomHex = Math.floor((1 + Math.random()) * 0x1000000000000)
   .toString(16)
   .substring(1)
 const testCheckout = `/tmp/gcproj-test-checkout-${randomHex}`
+const testOrigin = `/tmp/gcproj-test-origin-${randomHex}`
 const testOriginUrl = 'https://github.com/Liquid-Labs/catalyst-cli.git'
 
 let gitSetupResults
 beforeAll(() => {
   // TODO: reuse the checkout from 'project.test.sh'?
+  shell.mkdir(testOrigin)
+  shell.exec(`cd ${testOrigin} && git clone --bare ${testOriginUrl} .`)
   const initCommand =
-    `gcproj ORIGIN_URL="${testOriginUrl}" ORGANIZATION_ID=1234 BILLING_ACCOUNT_ID=4321 project init`
+    `gcproj ORIGIN_URL="file://${testOrigin}" ORGANIZATION_ID=1234 BILLING_ACCOUNT_ID=4321 project init`
   shell.mkdir(testCheckout)
   shell.exec(`cd ${testCheckout} && ${initCommand}`)
 })
 afterAll(() => {
   shell.rm('-rf', testCheckout)
+  shell.rm('-rf', testOrigin)
 })
 
 test("'work start' should require additional arguments", () => {
@@ -65,6 +69,22 @@ test("'work start add-feature' result in new branch", () => {
 
   const branchCheck = shell.exec(`cd ${testCheckout} && git branch | wc -l | awk '{print $1}'`)
   expect(branchCheck.stdout).toEqual("2\n")
+  expect(branchCheck.stderr).toEqual('')
+  expect(branchCheck.code).toEqual(0)
+})
+
+test("'work merge' results merge, push, and deleting branch", () => {
+  shell.exec(`echo "hey" > ${testCheckout}/foo.txt`)
+  shell.exec(`cd ${testCheckout} && git add foo.txt && git commit -m 'test file'`)
+  const result = shell.exec(`cd ${testCheckout} && gcproj work merge`)
+  const expectedOutput = expect.stringMatching(new RegExp(`^Work merged and pushed to origin.[\\s\\n]*$`))
+
+  expect(result.stdout).toEqual(expectedOutput)
+  expect(result.stderr).toEqual('')
+  expect(result.code).toEqual(0)
+
+  const branchCheck = shell.exec(`cd ${testCheckout} && git branch | wc -l | awk '{print $1}'`)
+  expect(branchCheck.stdout).toEqual("1\n")
   expect(branchCheck.stderr).toEqual('')
   expect(branchCheck.code).toEqual(0)
 })

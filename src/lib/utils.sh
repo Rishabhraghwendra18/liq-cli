@@ -7,6 +7,13 @@ echoerr() {
   echo "${red}$*${reset}" >&2
 }
 
+echoerrandexit() {
+  local MSG="$1"
+  local EXIT_CODE="${2:-10}"
+  echoerr "$MSG"
+  exit $EXIT_CODE
+}
+
 colorerr() {
   # SAW_ERROR=`cat <(trap 'tput sgr0' EXIT; eval "$* 2> >(echo -n \"${red}\"; cat - >&2; echo 1)")`"$SAW_ERROR"
   (trap 'tput sgr0' EXIT; eval "$* 2> >(echo -n \"${red}\"; cat -;)")
