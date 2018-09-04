@@ -21,7 +21,7 @@ while (( $# > 0 )) && [[ $1 == *"="* ]]; do
   shift
 done
 
-# see note at bottom of proj function
+# see note in lib/utils.sh:colorerr re. SAW_ERROR
 # local SAW_ERROR=''
 if [[ $# -lt 1 ]]; then
   print_usage
@@ -32,17 +32,3 @@ fi
 source "$SOURCE_DIR"/dispatch.sh
 
 exit 0
-
-WEB_APP_DIR="${BASE_DIR}/apps/store"
-
-proj() {
-
-  # TODO: in case the output is long, want to note whether we noted any problems
-  # at the end; however, we're having troubling capturing 'SAW_ERROR'.
-  # echo
-  # if [ -n "$SAW_ERROR" ]; then
-  #   echo "${red}Errors were observed. Check the logs above.${reset}"
-  # else
-  #   echo "${green}Everything looks good.${reset}"
-  # fi
-}
