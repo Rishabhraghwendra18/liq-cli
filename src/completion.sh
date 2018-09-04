@@ -17,9 +17,9 @@ _catalyst()
       project)
         opts="init deploy set-billing";;
       sql)
-        opts="start-proxy stop-proxy view-proxy-log connect rebuild";;
+        opts="configure start-proxy stop-proxy view-proxy-log connect rebuild";;
       webapp)
-        opts="audit build start stop view-log";;
+        opts="configure audit build start stop view-log";;
       work)
         opts="start merge diff-master";;
       *)

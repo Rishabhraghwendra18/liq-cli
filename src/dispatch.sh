@@ -5,6 +5,7 @@ case "$COMPONENT" in
   # global actions
   help)
     global-help "${2:-}";;
+  # components and actions
   *)
     ACTION="${2:-}"
     case "$COMPONENT" in
@@ -57,17 +58,13 @@ EOF
           *) exitUnknownAction
         esac;;
       webapp)
+        requireCatalystfile
         case "$ACTION" in
-          audit)
-            webapp-audit;;
-          build)
-            webapp-build;;
-          start)
-            webapp-start;;
-          stop)
-            webapp-stop;;
-          view-log)
-            webapp-view-log;;
+          audit|build|start|stop|view-log)
+            ensureGlobals 'WEB_APP_DIR'
+            ${COMPONENT}-${ACTION} "${3:-}";;
+          configure)
+            ${COMPONENT}-${ACTION} "${3:-}";;
           *) exitUnknownAction
         esac;;
       work)

@@ -113,8 +113,9 @@ updateCatalystFile() {
   echo "BILLING_ACCOUNT_ID=$BILLING_ACCOUNT_ID" >> "$BASE_DIR/.catalyst"
   echo "PROJECT_ID=$PROJECT_ID" >> "$BASE_DIR/.catalyst"
   for VAR in GOPATH REL_GOAPP_PATH SQL_DIR TEST_DATA_DIR \
-      CLOUDSQL_CONNECTION_NAME CLOUDSQL_CREDS CLOUDSQL_DB_DEV CLOUDSQL_DB_TEST; do
-    if [[ -n "${!VAR}" ]]; then
+      CLOUDSQL_CONNECTION_NAME CLOUDSQL_CREDS CLOUDSQL_DB_DEV CLOUDSQL_DB_TEST \
+      WEB_APP_DIR; do
+    if [[ -n "${!VAR:-}" ]]; then
       echo "$VAR='${!VAR}'" >> "$BASE_DIR/.catalyst"
     fi
   done
