@@ -112,15 +112,15 @@ updateCatalystFile() {
   echo "ORGANIZATION_ID=$ORGANIZATION_ID" > "$BASE_DIR/.catalyst"
   echo "BILLING_ACCOUNT_ID=$BILLING_ACCOUNT_ID" >> "$BASE_DIR/.catalyst"
   echo "PROJECT_ID=$PROJECT_ID" >> "$BASE_DIR/.catalyst"
-  if [[ -n "${GOPATH:-}" ]]; then
-    echo "GOPATH='$GOPATH'" >> "$BASE_DIR/.catalyst"
-  fi
-  if [[ -n "${REL_GOAPP_PATH:-}" ]]; then
-    echo "REL_GOAPP_PATH='$REL_GOAPP_PATH'" >> "$BASE_DIR/.catalyst"
-  fi
+  for VAR in GOPATH REL_GOAPP_PATH SQL_DIR TEST_DATA_DIR \
+      CLOUDSQL_CONNECTION_NAME CLOUDSQL_CREDS CLOUDSQL_DB_DEV CLOUDSQL_DB_TEST; do
+    if [[ -n "${!VAR}" ]]; then
+      echo "$VAR='${!VAR}'" >> "$BASE_DIR/.catalyst"
+    fi
+  done
+
   if [[ "$SUPPRESS_MSG" != 'suppress-msg' ]]; then
     echo "Updated '$BASE_DIR/.catalyst'."
-    echo
   fi
 }
 

@@ -12,4 +12,5 @@ PROJECT_ID=''
 
 # Global constants.
 
+_ORG_ID_URL='https://console.cloud.google.com/iam-admin/settings'
 _BILLING_ACCT_URL='https://console.cloud.google.com/billing?folder=&organizationId='
