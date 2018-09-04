@@ -106,6 +106,12 @@ updateCatalystFile() {
   echo "ORGANIZATION_ID=$ORGANIZATION_ID" > "$BASE_DIR/.catalyst"
   echo "BILLING_ACCOUNT_ID=$BILLING_ACCOUNT_ID" >> "$BASE_DIR/.catalyst"
   echo "PROJECT_ID=$PROJECT_ID" >> "$BASE_DIR/.catalyst"
+  if [[ -n "${GOPATH:-}" ]]; then
+    echo "GOPATH='$GOPATH'" >> "$BASE_DIR/.catalyst"
+  fi
+  if [[ -n "${REL_GOAPP_PATH:-}" ]]; then
+    echo "REL_GOAPP_PATH='$REL_GOAPP_PATH'" >> "$BASE_DIR/.catalyst"
+  fi
   if [[ "$SUPPRESS_MSG" != 'suppress-msg' ]]; then
     echo "Updated '$BASE_DIR/.catalyst'."
     echo
@@ -114,9 +120,9 @@ updateCatalystFile() {
 
 requireArgs() {
   local COUNT=$#
-  local I=${COUNT}
-  while (( $I != 0 )); do
-    if [[ -z ${!COUNT:-} ]]; then
+  local I=1
+  while (( $I <= $COUNT )); do
+    if [[ -z ${!I:-} ]]; then
       if [ -z $ACTION ]; then
         echoerr "Global action '$COMPONENT' requires $COUNT additional arguments."
       else
@@ -124,7 +130,22 @@ requireArgs() {
       fi
       return 1
     fi
-    I=$(( I - 1 ))
+    I=$(( I + 1 ))
+  done
+
+  return 0
+}
+
+ensureGlobals() {
+  local COUNT=$#
+  local I=1
+  while (( $I <= $COUNT )); do
+    local GLOBAL_NAME=${!I}
+    if [[ -z ${!GLOBAL_NAME:-} ]]; then
+      echoerr "'${GLOBAL_NAME}' not set. Try: 'catalyst ${COMPONENT} configure'."
+      return 1
+    fi
+    I=$(( I + 1 ))
   done
 
   return 0

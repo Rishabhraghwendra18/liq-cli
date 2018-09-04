@@ -49,26 +49,6 @@ proj() {
     rm "${BASE_DIR}/api-server.log" "${BASE_DIR}/db-proxy.log" "${BASE_DIR}/webapp-dev-server.log" 2> /dev/null
   }
 
-  api-get-deps() {
-    bash -c "cd $GOPATH/src/unodelivers.com/app; go get ./..."
-  }
-
-  api-build() {
-    colorerr "bash -c 'go build unodelivers.com/app'"
-  }
-
-  api-start() {
-    bash -c "cd $GOPATH/src/unodelivers.com/app; ( dev_appserver.py --enable_watching_go_path=true app.yaml & echo \$! >&3 ) 3> ${BASE_DIR}/api-server.pid 2>&1 | tee ${BASE_DIR}/api-server.log &"
-  }
-
-  api-stop() {
-    bash -c "kill `cat ${BASE_DIR}/api-server.pid` && rm ${BASE_DIR}/api-server.pid"
-  }
-
-  api-view-log() {
-    less "${BASE_DIR}/api-server.log"
-  }
-
   _select_db() {
     if [[ x"$1" == "xtest" ]]; then echo ${CLOUDSQL_DB_TEST}; else echo ${CLOUDSQL_DB_DEV}; fi;
   }

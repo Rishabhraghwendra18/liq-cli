@@ -9,25 +9,19 @@ case "$COMPONENT" in
     global-start;;
   stop)
     global-stop;;
-  deploy)
-    global-deploy;;
   clear-all-logs)
     global-clear-all-logs;;
   *)
     ACTION="${2:-}"
     case "$COMPONENT" in
       api)
+        sourceCatalystfile || (echoerr "Did not find 'Catalystfile'; run 'catalyst project init'." && exit 1)
         case "$ACTION" in
-          get-deps)
-            api-get-deps;;
-          build)
-            api-build;;
-          start)
-            api-start;;
-          stop)
-            api-stop;;
-          view-log)
-            api-view-log;;
+          get-deps|build|start|stop|view-log)
+            ensureGlobals 'GOPATH' 'REL_GOAPP_PATH' || exit $?
+            ${COMPONENT}-${ACTION} "${3:-}";;
+          configure)
+            ${COMPONENT}-${ACTION} "${3:-}";;
           *)
             exitUnknownAction
         esac;;
@@ -48,7 +42,10 @@ case "$COMPONENT" in
         esac;;
       project)
         case "$ACTION" in
-          init|set-billing)
+          deploy|set-billing)
+            sourceCatalystfile
+            ${COMPONENT}-${ACTION} "${3:-}";;
+          init)
             ${COMPONENT}-${ACTION} "${3:-}";;
           *) exitUnknownAction
         esac;;
