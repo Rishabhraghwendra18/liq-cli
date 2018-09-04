@@ -63,6 +63,12 @@ sourceCatalystfile() {
   fi
 }
 
+requireCatalystfile() {
+  sourceCatalystfile \
+    || (echoerr "Did not find 'Catalystfile'; run 'catalyst project init'." \
+        && exit 1)
+}
+
 yesno() {
   local PROMPT="$1"
   local DEFAULT=$2
