@@ -161,7 +161,7 @@ requireGlobals() {
     local GLOBAL_NAME=${!I}
     if [[ -z ${!GLOBAL_NAME:-} ]]; then
       echoerr "'${GLOBAL_NAME}' not set. Try: 'catalyst ${COMPONENT} configure'."
-      return 1
+      exit 1
     fi
     I=$(( I + 1 ))
   done
