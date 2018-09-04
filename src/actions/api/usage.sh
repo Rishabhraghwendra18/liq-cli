@@ -1,4 +1,4 @@
-print_project_usage() {
+print_api_usage() {
   local PREFIX="${1:-}"
   if [[ -z "$PREFIX" ]]; then
     echo -e "Valid api actions are:\n"

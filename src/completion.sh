@@ -7,17 +7,19 @@ _catalyst()
 
     case "${prev}" in
       catalyst)
-        global_actions="help start stop clear-all-logs"
-        components="api db project webapp work"
+        global_actions="help"
+        components="api local project sql webapp work"
         opts="${global_actions} ${components}";;
       api)
         opts="configure build get-deps start stop view-log";;
-      db)
-        opts="start-proxy stop-proxy view-proxy-log connect rebuild";;
+      local)
+        opts="start stop restart clear-logs";;
       project)
         opts="init deploy set-billing";;
+      sql)
+        opts="configure start-proxy stop-proxy view-proxy-log connect rebuild";;
       webapp)
-        opts="audit build start stop view-log";;
+        opts="configure audit build start stop view-log";;
       work)
         opts="start merge diff-master";;
       *)

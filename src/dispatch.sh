@@ -5,17 +5,12 @@ case "$COMPONENT" in
   # global actions
   help)
     global-help "${2:-}";;
-  start)
-    global-start;;
-  stop)
-    global-stop;;
-  clear-all-logs)
-    global-clear-all-logs;;
+  # components and actions
   *)
     ACTION="${2:-}"
     case "$COMPONENT" in
       api)
-        sourceCatalystfile || (echoerr "Did not find 'Catalystfile'; run 'catalyst project init'." && exit 1)
+        requireCatalystfile
         case "$ACTION" in
           get-deps|build|start|stop|view-log)
             ensureGlobals 'GOPATH' 'REL_GOAPP_PATH' || exit $?
@@ -25,20 +20,33 @@ case "$COMPONENT" in
           *)
             exitUnknownAction
         esac;;
-      db)
+      sql)
+        requireCatalystfile
+        if [ ! -f ~/.my.cnf ]; then
+          cat <<EOF
+No '~/.my.cnf' file found; some 'db' actions won't work. File should contain:
+
+[client]
+user=the_user_name
+password=the_password
+EOF
+        fi
         case "$ACTION" in
-          start-proxy)
-            db-start-proxy;;
-          stop-proxy)
-            db-stop-proxy;;
-          view-proxy-log)
-            db-view-proxy-log;;
-          connect)
-            db-connect;;
-          rebuild)
-            db-rebuild "$3";;
+          start-proxy|stop-proxy|view-proxy-log|connect|rebuild)
+            ensureGlobals 'SQL_DIR' 'TEST_DATA_DIR' 'CLOUDSQL_CONNECTION_NAME' \
+              'CLOUDSQL_CREDS' 'CLOUDSQL_DB_DEV' 'CLOUDSQL_DB_TEST'
+            ${COMPONENT}-${ACTION} "${3:-}";;
+          configure)
+            ${COMPONENT}-${ACTION} "${3:-}";;
           *)
             exitUnknownAction
+        esac;;
+      local)
+        requireCatalystfile
+        case "$ACTION" in
+          start|stop|restart|clear-logs)
+            ${COMPONENT}-${ACTION} "${3:-}";;
+          *) exitUnknownAction
         esac;;
       project)
         case "$ACTION" in
@@ -50,17 +58,13 @@ case "$COMPONENT" in
           *) exitUnknownAction
         esac;;
       webapp)
+        requireCatalystfile
         case "$ACTION" in
-          audit)
-            webapp-audit;;
-          build)
-            webapp-build;;
-          start)
-            webapp-start;;
-          stop)
-            webapp-stop;;
-          view-log)
-            webapp-view-log;;
+          audit|build|start|stop|view-log)
+            ensureGlobals 'WEB_APP_DIR'
+            ${COMPONENT}-${ACTION} "${3:-}";;
+          configure)
+            ${COMPONENT}-${ACTION} "${3:-}";;
           *) exitUnknownAction
         esac;;
       work)
