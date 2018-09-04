@@ -21,7 +21,3 @@ global-stop() {
   api-stop
   db-stop-proxy
 }
-
-global-deploy() {
-  bash -c "cd $GOPATH/src/unodelivers.com/app; gcloud app deploy"
-}

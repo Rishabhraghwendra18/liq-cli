@@ -80,3 +80,11 @@ project-set-billing() {
   read -p 'Billing account ID: ' BILLING_ACCOUNT_ID
   updateCatalystFile
 }
+
+project-deploy() {
+  if [[ -z "${GOPATH:-}" ]]; then
+    echoerr "'GOPATH' is not defined. Run 'catalyst api configure'."
+    exit 1
+  fi
+  colorerr "bash -c 'cd $GOPATH/src/unodelivers.com/app; gcloud app deploy'"
+}
