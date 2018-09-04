@@ -13,7 +13,7 @@ case "$COMPONENT" in
         requireCatalystfile
         case "$ACTION" in
           get-deps|build|start|stop|view-log)
-            ensureGlobals 'GOPATH' 'REL_GOAPP_PATH' || exit $?
+            requireGlobals 'GOPATH' 'REL_GOAPP_PATH' || exit $?
             ${COMPONENT}-${ACTION} "${3:-}";;
           configure)
             ${COMPONENT}-${ACTION} "${3:-}";;
@@ -33,7 +33,7 @@ EOF
         fi
         case "$ACTION" in
           start-proxy|stop-proxy|view-proxy-log|connect|rebuild)
-            ensureGlobals 'SQL_DIR' 'TEST_DATA_DIR' 'CLOUDSQL_CONNECTION_NAME' \
+            requireGlobals 'SQL_DIR' 'TEST_DATA_DIR' 'CLOUDSQL_CONNECTION_NAME' \
               'CLOUDSQL_CREDS' 'CLOUDSQL_DB_DEV' 'CLOUDSQL_DB_TEST'
             ${COMPONENT}-${ACTION} "${3:-}";;
           configure)
@@ -61,7 +61,7 @@ EOF
         requireCatalystfile
         case "$ACTION" in
           audit|build|start|stop|view-log)
-            ensureGlobals 'WEB_APP_DIR'
+            requireGlobals 'WEB_APP_DIR'
             ${COMPONENT}-${ACTION} "${3:-}";;
           configure)
             ${COMPONENT}-${ACTION} "${3:-}";;

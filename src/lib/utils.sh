@@ -17,6 +17,17 @@ echoerrandexit() {
 colorerr() {
   # SAW_ERROR=`cat <(trap 'tput sgr0' EXIT; eval "$* 2> >(echo -n \"${red}\"; cat - >&2; echo 1)")`"$SAW_ERROR"
   (trap 'tput sgr0' EXIT; eval "$* 2> >(echo -n \"${red}\"; cat -;)")
+
+  # TODO: in case the output is long, want to note whether we noted any problems
+  # at the end; however, we're having troubling capturing 'SAW_ERROR'.
+  # But that was in an earlier implementation, so might be worth taking another
+  # run at it.
+  # echo
+  # if [ -n "$SAW_ERROR" ]; then
+  #   echo "${red}Errors were observed. Check the logs above.${reset}"
+  # else
+  #   echo "${green}Everything looks good.${reset}"
+  # fi
 }
 
 exitUnknownGlobal() {
@@ -143,7 +154,7 @@ requireArgs() {
   return 0
 }
 
-ensureGlobals() {
+requireGlobals() {
   local COUNT=$#
   local I=1
   while (( $I <= $COUNT )); do
