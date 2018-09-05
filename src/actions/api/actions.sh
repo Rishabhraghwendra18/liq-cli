@@ -11,15 +11,15 @@ api-configure() {
 }
 
 api-get-deps() {
-  colorerr "bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; go get ./...'"
+  colorerr "GOPATH=${GOPATH} bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; go get ./...'"
 }
 
 api-build() {
-  colorerr "bash -c 'go build $REL_GOAPP_PATH'"
+  colorerr "GOPATH=${GOPATH} bash -c 'go build $REL_GOAPP_PATH'"
 }
 
 api-start() {
-  colorerr "bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; ( dev_appserver.py --enable_watching_go_path=true app.yaml & echo \$! >&3 ) 3> ${BASE_DIR}/api-server.pid 2>&1 | tee ${BASE_DIR}/api-server.log &'"
+  colorerr "GOPATH=${GOPATH} bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; ( dev_appserver.py --enable_watching_go_path=true app.yaml & echo \$! >&3 ) 3> ${BASE_DIR}/api-server.pid 2>&1 | tee ${BASE_DIR}/api-server.log &'"
 }
 
 api-stop() {
