@@ -1,8 +1,8 @@
 webapp-configure() {
-  if [[ -z "${SQL_DIR:-}" ]]; then
-    echo -p "Please provide the path to the webapp:"
+  if [[ -z "${WEB_APP_DIR:-}" ]]; then
+    echo "Please provide the path to the webapp:"
     read -p "(${BASE_DIR}/webapp): " WEB_APP_DIR
-    WEB_APP_DIR=${SQL_DIR:-"${BASE_DIR}/webapp"}
+    WEB_APP_DIR=${WEB_APP_DIR:-"${BASE_DIR}/webapp"}
     echo
   fi
 
