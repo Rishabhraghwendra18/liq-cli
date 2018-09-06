@@ -10,6 +10,10 @@ work-start() {
 work-merge() {
   sourceCatalystfile
 
+  git diff-index --quiet HEAD -- \
+    || ( echoerr 'Currint working branch has uncommitted changes. Please resolve before merging.' \
+         && exit 1 )
+
   local WORKBRANCH=`git branch | (grep '*' || true) | awk '{print $2}'`
   if [ $WORKBRANCH == 'master' ]; then
     echoerr "Can't 'merge work' from master branch. Switch to workbranch with 'git checkout'." >&2
