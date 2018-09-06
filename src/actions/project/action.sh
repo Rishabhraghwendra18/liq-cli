@@ -32,6 +32,7 @@ project-init() {
 
   if [[ -z "$ORGANIZATION_ID" ]]; then
     echo "First we need to determine your 'organization ID' where your project lives."
+    echo "If the local project is not currentyl associated with a GCP Project, it's fine to leave this value blank."
     local FALLBACK=N
     handleOpenOrgSettings() {
       open ${_ORG_ID_URL} || FALLBACK=Y
