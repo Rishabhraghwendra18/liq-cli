@@ -69,7 +69,7 @@ EOF
         esac;;
       work)
         case "$ACTION" in
-          start|merge|diff-master)
+          start|merge|diff-master|ignore-rest)
             ${COMPONENT}-${ACTION} "${3:-}";;
           *) exitUnknownAction
         esac;;
