@@ -21,7 +21,7 @@ work-merge() {
 
   local INS_COUNT
   local DEL_COUNT
-  for i in `git diff --shortstat master ${WORKBRANCH} | egrep -Eio -e '\d+ insertions|\d+ deletions' | awk '{print $1}'`; do
+  for i in `git diff --shortstat master ${WORKBRANCH} | egrep -Eio -e '\d+ insertions|\d+ deletions' | awk '{print \$1}'`; do
     if [[ -z "$INS_COUNT" ]]; then
       INS_COUNT="${i}"
     else DEL_COUNT="${i}"; fi
