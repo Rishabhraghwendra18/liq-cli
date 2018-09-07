@@ -21,7 +21,7 @@ work-merge() {
 
   local INS_COUNT
   local DEL_COUNT
-  for i in `git diff --shortstat master ${WORKBRANCH} | egrep -Eio -e '\d+ insertions|\d+ deletions' | awk '{print \$1}'`; do
+  for i in `git diff --shortstat master ${WORKBRANCH} | egrep -Eio -e '\d+ insertion|\d+ deletion' | awk '{print $1}'`; do
     if [[ -z "$INS_COUNT" ]]; then
       INS_COUNT="${i}"
     else DEL_COUNT="${i}"; fi
@@ -43,7 +43,7 @@ work-merge() {
   # git branch -qd "$WORKBRANCH" \
   # || echoerr "Could not delete '${WORKBRANCH}'. This can happen if the branch was renamed."
   # TODO: provide a reference for checking the merge is present and if safe to delete.
-  echo "Line change count: $DIFF_COUNT"
+  echo "Linecount change: $DIFF_COUNT"
 }
 
 work-diff-master() {
