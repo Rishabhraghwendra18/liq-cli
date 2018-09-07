@@ -43,7 +43,7 @@ work-merge() {
   # git branch -qd "$WORKBRANCH" \
   # || echoerr "Could not delete '${WORKBRANCH}'. This can happen if the branch was renamed."
   # TODO: provide a reference for checking the merge is present and if safe to delete.
-  echo "Line change count: $DIFF_COUNT"
+  echo "Linecount change: $DIFF_COUNT"
 }
 
 work-diff-master() {
