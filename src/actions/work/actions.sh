@@ -40,3 +40,13 @@ work-merge() {
 work-diff-master() {
   git diff HEAD..$(git merge-base master HEAD)
 }
+
+work-ignore-rest() {
+  sourceCatalystfile
+
+  touch "${BASE_DIR}/.gitignore"
+  for i in `git ls-files . --exclude-standard --others --directory`; do
+    local REL_PATH=`python -c "import os.path; print os.path.relpath('${PWD}/${i}', '${BASE_DIR}')"`
+    echo "${REL_PATH}" >> "${BASE_DIR}/.gitignore"
+  done
+}

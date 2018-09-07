@@ -21,7 +21,7 @@ _catalyst()
       webapp)
         opts="configure audit build start stop view-log";;
       work)
-        opts="start merge diff-master";;
+        opts="start merge diff-master ignore-rest";;
       *)
       ;;
     esac
