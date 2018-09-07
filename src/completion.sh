@@ -8,9 +8,9 @@ _catalyst()
     case "${prev}" in
       catalyst)
         global_actions="help"
-        components="api local project sql webapp work"
+        components="go local project sql webapp work"
         opts="${global_actions} ${components}";;
-      api)
+      go)
         opts="configure build get-deps start stop view-log";;
       local)
         opts="start stop restart clear-logs";;

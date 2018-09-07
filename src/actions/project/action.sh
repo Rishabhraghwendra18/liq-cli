@@ -84,7 +84,7 @@ project-set-billing() {
 
 project-deploy() {
   if [[ -z "${GOPATH:-}" ]]; then
-    echoerr "'GOPATH' is not defined. Run 'catalyst api configure'."
+    echoerr "'GOPATH' is not defined. Run 'catalyst go configure'."
     exit 1
   fi
   colorerr "bash -c 'cd $GOPATH/src/unodelivers.com/app; gcloud app deploy'"
