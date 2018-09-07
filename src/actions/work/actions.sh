@@ -44,9 +44,11 @@ work-diff-master() {
 work-ignore-rest() {
   sourceCatalystfile
 
-  touch "${BASE_DIR}/.gitignore"
+  pushd "${BASE_DIR}" > /dev/null
+  touch .gitignore
+  # first ignore whole directories
   for i in `git ls-files . --exclude-standard --others --directory`; do
-    local REL_PATH=`python -c "import os.path; print os.path.relpath('${PWD}/${i}', '${BASE_DIR}')"`
-    echo "${REL_PATH}" >> "${BASE_DIR}/.gitignore"
+    echo "${i}" >> .gitignore
   done
+  popd > /dev/null
 }
