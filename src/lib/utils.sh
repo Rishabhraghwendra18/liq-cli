@@ -16,7 +16,10 @@ echoerrandexit() {
 
 colorerr() {
   # SAW_ERROR=`cat <(trap 'tput sgr0' EXIT; eval "$* 2> >(echo -n \"${red}\"; cat - >&2; echo 1)")`"$SAW_ERROR"
-  (trap 'tput sgr0' EXIT; eval "$* 2> >(echo -n \"${red}\"; cat -;)")
+  # the subshell around '$*' is to suppress not-so-useful error report on failure.
+  # it's a hack and have posted question to try and find better fix:
+  # https://unix.stackexchange.com/questions/467558/why-is-the-err-trap-being-invoked-here
+  (trap 'tput sgr0' EXIT; eval "($*) 2> >(echo -n \"${red}\"; cat -;)") || true
 
   # TODO: in case the output is long, want to note whether we noted any problems
   # at the end; however, we're having troubling capturing 'SAW_ERROR'.
