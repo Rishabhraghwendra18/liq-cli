@@ -15,22 +15,10 @@ echoerrandexit() {
 }
 
 colorerr() {
-  # SAW_ERROR=`cat <(trap 'tput sgr0' EXIT; eval "$* 2> >(echo -n \"${red}\"; cat - >&2; echo 1)")`"$SAW_ERROR"
-  # the subshell around '$*' is to suppress not-so-useful error report on failure.
-  # it's a hack and have posted question to try and find better fix:
-  # https://unix.stackexchange.com/questions/467558/why-is-the-err-trap-being-invoked-here
-  (trap 'tput sgr0' EXIT; eval "($*) 2> >(echo -n \"${red}\"; cat -;)") || true
-
-  # TODO: in case the output is long, want to note whether we noted any problems
-  # at the end; however, we're having troubling capturing 'SAW_ERROR'.
-  # But that was in an earlier implementation, so might be worth taking another
-  # run at it.
-  # echo
-  # if [ -n "$SAW_ERROR" ]; then
-  #   echo "${red}Errors were observed. Check the logs above.${reset}"
-  # else
-  #   echo "${green}Everything looks good.${reset}"
-  # fi
+  # TODO: in the case of long output, it would be nice to notice whether we saw
+  # error or not and tell the user to scroll back and check the logs. e.g., if
+  # we see an error and then 20+ lines of stuff, then emit advice.
+  (set -o pipefail;eval "$@" 2>&1>&3|sed 's/^\(.*\)$/'$'\e''[31m\1'$'\e''[m/'>&2)3>&1
 }
 
 exitUnknownGlobal() {

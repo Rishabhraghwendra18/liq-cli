@@ -18,6 +18,10 @@ go-build() {
   colorerr "GOPATH=${GOPATH} bash -c 'go build $REL_GOAPP_PATH'"
 }
 
+go-test() {
+  colorerr "GOPATH=${GOPATH} bash -c 'go test $REL_GOAPP_PATH'"
+}
+
 go-start() {
   colorerr "GOPATH=${GOPATH} bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; ( dev_appserver.py --enable_watching_go_path=true app.yaml & echo \$! >&3 ) 3> ${BASE_DIR}/go-server.pid 2>&1 | tee ${BASE_DIR}/go-server.log &'"
 }
