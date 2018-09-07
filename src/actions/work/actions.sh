@@ -40,10 +40,10 @@ work-merge() {
       || (PUSH_FAILED=Y && echoerr "Local merge successful, but there was a problem pushing work to master."))
   # if we have not exited, then the merge was made and we'll attempt to clean up
   # local work branch (even if the push fails)
-  # git branch -qd "$WORKBRANCH" \
-  # || echoerr "Could not delete '${WORKBRANCH}'. This can happen if the branch was renamed."
+  git branch -qd "$WORKBRANCH" \
+    || echoerr "Could not delete '${WORKBRANCH}'. This can happen if the branch was renamed."
   # TODO: provide a reference for checking the merge is present and if safe to delete.
-  echo "Linecount change: $DIFF_COUNT"
+  echo "linecount change: $DIFF_COUNT"
 }
 
 work-diff-master() {
