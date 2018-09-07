@@ -12,7 +12,7 @@ case "$COMPONENT" in
       go)
         requireCatalystfile
         case "$ACTION" in
-          get-deps|build|start|stop|view-log)
+          get-deps|build|test|start|stop|view-log)
             requireGlobals 'GOPATH' 'REL_GOAPP_PATH' || exit $?
             ${COMPONENT}-${ACTION} "${3:-}";;
           configure)
