@@ -1,4 +1,4 @@
-api-configure() {
+go-configure() {
   if [[ -z "${GOPATH:-}" ]]; then
     echo "Please provide the 'GOPATH' to the root of go application code, right below 'src'."
     read -p 'GOPATH: ' GOPATH
@@ -10,24 +10,24 @@ api-configure() {
   updateCatalystFile
 }
 
-api-get-deps() {
+go-get-deps() {
   colorerr "GOPATH=${GOPATH} bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; go get ./...'"
 }
 
-api-build() {
+go-build() {
   colorerr "GOPATH=${GOPATH} bash -c 'go build $REL_GOAPP_PATH'"
 }
 
-api-start() {
-  colorerr "GOPATH=${GOPATH} bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; ( dev_appserver.py --enable_watching_go_path=true app.yaml & echo \$! >&3 ) 3> ${BASE_DIR}/api-server.pid 2>&1 | tee ${BASE_DIR}/api-server.log &'"
+go-start() {
+  colorerr "GOPATH=${GOPATH} bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; ( dev_appserver.py --enable_watching_go_path=true app.yaml & echo \$! >&3 ) 3> ${BASE_DIR}/go-server.pid 2>&1 | tee ${BASE_DIR}/go-server.log &'"
 }
 
-api-stop() {
+go-stop() {
   # TODO: fallback to 'ps aux'
-  colorerr "bash -c '( kill `cat ${BASE_DIR}/api-server.pid` && rm ${BASE_DIR}/api-server.pid ) \
-    || echo \"There may have been a problem shutting down the api dev server. Check manually.\"'"
+  colorerr "bash -c '( kill `cat ${BASE_DIR}/go-server.pid` && rm ${BASE_DIR}/go-server.pid ) \
+    || echo \"There may have been a problem shutting down the go dev server. Check manually.\"'"
 }
 
-api-view-log() {
-  less "${BASE_DIR}/api-server.log"
+go-view-log() {
+  less "${BASE_DIR}/go-server.log"
 }

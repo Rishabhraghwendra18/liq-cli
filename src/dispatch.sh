@@ -9,7 +9,7 @@ case "$COMPONENT" in
   *)
     ACTION="${2:-}"
     case "$COMPONENT" in
-      api)
+      go)
         requireCatalystfile
         case "$ACTION" in
           get-deps|build|start|stop|view-log)
