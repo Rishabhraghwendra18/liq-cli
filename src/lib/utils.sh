@@ -50,9 +50,10 @@ exitUnknownAction() {
 }
 
 getProjFile() {
+  local SEARCH_DIR="${1}"
   local PROJFILE
   while [[ $(cd "$SEARCH_DIR"; echo $PWD) != "/" ]]; do
-    PROJFILE=`find "$SEARCH_DIR" -maxdepth 1 -mindepth 1 -name ".catalyst" | grep .catalyst || true`
+    PROJFILE=`find -L "$SEARCH_DIR" -maxdepth 1 -mindepth 1 -name ".catalyst" | grep .catalyst || true`
     if [ -z "$PROJFILE" ]; then
       SEARCH_DIR="$SEARCH_DIR/.."
     else
@@ -64,11 +65,10 @@ getProjFile() {
 }
 
 sourceCatalystfile() {
-  local SEARCH_DIR="$PWD"
-  local PROJFILE=`getProjFile`
+  local PROJFILE=`getProjFile "${PWD}"`
 
   if [ -z "$PROJFILE" ]; then
-    echoerr "Could not find project file." >&2
+    echoerr "Could not find '.catalyst' config file in any parent directory."
     return 1
   else
     source "$PROJFILE"
@@ -79,8 +79,7 @@ sourceCatalystfile() {
 
 requireCatalystfile() {
   sourceCatalystfile \
-    || (echoerr "Did not find 'Catalystfile'; run 'catalyst project init'." \
-        && exit 1)
+    || echoerrandexit "Run 'catalyst project init' from project root." 1
 }
 
 yesno() {
