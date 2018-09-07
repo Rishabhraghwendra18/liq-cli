@@ -11,14 +11,21 @@ work-merge() {
   sourceCatalystfile
 
   git diff-index --quiet HEAD -- \
-    || ( echoerr 'Currint working branch has uncommitted changes. Please resolve before merging.' \
-         && exit 1 )
+    || echoerrandexit 'Currint working branch has uncommitted changes. Please resolve before merging.' 1
 
   local WORKBRANCH=`git branch | (grep '*' || true) | awk '{print $2}'`
   if [ $WORKBRANCH == 'master' ]; then
     echoerr "Can't 'merge work' from master branch. Switch to workbranch with 'git checkout'." >&2
     return
   fi
+
+  local INS_COUNT, DEL_COUNT
+  for i in `git diff --shortstat HEAD^ HEAD | egrep -Eio -e '\d+ insertions|\d+ deletions' | awk '{print $1}'`; do
+    if [[ -z "$INS_COUNT" ]]; then
+      INS_COUNT="${i}"
+    else DEL_COUNT="${i}"; fi
+  done
+  local DIFF_COUNT=$(( $INS_COUNT - $DEL_COUNT ))
 
   local PUSH_FAILED=N
   # in case the current working dir does not exist in master
@@ -32,9 +39,10 @@ work-merge() {
       || (PUSH_FAILED=Y && echoerr "Local merge successful, but there was a problem pushing work to master."))
   # if we have not exited, then the merge was made and we'll attempt to clean up
   # local work branch (even if the push fails)
-  git branch -qd "$WORKBRANCH" \
-   || echoerr "Could not delete '${WORKBRANCH}'. This can happen if the branch was renamed."
+  # git branch -qd "$WORKBRANCH" \
+  # || echoerr "Could not delete '${WORKBRANCH}'. This can happen if the branch was renamed."
   # TODO: provide a reference for checking the merge is present and if safe to delete.
+  echo "Line count change: $DIFF_COUNT"
 }
 
 work-diff-master() {
