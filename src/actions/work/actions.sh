@@ -19,13 +19,11 @@ work-merge() {
     return
   fi
 
-  local INS_COUNT
-  local DEL_COUNT
-  for i in `git diff --shortstat master ${WORKBRANCH} | egrep -Eio -e '\d+ insertion|\d+ deletion' | awk '{print $1}'`; do
-    if [[ -z "$INS_COUNT" ]]; then
-      INS_COUNT="${i}"
-    else DEL_COUNT="${i}"; fi
-  done
+  local SHORT_STAT=`git diff --shortstat master ${WORKBRANCH}`
+  local INS_COUNT=`echo "${SHORT_STAT}" | egrep -Eio -e '\d+ insertion' | awk '{print $1}'`
+  INS_COUNT=${INS_COUNT:-0}
+  local DEL_COUNT=`echo "${SHORT_STAT}" | egrep -Eio -e '\d+ deletion' | awk '{print $1}'`
+  DEL_COUNT=${DEL_COUNT:-0}
   local DIFF_COUNT=$(( $INS_COUNT - $DEL_COUNT ))
 
   local PUSH_FAILED=N
