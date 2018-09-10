@@ -20,6 +20,22 @@ case "$COMPONENT" in
           *)
             exitUnknownAction
         esac;;
+      local)
+        requireCatalystfile
+        case "$ACTION" in
+          start|stop|restart|clear-logs)
+            ${COMPONENT}-${ACTION} "${3:-}";;
+          *) exitUnknownAction
+        esac;;
+      project)
+        case "$ACTION" in
+          deploy|set-billing)
+            sourceCatalystfile
+            ${COMPONENT}-${ACTION} "${3:-}";;
+          init)
+            ${COMPONENT}-${ACTION} "${3:-}";;
+          *) exitUnknownAction
+        esac;;
       sql)
         requireCatalystfile
         if [ ! -f ~/.my.cnf ]; then
@@ -41,22 +57,6 @@ EOF
           *)
             exitUnknownAction
         esac;;
-      local)
-        requireCatalystfile
-        case "$ACTION" in
-          start|stop|restart|clear-logs)
-            ${COMPONENT}-${ACTION} "${3:-}";;
-          *) exitUnknownAction
-        esac;;
-      project)
-        case "$ACTION" in
-          deploy|set-billing)
-            sourceCatalystfile
-            ${COMPONENT}-${ACTION} "${3:-}";;
-          init)
-            ${COMPONENT}-${ACTION} "${3:-}";;
-          *) exitUnknownAction
-        esac;;
       webapp)
         requireCatalystfile
         case "$ACTION" in
@@ -69,7 +69,7 @@ EOF
         esac;;
       work)
         case "$ACTION" in
-          start|merge|diff-master|ignore-rest)
+          edit|start|merge|diff-master|ignore-rest)
             ${COMPONENT}-${ACTION} "${3:-}";;
           *) exitUnknownAction
         esac;;
