@@ -1,3 +1,11 @@
+work-edit() {
+  requireCatalystfile
+  # TODO: make editor configurable
+  local EDITOR_CMD='atom'
+  local OPEN_PROJ_CMD="${EDITOR_CMD} ."
+  cd "${BASE_DIR}" && ${OPEN_PROJ_CMD}
+}
+
 work-start() {
   local BRANCH_DESC="${1:-}"
   local BRANCH_NAME="`date +%Y-%m-%d`-`whoami`-${BRANCH_DESC}"
