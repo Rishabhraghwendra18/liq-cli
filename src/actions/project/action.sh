@@ -1,17 +1,25 @@
 project-init_git_setup() {
   local CURR_ORIGIN=`git config --get remote.origin.url || true`
   if [[ -z "$CURR_ORIGIN" ]]; then
-    if [[ -z "$ORIGIN_URL" ]]; then
-      read -p 'Origin URL: ' ORIGIN_URL
+    if [[ -z "${ORIGIN_URL:-}" ]]; then
+      echo
+      echo "You can set up the remote origin now, if not already done, which will be cloned into"
+      echo "the current directory if it is empty. Otherwise, the current directory will be"
+      echo "initialized as a git repo if not already done, and the remote origin added if an "
+      echo "origin URL provided."
+      read -p 'git origin URL: ' ORIGIN_URL
     fi
 
     local HAS_FILES=`ls "${BASE_DIR}" | wc -w`
     if [[ -n "$ORIGIN_URL" ]] && (( $HAS_FILES == 0 )); then
       git clone -q "$ORIGIN_URL" "${BASE_DIR}" && echo "Cloned '$ORIGIN_URL' into '${BASE_DIR}'."
-    elif [[ -n "$ORIGIN_URL" ]] && (( $HAS_FILES != 0 )); then
-      get remote add origin "$ORIGIN_URL"
-    elif [[ -z "$ORIGIN_URL" ]] && [[ ! -d "${BASE_DIR}/.git" ]]; then
-      git init "${BASE_DIR}"
+    else
+      if [[ ! -d "${BASE_DIR}/.git" ]]; then
+        git init "${BASE_DIR}"
+      fi
+      if [[ -n "$ORIGIN_URL" ]]; then
+        get remote add origin "$ORIGIN_URL"
+      fi
     fi
   fi
 
