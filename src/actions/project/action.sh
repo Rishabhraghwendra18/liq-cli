@@ -35,6 +35,7 @@ project-init() {
   else
     BASE_DIR="$PWD"
   fi
+  # TODO: verify that the parent directory is a workspace?
 
   project-init_git_setup
 

@@ -8,7 +8,7 @@ _catalyst()
     case "${prev}" in
       catalyst)
         global_actions="help"
-        components="go local project sql webapp work"
+        components="go local project sql webapp work workspace"
         opts="${global_actions} ${components}";;
       go)
         opts="configure build get-deps start stop view-log";;
@@ -22,6 +22,8 @@ _catalyst()
         opts="configure audit build start stop view-log";;
       work)
         opts="edit start merge diff-master ignore-rest";;
+      workspace)
+        opts="init branch stash merge diff-master";;
       *)
       ;;
     esac

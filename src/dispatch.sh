@@ -5,7 +5,7 @@ case "$COMPONENT" in
   # global actions
   help)
     global-help "${2:-}";;
-  # components and actions
+  # components and actionsprojct
   *)
     ACTION="${2:-}"
     case "$COMPONENT" in
@@ -69,7 +69,16 @@ EOF
         esac;;
       work)
         case "$ACTION" in
-          edit|start|merge|diff-master|ignore-rest)
+          report|edit|start|merge|diff-master|ignore-rest)
+            ${COMPONENT}-${ACTION} "${3:-}";;
+          *) exitUnknownAction
+        esac;;
+      workspace)
+        case "$ACTION" in
+          report|branch|stash|merge|diff-master) # TODO: go ahead and implement 'ignore-rest'
+            requireWorkspaceConfig
+            ${COMPONENT}-${ACTION} "${3:-}";;
+          init)
             ${COMPONENT}-${ACTION} "${3:-}";;
           *) exitUnknownAction
         esac;;

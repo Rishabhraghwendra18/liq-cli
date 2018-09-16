@@ -38,11 +38,12 @@ exitUnknownAction() {
   exit 1
 }
 
-getProjFile() {
+sourceFile() {
   local SEARCH_DIR="${1}"
+  local FILE_NAME="${2}"
   local PROJFILE
-  while [[ $(cd "$SEARCH_DIR"; echo $PWD) != "/" ]]; do
-    PROJFILE=`find -L "$SEARCH_DIR" -maxdepth 1 -mindepth 1 -name ".catalyst" | grep .catalyst || true`
+  while SEARCH_DIR="$(cd "$SEARCH_DIR"; echo $PWD)" && [[ "${SEARCH_DIR}" != "/" ]]; do
+    PROJFILE=`find -L "$SEARCH_DIR" -maxdepth 1 -mindepth 1 -name "${FILE_NAME}" | grep "${FILE_NAME}" || true`
     if [ -z "$PROJFILE" ]; then
       SEARCH_DIR="$SEARCH_DIR/.."
     else
@@ -50,14 +51,8 @@ getProjFile() {
     fi
   done
 
-  echo "$PROJFILE"
-}
-
-sourceCatalystfile() {
-  local PROJFILE=`getProjFile "${PWD}"`
-
   if [ -z "$PROJFILE" ]; then
-    echoerr "Could not find '.catalyst' config file in any parent directory."
+    echoerr "Could not find '${FILE_NAME}' config file in any parent directory."
     return 1
   else
     source "$PROJFILE"
@@ -66,9 +61,24 @@ sourceCatalystfile() {
   fi
 }
 
+sourceCatalystfile() {
+  sourceFile "${PWD}" '.catalyst'
+  return $? # TODO: is this how this works in bash?
+}
+
 requireCatalystfile() {
   sourceCatalystfile \
     || echoerrandexit "Run 'catalyst project init' from project root." 1
+}
+
+sourceWorkspaceConfig() {
+  sourceFile "${PWD}" "${_WORKSPACE_CONFIG}"
+  return $? # TODO: is this how this works in bash?
+}
+
+requireWorkspaceConfig() {
+  sourceWorkspaceConfig \
+    || echoerrandexit "Run 'catalyst workspace init' from workspace root." 1
 }
 
 yesno() {
@@ -132,11 +142,12 @@ requireArgs() {
   local I=1
   while (( $I <= $COUNT )); do
     if [[ -z ${!I:-} ]]; then
-      if [ -z $ACTION ]; then
+      if [[ -z $ACTION ]]; then
         echoerr "Global action '$COMPONENT' requires $COUNT additional arguments."
       else
         echoerr "'$COMPONENT $ACTION' requires $COUNT additional arguments."
       fi
+      # TODO: as 'requireArgs' this should straight up exit.
       return 1
     fi
     I=$(( I + 1 ))
@@ -158,4 +169,10 @@ requireGlobals() {
   done
 
   return 0
+}
+
+branchName() {
+  local BRANCH_DESC="${1:-}"
+  requireArgs "$BRANCH_DESC" || exit $?
+  "`date +%Y-%m-%d`-`whoami`-${BRANCH_DESC}"
 }

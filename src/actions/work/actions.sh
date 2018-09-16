@@ -1,3 +1,39 @@
+work-report() {
+  local BRANCH_NAME
+  statusReport() {
+    local COUNT="$1"
+    local DESC="$2"
+    if (( $COUNT > 0 )); then
+      echo "$1 files $2."
+    fi
+  }
+
+  requireCatalystfile
+  (cd "${BASE_DIR}"
+   echo
+   echo "${green}"`basename "$PWD"`; tput sgr0
+   BRANCH_NAME=`git rev-parse --abbrev-ref HEAD 2> /dev/null || echo ''`
+   if [[ $BRANCH_NAME == "HEAD" ]]; then
+     echo "${red}NO WORKING BRANCH"
+  else
+    echo "On branch: ${green}${BRANCH_NAME}"
+  fi
+  tput sgr0
+  statusReport `git status --porcelain | grep '^ M' | wc -l || true` 'modified'
+  statusReport `git status --porcelain | grep '^R ' | wc -l || true` 'renamed'
+  statusReport `git status --porcelain | grep '^RM' | wc -l || true` 'renamed and modifed'
+  statusReport `git status --porcelain | grep '^D ' | wc -l || true` 'deleted'
+  statusReport `git status --porcelain | grep '^ D' | wc -l || true` 'missing'
+  statusReport `git status --porcelain | grep '^??' | wc -l || true` 'untracked'
+  local TOTAL_COUNT=`git status --porcelain | wc -l | xargs || true`
+  if (( $TOTAL_COUNT > 0 )); then
+    echo -e "------------\n$TOTAL_COUNT total"
+  fi
+ )
+
+  tput sgr0 # TODO: put this in the exit trap, too, I think.
+}
+
 work-edit() {
   requireCatalystfile
   # TODO: make editor configurable
@@ -8,7 +44,7 @@ work-edit() {
 
 work-start() {
   local BRANCH_DESC="${1:-}"
-  local BRANCH_NAME="`date +%Y-%m-%d`-`whoami`-${BRANCH_DESC}"
+  local BRANCH_NAME=`branchName "${BRANCH_DESC}"`
   (requireArgs "${BRANCH_DESC}" \
    && git checkout -qb "${BRANCH_NAME}" \
    && echo "Now working on branch '${BRANCH_NAME}'.") \
