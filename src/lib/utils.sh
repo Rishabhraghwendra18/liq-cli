@@ -174,5 +174,5 @@ requireGlobals() {
 branchName() {
   local BRANCH_DESC="${1:-}"
   requireArgs "$BRANCH_DESC" || exit $?
-  "`date +%Y-%m-%d`-`whoami`-${BRANCH_DESC}"
+  echo `date +%Y-%m-%d`-`whoami`-"${BRANCH_DESC}"
 }

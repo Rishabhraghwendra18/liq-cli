@@ -64,9 +64,9 @@ work-merge() {
   fi
 
   local SHORT_STAT=`git diff --shortstat master ${WORKBRANCH}`
-  local INS_COUNT=`echo "${SHORT_STAT}" | egrep -Eio -e '\d+ insertion' | awk '{print $1}'`
+  local INS_COUNT=`echo "${SHORT_STAT}" | egrep -Eio -e '\d+ insertion' | awk '{print $1}' || true`
   INS_COUNT=${INS_COUNT:-0}
-  local DEL_COUNT=`echo "${SHORT_STAT}" | egrep -Eio -e '\d+ deletion' | awk '{print $1}'`
+  local DEL_COUNT=`echo "${SHORT_STAT}" | egrep -Eio -e '\d+ deletion' | awk '{print $1}' || true`
   DEL_COUNT=${DEL_COUNT:-0}
   local DIFF_COUNT=$(( $INS_COUNT - $DEL_COUNT ))
 

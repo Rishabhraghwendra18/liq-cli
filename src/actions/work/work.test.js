@@ -5,8 +5,7 @@ const execOpts = {
   silent: true,
 }
 
-const expectedWorkUsage = expect.stringMatching(new RegExp(`Valid work actions are:\\s+
-start <desc> : creates work branch and switches to it[.\\s]+`, 'm'))
+const expectedWorkUsage = expect.stringMatching(new RegExp(`Valid work actions are:\\s+`))
 
 test('no action results in error and work usage', () => {
   console.error = jest.fn() // supresses err echo from shelljs
@@ -45,8 +44,8 @@ beforeAll(() => {
   shell.exec(`cd ${testCheckout} && ${initCommand}`)
 })
 afterAll(() => {
-  shell.rm('-rf', testCheckout)
-  shell.rm('-rf', testOrigin)
+  //shell.rm('-rf', testCheckout)
+  //shell.rm('-rf', testOrigin)
 })
 
 test("'work start' should require additional arguments", () => {
@@ -77,7 +76,8 @@ test("'work merge' results merge, push, and deleting branch", () => {
   shell.exec(`echo "hey" > ${testCheckout}/foo.txt`)
   shell.exec(`cd ${testCheckout} && git add foo.txt && git commit -m 'test file'`)
   const result = shell.exec(`cd ${testCheckout} && catalyst work merge`)
-  const expectedOutput = expect.stringMatching(new RegExp(`^Work merged and pushed to origin.[\\s\\n]*$`))
+  // TODO: test the linecount
+  const expectedOutput = expect.stringMatching(new RegExp(`^Work merged and pushed to origin.`))
 
   expect(result.stdout).toEqual(expectedOutput)
   expect(result.stderr).toEqual('')
