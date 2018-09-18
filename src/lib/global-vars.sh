@@ -1,6 +1,7 @@
 # Global variables.
 SOURCE_DIR="$SOURCE_DIR"
 BASE_DIR=''
+WORKSPACE_DIR=''
 
 COMPONENT=''
 ACTION=''
@@ -14,6 +15,8 @@ PROJECT_ID=''
 # Global constants.
 
 _PROJECT_CONFIG='.catalyst-project' #TODO: current file '.catalyst' and the code doesn't make reference to this constant; convert that to 'catalyst-project'
-_WORKSPACE_CONFIG='.catalyst-workspace'
+_PROJECT_PUB_CONFIG='.catalyst-pub'
+_WORKSPACE_CONFIG='.catalyst-workspace' #TODO: move under _WORKSPACE_DB
+_WORKSPACE_DB='.catalyst'
 _ORG_ID_URL='https://console.cloud.google.com/iam-admin/settings'
 _BILLING_ACCT_URL='https://console.cloud.google.com/billing?folder=&organizationId='

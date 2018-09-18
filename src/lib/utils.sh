@@ -137,6 +137,33 @@ updateCatalystFile() {
   fi
 }
 
+updateProjectPubConfig() {
+  PROJECT_DIR="$BASE_DIR"
+  requireWorkspaceConfig
+  WORKSPACE_DIR="$BASE_DIR"
+  ensureWorkspaceDb
+  local SUPPRESS_MSG="${1:-}"
+  echo "PROJECT_HOME='$PROJECT_HOME" > "$PROJECT_DIR/$_PROJECT_PUB_CONFIG'"
+  for VAR in PROJECT_MIRRORS; do
+    if [[ -n "${!VAR:-}" ]]; then
+      echo "$VAR='${!VAR}'" >> "$PROJECT_DIR/$_PROJECT_PUB_CONFIG"
+    fi
+  done
+
+  local PROJECT_NAME=`basename $PROJECT_DIR`
+  cp "$PROJECT_DIR/$_PROJECT_PUB_CONFIG" "$BASE_DIR/$_WORKSPACE_DB/projects/$PROJECT_NAME"
+  if [[ "$SUPPRESS_MSG" != 'suppress-msg' ]]; then
+    echo "Updated '$PROJECT_DIR/$_PROJECT_PUB_CONFIG' and '$BASE_DIR/projects/$PROJECT_NAME'."
+  fi
+}
+
+# Sets up Workspace DB directory structure.
+ensureWorkspaceDb() {
+  cd "$WORKSPACE_DIR"
+  mkdir -p "${_WORKSPACE_DB}"
+  mkdir -p "${_WORKSPACE_DB}"/projects
+}
+
 requireArgs() {
   local COUNT=$#
   local I=1
