@@ -29,10 +29,10 @@ case "$COMPONENT" in
         esac;;
       project)
         case "$ACTION" in
-          deploy|set-billing)
+          deploy|add-mirror|set-billing)
             sourceCatalystfile
             ${COMPONENT}-${ACTION} "${3:-}";;
-          init)
+          init|import)
             ${COMPONENT}-${ACTION} "${3:-}";;
           *) exitUnknownAction
         esac;;

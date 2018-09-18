@@ -23,7 +23,8 @@ project-init_git_setup() {
     fi
   fi
 
-  addLineIfNotPresentInFile "${BASE_DIR}/.gitignore" '.catalyst'
+  addLineIfNotPresentInFile "${BASE_DIR}/.gitignore" '.catalyst' # TODO: change to _PROJECT_CONFIG
+  addLineIfNotPresentInFile "${BASE_DIR}/.gitignore" "$_PROJECT_PUB_CONFIG"
 }
 
 project-init() {
@@ -73,6 +74,62 @@ project-init() {
     yesno "Have you set up billing for this account yet? (Y\n) " Y handleBilling handleNoBilling
   fi
   updateCatalystFile
+}
+
+project-import() {
+  local PROJECT_URL="${1:-}"
+  requireArgs "$PROJECT_URL" || exit 1
+  requireWorkspaceConfig
+  if [[ -f "${BASE_DIR}/${_WORKSPACE_DB}/projects/${PROJECT_URL}" ]]; then
+    source "${BASE_DIR}/${_WORKSPACE_DB}/projects/${PROJECT_URL}"
+    cd "$BASE_DIR"
+    git clone "${PROJECT_HOME}"
+    PROJECT_MIRRORS=${PROJECT_MIRRORS:-}
+    if [[ -n "$PROJECT_MIRRORS" ]]; then
+      cd "$PROJECT_URL"
+      git remote set-url --add --push origin "${PROJECT_HOME}"
+      for MIRROR in $PROJECT_MIRRORS; do
+        git remote set-url --add --push origin "$MIRROR"
+      done
+    fi
+  else
+    (cd "${BASE_DIR}"
+     git clone "$PROJECT_URL")
+    # TODO: suport a 'project fork' that resets the _PROJECT_PUB_CONFIG file?
+    local PROJECT_NAME=`basename "${PROJECT_URL}"`
+    if [[ -n `expr "$PROJECT_NAME" : '.*\(\.git\)'` ]]; then
+      PROJECT_NAME=${PROJECT_NAME::${#PROJECT_NAME}-4}
+    fi
+    cd "$BASE_DIR/$PROJECT_NAME"
+    git remote set-url --add --push origin "${PROJECT_URL}"
+    touch .catalyst # TODO: switch to _PROJECT_CONFIG
+    if [[ -f "$_PROJECT_PUB_CONFIG" ]]; then
+      cp "$_PROJECT_PUB_CONFIG" "$BASE_DIR/$_WORKSPACE_DB/projects/"
+    else
+      requireCatalystfile
+      PROJECT_HOME="$PROJECT_URL"
+      updateProjectPubConfig
+      echoerr "Please add the '${_PROJECT_PUB_CONFIG}' file to the git repo."
+    fi
+  fi
+}
+
+project-add-mirror() {
+  local GIT_URL="${1:-}"
+  requireArgs "$GIT_URL" || exit 1
+  source "$BASE_DIR/${_PROJECT_PUB_CONFIG}"
+  PROJECT_MIRRORS=${PROJECT_MIRRORS:-}
+  if [[ $PROJECT_MIRRORS = *$GIT_URL* ]]; then
+    echoerr "Remote URL '$GIT_URL' already in mirror list."
+  else
+    git remote set-url --add --push origin "$GIT_URL"
+    if [[ -z "$PROJECT_MIRRORS" ]]; then
+      PROJECT_MIRRORS=$GIT_URL
+    else
+      PROJECT_MIRRORS="$PROJECT_MIRRORS $GIT_URL"
+    fi
+    updateProjectPubConfig
+  fi
 }
 
 project-set-billing() {
