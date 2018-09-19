@@ -24,7 +24,6 @@ project-init_git_setup() {
   fi
 
   addLineIfNotPresentInFile "${BASE_DIR}/.gitignore" '.catalyst' # TODO: change to _PROJECT_CONFIG
-  addLineIfNotPresentInFile "${BASE_DIR}/.gitignore" "$_PROJECT_PUB_CONFIG"
 }
 
 project-init() {

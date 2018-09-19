@@ -43,7 +43,7 @@ sourceFile() {
   local FILE_NAME="${2}"
   local PROJFILE
   while SEARCH_DIR="$(cd "$SEARCH_DIR"; echo $PWD)" && [[ "${SEARCH_DIR}" != "/" ]]; do
-    PROJFILE=`find -L "$SEARCH_DIR" -maxdepth 1 -mindepth 1 -name "${FILE_NAME}" | grep "${FILE_NAME}" || true`
+    PROJFILE=`find -L "$SEARCH_DIR" -maxdepth 1 -mindepth 1 -name "${FILE_NAME}" -type f | grep "${FILE_NAME}" || true`
     if [ -z "$PROJFILE" ]; then
       SEARCH_DIR="$SEARCH_DIR/.."
     else
