@@ -27,23 +27,20 @@ test("'help work' prints work usage", () => {
   expect(result.code).toBe(0)
 })
 
-const testCheckout = `/tmp/catalyst-test-checkout-${testing.randomHex}`
-const testOrigin = `/tmp/catalyst-test-origin-${testing.randomHex}`
+const testCheckout = `/tmp/catalyst-test-work-checkout-${testing.randomHex}`
+const testOrigin = `/tmp/catalyst-test-work-origin-${testing.randomHex}`
 
-let gitSetupResults
 beforeAll(() => {
   // TODO: reuse the checkout from 'project.test.sh'?
   shell.mkdir(testOrigin)
+  // TODO: use 'project init'... better yet, once we combine 'work' with 'project', this is folded into a test
   shell.exec(`cd ${testOrigin} && git clone --bare ${testing.selfOriginUrl} .`)
   const initCommand =
     `catalyst ORIGIN_URL="file://${testOrigin}" ORGANIZATION_ID=1234 BILLING_ACCOUNT_ID=4321 project init`
   shell.mkdir(testCheckout)
   shell.exec(`cd ${testCheckout} && ${initCommand}`)
 })
-afterAll(() => {
-  //shell.rm('-rf', testCheckout)
-  //shell.rm('-rf', testOrigin)
-})
+afterAll(testing.cleanupDirs(testCheckout, testOrigin))
 
 test("'work start' should require additional arguments", () => {
   const result = shell.exec(`cd ${testCheckout} && catalyst work start`)

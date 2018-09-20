@@ -27,28 +27,49 @@ test("'help work' prints project usage", () => {
   expect(result.code).toBe(0)
 })
 
-const testCheckout = `/tmp/catalyst-test-project-checkout-${testing.randomHex}`
+const testWorkspaceDir = `/tmp/catalyst-test-project-workspace-${testing.randomHex}`
+const testProjectDir = `${testWorkspaceDir}/catalyst-cli`
 
-let gitSetupResults
 beforeAll(() => {
-  shell.mkdir(testCheckout)
+  shell.mkdir(testWorkspaceDir)
 })
-afterAll(() => {
-  shell.rm('-rf', testCheckout)
+// afterAll(testing.cleanupDirs(testWorkspaceDir))
+
+test(`'setup workspace'`, () => {
+  const result = shell.exec(`cd ${testWorkspaceDir} && catalyst workspace init`)
+  expect(result.stdout).toEqual('')
+  expect(result.stderr).toEqual('')
+  expect(result.code).toEqual(0)
 })
 
-test('project init should clone remote git dir', () => {
+test("'project init' should clone remote git dir", () => {
   const initCommand =
     `catalyst ORIGIN_URL="${testing.selfOriginUrl}" ORGANIZATION_ID=1234 BILLING_ACCOUNT_ID=4321 project init`
   const expectedOutput = expect.stringMatching(
-    new RegExp(`^Cloned 'http[^']+' into '${testCheckout}'.[\s\n]*Updated .+.catalyst'\.[\s\n]*$`))
+    new RegExp(`^Cloned 'http[^']+' into '${testProjectDir}'.[\s\n]*Updated .+.catalyst'\.[\s\n]*$`))
   const result =
-    shell.exec(`cd ${testCheckout} && ${initCommand}`)
+    shell.exec(`cd ${testProjectDir} && ${initCommand}`)
 
   expect(result.stdout).toEqual(expectedOutput)
   expect(result.stderr).toEqual('')
   expect(result.code).toEqual(0)
   const checkFiles = ['README.md', 'dev_notes.md', '.git', '.catalyst'].map((i) =>
-    `${testCheckout}/${i}`)
+    `${testProjectDir}/${i}`)
   expect(shell.ls('-d', checkFiles)).toHaveLength(4)
+})
+
+test(`'project close' should do nothing and emit warning if there are untracked files.`, () => {
+  shell.exec(`cd ${testProjectDir} && touch foobar`, execOpts)
+
+  let result = shell.exec(`cd ${testProjectDir} && catalyst project close`)
+  expect(result.stdout).toEqual('')
+  expect(result.stderr).toEqual('')
+  expect(result.code).toEqual(1)
+
+  result = shell.exec(`cd ${testWorkspaceDir} && catalyst project close catalyst-cli`)
+  expect(result.stdout).toEqual('')
+  expect(result.stderr).toEqual('')
+  expect(result.code).toEqual(1)
+
+  shell.exec(`cd ${testProjectDir} && rm foobar`, execOpts)
 })
