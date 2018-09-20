@@ -1,3 +1,4 @@
+import * as testing from '../../lib/testing'
 const shell = require('shelljs')
 
 const execOpts = {
@@ -26,11 +27,7 @@ test("'help work' prints project usage", () => {
   expect(result.code).toBe(0)
 })
 
-const randomHex = Math.floor((1 + Math.random()) * 0x1000000000000)
-  .toString(16)
-  .substring(1)
-const testCheckout = `/tmp/catalyst-test-checkout-${randomHex}`
-const testOriginUrl = 'https://github.com/Liquid-Labs/catalyst-cli.git'
+const testCheckout = `/tmp/catalyst-test-project-checkout-${testing.randomHex}`
 
 let gitSetupResults
 beforeAll(() => {
@@ -42,7 +39,7 @@ afterAll(() => {
 
 test('project init should clone remote git dir', () => {
   const initCommand =
-    `catalyst ORIGIN_URL="${testOriginUrl}" ORGANIZATION_ID=1234 BILLING_ACCOUNT_ID=4321 project init`
+    `catalyst ORIGIN_URL="${testing.selfOriginUrl}" ORGANIZATION_ID=1234 BILLING_ACCOUNT_ID=4321 project init`
   const expectedOutput = expect.stringMatching(
     new RegExp(`^Cloned 'http[^']+' into '${testCheckout}'.[\s\n]*Updated .+.catalyst'\.[\s\n]*$`))
   const result =

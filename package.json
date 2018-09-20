@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "install": "./install.sh",
-    "test": "jest"
+    "pretest": "babel --source-maps inline src -d test-staging",
+    "test": "jest ./test-staging"
   },
   "author": "Zane Rockenbaugh <zane@liquid-labs.com>",
   "license": "ISC",
@@ -14,6 +15,9 @@
     "catalyst": "./src/cli.sh"
   },
   "devDependencies": {
+    "@babel/cli": "^7.1.0",
+    "@babel/core": "^7.1.0",
+    "@babel/preset-env": "^7.1.0",
     "jest": "^23.5.0",
     "shelljs": "^0.8.2"
   }

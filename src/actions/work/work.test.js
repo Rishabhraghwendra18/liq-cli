@@ -1,3 +1,4 @@
+import * as testing from '../../lib/testing'
 const shell = require('shelljs')
 
 const execOpts = {
@@ -26,18 +27,14 @@ test("'help work' prints work usage", () => {
   expect(result.code).toBe(0)
 })
 
-const randomHex = Math.floor((1 + Math.random()) * 0x1000000000000)
-  .toString(16)
-  .substring(1)
-const testCheckout = `/tmp/catalyst-test-checkout-${randomHex}`
-const testOrigin = `/tmp/catalyst-test-origin-${randomHex}`
-const testOriginUrl = 'https://github.com/Liquid-Labs/catalyst-cli.git'
+const testCheckout = `/tmp/catalyst-test-checkout-${testing.randomHex}`
+const testOrigin = `/tmp/catalyst-test-origin-${testing.randomHex}`
 
 let gitSetupResults
 beforeAll(() => {
   // TODO: reuse the checkout from 'project.test.sh'?
   shell.mkdir(testOrigin)
-  shell.exec(`cd ${testOrigin} && git clone --bare ${testOriginUrl} .`)
+  shell.exec(`cd ${testOrigin} && git clone --bare ${testing.selfOriginUrl} .`)
   const initCommand =
     `catalyst ORIGIN_URL="file://${testOrigin}" ORGANIZATION_ID=1234 BILLING_ACCOUNT_ID=4321 project init`
   shell.mkdir(testCheckout)
