@@ -14,16 +14,16 @@ test('no action results in error and project usage', () => {
   const expectedErr = expect.stringMatching(
     new RegExp(`Must specify action.\\s*`))
 
-  expect(result.stdout).toEqual(expectedProjectUsage)
   expect(result.stderr).toEqual(expectedErr)
+  expect(result.stdout).toEqual(expectedProjectUsage)
   expect(result.code).toBe(1)
 })
 
 test("'help work' prints project usage", () => {
   const result = shell.exec(`catalyst help project`, execOpts)
 
-  expect(result.stdout).toEqual(expectedProjectUsage)
   expect(result.stderr).toEqual('')
+  expect(result.stdout).toEqual(expectedProjectUsage)
   expect(result.code).toBe(0)
 })
 
@@ -37,38 +37,38 @@ beforeAll(() => {
 
 test(`'setup workspace'`, () => {
   const result = shell.exec(`cd ${testWorkspaceDir} && catalyst workspace init`)
-  expect(result.stdout).toEqual('')
   expect(result.stderr).toEqual('')
+  expect(result.stdout).toEqual('')
   expect(result.code).toEqual(0)
 })
 
-test("'project init' should clone remote git dir", () => {
-  const initCommand =
-    `catalyst ORIGIN_URL="${testing.selfOriginUrl}" ORGANIZATION_ID=1234 BILLING_ACCOUNT_ID=4321 project init`
+test("'project import' should clone remote git into workspace", () => {
+  const importCommand = `catalyst project import "${testing.selfOriginUrl}"`
   const expectedOutput = expect.stringMatching(
-    new RegExp(`^Cloned 'http[^']+' into '${testProjectDir}'.[\s\n]*Updated .+.catalyst'\.[\s\n]*$`))
-  const result =
-    shell.exec(`cd ${testProjectDir} && ${initCommand}`)
+    new RegExp(`^'catalyst-cli' imported into workspace.[\s\n]*$`))
+  const result = shell.exec(`cd ${testWorkspaceDir} && ${importCommand}`)
 
-  expect(result.stdout).toEqual(expectedOutput)
   expect(result.stderr).toEqual('')
+  expect(result.stdout).toEqual(expectedOutput)
   expect(result.code).toEqual(0)
-  const checkFiles = ['README.md', 'dev_notes.md', '.git', '.catalyst'].map((i) =>
+  const checkFiles = ['README.md', 'dev_notes.md', '.git', '.catalyst-pub'].map((i) =>
     `${testProjectDir}/${i}`)
   expect(shell.ls('-d', checkFiles)).toHaveLength(4)
 })
 
 test(`'project close' should do nothing and emit warning if there are untracked files.`, () => {
   shell.exec(`cd ${testProjectDir} && touch foobar`, execOpts)
+  // TODO: having trouble matching end to end because of the non-printing coloration characters.
+  const expectedErr = /Found untracked files./
 
   let result = shell.exec(`cd ${testProjectDir} && catalyst project close`)
+  expect(result.stderr).toMatch(expectedErr)
   expect(result.stdout).toEqual('')
-  expect(result.stderr).toEqual('')
   expect(result.code).toEqual(1)
 
   result = shell.exec(`cd ${testWorkspaceDir} && catalyst project close catalyst-cli`)
+  expect(result.stderr).toMatch(expectedErr)
   expect(result.stdout).toEqual('')
-  expect(result.stderr).toEqual('')
   expect(result.code).toEqual(1)
 
   shell.exec(`cd ${testProjectDir} && rm foobar`, execOpts)

@@ -76,34 +76,46 @@ project-init() {
 }
 
 project-import() {
+  setupMirrors() {
+    local PROJECT_DIR="$1"
+    local PROJECT_HOME="$2"
+    local PROJECT_MIRRORS="$3"
+
+    if [[ -n "$PROJECT_MIRRORS" ]]; then
+      cd "$PROJECT_DIR"
+      git remote set-url --add --push origin "${PROJECT_HOME}"
+      for MIRROR in $PROJECT_MIRRORS; do
+        git remote set-url --add --push origin "$MIRROR"
+      done
+    fi
+  }
+
   local PROJECT_URL="${1:-}"
   requireArgs "$PROJECT_URL" || exit 1
   requireWorkspaceConfig
   if [[ -f "${BASE_DIR}/${_WORKSPACE_DB}/projects/${PROJECT_URL}" ]]; then
     source "${BASE_DIR}/${_WORKSPACE_DB}/projects/${PROJECT_URL}"
     cd "$BASE_DIR"
-    git clone "${PROJECT_HOME}"
-    PROJECT_MIRRORS=${PROJECT_MIRRORS:-}
-    if [[ -n "$PROJECT_MIRRORS" ]]; then
-      cd "$PROJECT_URL"
-      git remote set-url --add --push origin "${PROJECT_HOME}"
-      for MIRROR in $PROJECT_MIRRORS; do
-        git remote set-url --add --push origin "$MIRROR"
-      done
-    fi
+    git clone --quiet "${PROJECT_HOME}" && echo "'$ROJECT_URL' imported into workspace."
+    setupMirrors "$PROJECT_URL" "$PROJECT_HOME" "${PROJECT_MIRRORS:-}"
   else
-    (cd "${BASE_DIR}"
-     git clone "$PROJECT_URL")
-    # TODO: suport a 'project fork' that resets the _PROJECT_PUB_CONFIG file?
     local PROJECT_NAME=`basename "${PROJECT_URL}"`
     if [[ -n `expr "$PROJECT_NAME" : '.*\(\.git\)'` ]]; then
       PROJECT_NAME=${PROJECT_NAME::${#PROJECT_NAME}-4}
     fi
-    cd "$BASE_DIR/$PROJECT_NAME"
+
+    (cd "${BASE_DIR}"
+     git clone --quiet "$PROJECT_URL" && echo "'${PROJECT_NAME}' imported into workspace.")
+    # TODO: suport a 'project fork' that resets the _PROJECT_PUB_CONFIG file?
+
+    local PROJECT_DIR="$BASE_DIR/$PROJECT_NAME"
+    cd "$PROJECT_DIR"
     git remote set-url --add --push origin "${PROJECT_URL}"
     touch .catalyst # TODO: switch to _PROJECT_CONFIG
     if [[ -f "$_PROJECT_PUB_CONFIG" ]]; then
       cp "$_PROJECT_PUB_CONFIG" "$BASE_DIR/$_WORKSPACE_DB/projects/"
+      source "$_PROJECT_PUB_CONFIG"
+      setupMirrors "$PROJECT_DIR" "$PROJECT_URL" "${PROJECT_MIRRORS:-}"
     else
       requireCatalystfile
       PROJECT_HOME="$PROJECT_URL"
@@ -129,17 +141,21 @@ project-close() {
     # Is everything comitted?
     # credit: https://stackoverflow.com/a/8830922/929494
     if git diff --quiet && git diff --cached --quiet; then
-      if [[ `git rev-parse --verify master` == `git rev-parse --verify origin/master` ]]; then
-        cd "$BASE_DIR"
-        rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
+      if (( `git status --porcelain 2>/dev/null| grep "^??" | wc -l` == 0 )); then
+        if [[ `git rev-parse --verify master` == `git rev-parse --verify origin/master` ]]; then
+          cd "$BASE_DIR"
+          rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
+        else
+          echoerr "Not all changes have been pushed to master."
+        fi
       else
-        echoerr "Not all changes have been pushed to master."
+        echoerrandexit "Found untracked files." 1
       fi
     else
-      echoerr "Found uncommited changes."
+      echoerrandexit "Found uncommited changes." 1
     fi
   else
-    echoerr "Did not find project '$PROJECT_NAME'"
+    echoerrandexit "Did not find project '$PROJECT_NAME'" 1
   fi
 }
 
