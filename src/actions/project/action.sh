@@ -141,18 +141,18 @@ project-close() {
     # Is everything comitted?
     # credit: https://stackoverflow.com/a/8830922/929494
     if git diff --quiet && git diff --cached --quiet; then
-      if (( `git status --porcelain 2>/dev/null| grep "^??" | wc -l` == 0 )); then
+      if (( $(git status --porcelain 2>/dev/null| grep "^??" || true | wc -l) == 0 )); then
         if [[ `git rev-parse --verify master` == `git rev-parse --verify origin/master` ]]; then
           cd "$BASE_DIR"
           rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
         else
-          echoerr "Not all changes have been pushed to master."
+          echoerrandexit "Not all changes have been pushed to master." 1
         fi
       else
         echoerrandexit "Found untracked files." 1
       fi
     else
-      echoerrandexit "Found uncommited changes." 1
+      echoerrandexit "Found uncommitted changes." 1
     fi
   else
     echoerrandexit "Did not find project '$PROJECT_NAME'" 1

@@ -42,8 +42,8 @@ test(`'setup workspace'`, () => {
   expect(result.code).toEqual(0)
 })
 
+const importCommand = `catalyst project import "${testing.selfOriginUrl}"`
 test("'project import' should clone remote git into workspace", () => {
-  const importCommand = `catalyst project import "${testing.selfOriginUrl}"`
   const expectedOutput = expect.stringMatching(
     new RegExp(`^'catalyst-cli' imported into workspace.[\s\n]*$`))
   const result = shell.exec(`cd ${testWorkspaceDir} && ${importCommand}`)
@@ -56,20 +56,55 @@ test("'project import' should clone remote git into workspace", () => {
   expect(shell.ls('-d', checkFiles)).toHaveLength(4)
 })
 
-test(`'project close' should do nothing and emit warning if there are untracked files.`, () => {
-  shell.exec(`cd ${testProjectDir} && touch foobar`, execOpts)
-  // TODO: having trouble matching end to end because of the non-printing coloration characters.
-  const expectedErr = /Found untracked files./
+const closeFailureTests = [
+  { desc: `'project close' should do nothing and emit warning if there are untracked files.`,
+    setup: () => shell.exec(`cd ${testProjectDir} && touch foobar`, execOpts),
+    // TODO: having trouble matching end to end because of the non-printing coloration characters.
+    errMatch: /Found untracked files./,
+    cleanup: () => shell.exec(`cd ${testProjectDir} && rm foobar`, execOpts) },
+  { desc: `'project close' should do nothing and emit warning if there are uncommitted changes.`,
+    setup: () => shell.exec(`cd ${testProjectDir} && echo 'hey' >> README.md`, execOpts),
+    errMatch: /Found uncommitted changes./,
+    cleanup: () => shell.exec(`cd ${testProjectDir} && git checkout README.md`, execOpts) },
+  { desc: `'project close' should do nothing and emit warning if there are un-pushed changes.`,
+    setup: () => shell.exec(`cd ${testProjectDir} && echo 'hey' >> README.md && git commit --quiet -am "test commit"`, execOpts),
+    errMatch: /Not all changes have been pushed to master./,
+    cleanup: () => shell.exec(`cd ${testProjectDir} && git reset --hard HEAD^`, execOpts) },
+]
 
-  let result = shell.exec(`cd ${testProjectDir} && catalyst project close`)
-  expect(result.stderr).toMatch(expectedErr)
-  expect(result.stdout).toEqual('')
-  expect(result.code).toEqual(1)
+closeFailureTests.forEach(testConfig => {
+  test(testConfig.desc, () => {
+    console.error = jest.fn() // supresses err echo from shelljs
+    testConfig.setup()
 
-  result = shell.exec(`cd ${testWorkspaceDir} && catalyst project close catalyst-cli`)
-  expect(result.stderr).toMatch(expectedErr)
-  expect(result.stdout).toEqual('')
-  expect(result.code).toEqual(1)
+    let result = shell.exec(`cd ${testProjectDir} && catalyst project close`, execOpts)
+    expect(result.stderr).toMatch(testConfig.errMatch)
+    expect(result.stdout).toEqual('')
+    expect(result.code).toEqual(1)
 
-  shell.exec(`cd ${testProjectDir} && rm foobar`, execOpts)
+    result = shell.exec(`cd ${testWorkspaceDir} && catalyst project close catalyst-cli`, execOpts)
+    expect(result.stderr).toMatch(testConfig.errMatch)
+    expect(result.stdout).toEqual('')
+    expect(result.code).toEqual(1)
+
+    testConfig.cleanup()
+  })
+})
+
+test(`project directory is removed on 'project closed' when no changes present`, () => {
+  console.error = jest.fn() // supresses err echo from shelljs
+  const expectedOutput = /^Removed project 'catalyst-cli'/
+  let result = shell.exec(`cd ${testProjectDir} && catalyst project close`, execOpts)
+  expect(result.stderr).toEqual('')
+  expect(result.stdout).toMatch(expectedOutput)
+  expect(result.code).toEqual(0)
+  expect(shell.ls(testWorkspaceDir)).toHaveLength(0)
+
+  shell.exec(`cd ${testWorkspaceDir} && ${importCommand}`)
+
+  result = shell.exec(`cd ${testWorkspaceDir} && catalyst project close catalyst-cli`, execOpts)
+  expect(result.stderr).toEqual('')
+  expect(result.stdout).toMatch(expectedOutput)
+  expect(result.code).toEqual(0)
+  expect(shell.ls(testWorkspaceDir)).toHaveLength(0)
 })
