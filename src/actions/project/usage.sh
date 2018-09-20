@@ -5,6 +5,7 @@ print_project_usage() {
   fi
   echo "${PREFIX}init : Initializes the current directory as the root for local Catalyst project checkout."
   echo "${PREFIX}import : Imports a Catalyst project by name or from a GIT url."
+  echo "${PREFIX}close : Removes the local workspace copy of the project after checking that all updates have been pushed."
   # TODO: should have 'set-home' for completion. Which would interactively swap home and mirror values as necessary / indicated.
   echo "${PREFIX}add-mirror : Adds a mirror, which will receive 'git push' updates."
   echo "${PREFIX}set-billing : Sets the billing account ID for the project."
