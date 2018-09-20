@@ -113,6 +113,36 @@ project-import() {
   fi
 }
 
+project-close() {
+  local PROJECT_NAME="${1:-}"
+
+    # first figure out what to close
+  if [[ -z "$PROJECT_NAME" ]]; then # try removing the project we're in
+    cd "$BASE_DIR"
+    PROJECT_NAME=`basename $PWD`
+  fi
+  # TODO: confirm this
+  requireWorkspaceConfig
+  cd "$BASE_DIR"
+  if [[ -d "$PROJECT_NAME" ]]; then
+    cd "$PROJECT_NAME"
+    # Is everything comitted?
+    # credit: https://stackoverflow.com/a/8830922/929494
+    if git diff --quiet && git diff --cached --quiet; then
+      if [[ `git rev-parse --verify master` == `git rev-parse --verify origin/master` ]]; then
+        cd "$BASE_DIR"
+        rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
+      else
+        echoerr "Not all changes have been pushed to master."
+      fi
+    else
+      echoerr "Found uncommited changes."
+    fi
+  else
+    echoerr "Did not find project '$PROJECT_NAME'"
+  fi
+}
+
 project-add-mirror() {
   local GIT_URL="${1:-}"
   requireArgs "$GIT_URL" || exit 1
