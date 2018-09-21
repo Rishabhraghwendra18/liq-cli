@@ -1,29 +1,41 @@
 project-init_git_setup() {
-  local CURR_ORIGIN=`git config --get remote.origin.url || true`
-  if [[ -z "$CURR_ORIGIN" ]]; then
+  local ORIGIN_URL=`git config --get remote.origin.url || true`
+  if [[ -z "$ORIGIN_URL" ]]; then
+    local HAS_FILES=`ls -a "${BASE_DIR}" | wc -w`
+    local IS_GIT_REPO=`test -d "${BASE_DIR}"/.git && echo $?`
     if [[ -z "${ORIGIN_URL:-}" ]]; then
-      echo
-      echo "You can set up the remote origin now, if not already done, which will be cloned into"
-      echo "the current directory if it is empty. Otherwise, the current directory will be"
-      echo "initialized as a git repo if not already done, and the remote origin added if an "
-      echo "origin URL provided."
+      # Recal, 'HAS_FILES' is a count, and IS_GIT_REPO==0 == true
+      if (( $HAS_FILES == 0 )) && (( $IS_GIT_REPO == 0 )); then
+        echo "The origin will be cloned, if provided."
+      elif [[ -n "$ORIGIN_URL" ]] && (( $IS_GIT_REPO != 0 )); then
+        echo "The current directory will be initialized as a git repo with the provided origin."
+      else
+        echo "The origin of this existing git repo will be set, if provided."
+      fi
       read -p 'git origin URL: ' ORIGIN_URL
     fi
 
-    local HAS_FILES=`ls "${BASE_DIR}" | wc -w`
-    if [[ -n "$ORIGIN_URL" ]] && (( $HAS_FILES == 0 )); then
+    if [[ -n "$ORIGIN_URL" ]] && (( $HAS_FILES == 0 )) && (( $IS_GIT_REPO != 0 )); then
       git clone -q "$ORIGIN_URL" "${BASE_DIR}" && echo "Cloned '$ORIGIN_URL' into '${BASE_DIR}'."
-    else
-      if [[ ! -d "${BASE_DIR}/.git" ]]; then
-        git init "${BASE_DIR}"
-      fi
-      if [[ -n "$ORIGIN_URL" ]]; then
-        get remote add origin "$ORIGIN_URL"
-      fi
+    elif [[ -n "$ORIGIN_URL" ]] && (( $IS_GIT_REPO != 0 )); then
+      git init "${BASE_DIR}"
+    fi
+    if [[ -n "$ORIGIN_URL" ]]; then
+      git remote add origin "$ORIGIN_URL"
     fi
   fi
 
+  if [[ -d "${BASE_DIR}/.git" ]]; then
+    git remote set-url --add --push origin "${ORIGIN_URL}"
+  fi
   addLineIfNotPresentInFile "${BASE_DIR}/.gitignore" '.catalyst' # TODO: change to _PROJECT_CONFIG
+  if [[ -n "$ORIGIN_URL" ]]; then
+    PROJECT_HOME="$ORIGIN_URL"
+    PROJECT_DIR="${BASE_DIR}"
+    updateProjectPubConfig
+    # TODO: the above overwrites the project BASE_DIR, which we rely on later. See https://github.com/Liquid-Labs/catalyst-cli/issues/2
+    BASE_DIR="$PROJECT_DIR"
+  fi
 }
 
 project-init() {
