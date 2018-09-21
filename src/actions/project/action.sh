@@ -2,12 +2,16 @@ project-init_git_setup() {
   local ORIGIN_URL=`git config --get remote.origin.url || true`
   if [[ -z "$ORIGIN_URL" ]]; then
     local HAS_FILES=`ls -a "${BASE_DIR}" | wc -w`
-    local IS_GIT_REPO=`test -d "${BASE_DIR}"/.git && echo $?`
+    local IS_GIT_REPO
+    if [[ -d "${BASE_DIR}"/.git ]]; then
+      IS_GIT_REPO='true'
+    else
+      IS_GIT_REPO='false'
+    fi
     if [[ -z "${ORIGIN_URL:-}" ]]; then
-      # Recal, 'HAS_FILES' is a count, and IS_GIT_REPO==0 == true
-      if (( $HAS_FILES == 0 )) && (( $IS_GIT_REPO == 0 )); then
+      if (( $HAS_FILES == 0 )) && [[ $IS_GIT_REPO == 'false' ]]; then
         echo "The origin will be cloned, if provided."
-      elif [[ -n "$ORIGIN_URL" ]] && (( $IS_GIT_REPO != 0 )); then
+      elif [[ -n "$ORIGIN_URL" ]] && [[ $IS_GIT_REPO == 'false' ]]; then
         echo "The current directory will be initialized as a git repo with the provided origin."
       else
         echo "The origin of this existing git repo will be set, if provided."
@@ -15,9 +19,9 @@ project-init_git_setup() {
       read -p 'git origin URL: ' ORIGIN_URL
     fi
 
-    if [[ -n "$ORIGIN_URL" ]] && (( $HAS_FILES == 0 )) && (( $IS_GIT_REPO != 0 )); then
+    if [[ -n "$ORIGIN_URL" ]] && (( $HAS_FILES == 0 )) && [[ $IS_GIT_REPO == 'false' ]]; then
       git clone -q "$ORIGIN_URL" "${BASE_DIR}" && echo "Cloned '$ORIGIN_URL' into '${BASE_DIR}'."
-    elif [[ -n "$ORIGIN_URL" ]] && (( $IS_GIT_REPO != 0 )); then
+    elif [[ -n "$ORIGIN_URL" ]] && [[ $IS_GIT_REPO == 'false' ]]; then
       git init "${BASE_DIR}"
     fi
     if [[ -n "$ORIGIN_URL" ]]; then
