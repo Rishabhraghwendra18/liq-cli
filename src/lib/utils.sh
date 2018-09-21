@@ -143,7 +143,7 @@ updateProjectPubConfig() {
   WORKSPACE_DIR="$BASE_DIR"
   ensureWorkspaceDb
   local SUPPRESS_MSG="${1:-}"
-  echo "PROJECT_HOME='$PROJECT_HOME" > "$PROJECT_DIR/$_PROJECT_PUB_CONFIG'"
+  echo "PROJECT_HOME='$PROJECT_HOME'" > "$PROJECT_DIR/$_PROJECT_PUB_CONFIG"
   for VAR in PROJECT_MIRRORS; do
     if [[ -n "${!VAR:-}" ]]; then
       echo "$VAR='${!VAR}'" >> "$PROJECT_DIR/$_PROJECT_PUB_CONFIG"
