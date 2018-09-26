@@ -141,6 +141,27 @@ project-import() {
   fi
 }
 
+project-link() {
+  local LINK_PROJECT="${1:-}"
+  requireArgs "$LINK_PROJECT" || exit 1
+
+  local CURR_PROJECT_DIR="${BASE_DIR}"
+  requireWorkspaceConfig
+  cd "${BASE_DIR}"
+  if [[ ! -d "$LINK_PROJECT" ]]; then
+    echoerrandexit "Did not find project '${LINK_PROJECT}' to link."
+  fi
+  cd "$LINK_PROJECT"
+  local LINK_PACKAGE=`node -e "const fs = require('fs'); const package = JSON.parse(fs.readFileSync('./package.json')); console.log(package.name);"`
+  npm link
+  cd "${CURR_PROJECT_DIR}"
+  # TODO: check that there aren't multiple files
+  local OUR_PACKAGE=`find . -name "package.json" -not -path "*/node_modules/*"`
+  cd `dirname ${OUR_PACKAGE}`
+  npm link "$LINK_PACKAGE"
+  npm install "file:/usr/local/lib/node_modules/${LINK_PACKAGE}"
+}
+
 project-close() {
   local PROJECT_NAME="${1:-}"
 
