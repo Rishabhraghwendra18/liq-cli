@@ -146,20 +146,30 @@ project-link() {
   requireArgs "$LINK_PROJECT" || exit 1
 
   local CURR_PROJECT_DIR="${BASE_DIR}"
+  cd "${CURR_PROJECT_DIR}"
+  # TODO: check that there aren't multiple files
+  local OUR_PACKAGE_DIR=`find . -name "package.json" -not -path "*/node_modules/*"`
+  if [[ -z "$OUR_PACKAGE_DIR" ]]; then
+    echoerrandexit "Did not find 'package.json' in current project"
+  else
+    OUR_PACKAGE_DIR=`dirname "$OUR_PACKAGE_DIR"`
+  fi
+
   requireWorkspaceConfig
-  cd "${BASE_DIR}"
+  cd "${BASE_DIR}" # now workspace base
   if [[ ! -d "$LINK_PROJECT" ]]; then
     echoerrandexit "Did not find project '${LINK_PROJECT}' to link."
   fi
   cd "$LINK_PROJECT"
-  local LINK_PACKAGE=`node -e "const fs = require('fs'); const package = JSON.parse(fs.readFileSync('./package.json')); console.log(package.name);"`
-  npm link
-  cd "${CURR_PROJECT_DIR}"
   # TODO: check that there aren't multiple files
-  local OUR_PACKAGE=`find . -name "package.json" -not -path "*/node_modules/*"`
-  cd `dirname ${OUR_PACKAGE}`
-  npm link "$LINK_PACKAGE"
-  npm install "file:/usr/local/lib/node_modules/${LINK_PACKAGE}"
+  local LINK_PACKAGE=`find . -name "package.json" -not -path "*/node_modules/*"`
+  local LINK_PACKAGE_NAME=`node -e "const fs = require('fs'); const package = JSON.parse(fs.readFileSync('${LINK_PACKAGE}')); console.log(package.name);"`
+  npm link
+
+  cd "$CURR_PROJECT_DIR"
+  cd "$OUR_PACKAGE_DIR"
+  npm link "$LINK_PACKAGE_NAME"
+  npm install "file:/usr/local/lib/node_modules/${LINK_PACKAGE_NAME}"
 }
 
 project-close() {
