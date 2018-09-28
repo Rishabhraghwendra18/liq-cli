@@ -8,4 +8,4 @@ import { testWorkspaceDir, testOriginDir } from './actions/project/project.seqte
 import './actions/work/work.seqtest.js'
 import * as testing from './lib/testing'
 
-// afterAll(testing.cleanupDirs(testWorkspaceDir, testOriginDir))
+afterAll(testing.cleanupDirs(testWorkspaceDir, testOriginDir))
