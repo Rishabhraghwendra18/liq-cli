@@ -1,3 +1,5 @@
+// These tests are designed to be run sequentially and are kicked off by
+// 'seqtests.test.js'.
 import * as testing from '../../lib/testing'
 const shell = require('shelljs')
 
@@ -27,13 +29,16 @@ test("'help work' prints project usage", () => {
   expect(result.code).toBe(0)
 })
 
-const testWorkspaceDir = `/tmp/catalyst-test-project-workspace-${testing.randomHex}`
+export const testWorkspaceDir = `/tmp/catalyst-test-workspace-${testing.randomHex}`
+export const testOriginDir = `/tmp/catalyst-test-gitorigin-${testing.randomHex}`
+export const testCheckoutDir = `${testWorkspaceDir}/test-checkout`
 const testProjectDir = `${testWorkspaceDir}/catalyst-cli`
 
 beforeAll(() => {
   shell.mkdir(testWorkspaceDir)
+  shell.mkdir(testOriginDir)
+  shell.exec(`cd ${testOriginDir} && git clone -q --bare ${testing.selfOriginUrl} .`)
 })
-// afterAll(testing.cleanupDirs(testWorkspaceDir))
 
 test(`'setup workspace'`, () => {
   const result = shell.exec(`cd ${testWorkspaceDir} && catalyst workspace init`)
@@ -107,4 +112,17 @@ test(`project directory is removed on 'project closed' when no changes present`,
   expect(result.stdout).toMatch(expectedOutput)
   expect(result.code).toEqual(0)
   expect(shell.ls(testWorkspaceDir)).toHaveLength(0)
+})
+
+test(`project init in bare directory`, () => {
+  shell.mkdir(testCheckoutDir)
+  const initCommand =
+    `catalyst ORIGIN_URL="file://${testOriginDir}" ORGANIZATION_ID=1234 BILLING_ACCOUNT_ID=4321 project init`
+  const result = shell.exec(`cd ${testCheckoutDir} && ${initCommand}`)
+  expect(result.stderr).toEqual('')
+  expect(result.stdout).toMatch('')
+  expect(result.code).toEqual(0)
+  expect(shell.test('-f', `${testCheckoutDir}/.catalyst`)).toEqual(true)
+  expect(shell.test('-f', `${testCheckoutDir}/.catalyst-pub`)).toEqual(true)
+  shell.exec(`cd ${testCheckoutDir} && git add .catalyst-pub && git commit -qm "added .catalyst-pub"`)
 })

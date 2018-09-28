@@ -12,6 +12,9 @@ ORGANIZATION_ID=''
 BILLING_ACCOUNT_ID=''
 PROJECT_ID=''
 
+# Configurable globals.
+ORIGIN_URL='' # can be set externally to avoid interactive questions on 'project init'
+
 # Global constants.
 
 _PROJECT_CONFIG='.catalyst-project' #TODO: current file '.catalyst' and the code doesn't make reference to this constant; convert that to 'catalyst-project'

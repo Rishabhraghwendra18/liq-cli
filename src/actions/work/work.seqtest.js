@@ -1,4 +1,6 @@
-import * as testing from '../../lib/testing'
+// These tests are designed to be run sequentially and are kicked off by
+// 'seqtests.test.js'.
+import { testCheckoutDir } from '../project/project.seqtest'
 const shell = require('shelljs')
 
 const execOpts = {
@@ -27,23 +29,8 @@ test("'help work' prints work usage", () => {
   expect(result.code).toBe(0)
 })
 
-const testCheckout = `/tmp/catalyst-test-work-checkout-${testing.randomHex}`
-const testOrigin = `/tmp/catalyst-test-work-origin-${testing.randomHex}`
-
-beforeAll(() => {
-  // TODO: reuse the checkout from 'project.test.sh'?
-  shell.mkdir(testOrigin)
-  // TODO: use 'project init'... better yet, once we combine 'work' with 'project', this is folded into a test
-  shell.exec(`cd ${testOrigin} && git clone --bare ${testing.selfOriginUrl} .`)
-  const initCommand =
-    `catalyst ORIGIN_URL="file://${testOrigin}" ORGANIZATION_ID=1234 BILLING_ACCOUNT_ID=4321 project init`
-  shell.mkdir(testCheckout)
-  shell.exec(`cd ${testCheckout} && ${initCommand}`)
-})
-afterAll(testing.cleanupDirs(testCheckout, testOrigin))
-
 test("'work start' should require additional arguments", () => {
-  const result = shell.exec(`cd ${testCheckout} && catalyst work start`, execOpts)
+  const result = shell.exec(`cd ${testCheckoutDir} && catalyst work start`, execOpts)
   const expectedErr = expect.stringMatching(
     new RegExp(`'work start' requires 1 additional arguments.`))
 
@@ -53,23 +40,23 @@ test("'work start' should require additional arguments", () => {
 })
 
 test("'work start add-feature' result in new branch", () => {
-  const result = shell.exec(`cd ${testCheckout} && catalyst work start add-feature`)
+  const result = shell.exec(`cd ${testCheckoutDir} && catalyst work start add-feature`)
   const expectedOutput = expect.stringMatching(new RegExp(`^Now working on branch '\\d{4}-\\d{2}-\\d{2}-[^-]+-add-feature'.[\\s\\n]*$`))
 
   expect(result.stderr).toEqual('')
   expect(result.stdout).toEqual(expectedOutput)
   expect(result.code).toEqual(0)
 
-  const branchCheck = shell.exec(`cd ${testCheckout} && git branch | wc -l | awk '{print $1}'`)
+  const branchCheck = shell.exec(`cd ${testCheckoutDir} && git branch | wc -l | awk '{print $1}'`)
   expect(branchCheck.stderr).toEqual('')
   expect(branchCheck.stdout).toEqual("2\n")
   expect(branchCheck.code).toEqual(0)
 })
 
 test("'work merge' results merge, push, and deleting branch", () => {
-  shell.exec(`echo "hey" > ${testCheckout}/foo.txt`)
-  shell.exec(`cd ${testCheckout} && git add foo.txt && git commit -m 'test file'`)
-  const result = shell.exec(`cd ${testCheckout} && catalyst work merge`)
+  shell.exec(`echo "hey" > ${testCheckoutDir}/foo.txt`)
+  shell.exec(`cd ${testCheckoutDir} && git add foo.txt && git commit -m 'test file'`)
+  const result = shell.exec(`cd ${testCheckoutDir} && catalyst work merge`)
   // TODO: test the linecount
   const expectedOutput = expect.stringMatching(new RegExp(`^Work merged and pushed to origin.`))
 
@@ -77,7 +64,7 @@ test("'work merge' results merge, push, and deleting branch", () => {
   expect(result.stdout).toEqual(expectedOutput)
   expect(result.code).toEqual(0)
 
-  const branchCheck = shell.exec(`cd ${testCheckout} && git branch | wc -l | awk '{print $1}'`)
+  const branchCheck = shell.exec(`cd ${testCheckoutDir} && git branch | wc -l | awk '{print $1}'`)
   expect(branchCheck.stderr).toEqual('')
   expect(branchCheck.stdout).toEqual("1\n")
   expect(branchCheck.code).toEqual(0)

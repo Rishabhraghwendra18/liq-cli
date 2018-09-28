@@ -1,32 +1,33 @@
 project-init_git_setup() {
-  local ORIGIN_URL=`git config --get remote.origin.url || true`
-  if [[ -z "$ORIGIN_URL" ]]; then
-    local HAS_FILES=`ls -a "${BASE_DIR}" | wc -w`
-    local IS_GIT_REPO
-    if [[ -d "${BASE_DIR}"/.git ]]; then
-      IS_GIT_REPO='true'
-    else
-      IS_GIT_REPO='false'
-    fi
+  local HAS_FILES=`ls -a "${BASE_DIR}" | (grep -ve '^\.$' || true) | (grep -ve '^\.\.$' || true) | wc -w`
+  local IS_GIT_REPO
+  if [[ -d "${BASE_DIR}"/.git ]]; then
+    IS_GIT_REPO='true'
+  else
+    IS_GIT_REPO='false'
+  fi
+  # first we test if set externally as environment variable (used in testing).
+  if [[ -z "${ORIGIN_URL}" ]]; then
+    ORIGIN_URL=`git config --get remote.origin.url || true`
     if [[ -z "${ORIGIN_URL:-}" ]]; then
-      if (( $HAS_FILES == 0 )) && [[ $IS_GIT_REPO == 'false' ]]; then
-        echo "The origin will be cloned, if provided."
-      elif [[ -n "$ORIGIN_URL" ]] && [[ $IS_GIT_REPO == 'false' ]]; then
-        echo "The current directory will be initialized as a git repo with the provided origin."
-      else
-        echo "The origin of this existing git repo will be set, if provided."
+      if [[ -z "${ORIGIN_URL:-}" ]]; then
+        if (( $HAS_FILES == 0 )) && [[ $IS_GIT_REPO == 'false' ]]; then
+          echo "The origin will be cloned, if provided."
+        elif [[ -n "$ORIGIN_URL" ]] && [[ $IS_GIT_REPO == 'false' ]]; then
+          echo "The current directory will be initialized as a git repo with the provided origin."
+        else
+          echo "The origin of this existing git repo will be set, if provided."
+        fi
+        read -p 'git origin URL: ' ORIGIN_URL
       fi
-      read -p 'git origin URL: ' ORIGIN_URL
-    fi
+    fi # -z "$ORIGIN_URL" - git test
+  fi # -z "$ORIGIN_URL" - external / global
 
-    if [[ -n "$ORIGIN_URL" ]] && (( $HAS_FILES == 0 )) && [[ $IS_GIT_REPO == 'false' ]]; then
-      git clone -q "$ORIGIN_URL" "${BASE_DIR}" && echo "Cloned '$ORIGIN_URL' into '${BASE_DIR}'."
-    elif [[ -n "$ORIGIN_URL" ]] && [[ $IS_GIT_REPO == 'false' ]]; then
-      git init "${BASE_DIR}"
-    fi
-    if [[ -n "$ORIGIN_URL" ]]; then
-      git remote add origin "$ORIGIN_URL"
-    fi
+  if [[ -n "$ORIGIN_URL" ]] && (( $HAS_FILES == 0 )) && [[ $IS_GIT_REPO == 'false' ]]; then
+    git clone -q "$ORIGIN_URL" "${BASE_DIR}" && echo "Cloned '$ORIGIN_URL' into '${BASE_DIR}'."
+  elif [[ -n "$ORIGIN_URL" ]] && [[ $IS_GIT_REPO == 'false' ]]; then
+    git init "${BASE_DIR}"
+    git remote -q add origin "$ORIGIN_URL"
   fi
 
   if [[ -d "${BASE_DIR}/.git" ]]; then
@@ -146,20 +147,30 @@ project-link() {
   requireArgs "$LINK_PROJECT" || exit 1
 
   local CURR_PROJECT_DIR="${BASE_DIR}"
+  cd "${CURR_PROJECT_DIR}"
+  # TODO: check that there aren't multiple files
+  local OUR_PACKAGE_DIR=`find . -name "package.json" -not -path "*/node_modules/*"`
+  if [[ -z "$OUR_PACKAGE_DIR" ]]; then
+    echoerrandexit "Did not find 'package.json' in current project"
+  else
+    OUR_PACKAGE_DIR=`dirname "$OUR_PACKAGE_DIR"`
+  fi
+
   requireWorkspaceConfig
-  cd "${BASE_DIR}"
+  cd "${BASE_DIR}" # now workspace base
   if [[ ! -d "$LINK_PROJECT" ]]; then
     echoerrandexit "Did not find project '${LINK_PROJECT}' to link."
   fi
   cd "$LINK_PROJECT"
-  local LINK_PACKAGE=`node -e "const fs = require('fs'); const package = JSON.parse(fs.readFileSync('./package.json')); console.log(package.name);"`
-  npm link
-  cd "${CURR_PROJECT_DIR}"
   # TODO: check that there aren't multiple files
-  local OUR_PACKAGE=`find . -name "package.json" -not -path "*/node_modules/*"`
-  cd `dirname ${OUR_PACKAGE}`
-  npm link "$LINK_PACKAGE"
-  npm install "file:/usr/local/lib/node_modules/${LINK_PACKAGE}"
+  local LINK_PACKAGE=`find . -name "package.json" -not -path "*/node_modules/*"`
+  local LINK_PACKAGE_NAME=`node -e "const fs = require('fs'); const package = JSON.parse(fs.readFileSync('${LINK_PACKAGE}')); console.log(package.name);"`
+  npm link
+
+  cd "$CURR_PROJECT_DIR"
+  cd "$OUR_PACKAGE_DIR"
+  npm link "$LINK_PACKAGE_NAME"
+  npm install "file:/usr/local/lib/node_modules/${LINK_PACKAGE_NAME}"
 }
 
 project-close() {
