@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "install": "./install.sh",
-    "pretest": "babel --source-maps inline src -d test-staging",
+    "pretest": "rm -rf test-staging/* && babel --source-maps inline src -d test-staging",
     "test": "jest ./test-staging"
   },
   "author": "Zane Rockenbaugh <zane@liquid-labs.com>",
