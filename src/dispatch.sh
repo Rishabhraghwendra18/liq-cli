@@ -31,7 +31,7 @@ case "$COMPONENT" in
         case "$ACTION" in
           deploy|add-mirror|set-billing|link)
             sourceCatalystfile
-            ${COMPONENT}-${ACTION} "${3:-}";;
+            ${COMPONENT}-${ACTION} "${3:-}" "${4:-}";;
           init|import|close)
             ${COMPONENT}-${ACTION} "${3:-}";;
           *) exitUnknownAction
