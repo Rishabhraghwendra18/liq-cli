@@ -145,11 +145,19 @@ project-import() {
 project-link() {
   local LINK_PROJECT="${1:-}"
   requireArgs "$LINK_PROJECT" || exit 1
+  local PACKAGE_REL_PATH="${2:-}" # this one's optional
 
   local CURR_PROJECT_DIR="${BASE_DIR}"
   cd "${CURR_PROJECT_DIR}"
-  # TODO: check that there aren't multiple files
   local OUR_PACKAGE_DIR=`find . -name "package.json" -not -path "*/node_modules/*"`
+  local PACKAGE_COUNT=`echo "$OUR_PACKAGE_DIR" | wc -l`
+  if (( $PACKAGE_COUNT == 0 )); then
+    echoerrandexit "Did not find local 'package.json'."
+  elif (( $PACKAGE_COUNT > 1 )); then
+    # TODO: requrie the user to be in the dir with the package.json
+    echoerrandexit "Found multiple 'package.json' files; this is currently a limitation, perform linking manually."
+  fi
+
   if [[ -z "$OUR_PACKAGE_DIR" ]]; then
     echoerrandexit "Did not find 'package.json' in current project"
   else
@@ -161,9 +169,26 @@ project-link() {
   if [[ ! -d "$LINK_PROJECT" ]]; then
     echoerrandexit "Did not find project '${LINK_PROJECT}' to link."
   fi
+
   cd "$LINK_PROJECT"
-  # TODO: check that there aren't multiple files
-  local LINK_PACKAGE=`find . -name "package.json" -not -path "*/node_modules/*"`
+  # determine the package-to-link's package.json
+  local LINK_PACKAGE
+  if [[ -n "$PACKAGE_REL_PATH" ]]; then
+    if [[ -f "$PACKAGE_REL_PATH/package.json" ]]; then
+      LINK_PACKAGE="$PACKAGE_REL_PATH/package.json"
+    else
+      echoerrandexit "Did not find 'package.json' under specified path '$PACKAGE_REL_PATH'."
+    fi
+  else
+    LINK_PACKAGE=`find . -name "package.json" -not -path "*/node_modules/*"`
+    local LINK_PACKAGE_COUNT=`echo "$LINK_PACKAGE" | wc -l`
+    if (( $LINK_PACKAGE_COUNT == 0 )); then
+      echoerrandexit "Did not find 'package.json' in '$LINK_PROJECT'."
+    elif (( $LINK_PACKAGE_COUNT > 1 )); then
+      echoerrandexit "Found multiple packages to link in '$LINK_PROJECT'; specify relative package path."
+    fi
+  fi
+
   local LINK_PACKAGE_NAME=`node -e "const fs = require('fs'); const package = JSON.parse(fs.readFileSync('${LINK_PACKAGE}')); console.log(package.name);"`
   npm link
 
