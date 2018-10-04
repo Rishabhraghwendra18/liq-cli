@@ -27,7 +27,7 @@ project-init_git_setup() {
     git clone -q "$ORIGIN_URL" "${BASE_DIR}" && echo "Cloned '$ORIGIN_URL' into '${BASE_DIR}'."
   elif [[ -n "$ORIGIN_URL" ]] && [[ $IS_GIT_REPO == 'false' ]]; then
     git init "${BASE_DIR}"
-    git remote -q add origin "$ORIGIN_URL"
+    git remote add origin "$ORIGIN_URL"
   fi
 
   if [[ -d "${BASE_DIR}/.git" ]]; then
