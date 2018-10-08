@@ -110,10 +110,17 @@ project-import() {
   local PROJECT_URL="${1:-}"
   requireArgs "$PROJECT_URL" || exit 1
   requireWorkspaceConfig
+  cd "$BASE_DIR"
+  if [ -d "$PROJECT_URL" ]; then
+    echo "It looks like '${PROJECT_URL}' has already been imported."
+    exit 0
+  fi
   if [[ -f "${BASE_DIR}/${_WORKSPACE_DB}/projects/${PROJECT_URL}" ]]; then
     source "${BASE_DIR}/${_WORKSPACE_DB}/projects/${PROJECT_URL}"
-    cd "$BASE_DIR"
-    git clone --quiet "${PROJECT_HOME}" && echo "'$ROJECT_URL' imported into workspace."
+    # TODO: this assumes SSH style access, which we should, but need to enforce
+    # the 'ssh' will be denied with 1 if successful and 255 if no key found.
+    ssh -qT git@github.com 2> /dev/null || if [ $? -ne 1 ]; then echoerrandexit "Could not connect to github; add your github key with 'ssh-add'."; fi
+    git clone --quiet "${PROJECT_HOME}" && echo "'$PROJECT_URL' imported into workspace."
     setupMirrors "$PROJECT_URL" "$PROJECT_HOME" "${PROJECT_MIRRORS:-}"
   else
     local PROJECT_NAME=`basename "${PROJECT_URL}"`
