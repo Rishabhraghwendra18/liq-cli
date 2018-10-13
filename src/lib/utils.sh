@@ -18,14 +18,16 @@ colorerr() {
   # TODO: in the case of long output, it would be nice to notice whether we saw
   # error or not and tell the user to scroll back and check the logs. e.g., if
   # we see an error and then 20+ lines of stuff, then emit advice.
-  (trap 'tput sgr0' EXIT; eval "$* 2> >(echo -n \"${red}\"; cat -;)")
+  (trap 'EXIT_STATUS=$?; tput sgr0; exit $EXIT_STATUS' EXIT; eval "$* 2> >(echo -n \"${red}\"; cat -;)")
 }
 
 # TODO: is this better? We switched to it for awhile, but there were problems.
 # The reasons for both the initial switch and the switchback are now obscured
-# in human memory. The switchback was, in part, because of problems with
-# syncronous calls. Of course, it didn't wait as we would like, but it was also
-# causing functional problems with... somethnig.
+# but may have been due to failure of the original code to exit with the
+# underling error status from the eval, which has since been fixed. The
+# switchback was, in part, because of problems with syncronous calls. Of course,
+# it didn't wait as we would like, but it was also causing functional problems
+# with... somethnig.
 # TODO: We are currently not using colorerrbg anywhere.
 colorerrbg() {
   (eval "$@" 2>&1>&3|sed 's/^\(.*\)$/'$'\e''[31m\1'$'\e''[m/'>&2)3>&1 &

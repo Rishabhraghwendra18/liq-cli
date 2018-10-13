@@ -149,7 +149,7 @@ project-import() {
   fi
 }
 
-project-link() {
+_project-link() {
   local LINK_PROJECT="${1:-}"
   requireArgs "$LINK_PROJECT" || exit 1
   local PACKAGE_REL_PATH="${2:-}" # this one's optional
@@ -197,12 +197,31 @@ project-link() {
   fi
 
   local LINK_PACKAGE_NAME=`node -e "const fs = require('fs'); const package = JSON.parse(fs.readFileSync('${LINK_PACKAGE}')); console.log(package.name);"`
-  npm link
+  npm -q link
 
   cd "$CURR_PROJECT_DIR"
   cd "$OUR_PACKAGE_DIR"
-  npm link "$LINK_PACKAGE_NAME"
-  npm install "file:/usr/local/lib/node_modules/${LINK_PACKAGE_NAME}"
+  npm -q link "$LINK_PACKAGE_NAME"
+
+  echo "$LINK_PACKAGE_NAME"
+}
+
+project-link() {
+  local LINK_PROJECT="${1:-}"
+  local LINK_PACKAGE_NAME=`_project-link "$@" | tail -n 1`
+  if [[ -n "$LINK_PACKAGE_NAME" ]]; then
+    npm install --save "file:/usr/local/lib/node_modules/${LINK_PACKAGE_NAME}"
+    echo "Linked Catalyst project '$LINK_PROJECT' as dependency."
+  fi
+}
+
+project-link-dev() {
+  local LINK_PROJECT="${1:-}"
+  local LINK_PACKAGE_NAME=`_project-link "$@" | tail -n 1`
+  if [[ -n "$LINK_PACKAGE_NAME" ]]; then
+    npm install --save-dev "file:/usr/local/lib/node_modules/${LINK_PACKAGE_NAME}"
+    echo "Linked Catalyst project '$LINK_PROJECT' as dev dependency."
+  fi
 }
 
 project-close() {
