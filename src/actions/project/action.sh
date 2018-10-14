@@ -149,11 +149,12 @@ project-import() {
   fi
 }
 
-project-build() {
+_project_script() {
+  local ACTION="$1"
   # TODO: this check can be slow; can we cach it?
-  local USES_REACT_SCRIPTS=`npm ls react-scripts --depth 1 --parseable | (grep react-scripts || true) | wc -l`
+  local USES_REACT_SCRIPTS=$((npm ls react-scripts --depth 1 --parseable | (grep react-scripts || true) | wc -l) || true)
   if (( $USES_REACT_SCRIPTS > 0 )); then
-    npm run build
+    npm run $ACTION
   else
     local CATALYST_SCRIPTS=$(npm bin)/catalyst-scripts
     if [[ ! -x "$CATALYST_SCRIPTS" ]]; then
@@ -161,8 +162,16 @@ project-build() {
       echoerr ""
       echoerrandexit "npm install --save-dev @liquid-labs/catalyst-scripts"
     fi
-    "${CATALYST_SCRIPTS}" "${BASE_DIR}" build
+    "${CATALYST_SCRIPTS}" "${BASE_DIR}" $ACTION
   fi
+}
+
+project-build() {
+  _project_script build
+}
+
+project-start() {
+  _project_script start
 }
 
 _project-link() {
