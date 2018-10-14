@@ -20,7 +20,9 @@ function traperror () {
     echo "${red}ERROR '$command' failed at line $line - exited with status: $err${reset}" >&2
 
     if [ "$funcstack" != "::" ]; then
-      echo -n "$(date) $(hostname) $0: DEBUG Error in ${funcstack} "
+      # if generating logs directly, the following is useful:
+      # echo -n "$(date) $(hostname) $0: DEBUG Error in ${funcstack} "
+      echo "$0: DEBUG Error in ${funcstack} "
       if [ "$linecallfunc" != "" ]; then
         echo "called at line $linecallfunc"
       else

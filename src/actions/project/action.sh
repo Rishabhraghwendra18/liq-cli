@@ -149,6 +149,22 @@ project-import() {
   fi
 }
 
+project-build() {
+  # TODO: this check can be slow; can we cach it?
+  local USES_REACT_SCRIPTS=`npm ls react-scripts --depth 1 --parseable | (grep react-scripts || true) | wc -l`
+  if (( $USES_REACT_SCRIPTS > 0 )); then
+    npm run build
+  else
+    local CATALYST_SCRIPTS=$(npm bin)/catalyst-scripts
+    if [[ ! -x "$CATALYST_SCRIPTS" ]]; then
+      echoerr "This project does not appear to be using 'catalyst-scripts'. Try:"
+      echoerr ""
+      echoerrandexit "npm install --save-dev @liquid-labs/catalyst-scripts"
+    fi
+    "${CATALYST_SCRIPTS}" "${BASE_DIR}" build
+  fi
+}
+
 _project-link() {
   local LINK_PROJECT="${1:-}"
   requireArgs "$LINK_PROJECT" || exit 1
