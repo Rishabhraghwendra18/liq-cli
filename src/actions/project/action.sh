@@ -151,19 +151,24 @@ project-import() {
 
 _project_script() {
   local ACTION="$1"
-  # TODO: this check can be slow; can we cach it?
-  local USES_REACT_SCRIPTS=$((npm ls react-scripts --depth 1 --parseable | (grep react-scripts || true) | wc -l) || true)
-  if (( $USES_REACT_SCRIPTS > 0 )); then
-    npm run $ACTION
-  else
-    local CATALYST_SCRIPTS=$(npm bin)/catalyst-scripts
-    if [[ ! -x "$CATALYST_SCRIPTS" ]]; then
-      echoerr "This project does not appear to be using 'catalyst-scripts'. Try:"
-      echoerr ""
-      echoerrandexit "npm install --save-dev @liquid-labs/catalyst-scripts"
+  if [[ "$ACTION" == 'build' ]] || [[ "$ACTION" == 'start' ]]; then
+    # TODO: this check can be slow; can we cach it?
+    local USES_REACT_SCRIPTS=$((npm ls react-scripts --depth 1 --parseable | (grep react-scripts || true) | wc -l) || true)
+    if (( $USES_REACT_SCRIPTS > 0 )); then
+      npm run $ACTION
+      return
     fi
-    "${CATALYST_SCRIPTS}" "${BASE_DIR}" $ACTION
   fi
+  # If we get here, then it's either an action we always handle with
+  # catalyst-scripts or CRA is not used in the target project.
+
+  local CATALYST_SCRIPTS=$(npm bin)/catalyst-scripts
+  if [[ ! -x "$CATALYST_SCRIPTS" ]]; then
+    echoerr "This project does not appear to be using 'catalyst-scripts'. Try:"
+    echoerr ""
+    echoerrandexit "npm install --save-dev @liquid-labs/catalyst-scripts"
+  fi
+  "${CATALYST_SCRIPTS}" "${BASE_DIR}" $ACTION
 }
 
 project-build() {
@@ -172,6 +177,14 @@ project-build() {
 
 project-start() {
   _project_script start
+}
+
+project-lint() {
+  _project_script lint
+}
+
+project-lint-fix() {
+  _project_script lint-fix
 }
 
 _project-link() {
