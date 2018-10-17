@@ -151,10 +151,10 @@ project-import() {
 
 _project_script() {
   local ACTION="$1"
+  cd "${BASE_DIR}"
   if [[ "$ACTION" == 'build' ]] || [[ "$ACTION" == 'start' ]]; then
-    # TODO: this check can be slow; can we cach it?
-    local USES_REACT_SCRIPTS=$((npm ls react-scripts --depth 1 --parseable | (grep react-scripts || true) | wc -l) || true)
-    if (( $USES_REACT_SCRIPTS > 0 )); then
+    source "$BASE_DIR/${_PROJECT_PUB_CONFIG}"
+    if [[ "${IS_APP:-}" -eq 1 ]] || [[ "${BUILD_WITH_NPM}" -eq 1 ]]; then
       npm run $ACTION
       return
     fi
@@ -185,6 +185,32 @@ project-lint() {
 
 project-lint-fix() {
   _project_script lint-fix
+}
+
+project-npm-check() {
+  if which -s npm-check; then
+    COMMAND='echo "Checking package status..."'
+    source "$BASE_DIR/${_PROJECT_PUB_CONFIG}"
+
+    if npm-check ${NPM_CHECK_OPTS}; then
+      return 0
+    else
+      return 1
+    fi
+  else
+    echoerr "'npm-check' not found; could not check package status. Install with:"
+    echoerr ''
+    echoerr '    npm install -g npm-check'
+    echoerr ''
+    exit 10
+  fi
+}
+
+project-qa() {
+  echo "Checking local repo status..."
+  work-report
+  echo "Checking package dependencies..."
+  project-npm-check
 }
 
 _project-link() {
