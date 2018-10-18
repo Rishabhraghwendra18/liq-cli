@@ -187,23 +187,33 @@ project-lint-fix() {
   _project_script lint-fix
 }
 
-project-npm-check() {
-  if which -s npm-check; then
-    COMMAND='echo "Checking package status..."'
-    source "$BASE_DIR/${_PROJECT_PUB_CONFIG}"
-
-    if npm-check ${NPM_CHECK_OPTS:-}; then
-      return 0
-    else
-      return 1
-    fi
-  else
+_require-npm-check() {
+  if ! which -s npm-check; then
     echoerr "'npm-check' not found; could not check package status. Install with:"
     echoerr ''
     echoerr '    npm install -g npm-check'
     echoerr ''
     exit 10
   fi
+}
+
+project-npm-check() {
+  _require-npm-check
+  source "$BASE_DIR/${_PROJECT_PUB_CONFIG}"
+  if npm-check ${NPM_CHECK_OPTS:-}; then
+    return 0
+  else
+    return 1
+  fi
+
+}
+
+project-npm-update() {
+  _require-npm-check
+  source "$BASE_DIR/${_PROJECT_PUB_CONFIG}"
+  npm-check -u ${NPM_CHECK_OPTS:-}
+  # TODO: by default, it should also swap out any 'file:' based installation of
+  # internal projects with the latest published internal
 }
 
 project-qa() {
