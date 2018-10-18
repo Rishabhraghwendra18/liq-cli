@@ -154,7 +154,7 @@ _project_script() {
   cd "${BASE_DIR}"
   if [[ "$ACTION" == 'build' ]] || [[ "$ACTION" == 'start' ]]; then
     source "$BASE_DIR/${_PROJECT_PUB_CONFIG}"
-    if [[ "${IS_APP:-}" -eq 1 ]] || [[ "${BUILD_WITH_NPM}" -eq 1 ]]; then
+    if [[ "${IS_APP:-}" -eq 1 ]] || [[ "${BUILD_WITH_NPM:-}" -eq 1 ]]; then
       npm run $ACTION
       return
     fi
@@ -192,7 +192,7 @@ project-npm-check() {
     COMMAND='echo "Checking package status..."'
     source "$BASE_DIR/${_PROJECT_PUB_CONFIG}"
 
-    if npm-check ${NPM_CHECK_OPTS}; then
+    if npm-check ${NPM_CHECK_OPTS:-}; then
       return 0
     else
       return 1
@@ -211,6 +211,8 @@ project-qa() {
   work-report
   echo "Checking package dependencies..."
   project-npm-check
+  echo "Linting code..."
+  project-lint
 }
 
 _project-link() {
