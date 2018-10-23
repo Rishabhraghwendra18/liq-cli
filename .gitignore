@@ -1,3 +1,4 @@
-.catalyst
+/.catalyst
 node_modules/
-test-staging/
+/test-staging/
+/lib

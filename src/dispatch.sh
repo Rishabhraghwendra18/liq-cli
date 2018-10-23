@@ -29,10 +29,10 @@ case "$COMPONENT" in
         esac;;
       project)
         case "$ACTION" in
-          build|start|lint|lint-fix|npm-check|npm-update|qa|deploy|add-mirror|set-billing|link|link-dev)
+          setup-scripts|build|start|lint|lint-fix|npm-check|npm-update|qa|deploy|add-mirror|set-billing|link|link-dev)
             sourceCatalystfile
             ${COMPONENT}-${ACTION} "${3:-}" "${4:-}";;
-          init|import|close)
+          setup|import|close)
             ${COMPONENT}-${ACTION} "${3:-}";;
           *) exitUnknownAction
         esac;;
