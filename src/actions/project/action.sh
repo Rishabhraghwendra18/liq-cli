@@ -1,4 +1,4 @@
-project-init_git_setup() {
+project-setup_git_setup() {
   local HAS_FILES=`ls -a "${BASE_DIR}" | (grep -ve '^\.$' || true) | (grep -ve '^\.\.$' || true) | wc -w`
   local IS_GIT_REPO
   if [[ -d "${BASE_DIR}"/.git ]]; then
@@ -43,7 +43,7 @@ project-init_git_setup() {
   fi
 }
 
-project-init() {
+project-setup() {
   local FOUND_PROJECT=Y
   sourceCatalystfile 2> /dev/null || FOUND_PROJECT=N
   if [[ $FOUND_PROJECT == Y ]]; then
@@ -54,7 +54,7 @@ project-init() {
   fi
   # TODO: verify that the parent directory is a workspace?
 
-  project-init_git_setup
+  project-setup_git_setup
 
   if [[ -z "$ORGANIZATION_ID" ]]; then
     echo "First we need to determine your 'organization ID' where your project lives."
@@ -146,6 +146,19 @@ project-import() {
       updateProjectPubConfig
       echoerr "Please add the '${_PROJECT_PUB_CONFIG}' file to the git repo."
     fi
+  fi
+}
+
+project-setup-scripts() {
+  source `dirname $BASH_SOURCE`/../../../lib/files/find-exec.func.sh
+  local CATALYST_SCRIPTS=`find-exec 'catalyst-scripts' "$BASE_DIR"`
+  if [[ ! -x $CATALYST_SCRIPTS ]] && which -s npm; then
+    cd $BASE_DIR && npm install @liquid-labs/catalyst-scripts
+    CATALYST_SCRIPTS=$(npm bin)/catalyst-scripts
+  fi
+  if [[ -x $CATALYST_SCRIPTS ]]; then
+    echo     "$CATALYST_SCRIPTS" "$PROJECT_DIR" setup
+    "$CATALYST_SCRIPTS" "$PROJECT_DIR" setup-scripts
   fi
 }
 

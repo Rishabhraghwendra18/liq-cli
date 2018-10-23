@@ -15,7 +15,7 @@ _catalyst()
       local)
         opts="start stop restart clear-logs";;
       project)
-        opts="init import build start lint lint-fix npm-check npm-update qa link link-dev close deploy add-mirror set-billing";;
+        opts="import setup setup-scripts build start lint lint-fix npm-check npm-update qa link link-dev close deploy add-mirror set-billing";;
       sql)
         opts="configure start-proxy stop-proxy view-proxy-log connect rebuild";;
       webapp)

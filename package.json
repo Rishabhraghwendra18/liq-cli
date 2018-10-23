@@ -2,11 +2,14 @@
   "name": "catalyst-cli",
   "version": "0.0.1",
   "description": "Local development and management tool for Catalyst projects.",
-  "main": "index.js",
   "scripts": {
     "install": "./install.sh",
     "pretest": "rm -rf test-staging/* && babel --source-maps inline src -d test-staging",
     "test": "jest -i ./test-staging"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Liquid-Labs/catalyst-cli.git"
   },
   "author": "Zane Rockenbaugh <zane@liquid-labs.com>",
   "license": "ISC",
@@ -18,6 +21,7 @@
     "@babel/cli": "^7.1.0",
     "@babel/core": "^7.1.0",
     "@babel/preset-env": "^7.1.0",
+    "@liquid-labs/bash-toolkit": "0.0.1",
     "jest": "^23.5.0",
     "shelljs": "^0.8.2"
   }
