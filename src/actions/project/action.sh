@@ -157,8 +157,7 @@ project-setup-scripts() {
     CATALYST_SCRIPTS=$(npm bin)/catalyst-scripts
   fi
   if [[ -x $CATALYST_SCRIPTS ]]; then
-    echo     "$CATALYST_SCRIPTS" "$PROJECT_DIR" setup
-    "$CATALYST_SCRIPTS" "$PROJECT_DIR" setup-scripts
+    "$CATALYST_SCRIPTS" "$BASE_DIR" setup-scripts
   fi
 }
 
@@ -198,6 +197,11 @@ project-lint() {
 
 project-lint-fix() {
   _project_script lint-fix
+}
+
+project-test() {
+  _project_script pretest
+  _project_script test
 }
 
 _require-npm-check() {
@@ -387,4 +391,16 @@ project-deploy() {
     exit 1
   fi
   colorerr "bash -c 'cd $GOPATH/src/unodelivers.com/app; gcloud app deploy'"
+}
+
+project-ignore-rest() {
+  sourceCatalystfile
+
+  pushd "${BASE_DIR}" > /dev/null
+  touch .gitignore
+  # first ignore whole directories
+  for i in `git ls-files . --exclude-standard --others --directory`; do
+    echo "${i}" >> .gitignore
+  done
+  popd > /dev/null
 }
