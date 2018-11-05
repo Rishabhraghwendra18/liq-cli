@@ -6,5 +6,4 @@ print_work_usage() {
   echo "${PREFIX}edit : opens project editor on the localhost"
   echo "${PREFIX}start <desc> : creates work branch and switches to it"
   echo "${PREFIX}merge : merges current work branch commits to master and deletes work branch"
-  echo "${PREFIX}diff-master : shows committed changes since branch from 'master'"
 }

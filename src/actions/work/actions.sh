@@ -87,19 +87,3 @@ work-merge() {
   # TODO: provide a reference for checking the merge is present and if safe to delete.
   echo "linecount change: $DIFF_COUNT"
 }
-
-work-diff-master() {
-  git diff HEAD..$(git merge-base master HEAD)
-}
-
-work-ignore-rest() {
-  sourceCatalystfile
-
-  pushd "${BASE_DIR}" > /dev/null
-  touch .gitignore
-  # first ignore whole directories
-  for i in `git ls-files . --exclude-standard --others --directory`; do
-    echo "${i}" >> .gitignore
-  done
-  popd > /dev/null
-}

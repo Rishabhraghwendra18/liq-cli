@@ -392,3 +392,19 @@ project-deploy() {
   fi
   colorerr "bash -c 'cd $GOPATH/src/unodelivers.com/app; gcloud app deploy'"
 }
+
+project-diff-master() {
+  git diff HEAD..$(git merge-base master HEAD)
+}
+
+project-ignore-rest() {
+  sourceCatalystfile
+
+  pushd "${BASE_DIR}" > /dev/null
+  touch .gitignore
+  # first ignore whole directories
+  for i in `git ls-files . --exclude-standard --others --directory`; do
+    echo "${i}" >> .gitignore
+  done
+  popd > /dev/null
+}
