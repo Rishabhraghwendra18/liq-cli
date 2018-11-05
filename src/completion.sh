@@ -15,13 +15,13 @@ _catalyst()
       local)
         opts="start stop restart clear-logs";;
       project)
-        opts="import setup setup-scripts build start lint lint-fix test npm-check npm-update qa link link-dev close deploy add-mirror set-billing diff-master ignore-rest";;
+        opts="import setup setup-scripts build start lint lint-fix test npm-check npm-update qa link link-dev close deploy add-mirror set-billing ignore-rest";;
       sql)
         opts="configure start-proxy stop-proxy view-proxy-log connect rebuild";;
       webapp)
         opts="configure audit build start stop view-log";;
       work)
-        opts="edit start merge";;
+        opts="diff-master edit merge report start";;
       workspace)
         opts="init branch stash merge diff-master";;
       *)

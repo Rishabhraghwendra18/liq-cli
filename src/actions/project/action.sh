@@ -393,10 +393,6 @@ project-deploy() {
   colorerr "bash -c 'cd $GOPATH/src/unodelivers.com/app; gcloud app deploy'"
 }
 
-project-diff-master() {
-  git diff HEAD..$(git merge-base master HEAD)
-}
-
 project-ignore-rest() {
   sourceCatalystfile
 

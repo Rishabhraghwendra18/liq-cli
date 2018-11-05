@@ -5,7 +5,6 @@ print_project_usage() {
   fi
   echo "${PREFIX}add-mirror : Adds a mirror, which will receive 'git push' updates."
   echo "${PREFIX}close : Removes the local workspace copy of the project after checking that all updates have been pushed."
-  echo "${PREFIX}diff-master : shows committed changes since branch from 'master'"
   echo "${PREFIX}init : Initializes the current directory as the root for local Catalyst project checkout."
   echo "${PREFIX}ignore-rest : Adds any currently untracked files to '.gitignore'."
   echo "${PREFIX}import : Imports a Catalyst project by name or from a GIT url."

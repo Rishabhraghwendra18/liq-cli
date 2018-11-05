@@ -29,7 +29,7 @@ case "$COMPONENT" in
         esac;;
       project)
         case "$ACTION" in
-          setup-scripts|build|start|lint|lint-fix|test|npm-check|npm-update|qa|deploy|add-mirror|set-billing|link|link-dev|diff-master|ignore-rest)
+          setup-scripts|build|start|lint|lint-fix|test|npm-check|npm-update|qa|deploy|add-mirror|set-billing|link|link-dev|ignore-rest)
             sourceCatalystfile
             ${COMPONENT}-${ACTION} "${3:-}" "${4:-}";;
           setup|import|close)
@@ -69,7 +69,7 @@ EOF
         esac;;
       work)
         case "$ACTION" in
-          report|edit|start|merge)
+          diff-master|edit|merge|report|start)
             ${COMPONENT}-${ACTION} "${3:-}";;
           *) exitUnknownAction
         esac;;
