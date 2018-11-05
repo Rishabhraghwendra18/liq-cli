@@ -157,8 +157,7 @@ project-setup-scripts() {
     CATALYST_SCRIPTS=$(npm bin)/catalyst-scripts
   fi
   if [[ -x $CATALYST_SCRIPTS ]]; then
-    echo     "$CATALYST_SCRIPTS" "$PROJECT_DIR" setup
-    "$CATALYST_SCRIPTS" "$PROJECT_DIR" setup-scripts
+    "$CATALYST_SCRIPTS" "$BASE_DIR" setup-scripts
   fi
 }
 
@@ -198,6 +197,11 @@ project-lint() {
 
 project-lint-fix() {
   _project_script lint-fix
+}
+
+project-test() {
+  _project_script pretest
+  _project_script test
 }
 
 _require-npm-check() {
