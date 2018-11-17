@@ -390,7 +390,7 @@ project-deploy() {
     echoerr "'GOPATH' is not defined. Run 'catalyst go configure'."
     exit 1
   fi
-  colorerr "bash -c 'cd $GOPATH/src/unodelivers.com/app; gcloud app deploy'"
+  colorerr "GOPATH=$GOPATH bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; gcloud app deploy'"
 }
 
 project-ignore-rest() {
