@@ -1,7 +1,9 @@
 print_usage() {
-  echo -e "Usage:\n\nproj <component | global action> <action> [<action args>]\n"
-  echo "global actions:"
-  echo "  help <component>: Prints this help, or component specific help."
+  echo "Usage:"
+  echo
+  echo "catalyst help"
+  echo "catalyst <module> <action> [<action args...>]"
+  echo
   echo "go:"
   print_go_usage "  "
   echo "local:"
@@ -14,4 +16,6 @@ print_usage() {
   print_webapp_usage "  "
   echo "work:"
   print_work_usage "  "
+  echo "environment:"
+  print_environment_usage "  "
 }
