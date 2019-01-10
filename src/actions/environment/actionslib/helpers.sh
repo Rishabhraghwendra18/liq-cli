@@ -1,3 +1,7 @@
+doEnvironmentList() {
+  find "$_CATALYST_ENVS" -mindepth 1 -maxdepth 1 -type f -exec basename '{}' \;
+}
+
 updateEnvironment() {
   local ENV_NAME="${1}"
 
@@ -44,7 +48,7 @@ setHelperFunctionName() {
   local FUNC_NAME=${KEY//:/-}
   FUNC_NAME=${FUNC_NAME}// /-}
   FUNC_NAME="catalyst-environment-set-${FUNC_NAME,,}"
-  if [[ -n "$(type -n "$FUNC_NAME")" ]]
+  if [[ -n "$(type -n "$FUNC_NAME")" ]]; then
     echo "$FUNC_NAME"
   fi
 }
@@ -57,5 +61,5 @@ updateEnvParam() {
   VAR_NAME=${VAR_NAME}// /_}
   VAR_NAME="CURR_ENV_${VAR_NAME^^}"
 
-  declare -g "$VAR_NAME" "$VALUE"
+  declare "$VAR_NAME"="$VALUE"
 }

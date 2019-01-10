@@ -18,17 +18,7 @@ COMPONENT=''
 ACTION=''
 
 # environment globals
-if [ -f "${_CURR_ENV_FILE}" ]; then
-  source "$_CURR_ENV_FILE"
-  source "$_CATALYST_ENVS/${CURR_ENV}"
-else
-  CURR_ENV=''
-  CURR_ENV_TYPE=''
-  CURR_ENV_PURPOSE=''
-  # CURR_ENV_GCP_ORG_ID=''
-  # CURR_ENV_GCP_BILLING_ID=''
-  # CURR_ENV_GCP_PROJ_ID=''
-fi
+loadCurrEnv
 
 # Configurable globals.
 ORIGIN_URL='' # can be set externally to avoid interactive questions on 'project init'

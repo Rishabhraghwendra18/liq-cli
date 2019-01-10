@@ -1,13 +1,20 @@
-source ./actionlib/gcpHelpers.sh
+source "`dirname ${BASH_SOURCE[0]}`/actionslib/gcpHelpers.sh"
+source "`dirname ${BASH_SOURCE[0]}`/actionslib/helpers.sh"
 
 environment-show() {
-  if [ -n "$CURR_ENV" ]; then
+  local ENV_NAME=`getEnv "${1:-}"`
+  test -n "$ENV_NAME" || exit 1
+
+  if [[ -n "$CURR_ENV" ]] && [[ "$CURR_ENV" == "$ENV_NAME" ]]; then
     echo "Current environment:"
     echo "$CURR_ENV"
     echo
-    cat "$_CATALYST_ENVS/${CURR_ENV}"
+  fi
+  local ENV_DB="${_CATALYST_ENVS}/${ENV_NAME}"
+  if [[ -f "$ENV_DB" ]]; then
+    cat "$ENV_DB"
   else
-    echoerrandexit "Environment is not set. Try 'catalyst environment set'."
+    echoerrandexit "No such environment '${ENV_NAME}'."
   fi
 }
 
@@ -31,7 +38,7 @@ environment-set() {
     fi
     local SET_HELPER=`setHelperFunctionName "$KEY"`
     if [[ -n "$SET_HELPER" ]]; then
-      eval "$SET_HELPER"
+      eval "$SET_HELPER '$ENV_NAME'"
     else
       requireAnswer 'Parameter value: ' VALUE
       updateEnvParam "$KEY" "$VALUE"
@@ -57,18 +64,23 @@ environment-add() {
 
   if [[ -z "$CURR_ENV_PURPOSE" ]]; then
     echo "Select purpose:"
-    select CURR_ENV_PURPOSE in test pre-production production <other>; do break; done
+    select CURR_ENV_PURPOSE in dev test pre-production production '<other>'; do break; done
     if [[ "$CURR_ENV_PURPOSE" == '<other>' ]]; then
       requireAnswer 'Purpose label: ' CURR_ENV_PURPOSE
+    fi
   fi
 
   if [[ "$CURR_ENV_TYPE" == 'gcp' ]]; then
     gatherGcpData
   fi
-}
 
-doEnvironmentList() {
-  find "$_CATALYST_ENVS" -mindepth 1 -maxdepth 1 -type f -exec basename '{}' \;
+  function selectNewEnv() {
+    environment-select "${ENV_NAME}"
+  }
+
+  yesno "Would you like to select the newly added '${ENV_NAME}'? (Y\n) " \
+    Y \
+    selectNewEnv
 }
 
 environment-list() {
@@ -88,38 +100,48 @@ environment-select() {
     echo "Select environment:"
     select ENV_NAME in `doEnvironmentList`; do break; done
   fi
-  if [ -f "$_CATALYST_ENVS/${ENV_NAME}" ]; then
+  if [[ "${ENV_NAME}" == 'none' ]]; then
+    rm "$_CURR_ENV_FILE"
+  elif [[ -f "$_CATALYST_ENVS/${ENV_NAME}" ]]; then
     echo "CURR_ENV='${ENV_NAME}'" > "$_CURR_ENV_FILE"
   else
     echoerrandexit "No such environment '$ENV_NAME' defined."
   fi
+  # if not error and exit
+  loadCurrEnv
 }
 
 environment-delete() {
-  local ENV_NAME="${1:-}"
+  local ENV_NAME=`getEnv "${1:-}"`
+  test -n "$ENV_NAME" || die
 
-  onConfirm() {
+  onDeleteConfirm() {
     rm ${_CATALYST_ENVS}/${ENV_NAME} && echo "Local '${ENV_NAME}' entry deleted."
   }
 
-  onCancel() {
+  onDeleteCurrent() {
+    onDeleteConfirm
+    environment-select 'none'
+  }
+
+  onDeleteCancel() {
     return 0 # noop
   }
 
-  if [[ -z "$ENV_NAME" ]]; then
+  if [[ -z "$ENV_NAME" ]] || [[ "$ENV_NAME" == "$CURR_ENV" ]]; then
     if [[ -z "$CURR_ENV" ]]; then
       echoerrandexit "No current environment defined. Try 'catalyst environment delete <env name>'."
     fi
     # else
-
+    ENV_NAME="$CURR_ENV"
     yesno \
-      "Confirm deletion of local records for current environment '${$CURR_ENV}': (y/N)" \
+      "Confirm deletion of local records for current environment '${CURR_ENV}': (y/N) " \
       N \
-      onDeleteConfirm \
+      onDeleteCurrent \
       onDeleteCancel
   elif [[ -f "${_CATALYST_ENVS}/${ENV_NAME}" ]]; then
     yesno \
-      "Confirm deletion of local records for environment '${$CURR_ENV}': (y/N)" \
+      "Confirm deletion of local records for environment '${ENV_NAME}': (y/N) " \
       N \
       onDeleteConfirm \
       onDeleteCancel

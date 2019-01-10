@@ -1,10 +1,14 @@
 gatherGcpData() {
-  if [[ -z "$CURR_ENV_GCP_PROJ_ID" ]]; then
+  CURR_ENV_GCP_PROJ_ID=''
+  CURR_ENV_GCP_ORG_ID=''
+  CURR_ENV_GCP_BILLING_ID=''
+
+  if [[ -z "${CURR_ENV_GCP_PROJ_ID}" ]]; then
     # TODO: offer to open 'projects' page
-    requireAnswer 'GCP Project name for environment: ' CURR_ENV_GCP_PROJ_ID
+    requireAnswer 'GCP Project name for environment: ' CURR_ENV_GCP_PROJ_ID "${ENV_NAME}"
   fi
 
-  if [[ -z "$CURR_ENV_GCP_ORG_ID" ]]; then
+  if [[ -z "${CURR_ENV_GCP_ORG_ID}" ]]; then
     echo "First we need to determine your 'organization ID' of the GCP Project hosting this environment."
     local FALLBACK=N
     handleOpenOrgSettings() {
@@ -22,18 +26,19 @@ gatherGcpData() {
     if [[ $FALLBACK == 'Y' ]]; then handleManual; fi
     read -p 'Organization ID: ' CURR_ENV_GCP_ORG_ID
   fi
-  updateEnvironment "${ENV_NAME}"
 
-  if [[ -z "$CURR_ENV_GCP_BILLING_ID" ]]; then
+  if [[ -z "${CURR_ENV_GCP_BILLING_ID}" ]]; then
     handleBilling() {
       echo "Then let's get your billing id."
-      environment-set-billing "${ENV_NAME}"
+      environment-set-gcp-billing-id "${ENV_NAME}"
     }
     handleNoBilling() {
-      echo "After setting up billing, you can set the billing account with 'catalyst environment set-billing'."
+      echo "After setting up billing, you can set the billing account with 'catalyst environment set'."
     }
     yesno "Have you set up billing for this account yet? (Y\n) " Y handleBilling handleNoBilling
   fi
+
+  updateEnvironment "${ENV_NAME}"
 }
 
 environment-set-gcp-billing-id() {

@@ -101,7 +101,7 @@ yesno() {
   local PROMPT="$1"
   local DEFAULT=$2
   local HANDLE_YES=$3
-  local HANDLE_NO=$4
+  local HANDLE_NO="${4:-}" # default to noop
 
   local ANSWER=''
   read -p "$PROMPT" ANSWER
@@ -130,12 +130,20 @@ yesno() {
 
 requireAnswer() {
   local PROMPT="$1"
-  local VAR=$2
+  local VAR="$2"
+  local DEFAULT="${3:-}"
 
-  while [ -z ${!VAR} ]; do
+  if [[ -n "${DEFAULT}" ]]; then
+    PROMPT="${PROMPT}(${DEFAULT}) "
+  fi
+
+  while [ -z ${!VAR:-} ]; do
     read -p "$PROMPT" $VAR
-    if [ -z ${!VAR} ]; then
+    if [[ -z ${!VAR:-} ]] && [[ -z "$DEFAULT" ]]; then
       echoerr "A response is required."
+    elif [[ -z ${!VAR:-} ]] && [[ -n "$DEFAULT" ]]; then
+      # MacOS dosen't support 'declare -g' :(
+      eval ${VAR}="${DEFAULT}"
     fi
   done
 }
@@ -227,4 +235,26 @@ branchName() {
   local BRANCH_DESC="${1:-}"
   requireArgs "$BRANCH_DESC" || exit $?
   echo `date +%Y-%m-%d`-`whoami`-"${BRANCH_DESC}"
+}
+
+loadCurrEnv() {
+  resetEnv() {
+    CURR_ENV=''
+    CURR_ENV_TYPE=''
+    CURR_ENV_PURPOSE=''
+  }
+
+  if [[ -f "${_CURR_ENV_FILE}" ]]; then
+    source "$_CURR_ENV_FILE"
+    local ENV_DB="$_CATALYST_ENVS/${CURR_ENV}"
+    if [[ -f "$ENV_DB" ]]; then
+      source "$ENV_DB"
+    else
+      echoerr "Could not find expected environment DB '$ENV_DB'. Perhaps it was deleted. Resetting curr env."
+      resetEnv "${_CURR_ENV_FILE}"
+      rm "${_CURR_ENV_FILE}"
+    fi
+  else
+    resetEnv
+  fi
 }
