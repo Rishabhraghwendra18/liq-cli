@@ -38,9 +38,6 @@ A running Service exists within an Environment. Environments are defined orthogo
 
 ### `work` module
 
-* `entry-info` : Displays the current entry-point project.
-* `entry-set` : Sets the current entry-point project.
-
 ### `services` module
 
 ### `data` module
