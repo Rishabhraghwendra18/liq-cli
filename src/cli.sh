@@ -29,6 +29,8 @@ if [[ $# -lt 1 ]]; then
   exit 1
 fi
 
+ensureConfig
+
 source "$SOURCE_DIR"/dispatch.sh
 
 exit 0

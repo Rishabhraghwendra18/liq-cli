@@ -9,6 +9,13 @@ case "$COMPONENT" in
   *)
     ACTION="${2:-}"
     case "$COMPONENT" in
+      environment)
+        case "$ACTION" in
+          show|list|add|delete|select|set-billing)
+            ${COMPONENT}-${ACTION} "${3:-}";;
+          *)
+            exitUnknownAction
+          esac;;
       go)
         requireCatalystfile
         case "$ACTION" in
@@ -29,7 +36,7 @@ case "$COMPONENT" in
         esac;;
       project)
         case "$ACTION" in
-          setup-scripts|build|start|lint|lint-fix|test|npm-check|npm-update|qa|deploy|add-mirror|set-billing|link|link-dev|ignore-rest)
+          setup-scripts|build|start|lint|lint-fix|test|npm-check|npm-update|qa|deploy|add-mirror|link|link-dev|ignore-rest)
             sourceCatalystfile
             ${COMPONENT}-${ACTION} "${3:-}" "${4:-}";;
           setup|import|close)

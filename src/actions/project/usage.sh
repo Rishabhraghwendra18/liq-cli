@@ -10,5 +10,4 @@ print_project_usage() {
   echo "${PREFIX}import : Imports a Catalyst project by name or from a GIT url."
   echo "${PREFIX}link <project> : Links the named project (via npm) and updates the current projects 'package.json'."
   # TODO: should have 'set-home' for completion. Which would interactively swap home and mirror values as necessary / indicated.
-  echo "${PREFIX}set-billing : Sets the billing account ID for the project."
 }

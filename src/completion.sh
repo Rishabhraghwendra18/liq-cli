@@ -1,3 +1,6 @@
+# After updating this file, run './install.sh' and open a new terminal for the
+# changes to take effect.
+
 _catalyst()
 {
     local cur prev opts
@@ -8,8 +11,10 @@ _catalyst()
     case "${prev}" in
       catalyst)
         global_actions="help"
-        components="go local project sql webapp work workspace"
+        components="go environment local project sql webapp work workspace"
         opts="${global_actions} ${components}";;
+      environment)
+        opts="add delete list select show";;
       go)
         opts="configure build get-deps start stop view-log";;
       local)

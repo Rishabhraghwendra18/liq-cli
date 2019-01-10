@@ -33,6 +33,11 @@ colorerrbg() {
   (eval "$@" 2>&1>&3|sed 's/^\(.*\)$/'$'\e''[31m\1'$'\e''[m/'>&2)3>&1 &
 }
 
+ensureConfig() {
+  mkdir -p "$_CATALYST_DB"
+  mkdir -p "$_CATALYST_ENVS"
+}
+
 exitUnknownGlobal() {
   print_usage
   echoerr "No such component or global action '$COMPONENT'."
@@ -123,6 +128,18 @@ yesno() {
   fi
 }
 
+requireAnswer() {
+  local PROMPT="$1"
+  local VAR=$2
+
+  while [ -z ${!VAR} ]; do
+    read -p "$PROMPT" $VAR
+    if [ -z ${!VAR} ]; then
+      echoerr "A response is required."
+    fi
+  done
+}
+
 addLineIfNotPresentInFile() {
   local FILE="${1:-}"
   local LINE="${2:-}"
@@ -132,9 +149,6 @@ addLineIfNotPresentInFile() {
 
 updateCatalystFile() {
   local SUPPRESS_MSG="${1:-}"
-  echo "ORGANIZATION_ID=$ORGANIZATION_ID" > "$BASE_DIR/.catalyst"
-  echo "BILLING_ACCOUNT_ID=$BILLING_ACCOUNT_ID" >> "$BASE_DIR/.catalyst"
-  echo "PROJECT_ID=$PROJECT_ID" >> "$BASE_DIR/.catalyst"
   for VAR in GOPATH REL_GOAPP_PATH SQL_DIR TEST_DATA_DIR \
       CLOUDSQL_CONNECTION_NAME CLOUDSQL_CREDS CLOUDSQL_DB_DEV CLOUDSQL_DB_TEST \
       WEB_APP_DIR; do
