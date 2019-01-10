@@ -1,32 +1,4 @@
-updateEnvironment() {
-  local ENV_NAME="${1}"
-
-  cat <<EOF > "$_CATALYST_ENVS/${ENV_NAME}"
-CURR_ENV_TYPE="${CURR_ENV_TYPE}"
-CURR_ENV_PURPOSE="${CURR_ENV_PURPOSE}"
-EOF
-
-  if [[ "$CURR_ENV_TYPE" == "gcp" ]]; then
-    cat <<EOF >> "$_CATALYST_ENVS/${ENV_NAME}"
-CURR_ENV_GCP_PROJ_ID="${CURR_ENV_GCP_PROJ_ID}"
-CURR_ENV_GCP_ORG_ID="${CURR_ENV_GCP_ORG_ID}"
-CURR_ENV_GCP_BILLING_ID="${CURR_ENV_GCP_BILLING_ID}"
-EOF
-  fi
-}
-
-getEnv() {
-  local ENV_NAME="${1:-}"
-  if [ -z "$ENV_NAME" ]; then
-    ENV_NAME="$CURR_ENV"
-  fi
-
-  if [ -z "$ENV_NAME" ]; then
-    echoerrandexit "Could not determine environment. Try 'catalyst environment select'."
-  else
-    echo "$ENV_NAME"
-  fi
-}
+source ./actionlib/gcpHelpers.sh
 
 environment-show() {
   if [ -n "$CURR_ENV" ]; then
@@ -39,55 +11,37 @@ environment-show() {
   fi
 }
 
-environment-set-billing() {
-  local ENV_NAME=`getEnv "${1:-}"`
-
-  handleOpenBilling() {
-    open "${_BILLING_ACCT_URL}${CURR_ENV_GCP_ORG_ID}" || FALLBACK=Y
-    echo
-  }
-  handleManual() {
-    echo "Check this page for existing billing account or to set one up:"
-    echo "${_BILLING_ACCT_URL}${CURR_ENV_GCP_ORG_ID}"
-    echo
-  }
-  yesno "Would you like me to open the billing page for you? (Y/n) " Y handleOpenBilling handleManual
-  if [[ $FALLBACK == 'Y' ]]; then handleManual; fi
-  read -p 'Billing account ID: ' CURR_ENV_GCP_BILLING_ID
-  updateEnvironment "$ENV_NAME"
-}
-
-gatherGcpData() {
-  if [[ -z "$CURR_ENV_GCP_ORG_ID" ]]; then
-    echo "First we need to determine your 'organization ID' of the GCP Project hosting this environment."
-    local FALLBACK=N
-    handleOpenOrgSettings() {
-      open ${_ORG_ID_URL} || FALLBACK=Y
-      echo
-    }
-    handleManual() {
-      echo 'If you have access to the GCP console, you can find it here:'
-      echo $_ORG_ID_URL
-      echo 'or find further instructions here:'
-      echo 'https://cloud.google.com/resource-manager/docs/creating-managing-organization#retrieving_your_organization_id'
-      echo
-    }
-    yesno 'Would you like me to try and open the Google Console for you? (Y/n) ' Y handleOpenOrgSettings handleManual
-    if [[ $FALLBACK == 'Y' ]]; then handleManual; fi
-    read -p 'Organization ID: ' CURR_ENV_GCP_ORG_ID
+environment-set() {
+  local ENV_NAME KEY VALUE
+  if [[ $# -eq 3 ]]; then
+    ENV_NAME="$1"
+    KEY="$2"
+    VALUE="$3"
+  elif [[ $# -eq 2 ]]; then
+    ENV_NAME="$CURR_ENV"
+    KEY="$1"
+    VALUE="$2"
+  elif [[ $# -eq 0 ]]; then
+    ENV_NAME="$CURR_ENV"
+    echo "Select parameter to update"
+    # TODO: add 'selectOrOther' function; we use this pattern in a few places
+    select KEY in `getEnvTypeKeys` '<other>'; do break; done
+    if [[ "$KEY" == '<other>' ]]; then
+      requireAnswer 'Parameter key: ' KEY
+    fi
+    local SET_HELPER=`setHelperFunctionName "$KEY"`
+    if [[ -n "$SET_HELPER" ]]; then
+      eval "$SET_HELPER"
+    else
+      requireAnswer 'Parameter value: ' VALUE
+      updateEnvParam "$KEY" "$VALUE"
+    fi
+  else
+    echoerrandexit "Unexpected number of arguments to 'catalyst environment set'."
+    # TODO: print action specific usage would be nice
   fi
-  updateEnvironment "${ENV_NAME}"
 
-  if [[ -z "$CURR_ENV_GCP_BILLING_ID" ]]; then
-    handleBilling() {
-      echo "Then let's get your billing id."
-      environment-set-billing "${ENV_NAME}"
-    }
-    handleNoBilling() {
-      echo "After setting up billing, you can set the billing account with 'catalyst environment set-billing'."
-    }
-    yesno "Have you set up billing for this account yet? (Y\n) " Y handleBilling handleNoBilling
-  fi
+  updateEnvironment
 }
 
 environment-add() {
@@ -97,10 +51,12 @@ environment-add() {
   fi
 
   if [[ -z "$CURR_ENV_TYPE" ]]; then
+    echo "Select type:"
     select CURR_ENV_TYPE in local gcp; do break; done
   fi
 
   if [[ -z "$CURR_ENV_PURPOSE" ]]; then
+    echo "Select purpose:"
     select CURR_ENV_PURPOSE in test pre-production production <other>; do break; done
     if [[ "$CURR_ENV_PURPOSE" == '<other>' ]]; then
       requireAnswer 'Purpose label: ' CURR_ENV_PURPOSE
@@ -129,6 +85,7 @@ environment-select() {
     if test -z "$(doEnvironmentList)"; then
       echoerrandexit "No environments defined. Try 'catalyst environment add'."
     fi
+    echo "Select environment:"
     select ENV_NAME in `doEnvironmentList`; do break; done
   fi
   if [ -f "$_CATALYST_ENVS/${ENV_NAME}" ]; then
