@@ -4,7 +4,10 @@ print_project_usage() {
     echo -e "Valid project actions are:\n"
   fi
   echo "${PREFIX}service [-a <name>...|-d [<name>...]] : Lists (no args), adds (-a), or deletes (-d) the named or selected service."
-  echo "${PREFIX}dependencies [-a <name>...|-d [<name>...]] : Lists (no args), adds (-a), or deletes (-d) the named or selected Catalyst dependency."
+  echo "${PREFIX}providers [-a <type> <name>...|-d [<spec>...]] :"
+  echo "${PREFIX}  no args - Lists possible providers."
+  echo "${PREFIX}  -a <type> <name>... : Add's one or more named providers of the given type."
+  echo "${PREFIX}  -d <spec>... : Deletes the indicated provider entry. Spec may be '<type>' or '<type>.<provider name>'."
   # TODO: change to 'mirrors'; list with no args, take options to add and delete
   echo "${PREFIX}add-mirror : Adds a mirror, which will receive 'git push' updates."
   # TODO: init?

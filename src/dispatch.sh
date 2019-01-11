@@ -41,6 +41,10 @@ case "$COMPONENT" in
             ${COMPONENT}-${ACTION} "${3:-}" "${4:-}";;
           setup|import|close)
             ${COMPONENT}-${ACTION} "${3:-}";;
+          provider)
+            requireNpmPackage
+            shift; shift
+            ${COMPONENT}-${ACTION} "$@";;
           *) exitUnknownAction
         esac;;
       sql)
