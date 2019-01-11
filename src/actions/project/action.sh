@@ -14,7 +14,7 @@ project-provider() {
     [[ $SERVICE_TYPE == *'.'* ]] && \
       echoerrandexit "Service type '$SERVICE_TYPE' contains illegal '.'."
     local INDEX=3
-    PACKAGE=`cat "$PACKAGE_FILE"`
+    local PACKAGE=`cat "$PACKAGE_FILE"`
     while (($INDEX <= $#)); do
       local DEP="${!INDEX}"
       PACKAGE=`echo "$PACKAGE" | jq ". * { $CAT_PROVIDER_KEY : { $SERVICE_TYPE : (.$CAT_PROVIDER_KEY.$SERVICE_TYPE + [ \"$DEP\" ]  ) } } "`
@@ -22,40 +22,56 @@ project-provider() {
     done
     echo "$PACKAGE" | jq > "$PACKAGE_FILE"
   elif [[ "$1" == '-d' ]]; then
-    local INDEX=2
-    PACKAGE=`cat "$PACKAGE_FILE"`
-    while (($INDEX <= $#)); do
-      PACKAGE=`echo $PACKAGE`
-      local SERVICE_TYPE=`echo ${!INDEX} | cut -d. -f1`
-      local DEP=''
-      if [[ ${!INDEX} == *'.'* ]]; then
-        # TODO: can package names contain '.'? If so, we need to add all fields after the first to dep
-        DEP=`echo ${!INDEX} | cut -d. -f2`
-      fi
-      # First we check if the SERVICE_TYPE even exists.
-      if ! echo "$PACKAGE" | jq -e ".$CAT_PROVIDER_KEY | has(\"$SERVICE_TYPE\")" > /dev/null; then
-        echoerr "No such service type '$SERVICE_TYPE' in providers definition."
-      else
-        # The SERVICE_TYPE is present. What are we deleting?
-        if [[ -z "$DEP" ]]; then # delete whole service type entry
-          PACKAGE=`echo "$PACKAGE" | jq ". + del(.$CAT_PROVIDER_KEY.$SERVICE_TYPE)"`
+    local PACKAGE=`cat "$PACKAGE_FILE"`
+    if [[ $# == 1 ]]; then
+      local DONE=false
+      while [[ $DONE != true ]]; do
+        select SPEC in `echo "$PACKAGE" | jq "(.$CAT_PROVIDER_KEY | keys) + ( [ (.$CAT_PROVIDER_KEY | to_entries | .[] | .key + \".\" + (.value | .[])  ) ] ) | sort | @sh" | tr -d "\"'"` '<done>'; do
+          case $SPEC in
+            '<done>')
+              DONE=true
+              break;;
+            *)
+              project-provider -d "$SPEC"
+              PACKAGE=`cat "$PACKAGE_FILE"`
+              break;;
+          esac
+        done # select
+      done # while
+    else
+      local INDEX=2
+      while (($INDEX <= $#)); do
+        PACKAGE=`echo $PACKAGE`
+        local SERVICE_TYPE=`echo ${!INDEX} | cut -d. -f1`
+        local DEP=''
+        if [[ ${!INDEX} == *'.'* ]]; then
+          # TODO: can package names contain '.'? If so, we need to add all fields after the first to dep
+          DEP=`echo ${!INDEX} | cut -d. -f2`
+        fi
+        # First we check if the SERVICE_TYPE even exists.
+        if ! echo "$PACKAGE" | jq -e ".$CAT_PROVIDER_KEY | has(\"$SERVICE_TYPE\")" > /dev/null; then
+          echoerr "No such service type '$SERVICE_TYPE' in providers definition."
         else
-          if ! echo "$PACKAGE" | jq -e "(.$CAT_PROVIDER_KEY.$SERVICE_TYPE | map(select(. == \"$DEP\")) | length) > 0" > /dev/null; then
-            echoerr "No such provider '$DEP' in '$SERVICE_TYPE' providers."
+          # The SERVICE_TYPE is present. What are we deleting?
+          if [[ -z "$DEP" ]]; then # delete whole service type entry
+            PACKAGE=`echo "$PACKAGE" | jq ". + del(.$CAT_PROVIDER_KEY.$SERVICE_TYPE)"`
           else
-            PACKAGE=`echo "$PACKAGE" | jq "delpaths([[\"$CAT_PROVIDER_KEY\", \"$SERVICE_TYPE\"]]) * { $CAT_PROVIDER_KEY: { $SERVICE_TYPE: (.$CAT_PROVIDER_KEY.$SERVICE_TYPE - [\"$DEP\"]) } }"`
-            # now, cleanup if necessary
-            if echo "$PACKAGE" | jq -e "(.$CAT_PROVIDER_KEY.$SERVICE_TYPE | length) == 0" > /dev/null; then
-              # TODO: this is a copy and past line
-              PACKAGE=`echo "$PACKAGE" | jq ". + del(.$CAT_PROVIDER_KEY.$SERVICE_TYPE)"`
+            if ! echo "$PACKAGE" | jq -e "(.$CAT_PROVIDER_KEY.$SERVICE_TYPE | map(select(. == \"$DEP\")) | length) > 0" > /dev/null; then
+              echoerr "No such provider '$DEP' in '$SERVICE_TYPE' providers."
+            else
+              PACKAGE=`echo "$PACKAGE" | jq "delpaths([[\"$CAT_PROVIDER_KEY\", \"$SERVICE_TYPE\"]]) * { $CAT_PROVIDER_KEY: { $SERVICE_TYPE: (.$CAT_PROVIDER_KEY.$SERVICE_TYPE - [\"$DEP\"]) } }"`
+              # now, cleanup if necessary
+              if echo "$PACKAGE" | jq -e "(.$CAT_PROVIDER_KEY.$SERVICE_TYPE | length) == 0" > /dev/null; then
+                # TODO: this is a copy and past line
+                PACKAGE=`echo "$PACKAGE" | jq ". + del(.$CAT_PROVIDER_KEY.$SERVICE_TYPE)"`
+              fi
             fi
           fi
         fi
-      fi
-      INDEX=$((INDEX + 1))
-    done
-    echo "$PACKAGE" | jq
-    # echo "$PACKAGE" | jq > "$PACKAGE_FILE"
+        INDEX=$((INDEX + 1))
+      done
+    fi
+    echo "$PACKAGE" | jq > "$PACKAGE_FILE"
   # else # list named services
 
   fi
