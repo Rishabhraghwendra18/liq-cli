@@ -10,6 +10,7 @@ _ORG_ID_URL='https://console.cloud.google.com/iam-admin/settings'
 _BILLING_ACCT_URL='https://console.cloud.google.com/billing?folder=&organizationId='
 
 # Global variables.
+PACKAGE_FILE=''
 SOURCE_DIR="$SOURCE_DIR"
 BASE_DIR=''
 WORKSPACE_DIR=''
