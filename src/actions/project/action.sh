@@ -1,20 +1,38 @@
 CAT_PROVIDER_KEY='_catalystProviders'
 
 project-provider() {
+  verifyService() {
+    if ! echo "$PACKAGE" | jq -e ".$CAT_PROVIDER_KEY | has(\"$SERVICE_TYPE\")" > /dev/null; then
+      echoerr "No such service type '$SERVICE_TYPE' in providers definition."
+      return 1
+    else return 0; fi
+  }
+
+  listType() {
+    # TYPE comes in like 'webapp'; handles the single quote
+    SERVICE_TYPE=`echo $SERVICE_TYPE | tr -d "'"`
+    echo "$SERVICE_TYPE : "`echo $PACKAGE | jq --raw-output ".${CAT_PROVIDER_KEY}.${SERVICE_TYPE} | @csv" | tr -d \" | sed 's/,/, /g'`
+  }
+
+  local PACKAGE=`cat "$PACKAGE_FILE"`
+
+  # If we're not adding, then there we expect $CAT_PROVIDER_KEY to be present.
+  if [[ "${1:-}" != "-a" ]] && \
+     ! echo "$PACKAGE" | jq -e "(.$CAT_PROVIDER_KEY | length) > 0" > /dev/null; then
+    echoerrandexit "No '$CAT_PROVIDER_KEY' provider definition found."
+  fi
+
   if [[ $# -eq 0 ]]; then # list
-    local TYPES=`cat $PACKAGE_FILE | jq --raw-output ".$CAT_PROVIDER_KEY | keys | @sh"`
-    local TYPE
-    for TYPE in $TYPES; do
-      # TYPE comes in like 'webapp'; handles the single quote
-      eval "TYPE=$TYPE"
-      echo "$TYPE : "`cat $PACKAGE_FILE | jq --raw-output ".${CAT_PROVIDER_KEY}.${TYPE} | @csv" | tr -d \" | sed 's/,/, /g'`
+    local SERVICE_TYPES=`cat $PACKAGE_FILE | jq --raw-output ".$CAT_PROVIDER_KEY | keys | @sh"`
+    local SERVICE_TYPE
+    for SERVICE_TYPE in $SERVICE_TYPES; do
+      listType
     done
   elif [[ "$1" == '-a' ]]; then
     local SERVICE_TYPE="$2"
     [[ $SERVICE_TYPE == *'.'* ]] && \
       echoerrandexit "Service type '$SERVICE_TYPE' contains illegal '.'."
     local INDEX=3
-    local PACKAGE=`cat "$PACKAGE_FILE"`
     while (($INDEX <= $#)); do
       local DEP="${!INDEX}"
       PACKAGE=`echo "$PACKAGE" | jq ". * { $CAT_PROVIDER_KEY : { $SERVICE_TYPE : (.$CAT_PROVIDER_KEY.$SERVICE_TYPE + [ \"$DEP\" ]  ) } } "`
@@ -22,7 +40,6 @@ project-provider() {
     done
     echo "$PACKAGE" | jq > "$PACKAGE_FILE"
   elif [[ "$1" == '-d' ]]; then
-    local PACKAGE=`cat "$PACKAGE_FILE"`
     if [[ $# == 1 ]]; then
       local DONE=false
       while [[ $DONE != true ]]; do
@@ -41,18 +58,15 @@ project-provider() {
     else
       local INDEX=2
       while (($INDEX <= $#)); do
-        PACKAGE=`echo $PACKAGE`
         local SERVICE_TYPE=`echo ${!INDEX} | cut -d. -f1`
         local DEP=''
         if [[ ${!INDEX} == *'.'* ]]; then
           # TODO: can package names contain '.'? If so, we need to add all fields after the first to dep
           DEP=`echo ${!INDEX} | cut -d. -f2`
         fi
-        # First we check if the SERVICE_TYPE even exists.
-        if ! echo "$PACKAGE" | jq -e ".$CAT_PROVIDER_KEY | has(\"$SERVICE_TYPE\")" > /dev/null; then
-          echoerr "No such service type '$SERVICE_TYPE' in providers definition."
-        else
-          # The SERVICE_TYPE is present. What are we deleting?
+
+        if verifyService; then
+          # Are we deletin the whole type def or just a single provider?
           if [[ -z "$DEP" ]]; then # delete whole service type entry
             PACKAGE=`echo "$PACKAGE" | jq ". + del(.$CAT_PROVIDER_KEY.$SERVICE_TYPE)"`
           else
@@ -72,8 +86,15 @@ project-provider() {
       done
     fi
     echo "$PACKAGE" | jq > "$PACKAGE_FILE"
-  # else # list named services
-
+  else # list named services
+    local INDEX=1
+    while (($INDEX <= $#)); do
+      local SERVICE_TYPE=${!INDEX}
+      if verifyService; then
+        listType
+      fi
+      INDEX=$((INDEX + 1))
+    done
   fi
 }
 
