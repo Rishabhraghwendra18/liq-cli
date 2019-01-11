@@ -54,27 +54,38 @@ exitUnknownAction() {
   exit 1
 }
 
-sourceFile() {
+findFile() {
   local SEARCH_DIR="${1}"
   local FILE_NAME="${2}"
-  local PROJFILE
+  local RES_VAR="${3}"
+  local FOUND_FILE
+
   while SEARCH_DIR="$(cd "$SEARCH_DIR"; echo $PWD)" && [[ "${SEARCH_DIR}" != "/" ]]; do
-    PROJFILE=`find -L "$SEARCH_DIR" -maxdepth 1 -mindepth 1 -name "${FILE_NAME}" -type f | grep "${FILE_NAME}" || true`
-    if [ -z "$PROJFILE" ]; then
+    FOUND_FILE=`find -L "$SEARCH_DIR" -maxdepth 1 -mindepth 1 -name "${FILE_NAME}" -type f | grep "${FILE_NAME}" || true`
+    if [ -z "$FOUND_FILE" ]; then
       SEARCH_DIR="$SEARCH_DIR/.."
     else
       break
     fi
   done
 
-  if [ -z "$PROJFILE" ]; then
+  if [ -z "$FOUND_FILE" ]; then
     echoerr "Could not find '${FILE_NAME}' config file in any parent directory."
     return 1
   else
+    eval $RES_VAR="$FOUND_FILE"
+  fi
+}
+
+sourceFile() {
+  local SEARCH_DIR="${1}"
+  local FILE_NAME="${2}"
+  local PROJFILE
+  findFile "$SEARCH_DIR" "$FILE_NAME" PROJFILE && {
     source "$PROJFILE"
     BASE_DIR="$( cd "$( dirname "${PROJFILE}" )" && pwd )"
     return 0
-  fi
+  }
 }
 
 sourceCatalystfile() {
@@ -85,6 +96,10 @@ sourceCatalystfile() {
 requireCatalystfile() {
   sourceCatalystfile \
     || echoerrandexit "Run 'catalyst project init' from project root." 1
+}
+
+requireNpmPackage() {
+  findFile "${PWD}" 'package.json' PACKAGE_FILE
 }
 
 sourceWorkspaceConfig() {
