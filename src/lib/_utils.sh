@@ -273,3 +273,25 @@ loadCurrEnv() {
     resetEnv
   fi
 }
+
+selectOtherDoneCancel() {
+  local VAR_NAME="$1"; shift
+  local ENV
+  # TODO trim options as they are selected
+  select ENV in "$@" '<any>' '<other>' '<done>' '<cancel>'; do
+    case "$ENV" in
+      '<cancel>')
+        exit;;
+      '<done>')
+        break;;
+      '<other>')
+        requireAnswer "$PS3" ENV
+        eval $VAR_NAME="${!VAR_NAME} '$ENV'";;
+      '<any>')
+        eval $VAR_NAME='any'
+        break;;
+      *)
+        eval $VAR_NAME=\"${!VAR_NAME}'$ENV' \";;
+    esac
+  done
+}

@@ -41,9 +41,9 @@ case "$COMPONENT" in
             ${COMPONENT}-${ACTION} "${3:-}" "${4:-}";;
           setup|import|close)
             ${COMPONENT}-${ACTION} "${3:-}";;
-          provider)
+          provider|service)
             requireNpmPackage
-            shift; shift
+            shift; shift # TODO: shift on initial grab; use '"$@"' for all
             ${COMPONENT}-${ACTION} "$@";;
           *) exitUnknownAction
         esac;;
