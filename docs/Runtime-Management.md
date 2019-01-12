@@ -12,4 +12,4 @@ General concepts and common concerns are addressed first. Issues particular to p
 * Packages may declare compatible service *providers*.
 * Compatible services are composed into a runtime *environment*.
 
-For example, package `mysql-runtime` might provide two services `mysql-gcp` and `mysql-local-hybrid`. These would both be of interface class `mysql`. Package `foo-api` requires a `mysql` provider. We could create then create a dev environment using `mysql-local-hybrid` and a production environment using `mysql-gcp`.
+For example, package `mysql-runtime` might provide two services `mysql-gcp` and `mysql-local-hybrid`. These would both support interface class `mysql`. Package `foo-api` requires a `mysql` provider. We could create then create a dev environment using `mysql-local-hybrid` and a production environment using `mysql-gcp`.

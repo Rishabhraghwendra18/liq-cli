@@ -276,22 +276,25 @@ loadCurrEnv() {
 
 selectOtherDoneCancel() {
   local VAR_NAME="$1"; shift
-  local ENV
+  local SELECTION
   # TODO trim options as they are selected
-  select ENV in "$@" '<any>' '<other>' '<done>' '<cancel>'; do
-    case "$ENV" in
+  select SELECTION in '<done>' '<cancel>' "$@" '<any>' '<other>'; do
+    case "$SELECTION" in
       '<cancel>')
         exit;;
       '<done>')
+        echo "Final selection: ${!VAR_NAME}"
         break;;
       '<other>')
-        requireAnswer "$PS3" ENV
-        eval $VAR_NAME="${!VAR_NAME} '$ENV'";;
+        requireAnswer "$PS3" SELECTION
+        eval $VAR_NAME=\"${!VAR_NAME}'$SELECTION' \";;
       '<any>')
+        echo "Final selection: 'any'"
         eval $VAR_NAME='any'
         break;;
       *)
-        eval $VAR_NAME=\"${!VAR_NAME}'$ENV' \";;
+        eval $VAR_NAME=\"${!VAR_NAME}'$SELECTION' \";;
     esac
+    echo "Current selections: ${!VAR_NAME}"
   done
 }

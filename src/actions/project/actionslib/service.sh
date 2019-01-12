@@ -10,71 +10,72 @@ project-service() {
 }
 
 project-service-add() {
+  local PACKAGE=`cat "$PACKAGE_FILE"`
   # TODO: check for global to allow programatic use
-  local SERVICE_TYPE="${1:-}"
-  if [[ -z "$SERVICE_TYPE" ]]; then
-    PS3="Service type: "
-    select SERVICE_TYPE in 'webapp' 'db-mysql' 'api-go' '<other>' '<cancel>'; do
-      break
-    done
-    case "$SERVICE_TYPE" in
-      '<cancel>')
-        exit;;
-      '<other>')
-        requireAnswer 'Service type: ' SERVICE_TYPE;;
-      *)
-        ;;
-    esac
-  fi # -z "$SERVICE_TYPE"
+  local SERVICE_NAME="${1:-}"
+  if [[ -z "$SERVICE_NAME" ]]; then
+    requireAnswer "Service name: " SERVICE_NAME
+  fi
 
   local SERVICE_DEF=$(cat <<EOF
 {
-  "serviceType": "${SERVICE_TYPE}",
-  "envTypes": [],
+  "name": "${SERVICE_NAME}",
+  "interface-classes": [],
+  "platform-types": [],
   "purposes": [],
-  "deployScript": null,
-  "ctrlScript": null,
-  "reqParams": [],
-  "optParams": []
+  "script-deploy": null,
+  "script-ctrl": null,
+  "params-req": [],
+  "params-opt": []
 }
 EOF
 )
-  local ENVIRONMENT_TYPES
-  local ENVIRONMENT_TYPE
-  PS3="Environment type: " # TODO: environment 'platform' better? type is so generic
-  selectOtherDoneCancel ENVIRONMENT_TYPES 'local' 'gcp'
-  for ENVIRONMENT_TYPE in $ENVIRONMENT_TYPES; do
-    echo "$ENVIRONMENT_TYPE"
-    SERVICE_DEF=`echo "$SERVICE_DEF" | jq ". + { \"envTypes\": (.envTypes + [\"$ENVIRONMENT_TYPE\"]) }"`
-  done
 
-  local PURPOSES
-  local PURPOSE
-  PS3="Purpose: "
-  selectOtherDoneCancel PURPOSES 'dev' 'test' 'pre-production', 'produciton'
-  for PURPOSE in $PURPOSES; do
-    SERVICE_DEF=`echo "$SERVICE_DEF" | jq ". + { \"purposes\": (.purposes + [\"$PURPOSE\"]) }"`
-  done
+  function selectOptions() {
+    local OPTIONS
+    local OPTION
+    local OPTIONS_NAME="$1"; shift
+    PS3="$1"; shift
+    selectOtherDoneCancel OPTIONS "$@"
+    for OPTION in $OPTIONS; do
+      SERVICE_DEF=`echo "$SERVICE_DEF" | jq ". + { \"$OPTIONS_NAME\": (.\"$OPTIONS_NAME\" + [\"$OPTION\"]) }"`
+    done
+  }
+
+  selectOptions 'interface-classes' 'Interface class: ' 'http' 'sql' 'mysql'
+  selectOptions 'platform-types' 'Platform type: ' 'local' 'gcp' 'aws'
+  selectOptions 'purposes' 'Purpose: ' 'dev' 'test' 'pre-production', 'produciton'
 
   local SCRIPT_FILE
-  requireAnswer 'Delpoy script: '
-  SERVICE_DEF=`echo "$SERVICE_DEF" | jq "setpath([\"deployScript\"]; \"$SCRIPT_FILE\")"`
+  requireAnswer 'Delpoy script: ' SCRIPT_FILE
+  SERVICE_DEF=`echo "$SERVICE_DEF" | jq "setpath([\"script-deploy\"]; \"$SCRIPT_FILE\")"`
 
-  requireAnswer 'Control script: '
-  SERVICE_DEF=`echo "$SERVICE_DEF" | jq "setpath([\"ctrlScript\"]; \"$SCRIPT_FILE\")"`
+  SCRIPT_FILE=''
+  requireAnswer 'Control script: ' SCRIPT_FILE
+  SERVICE_DEF=`echo "$SERVICE_DEF" | jq "setpath([\"script-ctrl\"]; \"$SCRIPT_FILE\")"`
 
   echo "Enter required parameters. Enter blank line when done."
   local PARAM_NAME
   while [[ $PARAM_NAME != '...quit...' ]]; do
     read -p "Required parameter: " PARAM_NAME
-    if [[ -z "$PARAM_NAME" ]]; then PARAM_NAME='...quit...'; fi
+    if [[ -z "$PARAM_NAME" ]]; then
+      PARAM_NAME='...quit...'
+    else
+      SERVICE_DEF=`echo "$SERVICE_DEF" | jq ". + { \"params-req\": (.\"params-req\" + [\"$PARAM_NAME\"]) }"`
+    fi
   done
 
+  PARAM_NAME=''
   echo "Enter optional parameters. Enter blank line when done."
   while [[ $PARAM_NAME != '...quit...' ]]; do
     read -p "Optional parameter: " PARAM_NAME
-    if [[ -z "$PARAM_NAME" ]]; then PARAM_NAME='...quit...'; fi
+    if [[ -z "$PARAM_NAME" ]]; then
+      PARAM_NAME='...quit...'
+    else
+      SERVICE_DEF=`echo "$SERVICE_DEF" | jq ". + { \"params-opt\": (.\"params-opt\" + [\"$PARAM_NAME\"]) }"`
+    fi
   done
 
-  echo "$SERVICE_DEF" | jq
+  PACKAGE=`echo "$PACKAGE" | jq ". + { \"$CAT_SERVICES_KEY\": (.\"$CAT_SERVICES_KEY\" + [$SERVICE_DEF]) }"`
+  echo "$PACKAGE" | jq > "$PACKAGE_FILE"
 }
