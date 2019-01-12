@@ -1,3 +1,5 @@
+CAT_SERVICES_KEY="_catServices"
+
 project-service() {
   if [[ $# -eq 0 ]]; then #list
     echo 'TODO list'

@@ -1,5 +1,3 @@
-CAT_PROVIDER_KEY='_catalystProviders'
-
 source "`dirname ${BASH_SOURCE[0]}`/actionslib/provider.sh"
 source "`dirname ${BASH_SOURCE[0]}`/actionslib/service.sh"
 
