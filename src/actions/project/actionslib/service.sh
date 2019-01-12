@@ -1,16 +1,28 @@
 CAT_SERVICES_KEY="_catServices"
 
 project-service() {
+  local PACKAGE=`cat "$PACKAGE_FILE"`
+
   if [[ $# -eq 0 ]]; then #list
-    echo 'TODO list'
+    echo $PACKAGE | jq --raw-output ".\"$CAT_SERVICES_KEY\" | .[] | .\"name\""
   elif [[ "$1" == '-a' ]]; then # add
     shift
     project-service-add "$@"
-  fi # -a
+  else # show detail on each named service
+    while [[ $# -gt 0 ]]; do
+      echo "$1:"
+      echo
+      echo $PACKAGE | jq ".\"$CAT_SERVICES_KEY\" | .[] | select(.name == \"$1\")"
+      if [[ $# -gt 1 ]]; then
+        echo
+        read -p "Hit enter to continue to '$2'..."
+      fi
+      shift
+    done
+  fi
 }
 
 project-service-add() {
-  local PACKAGE=`cat "$PACKAGE_FILE"`
   # TODO: check for global to allow programatic use
   local SERVICE_NAME="${1:-}"
   if [[ -z "$SERVICE_NAME" ]]; then
