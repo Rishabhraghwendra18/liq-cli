@@ -43,6 +43,7 @@ case "$COMPONENT" in
             ${COMPONENT}-${ACTION} "${3:-}";;
           requires-service|provides-service)
             requireNpmPackage
+            requireCatalystfile
             shift; shift # TODO: shift on initial grab; use '"$@"' for all
             ${COMPONENT}-${ACTION} "$@";;
           *) exitUnknownAction

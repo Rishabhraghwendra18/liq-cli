@@ -11,7 +11,7 @@ _BILLING_ACCT_URL='https://console.cloud.google.com/billing?folder=&organization
 
 # Global variables.
 PACKAGE_FILE=''
-SOURCE_DIR="$SOURCE_DIR"
+SOURCE_DIR="$SOURCE_DIR" # TODO: huh?
 BASE_DIR=''
 WORKSPACE_DIR=''
 

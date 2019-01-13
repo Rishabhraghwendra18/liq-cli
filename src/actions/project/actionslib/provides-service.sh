@@ -1,7 +1,7 @@
 CAT_PROVIDES_SERVICE="_catServices"
 STD_IFACE_CLASSES="http http-html http-rest sql sql-mysql"
 STD_PLATFORM_TYPES="local gcp aws"
-STD_PURPOSES="dev 'test pre-production produciton"
+STD_PURPOSES="dev test pre-production produciton"
 
 project-provides-service() {
   local PACKAGE=`cat "$PACKAGE_FILE"`
@@ -61,8 +61,11 @@ EOF
   selectOptions 'purposes' 'Purpose: ' $STD_PURPOSES
 
   local SCRIPT_FILE
-  requireAnswer 'Control script: ' SCRIPT_FILE
-  SERVICE_DEF=`echo "$SERVICE_DEF" | jq "setpath([\"ctrl-script\"]; \"$SCRIPT_FILE\")"`
+  PS3='Control script: '
+  select SCRIPT_FILE in `ls ${BASE_DIR}/bin`; do
+    SERVICE_DEF=`basename "$SERVICE_DEF" | jq "setpath([\"ctrl-script\"]; \"$SCRIPT_FILE\")"`
+    break
+  done
 
   echo "Enter required parameters. Enter blank line when done."
   local PARAM_NAME
