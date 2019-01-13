@@ -1,4 +1,7 @@
 CAT_PROVIDES_SERVICE="_catServices"
+STD_IFACE_CLASSES="http sql mysql"
+STD_PLATFORM_TYPES="local gcp aws"
+STD_PURPOSES="dev 'test pre-production produciton"
 
 project-provides-service() {
   local PACKAGE=`cat "$PACKAGE_FILE"`
@@ -53,9 +56,9 @@ EOF
     done
   }
 
-  selectOptions 'interface-classes' 'Interface class: ' 'http' 'sql' 'mysql'
-  selectOptions 'platform-types' 'Platform type: ' 'local' 'gcp' 'aws'
-  selectOptions 'purposes' 'Purpose: ' 'dev' 'test' 'pre-production', 'produciton'
+  selectOptions 'interface-classes' 'Interface class: ' $STD_IFACE_CLASSES
+  selectOptions 'platform-types' 'Platform type: ' $STD_PLATFORM_TYPES
+  selectOptions 'purposes' 'Purpose: ' $STD_PURPOSES
 
   local SCRIPT_FILE
   requireAnswer 'Control script: ' SCRIPT_FILE

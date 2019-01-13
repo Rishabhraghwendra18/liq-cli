@@ -1,9 +1,17 @@
+usage-project-provides-service() {
+  local TAB="${1:-}"
+  local PREFIX="${2:-}"
+  echo "${TAB}${PREFIX}service [<name>|-a [<name>]|-d [<name>...]] :"
+  echo "${TAB}  no args : Lists provided services by nameLists (no args), adds (-a), or deletes (-d) the named or selected service."
+}
+
 usage-project-requires-service() {
   local TAB="${1:-}"
   local PREFIX="${2:-}"
 
   echo "${TAB}${PREFIX}providers [-a <intferface> <name>...|-d [<spec>...]] :"
   echo "${TAB}  no args : Lists required runtime services."
+  echo "${TAB}  <name>... : Displays detailed information about each named service."
   echo "${TAB}  -a [<iface class>...] : Adds named or interactively selected required runtime services by interface."
   echo "${TAB}  -d [<iface class>...] : Deletes the indicated provider entry. Spec may be '<type>' or '<type>.<provider name>'."
 }
@@ -13,7 +21,7 @@ print_project_usage() {
   if [[ -z "$TAB" ]]; then
     echo -e "Valid project actions are:\n"
   fi
-  echo "${TAB}service [-a [<name>]|-d [<name>...]] : Lists (no args), adds (-a), or deletes (-d) the named or selected service."
+  usage-project-provides-service "$TAB"
   usage-project-requires-service "$TAB"
   # TODO: change to 'mirrors'; list with no args, take options to add and delete
   echo "${TAB}add-mirror : Adds a mirror, which will receive 'git push' updates."
