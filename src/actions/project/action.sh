@@ -1,5 +1,5 @@
 source "`dirname ${BASH_SOURCE[0]}`/actionslib/requires-service.sh"
-source "`dirname ${BASH_SOURCE[0]}`/actionslib/service.sh"
+source "`dirname ${BASH_SOURCE[0]}`/actionslib/provides-service.sh"
 
 project-setup_git_setup() {
   local HAS_FILES=`ls -a "${BASE_DIR}" | (grep -ve '^\.$' || true) | (grep -ve '^\.\.$' || true) | wc -w`

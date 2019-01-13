@@ -1,18 +1,18 @@
-CAT_SERVICES_KEY="_catServices"
+CAT_PROVIDES_SERVICE="_catServices"
 
-project-service() {
+project-provides-service() {
   local PACKAGE=`cat "$PACKAGE_FILE"`
 
   if [[ $# -eq 0 ]]; then #list
-    echo $PACKAGE | jq --raw-output ".\"$CAT_SERVICES_KEY\" | .[] | .\"name\""
+    echo $PACKAGE | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | .\"name\""
   elif [[ "$1" == '-a' ]]; then # add
     shift
-    project-service-add "$@"
+    project-provides-service-add "$@"
   else # show detail on each named service
     while [[ $# -gt 0 ]]; do
       echo "$1:"
       echo
-      echo $PACKAGE | jq ".\"$CAT_SERVICES_KEY\" | .[] | select(.name == \"$1\")"
+      echo $PACKAGE | jq ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$1\")"
       if [[ $# -gt 1 ]]; then
         echo
         read -p "Hit enter to continue to '$2'..."
@@ -22,7 +22,7 @@ project-service() {
   fi
 }
 
-project-service-add() {
+project-provides-service-add() {
   # TODO: check for global to allow programatic use
   local SERVICE_NAME="${1:-}"
   if [[ -z "$SERVICE_NAME" ]]; then
@@ -35,8 +35,7 @@ project-service-add() {
   "interface-classes": [],
   "platform-types": [],
   "purposes": [],
-  "script-deploy": null,
-  "script-ctrl": null,
+  "ctrl-script": null,
   "params-req": [],
   "params-opt": []
 }
@@ -59,12 +58,8 @@ EOF
   selectOptions 'purposes' 'Purpose: ' 'dev' 'test' 'pre-production', 'produciton'
 
   local SCRIPT_FILE
-  requireAnswer 'Delpoy script: ' SCRIPT_FILE
-  SERVICE_DEF=`echo "$SERVICE_DEF" | jq "setpath([\"script-deploy\"]; \"$SCRIPT_FILE\")"`
-
-  SCRIPT_FILE=''
   requireAnswer 'Control script: ' SCRIPT_FILE
-  SERVICE_DEF=`echo "$SERVICE_DEF" | jq "setpath([\"script-ctrl\"]; \"$SCRIPT_FILE\")"`
+  SERVICE_DEF=`echo "$SERVICE_DEF" | jq "setpath([\"ctrl-script\"]; \"$SCRIPT_FILE\")"`
 
   echo "Enter required parameters. Enter blank line when done."
   local PARAM_NAME
@@ -88,6 +83,6 @@ EOF
     fi
   done
 
-  PACKAGE=`echo "$PACKAGE" | jq ". + { \"$CAT_SERVICES_KEY\": (.\"$CAT_SERVICES_KEY\" + [$SERVICE_DEF]) }"`
+  PACKAGE=`echo "$PACKAGE" | jq ". + { \"$CAT_PROVIDES_SERVICE\": (.\"$CAT_PROVIDES_SERVICE\" + [$SERVICE_DEF]) }"`
   echo "$PACKAGE" | jq > "$PACKAGE_FILE"
 }

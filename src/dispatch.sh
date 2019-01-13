@@ -41,7 +41,7 @@ case "$COMPONENT" in
             ${COMPONENT}-${ACTION} "${3:-}" "${4:-}";;
           setup|import|close)
             ${COMPONENT}-${ACTION} "${3:-}";;
-          requires-service|service)
+          requires-service|provides-service)
             requireNpmPackage
             shift; shift # TODO: shift on initial grab; use '"$@"' for all
             ${COMPONENT}-${ACTION} "$@";;
