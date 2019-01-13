@@ -1,4 +1,4 @@
-source "`dirname ${BASH_SOURCE[0]}`/actionslib/provider.sh"
+source "`dirname ${BASH_SOURCE[0]}`/actionslib/requires-service.sh"
 source "`dirname ${BASH_SOURCE[0]}`/actionslib/service.sh"
 
 project-setup_git_setup() {

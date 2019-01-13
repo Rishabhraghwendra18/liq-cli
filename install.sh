@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-source ./src/lib/utils.sh
+source ./src/lib/_utils.sh
 
 COMPLETION_PATH="/usr/local/etc/bash_completion.d"
 
