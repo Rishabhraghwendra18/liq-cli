@@ -1,6 +1,6 @@
 STD_ENV_PUPRPOSES='dev test pre-production production'
 
-source "`dirname ${BASH_SOURCE[0]}`/actionslib/helpers.sh"
+source "`dirname ${BASH_SOURCE[0]}`/lib.sh"
 
 environment-show() {
   local ENV_NAME=`getEnv "${1:-}"`
@@ -54,6 +54,7 @@ environment-set() {
 
 environment-add() {
   local ENV_NAME="${1:-}"
+  # TODO: echo "Adding environment for project $CURR_PROJECT"
   if [ -z "${ENV_NAME}" ]; then
     requireAnswer 'Local environment name: ' ENV_NAME
   fi
@@ -69,7 +70,7 @@ environment-add() {
   local REQ_SERVICES=`project-requires-service`
   local REQ_SERVICE
   for REQ_SERVICE in $REQ_SERVICES; do
-    echo "TODO: $REQ_SERVICE"
+
   done
 
   function selectNewEnv() {
