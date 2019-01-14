@@ -1,8 +1,3 @@
-CAT_PROVIDES_SERVICE="_catServices"
-STD_IFACE_CLASSES="http http-html http-rest sql sql-mysql"
-STD_PLATFORM_TYPES="local gcp aws"
-STD_PURPOSES="dev test pre-production produciton"
-
 project-provides-service() {
   local PACKAGE=`cat "$PACKAGE_FILE"`
 
@@ -50,7 +45,7 @@ EOF
     local OPTION
     local OPTIONS_NAME="$1"; shift
     PS3="$1"; shift
-    selectOtherDoneCancel OPTIONS "$@"
+    selectOtherDoneCancelAny OPTIONS "$@"
     for OPTION in $OPTIONS; do
       SERVICE_DEF=`echo "$SERVICE_DEF" | jq ". + { \"$OPTIONS_NAME\": (.\"$OPTIONS_NAME\" + [\"$OPTION\"]) }"`
     done

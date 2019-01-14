@@ -274,27 +274,45 @@ loadCurrEnv() {
   fi
 }
 
+_commonSelectHelper() {
+  local VAR_NAME="$1"; shift
+  local PRE_OPTS="$1"; shift
+  local POST_OPTS="$1"; shift
+  local SELECTION
+  local OPTIONS="$@"
+  local QUIT='false'
+
+  while [[ $QUIT == 'false' ]]; do
+    select SELECTION in $PRE_OPTS $OPTIONS $POST_OPTS; do
+      case "$SELECTION" in
+        '<cancel>')
+          exit;;
+        '<done>')
+          echo "Final selection: ${!VAR_NAME}"
+          QUIT='true';;
+        '<other>')
+          SELECTION=''
+          requireAnswer "$PS3" SELECTION
+          eval $VAR_NAME=\"${!VAR_NAME}'$SELECTION' \";;
+        '<any>')
+          echo "Final selection: 'any'"
+          eval $VAR_NAME='any';;
+        *)
+          eval $VAR_NAME=\"${!VAR_NAME}'$SELECTION' \";;
+      esac
+      echo "Current selections: ${!VAR_NAME}"
+      OPTIONS=${OPTIONS/$SELECTION/}
+      break
+    done
+  done
+}
+
+selectOtherDoneCancelAny() {
+  local VAR_NAME="$1"; shift
+  _commonSelectHelper "$VAR_NAME" '<done> <cancel>' '<any> <other>' "$@"
+}
+
 selectOtherDoneCancel() {
   local VAR_NAME="$1"; shift
-  local SELECTION
-  # TODO trim options as they are selected
-  select SELECTION in '<done>' '<cancel>' "$@" '<any>' '<other>'; do
-    case "$SELECTION" in
-      '<cancel>')
-        exit;;
-      '<done>')
-        echo "Final selection: ${!VAR_NAME}"
-        break;;
-      '<other>')
-        requireAnswer "$PS3" SELECTION
-        eval $VAR_NAME=\"${!VAR_NAME}'$SELECTION' \";;
-      '<any>')
-        echo "Final selection: 'any'"
-        eval $VAR_NAME='any'
-        break;;
-      *)
-        eval $VAR_NAME=\"${!VAR_NAME}'$SELECTION' \";;
-    esac
-    echo "Current selections: ${!VAR_NAME}"
-  done
+  _commonSelectHelper "$VAR_NAME" '<done> <cancel>' '<other>' "$@"
 }

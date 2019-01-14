@@ -1,3 +1,8 @@
+CAT_PROVIDES_SERVICE="_catServices"
+STD_IFACE_CLASSES="http http-html http-rest sql sql-mysql"
+STD_PLATFORM_TYPES="local gcp aws"
+STD_PURPOSES="dev test pre-production produciton"
+
 source "`dirname ${BASH_SOURCE[0]}`/actionslib/requires-service.sh"
 source "`dirname ${BASH_SOURCE[0]}`/actionslib/provides-service.sh"
 
