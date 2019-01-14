@@ -1,6 +1,5 @@
 # Global constants.
 _CATALYST_DB="${HOME}/.catalyst"
-_CURR_ENV_FILE="${_CATALYST_DB}/curr_env"
 _CATALYST_ENVS="${_CATALYST_DB}/environments"
 _PROJECT_CONFIG='.catalyst-project' #TODO: current file '.catalyst' and the code doesn't make reference to this constant; convert that to 'catalyst-project'
 _PROJECT_PUB_CONFIG='.catalyst-pub'
@@ -11,15 +10,13 @@ _BILLING_ACCT_URL='https://console.cloud.google.com/billing?folder=&organization
 
 # Global variables.
 PACKAGE_FILE=''
+CURR_ENV_FILE=''
 SOURCE_DIR="$SOURCE_DIR" # TODO: huh?
 BASE_DIR=''
 WORKSPACE_DIR=''
 
 COMPONENT=''
 ACTION=''
-
-# environment globals
-loadCurrEnv
 
 # Configurable globals.
 ORIGIN_URL='' # can be set externally to avoid interactive questions on 'project init'

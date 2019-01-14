@@ -3,20 +3,32 @@ STD_ENV_PUPRPOSES='dev test pre-production production'
 source "`dirname ${BASH_SOURCE[0]}`/lib.sh"
 
 environment-show() {
-  local ENV_NAME=`getEnv "${1:-}"`
-  test -n "$ENV_NAME" || exit 1
+  local ENV_NAME="${1:-}"
+  local PACKAGE_NAME=`cat $BASE_DIR/package.json | jq --raw-output ".name"`
 
-  if [[ -n "$CURR_ENV" ]] && [[ "$CURR_ENV" == "$ENV_NAME" ]]; then
-    echo "Current environment:"
-    echo "$CURR_ENV"
-    echo
-  fi
-  local ENV_DB="${_CATALYST_ENVS}/${ENV_NAME}"
-  if [[ -f "$ENV_DB" ]]; then
-    cat "$ENV_DB"
+  if [[ -n "$ENV_NAME" ]]; then
+    if [[ ! -f "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
+      echoerrandexit "No such environment '$ENV_NAME' found for '$PACKAGE_NAME'."
+    fi
   else
-    echoerrandexit "No such environment '${ENV_NAME}'."
+    if [[ ! -f "${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env" ]]; then
+      echoerrandexit "No environment selected for '$PACKAGE_NAME'. Try 'catalyst environment select' or 'catalyst environment show <name>'."
+    fi
+    ENV_NAME='curr_env'
   fi
+  cat "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}"
+
+  # if [[ -n "$CURR_ENV" ]] && [[ "$CURR_ENV" == "$ENV_NAME" ]]; then
+  #  echo "Current environment:"
+  #  echo "$CURR_ENV"
+  #  echo
+  #fi
+  #local ENV_DB="${_CATALYST_ENVS}/${ENV_NAME}"
+  #if [[ -f "$ENV_DB" ]]; then
+  #  cat "$ENV_DB"
+  #else
+  #  echoerrandexit "No such environment '${ENV_NAME}'."
+  #fi
 }
 
 environment-set() {
@@ -64,9 +76,14 @@ environment-add() {
 
   local REQ_SERVICES=`project-requires-service`
   local REQ_SERVICE
+  CURR_ENV_SERVICES=()
   for REQ_SERVICE in $REQ_SERVICES; do
-
+    local ANSWER
+    findProvidersFor "$REQ_SERVICE" ANSWER
+    CURR_ENV_SERVICES+=("$ANSWER")
   done
+
+  updateEnvironment
 
   function selectNewEnv() {
     environment-select "${ENV_NAME}"
@@ -87,6 +104,7 @@ environment-list() {
 
 environment-select() {
   local ENV_NAME="${1:-}"
+  local PACKAGE_NAME=`cat $BASE_DIR/package.json | jq --raw-output ".name"`
   if [[ -z "$ENV_NAME" ]]; then
     if test -z "$(doEnvironmentList)"; then
       echoerrandexit "No environments defined. Try 'catalyst environment add'."
@@ -94,10 +112,12 @@ environment-select() {
     echo "Select environment:"
     select ENV_NAME in `doEnvironmentList`; do break; done
   fi
+  local CURR_ENV_FILE="${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env"
   if [[ "${ENV_NAME}" == 'none' ]]; then
-    rm "$_CURR_ENV_FILE"
-  elif [[ -f "$_CATALYST_ENVS/${ENV_NAME}" ]]; then
-    echo "CURR_ENV='${ENV_NAME}'" > "$_CURR_ENV_FILE"
+    test -L $CURR_ENV_FILE && rm $CURR_ENV_FILE
+  elif [[ -f "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
+    test -L $CURR_ENV_FILE && rm $CURR_ENV_FILE
+    cd "${_CATALYST_ENVS}/${PACKAGE_NAME}/" && ln -s "./${ENV_NAME}" curr_env
   else
     echoerrandexit "No such environment '$ENV_NAME' defined."
   fi
@@ -108,9 +128,10 @@ environment-select() {
 environment-delete() {
   local ENV_NAME="${1:-}"
   test -n "$ENV_NAME" || echoerrandexit "Must specify enviromnent for deletion."
+  local PACKAGE_NAME=`cat $BASE_DIR/package.json | jq --raw-output ".name"`
 
   onDeleteConfirm() {
-    rm ${_CATALYST_ENVS}/${ENV_NAME} && echo "Local '${ENV_NAME}' entry deleted."
+    rm ${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME} && echo "Local '${ENV_NAME}' entry deleted."
   }
 
   onDeleteCurrent() {
@@ -122,20 +143,15 @@ environment-delete() {
     return 0 # noop
   }
 
-  if [[ -z "$ENV_NAME" ]] || [[ "$ENV_NAME" == "$CURR_ENV" ]]; then
-    if [[ -z "$CURR_ENV" ]]; then
-      echoerrandexit "No current environment defined. Try 'catalyst environment delete <env name>'."
-    fi
-    # else
-    ENV_NAME="$CURR_ENV"
+  if [[ "$ENV_NAME" == "$CURR_ENV" ]]; then
     yesno \
-      "Confirm deletion of local records for current environment '${CURR_ENV}': (y/N) " \
+      "Confirm deletion of current environment '${CURR_ENV}': (y/N) " \
       N \
       onDeleteCurrent \
       onDeleteCancel
-  elif [[ -f "${_CATALYST_ENVS}/${ENV_NAME}" ]]; then
+  elif [[ -f "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
     yesno \
-      "Confirm deletion of local records for environment '${ENV_NAME}': (y/N) " \
+      "Confirm deletion of environment '${ENV_NAME}': (y/N) " \
       N \
       onDeleteConfirm \
       onDeleteCancel

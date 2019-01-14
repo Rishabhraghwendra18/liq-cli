@@ -41,7 +41,6 @@ project-setup_git_setup() {
   if [[ -d "${BASE_DIR}/.git" ]]; then
     git remote set-url --add --push origin "${ORIGIN_URL}"
   fi
-  addLineIfNotPresentInFile "${BASE_DIR}/.gitignore" '.catalyst' # TODO: change to _PROJECT_CONFIG
   if [[ -n "$ORIGIN_URL" ]]; then
     PROJECT_HOME="$ORIGIN_URL"
     PROJECT_DIR="${BASE_DIR}"

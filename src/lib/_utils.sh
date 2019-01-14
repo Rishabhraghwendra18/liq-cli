@@ -259,16 +259,11 @@ loadCurrEnv() {
     CURR_ENV_PURPOSE=''
   }
 
-  if [[ -f "${_CURR_ENV_FILE}" ]]; then
-    source "$_CURR_ENV_FILE"
-    local ENV_DB="$_CATALYST_ENVS/${CURR_ENV}"
-    if [[ -f "$ENV_DB" ]]; then
-      source "$ENV_DB"
-    else
-      echoerr "Could not find expected environment DB '$ENV_DB'. Perhaps it was deleted. Resetting curr env."
-      resetEnv "${_CURR_ENV_FILE}"
-      rm "${_CURR_ENV_FILE}"
-    fi
+  local PACKAGE_NAME=`cat $BASE_DIR/package.json | jq --raw-output ".name"`
+  local CURR_ENV_FILE="${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env"
+
+  if [[ -f "${CURR_ENV_FILE}" ]]; then
+    source "$CURR_ENV_FILE"
   else
     resetEnv
   fi
