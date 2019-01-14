@@ -10,7 +10,9 @@ case "$COMPONENT" in
     case "$COMPONENT" in
       environment)
         case "$ACTION" in
-          show|list|add|delete|select|set-billing)
+          show|list|add|delete|select)
+            requireCatalystfile
+            requireNpmPackage
             ${COMPONENT}-${ACTION} "$@";;
           *)
             exitUnknownAction

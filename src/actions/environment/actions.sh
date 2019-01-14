@@ -1,4 +1,5 @@
-source "`dirname ${BASH_SOURCE[0]}`/actionslib/gcpHelpers.sh"
+STD_ENV_PUPRPOSES='dev test pre-production production'
+
 source "`dirname ${BASH_SOURCE[0]}`/actionslib/helpers.sh"
 
 environment-show() {
@@ -53,26 +54,23 @@ environment-set() {
 
 environment-add() {
   local ENV_NAME="${1:-}"
-  if [ -z "${1}" ]; then
+  if [ -z "${ENV_NAME}" ]; then
     requireAnswer 'Local environment name: ' ENV_NAME
-  fi
-
-  if [[ -z "$CURR_ENV_TYPE" ]]; then
-    echo "Select type:"
-    select CURR_ENV_TYPE in local gcp; do break; done
   fi
 
   if [[ -z "$CURR_ENV_PURPOSE" ]]; then
     echo "Select purpose:"
-    select CURR_ENV_PURPOSE in dev test pre-production production '<other>'; do break; done
+    select CURR_ENV_PURPOSE in $STD_ENV_PUPRPOSES '<other>'; do break; done
     if [[ "$CURR_ENV_PURPOSE" == '<other>' ]]; then
       requireAnswer 'Purpose label: ' CURR_ENV_PURPOSE
     fi
   fi
 
-  if [[ "$CURR_ENV_TYPE" == 'gcp' ]]; then
-    gatherGcpData
-  fi
+  local REQ_SERVICES=`project-requires-service`
+  local REQ_SERVICE
+  for REQ_SERVICE in $REQ_SERVICES; do
+    echo "TODO: $REQ_SERVICE"
+  done
 
   function selectNewEnv() {
     environment-select "${ENV_NAME}"
