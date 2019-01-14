@@ -55,5 +55,7 @@ project-requires-service() {
 }
 
 project-requires-service-list() {
-  echo "$PACKAGE" | jq ".$CAT_REQ_SERVICES_KEY | @sh"
+  if (( `echo "$PACKAGE" | jq ".$CAT_REQ_SERVICES_KEY | length"` > 0 )); then
+    echo "$PACKAGE" | jq ".$CAT_REQ_SERVICES_KEY | @sh"
+  fi
 }
