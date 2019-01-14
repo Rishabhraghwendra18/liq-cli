@@ -112,8 +112,8 @@ environment-select() {
 }
 
 environment-delete() {
-  local ENV_NAME=`getEnv "${1:-}"`
-  test -n "$ENV_NAME" || die
+  local ENV_NAME="${1:-}"
+  test -n "$ENV_NAME" || echoerrandexit "Must specify enviromnent for deletion."
 
   onDeleteConfirm() {
     rm ${_CATALYST_ENVS}/${ENV_NAME} && echo "Local '${ENV_NAME}' entry deleted."
