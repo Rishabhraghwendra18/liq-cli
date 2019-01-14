@@ -1,18 +1,17 @@
-COMPONENT="${1:-}" # or global command
-ACTION="${2:-}"
+COMPONENT="${1:-}"; shift # or global command
 
 case "$COMPONENT" in
   # global actions
   help)
-    global-help "${2:-}";;
+    global-help "${1-}";; # ACTION may be empty
   # components and actionsprojct
   *)
-    ACTION="${2:-}"
+    ACTION="${1:-}"; shift
     case "$COMPONENT" in
       environment)
         case "$ACTION" in
           show|list|add|delete|select|set-billing)
-            ${COMPONENT}-${ACTION} "${3:-}";;
+            ${COMPONENT}-${ACTION} "$@";;
           *)
             exitUnknownAction
           esac;;
@@ -21,9 +20,9 @@ case "$COMPONENT" in
         case "$ACTION" in
           get-deps|build|test|start|stop|view-log)
             requireGlobals 'GOPATH' 'REL_GOAPP_PATH' || exit $?
-            ${COMPONENT}-${ACTION} "${3:-}";;
+            ${COMPONENT}-${ACTION} "$@";;
           configure)
-            ${COMPONENT}-${ACTION} "${3:-}";;
+            ${COMPONENT}-${ACTION} "$@";;
           *)
             exitUnknownAction
         esac;;
@@ -31,16 +30,16 @@ case "$COMPONENT" in
         requireCatalystfile
         case "$ACTION" in
           start|stop|restart|clear-logs)
-            ${COMPONENT}-${ACTION} "${3:-}";;
+            ${COMPONENT}-${ACTION} "$@";;
           *) exitUnknownAction
         esac;;
       project)
         case "$ACTION" in
           setup-scripts|build|start|lint|lint-fix|test|npm-check|npm-update|qa|deploy|add-mirror|link|link-dev|ignore-rest)
             sourceCatalystfile
-            ${COMPONENT}-${ACTION} "${3:-}" "${4:-}";;
+            ${COMPONENT}-${ACTION} "$@";;
           setup|import|close)
-            ${COMPONENT}-${ACTION} "${3:-}";;
+            ${COMPONENT}-${ACTION} "$@";;
           requires-service|provides-service)
             requireNpmPackage
             requireCatalystfile
@@ -63,9 +62,9 @@ EOF
           start-proxy|stop-proxy|view-proxy-log|connect|rebuild)
             requireGlobals 'SQL_DIR' 'TEST_DATA_DIR' 'CLOUDSQL_CONNECTION_NAME' \
               'CLOUDSQL_CREDS' 'CLOUDSQL_DB_DEV' 'CLOUDSQL_DB_TEST'
-            ${COMPONENT}-${ACTION} "${3:-}";;
+            ${COMPONENT}-${ACTION} "$@";;
           configure)
-            ${COMPONENT}-${ACTION} "${3:-}";;
+            ${COMPONENT}-${ACTION} "$@";;
           *)
             exitUnknownAction
         esac;;
@@ -74,24 +73,24 @@ EOF
         case "$ACTION" in
           audit|build|start|stop|view-log)
             requireGlobals 'WEB_APP_DIR'
-            ${COMPONENT}-${ACTION} "${3:-}";;
+            ${COMPONENT}-${ACTION} "$@";;
           configure)
-            ${COMPONENT}-${ACTION} "${3:-}";;
+            ${COMPONENT}-${ACTION} "$@";;
           *) exitUnknownAction
         esac;;
       work)
         case "$ACTION" in
           diff-master|edit|merge|report|start)
-            ${COMPONENT}-${ACTION} "${3:-}";;
+            ${COMPONENT}-${ACTION} "$@";;
           *) exitUnknownAction
         esac;;
       workspace)
         case "$ACTION" in
           report|branch|stash|merge|diff-master) # TODO: go ahead and implement 'ignore-rest'
             requireWorkspaceConfig
-            ${COMPONENT}-${ACTION} "${3:-}";;
+            ${COMPONENT}-${ACTION} "$@";;
           init)
-            ${COMPONENT}-${ACTION} "${3:-}";;
+            ${COMPONENT}-${ACTION} "$@";;
           *) exitUnknownAction
         esac;;
       *)
