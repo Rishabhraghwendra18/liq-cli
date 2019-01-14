@@ -32,27 +32,6 @@ getEnv() {
   fi
 }
 
-getEnvTypeKeys() {
-  case "$CURR_ENV_TYPE" in
-    local)
-      ;;
-    gcp)
-      echo 'gcp:proj id' 'gcp:org id' 'gcp:billing id';;
-    *)
-      echoerrandexit "Unexpected type: '$CURR_ENV_TYPE'." 10;;
-  esac
-}
-
-setHelperFunctionName() {
-  local KEY="$1"
-  local FUNC_NAME=${KEY//:/-}
-  FUNC_NAME=${FUNC_NAME}// /-}
-  FUNC_NAME="catalyst-environment-set-${FUNC_NAME,,}"
-  if [[ -n "$(type -n "$FUNC_NAME")" ]]; then
-    echo "$FUNC_NAME"
-  fi
-}
-
 updateEnvParam() {
   local KEY="$1"
   local VALUE="$2"

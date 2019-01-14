@@ -37,13 +37,8 @@ environment-set() {
     if [[ "$KEY" == '<other>' ]]; then
       requireAnswer 'Parameter key: ' KEY
     fi
-    local SET_HELPER=`setHelperFunctionName "$KEY"`
-    if [[ -n "$SET_HELPER" ]]; then
-      eval "$SET_HELPER '$ENV_NAME'"
-    else
-      requireAnswer 'Parameter value: ' VALUE
-      updateEnvParam "$KEY" "$VALUE"
-    fi
+    requireAnswer 'Parameter value: ' VALUE
+    updateEnvParam "$KEY" "$VALUE"
   else
     echoerrandexit "Unexpected number of arguments to 'catalyst environment set'."
     # TODO: print action specific usage would be nice
