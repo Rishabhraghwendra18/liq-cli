@@ -1,6 +1,7 @@
 # Global constants.
 _CATALYST_DB="${HOME}/.catalyst"
 _CATALYST_ENVS="${_CATALYST_DB}/environments"
+_CATALYST_ENV_LOGS="${_CATALYST_DB}/environments/logs"
 _PROJECT_CONFIG='.catalyst-project' #TODO: current file '.catalyst' and the code doesn't make reference to this constant; convert that to 'catalyst-project'
 _PROJECT_PUB_CONFIG='.catalyst-pub'
 _WORKSPACE_CONFIG='.catalyst-workspace' #TODO: move under _WORKSPACE_DB
