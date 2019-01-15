@@ -1,21 +1,9 @@
 print_usage() {
   echo "Usage:"
   echo
-  echo "catalyst help"
-  echo "catalyst <module> <action> [<action args...>]"
-  echo
-  echo "go:"
-  print_go_usage "  "
-  echo "local:"
-  print_local_usage "  "
-  echo "project:"
-  print_project_usage "  "
-  echo "sql:"
-  print_sql_usage "  "
-  echo "webapp:"
-  print_webapp_usage "  "
-  echo "work:"
-  print_work_usage "  "
-  echo "environment:"
-  print_environment_usage "  "
+  echo "  catalyst help : Prints help info."
+  for d in `find "${SOURCE_DIR}/actions" -type d -maxdepth 1 -not -path "${SOURCE_DIR}/actions"`; do
+    echo
+    print_$(basename ${d})_usage "  " "catalyst "
+  done
 }
