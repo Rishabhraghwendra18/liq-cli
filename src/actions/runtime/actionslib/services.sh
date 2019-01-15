@@ -25,7 +25,7 @@ runtime-services-list() {
     local SERV_PACKAGE=`npm explore "$SERV_PACKAGE_NAME" -- cat package.json`
     local SERV_SCRIPT=`echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"ctrl-script\" | @sh" | tr -d "'"`
 
-    echo "$SERV_IFACE ($($(npm bin)/$SERV_SCRIPT status))"
+    echo "$SERV_IFACE ($(npx $SERV_SCRIPT status))"
   done
 }
 
