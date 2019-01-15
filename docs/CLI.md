@@ -1,49 +1,44 @@
 # Catalyst CLI
 
+Catalyst CLI provides (more or less) complete support for managing, testing, and deploying Catalyst projects. The goal is to (more or less) cover the entire development and sysops lifecycles.
+
 ## Audience & scope
 
 This document defines the command line interface for the Catalyst CLI tool and is aimed at tool users.
 
 ## General concepts
 
-### Modules & actions
+The Catalyst CLI tool is used to:
 
-All commands are broken into two parts: the Module and Action.
-
-Each Module is essentially a group of related Actions dealing with a particular aspect of development and/or operations. Collectively, the Modules cover the entire scope of the development+deploy+production lifecycle.
-
-* [`project`](#project-module) : Used to create and manage Catalyst projects. This includes managing remote repositories and project dependencies.
-* [`work`](#work-module) : A development-only module managing the set of projects currently under active, local development.
-* [`services`](#services-module) : Manages services defined by the current in-scope projects.
+* Manage project and package configuration through the [`project` commands](#project-commands).
+* Manage services and environment through the [`runtime` commands](#runtime-commands).
+* Manage the workflow through the [`work` commands](#work-commands).
+* Manage data through the [`data` commands](#data-commands).
 
 ### Projects
 
 Organize code and other artifacts.
 
-### Services
+### Runtimes
 
-A Service is a runtime process, which may be either local or remote. Key Services include web servers and database servers.
+A package may require all needed services by referring to service "interface classes". Here, services are primarily network services and the interface class describes both the method and general syntax provided by the service.
 
-### Environments
-
-A running Service exists within an Environment. Environments are defined orthogonal to Projects and Services.
+Any given project may both require and provide services.
 
 ## Global actions
 
 * `help` : prints a list of available Modules.
 
-## Specification
+## Command spec
 
-### `project` module
+### `project` commands
 
-### `work` module
+-- TODO: can we push the 'usage' output into the document?
 
-### `services` module
+### `runtime` commands
 
-### `data` module
+### `work` commands
+
+### `data` commands
 
 Manage schema defined by projects and data sets.
-
-### `environment` module
-
-Manage the target deploy environment.
