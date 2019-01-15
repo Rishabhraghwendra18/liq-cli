@@ -1,4 +1,4 @@
-print_work_usage() {
+print_workspace_usage() {
   local PREFIX="${1:-}"
   if [[ -z "$PREFIX" ]]; then
     echo -e "Valid workspace actions are:\n"
