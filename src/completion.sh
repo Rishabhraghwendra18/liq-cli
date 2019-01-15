@@ -11,7 +11,7 @@ _catalyst()
     case "${prev}" in
       catalyst)
         global_actions="help"
-        components="go environment local project sql webapp work workspace"
+        components="environment go local project runtime sql webapp work workspace"
         opts="${global_actions} ${components}";;
       environment)
         opts="add delete list select show";;
@@ -21,6 +21,8 @@ _catalyst()
         opts="start stop restart clear-logs";;
       project)
         opts="requires-service provides-service import setup setup-scripts build start lint lint-fix test npm-check npm-update qa link link-dev close deploy add-mirror set-billing ignore-rest";;
+      runtime)
+        opts="environments services";;
       sql)
         opts="configure start-proxy stop-proxy view-proxy-log connect rebuild";;
       webapp)

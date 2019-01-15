@@ -15,7 +15,7 @@ case "$COMPONENT" in
             requireNpmPackage
             ${COMPONENT}-${ACTION} "$@";;
           *)
-            exitUnknownAction
+            exitUnknownAction;;
           esac;;
       go)
         requireCatalystfile
@@ -33,7 +33,7 @@ case "$COMPONENT" in
         case "$ACTION" in
           start|stop|restart|clear-logs)
             ${COMPONENT}-${ACTION} "$@";;
-          *) exitUnknownAction
+          *) exitUnknownAction;;
         esac;;
       project)
         case "$ACTION" in
@@ -47,7 +47,15 @@ case "$COMPONENT" in
             requireCatalystfile
             shift; shift # TODO: shift on initial grab; use '"$@"' for all
             ${COMPONENT}-${ACTION} "$@";;
-          *) exitUnknownAction
+          *) exitUnknownAction;;
+        esac;;
+      runtime)
+        case "$ACTION" in
+          services)
+            requireNpmPackage
+            requireCatalystfile
+            ${COMPONENT}-${ACTION} "$@";;
+          *) exitUnknownAction;;
         esac;;
       sql)
         requireCatalystfile
