@@ -66,7 +66,7 @@ environment-add() {
     requireAnswer 'Local environment name: ' ENV_NAME
   fi
 
-  if [[ -z "$CURR_ENV_PURPOSE" ]]; then
+  if [[ -z "${CURR_ENV_PURPOSE:-}" ]]; then
     echo "Select purpose:"
     select CURR_ENV_PURPOSE in $STD_ENV_PUPRPOSES '<other>'; do break; done
     if [[ "$CURR_ENV_PURPOSE" == '<other>' ]]; then

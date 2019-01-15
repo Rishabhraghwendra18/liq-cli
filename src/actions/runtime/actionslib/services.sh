@@ -16,7 +16,17 @@ runtime-services() {
 }
 
 runtime-services-list() {
-  echo "TODO"
+  source "${CURR_ENV_FILE}"
+  local SERVICE
+  for SERVICE in ${CURR_ENV_SERVICES[@]}; do
+    local SERV_IFACE=`echo "$SERVICE" | cut -d: -f1`
+    local SERV_PACKAGE_NAME=`echo "$SERVICE" | cut -d: -f2`
+    local SERV_NAME=`echo "$SERVICE" | cut -d: -f3`
+    local SERV_PACKAGE=`npm explore "$SERV_PACKAGE_NAME" -- cat package.json`
+    local SERV_SCRIPT=`echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"ctrl-script\" | @sh" | tr -d "'"`
+
+    echo "$SERV_IFACE ($($(npm bin)/$SERV_SCRIPT status))"
+  done
 }
 
 runtime-services-start() {

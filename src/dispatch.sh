@@ -52,8 +52,7 @@ case "$COMPONENT" in
       runtime)
         case "$ACTION" in
           services)
-            requireNpmPackage
-            requireCatalystfile
+            requireEnvironment
             ${COMPONENT}-${ACTION} "$@";;
           *) exitUnknownAction;;
         esac;;

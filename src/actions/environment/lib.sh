@@ -9,8 +9,9 @@ updateEnvironment() {
   local ENV_PATH="$_CATALYST_ENVS/${PACKAGE_NAME}/${ENV_NAME}"
   mkdir -p "`dirname "$ENV_PATH"`"
 
+  # the [@]@Q expands the array and puts each element in quotes
   cat <<EOF > "$ENV_PATH"
-CURR_ENV_SERVICES="(${CURR_ENV_SERVICES[@]})"
+CURR_ENV_SERVICES=(${CURR_ENV_SERVICES[@]@Q})
 EOF
 }
 
@@ -66,5 +67,5 @@ findProvidersFor() {
   local SELECTED_PROVIDER=`echo "$PROVIDER" | sed -E -e 's/[^(]+\(from ([^)]+)\)/\1/'`
   local SELECTED_SERVICE=`echo "$PROVIDER" | sed -E -e 's/ \(from .+//'`
 
-  eval "$RESULT_VAR_NAME='${SELECTED_PROVIDER}:${SELECTED_SERVICE}'"
+  eval "$RESULT_VAR_NAME='${REQ_SERVICE}:${SELECTED_PROVIDER}:${SELECTED_SERVICE}'"
 }

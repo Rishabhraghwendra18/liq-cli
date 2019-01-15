@@ -83,6 +83,7 @@ sourceFile() {
   local PROJFILE
   findFile "$SEARCH_DIR" "$FILE_NAME" PROJFILE && {
     source "$PROJFILE"
+    # TODO: this works (at time of note) because all the files we currently source are in the root, but it's a bit odd and should be reworked.
     BASE_DIR="$( cd "$( dirname "${PROJFILE}" )" && pwd )"
     return 0
   }
@@ -105,6 +106,21 @@ requireNpmPackage() {
 sourceWorkspaceConfig() {
   sourceFile "${PWD}" "${_WORKSPACE_CONFIG}"
   return $? # TODO: is this how this works in bash?
+}
+
+requirePackage() {
+  requireNpmPackage
+  PACKAGE=`cat $PACKAGE_FILE`
+  PACKAGE_NAME=`echo "$PACKAGE" | jq --raw-output ".name"`
+}
+
+requireEnvironment() {
+  requirePackage
+  CURR_ENV_FILE="${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env"
+  if [[ ! -f "$CURR_ENV_FILE" ]]; then
+    echoerrandexit "Must select environment to work with '${COMPONENT} ${ACTION}' module."
+  fi
+  CURR_ENV=`readlink "${CURR_ENV_FILE}" | xargs basename`
 }
 
 requireWorkspaceConfig() {
