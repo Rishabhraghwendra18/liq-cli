@@ -1,17 +1,19 @@
 usage-project-provides-service() {
   local TAB="${1:-}"
   local PREFIX="${2:-}"
-  echo "${TAB}${PREFIX}service [<name>|-a [<name>]|-d [<name>...]] :"
-  echo "${TAB}  no args : Lists provided services by nameLists (no args), adds (-a), or deletes (-d) the named or selected service."
+  echo "${TAB}${PREFIX}provides-service [<name>|-a [<name>]|-d [<name>...]] :"
+  echo "${TAB}  no args : Lists provided services by name."
+  echo "${TAB}  <name>... : Displays detailed information about each named service."
+  echo "${TAB}  -a [<name>] : Interactively adds a new service."
+  echo "${TAB}  -d <name> : Deletes the named service."
 }
 
 usage-project-requires-service() {
   local TAB="${1:-}"
   local PREFIX="${2:-}"
 
-  echo "${TAB}${PREFIX}providers [-a <intferface> <name>...|-d [<spec>...]] :"
+  echo "${TAB}${PREFIX}requires-service [-a <intferface> <name>...|-d [<spec>...]] :"
   echo "${TAB}  no args : Lists required runtime services."
-  echo "${TAB}  <name>... : Displays detailed information about each named service."
   echo "${TAB}  -a [<iface class>...] : Adds named or interactively selected required runtime services by interface."
   echo "${TAB}  -d [<iface class>...] : Deletes the indicated provider entry. Spec may be '<type>' or '<type>.<provider name>'."
 }
@@ -19,7 +21,7 @@ usage-project-requires-service() {
 print_project_usage() {
   local TAB="${1:-}"
   if [[ -z "$TAB" ]]; then
-    echo -e "Valid project actions are:\n"
+    echo -e "Project project commands:\n"
   fi
   usage-project-provides-service "$TAB"
   usage-project-requires-service "$TAB"
