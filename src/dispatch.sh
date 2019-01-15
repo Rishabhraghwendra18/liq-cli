@@ -1,5 +1,4 @@
 COMPONENT="${1:-}"; shift # or global command
-
 case "$COMPONENT" in
   # global actions
   help)
@@ -45,7 +44,6 @@ case "$COMPONENT" in
           requires-service|provides-service)
             requireNpmPackage
             requireCatalystfile
-            shift; shift # TODO: shift on initial grab; use '"$@"' for all
             ${COMPONENT}-${ACTION} "$@";;
           *) exitUnknownAction;;
         esac;;

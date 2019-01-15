@@ -9,10 +9,20 @@ updateEnvironment() {
   local ENV_PATH="$_CATALYST_ENVS/${PACKAGE_NAME}/${ENV_NAME}"
   mkdir -p "`dirname "$ENV_PATH"`"
 
-  # the [@]@Q expands the array and puts each element in quotes
+  # TODO: use '${CURR_ENV_SERVICES[@]@Q}' once upgraded to bash 4.4
   cat <<EOF > "$ENV_PATH"
-CURR_ENV_SERVICES=(${CURR_ENV_SERVICES[@]@Q})
+CURR_ENV_SERVICES=(${CURR_ENV_SERVICES[@]})
 EOF
+
+  local SERV_KEY
+  # TODO: again, @Q when available
+  for SERV_KEY in ${CURR_ENV_SERVICES[@]}; do
+    for REQ_PARAM in `getRequiredParameters "$SERV_KEY"`; do
+      cat <<EOF >> "$ENV_PATH"
+$REQ_PARAM='${!REQ_PARAM}'
+EOF
+    done
+  done
 }
 
 updateEnvParam() {
@@ -51,10 +61,13 @@ findProvidersFor() {
     PROVIDER_OPTIONS+="${SERVICES[$I]} (from ${SERVICE_PACKAGES[$I]})"
     I=$(($I + 1))
   done
+  if (( $I == 0 )); then
+    echoerrandexit "Could not find any providers for '$REQ_SERVICE'."
+  fi
 
   echo "Select provider for required service '$REQ_SERVICE':"
   local PROVIDER
-  # TODO: is there a better way to preserve the word boundries?
+  # TODO: is there a better way to preserve the word boundries? We can use the '${ARRAY[@]@Q}' construct in bash 4.4
   eval 'select PROVIDER in "<cancel>" '$(printf "'%s' " "${PROVIDER_OPTIONS[@]}")'; do
     case "$PROVIDER" in
       "<cancel>")

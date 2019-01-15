@@ -27,7 +27,7 @@ project-requires-service() {
     if [[ $# -eq 0 ]]; then # interactive delete
       local DEL
       while [[ $DEL != '...quit...' ]]; do
-        OPTIONS=`project-requires-service-list`
+        local OPTIONS=`project-requires-service-list`
         # TODO: rework to support canctel; add and use 'selectDone'?
         if [[ -z "$OPTIONS" ]]; then
           echo "Nothing left to delete."

@@ -116,6 +116,7 @@ requirePackage() {
 
 requireEnvironment() {
   requirePackage
+  requireCatalystfile
   CURR_ENV_FILE="${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env"
   if [[ ! -f "$CURR_ENV_FILE" ]]; then
     echoerrandexit "Must select environment to work with '${COMPONENT} ${ACTION}' module."
@@ -286,33 +287,34 @@ loadCurrEnv() {
 }
 
 _commonSelectHelper() {
-  local VAR_NAME="$1"; shift
-  local PRE_OPTS="$1"; shift
-  local POST_OPTS="$1"; shift
-  local SELECTION
-  local OPTIONS="$@"
-  local QUIT='false'
+  # TODO: the '_' is to avoid collision, but is a bit hacky; in particular, some callers were using 'local OPTIONS'
+  local _VAR_NAME="$1"; shift
+  local _PRE_OPTS="$1"; shift
+  local _POST_OPTS="$1"; shift
+  local _SELECTION
+  local _OPTIONS="$@"
+  local _QUIT='false'
 
-  while [[ $QUIT == 'false' ]]; do
-    select SELECTION in $PRE_OPTS $OPTIONS $POST_OPTS; do
-      case "$SELECTION" in
+  while [[ $_QUIT == 'false' ]]; do
+    select _SELECTION in $_PRE_OPTS $_OPTIONS $_POST_OPTS; do
+      case "$_SELECTION" in
         '<cancel>')
           exit;;
         '<done>')
-          echo "Final selection: ${!VAR_NAME}"
-          QUIT='true';;
+          echo "Final selection: ${!_VAR_NAME}"
+          _QUIT='true';;
         '<other>')
-          SELECTION=''
-          requireAnswer "$PS3" SELECTION
-          eval $VAR_NAME=\"${!VAR_NAME}'$SELECTION' \";;
+          _SELECTION=''
+          requireAnswer "$PS3" _SELECTION
+          eval $_VAR_NAME=\"${!_VAR_NAME}'${_SELECTION}' \";;
         '<any>')
           echo "Final selection: 'any'"
-          eval $VAR_NAME='any';;
+          eval $_VAR_NAME='any';;
         *)
-          eval $VAR_NAME=\"${!VAR_NAME}'$SELECTION' \";;
+          eval $_VAR_NAME=\"${!_VAR_NAME}'${_SELECTION}' \";;
       esac
-      echo "Current selections: ${!VAR_NAME}"
-      OPTIONS=${OPTIONS/$SELECTION/}
+      echo "Current selections: ${!_VAR_NAME}"
+      _OPTIONS=${_OPTIONS/$_SELECTION/}
       break
     done
   done
@@ -326,4 +328,14 @@ selectOtherDoneCancelAny() {
 selectOtherDoneCancel() {
   local VAR_NAME="$1"; shift
   _commonSelectHelper "$VAR_NAME" '<done> <cancel>' '<other>' "$@"
+}
+
+getRequiredParameters() {
+  local SERV_KEY="$1"
+  local SERV_IFACE=`echo "$SERV_KEY" | cut -d: -f1`
+  local SERV_PACKAGE_NAME=`echo "$SERV_KEY" | cut -d: -f2`
+  local SERV_NAME=`echo "$SERV_KEY" | cut -d: -f3`
+  local SERV_PACKAGE=`npm explore "$SERV_PACKAGE_NAME" -- cat package.json`
+
+  echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"params-req\" | @sh" | tr -d "'"
 }

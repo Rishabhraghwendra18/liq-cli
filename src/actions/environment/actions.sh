@@ -32,6 +32,8 @@ environment-show() {
 }
 
 environment-set() {
+  echoerr "TODO: sorry, 'set' implementation is outdated"
+  exit
   local ENV_NAME KEY VALUE
   if [[ $# -eq 3 ]]; then
     ENV_NAME="$1"
@@ -81,6 +83,12 @@ environment-add() {
     local ANSWER
     findProvidersFor "$REQ_SERVICE" ANSWER
     CURR_ENV_SERVICES+=("$ANSWER")
+    local REQ_PARAM
+    for REQ_PARAM in `getRequiredParameters "$ANSWER"`; do
+      local PARAM_VAL
+      requireAnswer "Value for required parameter '$REQ_PARAM': " PARAM_VAL
+      eval "$REQ_PARAM='$PARAM_VAL'"
+    done
   done
 
   updateEnvironment
