@@ -1,8 +1,8 @@
-usage-runtime-environment() {
+usage-runtime-environments() {
   local TAB="${1:-}"
   local PREFIX="${2:-}"
 
-  echo "${TAB}${PREFIX}environment [<name>|-a [<name>]|-d [<name>...]] :"
+  echo "${TAB}${PREFIX}environments [<name>|-a [<name>]|-d [<name>...]] :"
   echo "${TAB}  no args : Lists environments for the current project."
   echo "${TAB}  <name>... : Gives detailed info for each named environment."
   echo "${TAB}  -a [<name>] : Interactively adds a new environment definition."
@@ -13,7 +13,7 @@ usage-runtime-services() {
   local TAB="${1:-}"
   local PREFIX="${2:-}"
 
-  echo "${TAB}${PREFIX}service [<iface class>|-a [<iface class>]|-d [<iface class>...]] :"
+  echo "${TAB}${PREFIX}services [<iface class>|-a [<iface class>]|-d [<iface class>...]] :"
   echo "${TAB}  no args : Lists runtime services for the current environment and their status."
   echo "${TAB}  <iface class>... : Gives detailed info for service of the named interface class."
   echo "${TAB}  -s [<iface class>] : Starts the service by interface class or all services (no args)."
@@ -26,6 +26,6 @@ print_runtime_usage() {
   if [[ -z "$TAB" ]]; then
     echo -e "Runtime commands:\n"
   fi
-  usage-runtime-environment "$TAB"
+  usage-runtime-environments "$TAB"
   usage-runtime-services "$TAB"
 }
