@@ -71,7 +71,6 @@ runtime-services-start() {
       rm "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.err"
 
       echo "Starting ${SERV_IFACE}..."
-      ctrlScriptEnv
       eval "$(ctrlScriptEnv) npx $SERV_SCRIPT start"
       sleep 1
       if [[ `wc -l "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.err" | awk '{print $1}'` -gt 0 ]]; then
@@ -84,7 +83,22 @@ runtime-services-start() {
 }
 
 runtime-services-stop() {
-  echo "TODO"
+  source "${CURR_ENV_FILE}"
+  local SERVICE_KEY
+  for SERVICE_KEY in ${CURR_ENV_SERVICES[@]}; do
+    local SERV_IFACE=`echo "$SERVICE_KEY" | cut -d: -f1`
+    if testServMatch "$SERV_IFACE" "$@"; then
+      local SERV_PACKAGE_NAME=`echo "$SERVICE_KEY" | cut -d: -f2`
+      local SERV_NAME=`echo "$SERVICE_KEY" | cut -d: -f3`
+      local SERV_PACKAGE=`npm explore "$SERV_PACKAGE_NAME" -- cat package.json`
+      local SERV_SCRIPT=`echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"ctrl-script\" | @sh" | tr -d "'"`
+
+      echo "Stopping ${SERV_IFACE}..."
+      eval "$(ctrlScriptEnv) npx $SERV_SCRIPT stop"
+      sleep 1
+      runtime-services-list "${SERV_IFACE}"
+    fi
+  done
 }
 
 runtime-services-restart() {
