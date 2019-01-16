@@ -323,7 +323,6 @@ _commonSelectHelper() {
       echo "Current selections: ${!_VAR_NAME}"
       _OPTIONS=${_OPTIONS/$_SELECTION/}
       # if we only have the default options left, then we're done
-      echo $_OPTIONS
       _OPTIONS=`echo "$_OPTIONS" | sed -Ee 's/^<done> <cancel>[ ]*(<any>)?[ ]*(<other>)?$//'`
       echo $_OPTIONS
       if [[ -z "$_OPTIONS" ]]; then
