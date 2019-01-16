@@ -1,5 +1,5 @@
 ctrlScriptEnv() {
-  local ENV_SETTINGS="BASE_DIR='${BASE_DIR}' _CATALYST_ENV_LOGS='${_CATALYST_ENV_LOGS}' SERV_IFACE='${SERV_IFACE}'"
+  local ENV_SETTINGS="BASE_DIR='${BASE_DIR}' _CATALYST_ENV_LOGS='${_CATALYST_ENV_LOGS}' SERV_IFACE='${SERV_IFACE}' SERV_LOG='${SERV_LOG}' SERV_ERR='${SERV_ERR}'"
   local REQ_PARAM
   for REQ_PARAM in $(getRequiredParameters "$SERVICE_KEY"); do
     ENV_SETTINGS="$ENV_SETTINGS $REQ_PARAM='${!REQ_PARAM}'"
@@ -77,6 +77,9 @@ runtimeServiceRunner() {
           if (( $SERV_SCRIPT_COUNT > 1 )); then
             PROCESS_NAME="${SERV_IFACE}.${SCRIPT_NAME}"
           fi
+          local SERV_OUT_BASE="${_CATALYST_ENV_LOGS}/${SERV_IFACE}.${SCRIPT_NAME}"
+          local SERV_LOG="${SERV_OUT_BASE}.log"
+          local SERV_ERR="${SERV_OUT_BASE}.err"
           eval "$MAIN"
         fi
       done
@@ -95,14 +98,13 @@ EOF
 runtime-services-start() {
   # TODO: check status before starting
   local MAIN=$(cat <<'EOF'
-    rm "${_CATALYST_ENV_LOGS}/${PROCESS_NAME}.log"
-    rm "${_CATALYST_ENV_LOGS}/${PROCESS_NAME}.err"
+    rm -f "${SERV_LOG}" "${SERV_ERR}"
 
     echo "Starting ${PROCESS_NAME}..."
     eval "$(ctrlScriptEnv) npx $SERV_SCRIPT start"
     sleep 1
-    if [[ `wc -l "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.${SCRIPT_NAME}.err" | awk '{print $1}'` -gt 0 ]]; then
-      cat "${_CATALYST_ENV_LOGS}/${PROCESS_NAME}.err"
+    if [[ `wc -l "${SERV_ERR}" | awk '{print $1}'` -gt 0 ]]; then
+      cat "${SERV_ERR}"
       echoerr "Possible errors while starting ${PROCESS_NAME}. See error log above."
     fi
     runtime-services-list "${PROCESS_NAME}"
