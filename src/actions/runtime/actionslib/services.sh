@@ -57,6 +57,7 @@ runtime-services() {
 }
 
 runtimeServiceRunner() {
+  # TODO: currently, we check for matches before running, but we don't give any feedback on bad specs that don't match anything
   source "${CURR_ENV_FILE}"
   local SERVICE_KEY
   for SERVICE_KEY in ${CURR_ENV_SERVICES[@]}; do
