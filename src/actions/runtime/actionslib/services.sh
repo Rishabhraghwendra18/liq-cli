@@ -35,11 +35,11 @@ runtime-services() {
     shift
     runtime-services-restart "$@"
   else
-    runtime-services-detail "$@"
+    runtime-services-list "$@"
   fi
 }
 
-runtime-services-list() {
+runtimeServiceRunner() {
   source "${CURR_ENV_FILE}"
   local SERVICE_KEY
   for SERVICE_KEY in ${CURR_ENV_SERVICES[@]}; do
@@ -48,16 +48,24 @@ runtime-services-list() {
       local SERV_PACKAGE_NAME=`echo "$SERVICE_KEY" | cut -d: -f2`
       local SERV_NAME=`echo "$SERVICE_KEY" | cut -d: -f3`
       local SERV_PACKAGE=`npm explore "$SERV_PACKAGE_NAME" -- cat package.json`
-      local SERV_SCRIPT=`echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"ctrl-script\" | @sh" | tr -d "'"`
-
-      local STATUS=`eval "$(ctrlScriptEnv) npx $SERV_SCRIPT status"`
-      echo "$SERV_IFACE ($STATUS)"
+      local SERV_SCRIPT
+      local SERV_SCRIPTS=`echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"ctrl-script\" | @sh" | tr -d "'"`
+      for SERV_SCRIPT in "$SERV_SCRIPTS"; do
+        eval $MAIN
+      done
     fi
   done
 }
 
+runtime-services-list() {
+  local MAIN=$(cat <<EOF
+  echo "\$SERV_IFACE (\$(eval "\$(ctrlScriptEnv) npx \$SERV_SCRIPT status"))"
+EOF
+)
+  runtimeServiceRunner
+}
+
 runtime-services-start() {
-  mkdir -p "${_CATALYST_ENV_LOGS}"
   source "${CURR_ENV_FILE}"
   local SERVICE_KEY
   for SERVICE_KEY in ${CURR_ENV_SERVICES[@]}; do
@@ -102,9 +110,7 @@ runtime-services-stop() {
 }
 
 runtime-services-restart() {
-  echo "TODO"
-}
-
-runtime-services-detail() {
-  echo "TODO"
+  runtime-services-stop "$@"
+  # TODO: check that status really stopped
+  runtime-services-start "$@"
 }

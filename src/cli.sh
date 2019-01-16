@@ -30,6 +30,7 @@ if [[ $# -lt 1 ]]; then
 fi
 
 ensureConfig
+mkdir -p "${_CATALYST_ENV_LOGS}"
 
 source "$SOURCE_DIR"/dispatch.sh
 
