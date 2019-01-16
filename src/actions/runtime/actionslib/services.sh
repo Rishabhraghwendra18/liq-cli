@@ -4,6 +4,7 @@ ctrlScriptEnv() {
   for REQ_PARAM in $(getRequiredParameters "$SERVICE_KEY"); do
     ENV_SETTINGS="$ENV_SETTINGS $REQ_PARAM='${!REQ_PARAM}'"
   done
+
   echo "$ENV_SETTINGS"
 }
 
@@ -67,7 +68,7 @@ runtimeServiceRunner() {
       local SERV_NAME=`echo "$SERVICE_KEY" | cut -d: -f3`
       local SERV_PACKAGE=`npm explore "$SERV_PACKAGE_NAME" -- cat package.json`
       local SERV_SCRIPT
-      local SERV_SCRIPTS=`echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"ctrl-script\" | @sh" | tr -d "'"`
+      local SERV_SCRIPTS=`echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"ctrl-scripts\" | @sh" | tr -d "'"`
       local SERV_SCRIPT_ARRAY=( $SERV_SCRIPTS )
       local SERV_SCRIPT_COUNT=${#SERV_SCRIPT_ARRAY[@]}
       for SERV_SCRIPT in $SERV_SCRIPTS; do
