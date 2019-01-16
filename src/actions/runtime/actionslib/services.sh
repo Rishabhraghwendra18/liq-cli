@@ -51,7 +51,7 @@ runtimeServiceRunner() {
       local SERV_SCRIPT
       local SERV_SCRIPTS=`echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"ctrl-script\" | @sh" | tr -d "'"`
       for SERV_SCRIPT in "$SERV_SCRIPTS"; do
-        eval $MAIN
+        eval "$MAIN"
       done
     fi
   done
@@ -59,35 +59,28 @@ runtimeServiceRunner() {
 
 runtime-services-list() {
   local MAIN=$(cat <<EOF
-  echo "\$SERV_IFACE (\$(eval "\$(ctrlScriptEnv) npx \$SERV_SCRIPT status"))"
+    echo "\$SERV_IFACE (\$(eval "\$(ctrlScriptEnv) npx \$SERV_SCRIPT status"))"
 EOF
 )
   runtimeServiceRunner
 }
 
 runtime-services-start() {
-  source "${CURR_ENV_FILE}"
-  local SERVICE_KEY
-  for SERVICE_KEY in ${CURR_ENV_SERVICES[@]}; do
-    local SERV_IFACE=`echo "$SERVICE_KEY" | cut -d: -f1`
-    if testServMatch "$SERV_IFACE" "$@"; then
-      local SERV_PACKAGE_NAME=`echo "$SERVICE_KEY" | cut -d: -f2`
-      local SERV_NAME=`echo "$SERVICE_KEY" | cut -d: -f3`
-      local SERV_PACKAGE=`npm explore "$SERV_PACKAGE_NAME" -- cat package.json`
-      local SERV_SCRIPT=`echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"ctrl-script\" | @sh" | tr -d "'"`
-      rm "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.log"
-      rm "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.err"
+  local MAIN=$(cat <<'EOF'
+    rm "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.log"
+    rm "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.err"
 
-      echo "Starting ${SERV_IFACE}..."
-      eval "$(ctrlScriptEnv) npx $SERV_SCRIPT start"
-      sleep 1
-      if [[ `wc -l "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.err" | awk '{print $1}'` -gt 0 ]]; then
-        cat "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.err"
-        echoerr "Possible errors while starting ${SERV_IFACE}. See error log above."
-      fi
-      runtime-services-list "${SERV_IFACE}"
+    echo "Starting ${SERV_IFACE}..."
+    eval "$(ctrlScriptEnv) npx $SERV_SCRIPT start"
+    sleep 1
+    if [[ `wc -l "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.err" | awk '{print $1}'` -gt 0 ]]; then
+      cat "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.err"
+      echoerr "Possible errors while starting ${SERV_IFACE}. See error log above."
     fi
-  done
+    runtime-services-list "${SERV_IFACE}"
+EOF
+)
+  runtimeServiceRunner
 }
 
 runtime-services-stop() {
