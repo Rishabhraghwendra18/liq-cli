@@ -85,7 +85,7 @@ environment-add() {
     CURR_ENV_SERVICES+=("$ANSWER")
     local REQ_PARAM
     for REQ_PARAM in `getRequiredParameters "$ANSWER"`; do
-      local PARAM_VAL
+      local PARAM_VAL=''
       requireAnswer "Value for required parameter '$REQ_PARAM': " PARAM_VAL
       eval "$REQ_PARAM='$PARAM_VAL'"
     done
