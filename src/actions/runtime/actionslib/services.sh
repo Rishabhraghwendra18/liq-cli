@@ -92,6 +92,7 @@ EOF
 }
 
 runtime-services-start() {
+  # TODO: check status before starting
   local MAIN=$(cat <<'EOF'
     rm "${_CATALYST_ENV_LOGS}/${PROCESS_NAME}.log"
     rm "${_CATALYST_ENV_LOGS}/${PROCESS_NAME}.err"
@@ -110,6 +111,7 @@ EOF
 }
 
 runtime-services-stop() {
+  # TODO: check status before stopping
   local MAIN=$(cat <<'EOF'
     echo "Stopping ${PROCESS_NAME}..."
     eval "$(ctrlScriptEnv) npx $SERV_SCRIPT stop"
