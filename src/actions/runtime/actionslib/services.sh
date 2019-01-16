@@ -9,13 +9,30 @@ ctrlScriptEnv() {
 
 testServMatch() {
   local KEY="$1"; shift
-  if [[ -z "${2:-}" ]]; then
+  if [[ -z "${1:-}" ]]; then
     # if there's nothing to match, then everything matches
     return 0
   fi
-  local TEST
-  for TEST in "$@"; do
-    if [[ "$TEST" == "$KEY" ]]; then
+  local CANDIDATE
+  for CANDIDATE in "$@"; do
+    # Match on the interface class only; trim the script name.
+    if [[ "$KEY" == `echo $CANDIDATE | sed -Ee 's/\..+//'` ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+testScriptMatch() {
+  local KEY="$1"; shift
+  if [[ -z "${1:-}" ]]; then
+    # if there's nothing to match, then everything matches
+    return 0
+  fi
+  local CANDIDATE
+  for CANDIDATE in "$@"; do
+    # If script bound and match or not script bound
+    if [[ "$CANDIDATE" != *"."* ]] || [[ "$KEY" == `echo $CANDIDATE | sed -Ee 's/^[^.]+\.//'` ]]; then
       return 0
     fi
   done
@@ -50,8 +67,17 @@ runtimeServiceRunner() {
       local SERV_PACKAGE=`npm explore "$SERV_PACKAGE_NAME" -- cat package.json`
       local SERV_SCRIPT
       local SERV_SCRIPTS=`echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"ctrl-script\" | @sh" | tr -d "'"`
-      for SERV_SCRIPT in "$SERV_SCRIPTS"; do
-        eval "$MAIN"
+      local SERV_SCRIPT_ARRAY=( $SERV_SCRIPTS )
+      local SERV_SCRIPT_COUNT=${#SERV_SCRIPT_ARRAY[@]}
+      for SERV_SCRIPT in $SERV_SCRIPTS; do
+        local SCRIPT_NAME=$(npx $SERV_SCRIPT name)
+        local PROCESS_NAME="${SERV_IFACE}"
+        if testScriptMatch "$SCRIPT_NAME" "$@"; then
+          if (( $SERV_SCRIPT_COUNT > 1 )); then
+            PROCESS_NAME="${SERV_IFACE}.${SCRIPT_NAME}"
+          fi
+          eval "$MAIN"
+        fi
       done
     fi
   done
@@ -59,39 +85,39 @@ runtimeServiceRunner() {
 
 runtime-services-list() {
   local MAIN=$(cat <<'EOF'
-    echo "$SERV_IFACE ($(eval "$(ctrlScriptEnv) npx $SERV_SCRIPT status"))"
+    echo "$PROCESS_NAME ($(eval "$(ctrlScriptEnv) npx $SERV_SCRIPT status"))"
 EOF
 )
-  runtimeServiceRunner
+  runtimeServiceRunner "$@"
 }
 
 runtime-services-start() {
   local MAIN=$(cat <<'EOF'
-    rm "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.log"
-    rm "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.err"
+    rm "${_CATALYST_ENV_LOGS}/${PROCESS_NAME}.log"
+    rm "${_CATALYST_ENV_LOGS}/${PROCESS_NAME}.err"
 
-    echo "Starting ${SERV_IFACE}..."
+    echo "Starting ${PROCESS_NAME}..."
     eval "$(ctrlScriptEnv) npx $SERV_SCRIPT start"
     sleep 1
-    if [[ `wc -l "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.err" | awk '{print $1}'` -gt 0 ]]; then
-      cat "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.err"
-      echoerr "Possible errors while starting ${SERV_IFACE}. See error log above."
+    if [[ `wc -l "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.${SCRIPT_NAME}.err" | awk '{print $1}'` -gt 0 ]]; then
+      cat "${_CATALYST_ENV_LOGS}/${PROCESS_NAME}.err"
+      echoerr "Possible errors while starting ${PROCESS_NAME}. See error log above."
     fi
-    runtime-services-list "${SERV_IFACE}"
+    runtime-services-list "${PROCESS_NAME}"
 EOF
 )
-  runtimeServiceRunner
+  runtimeServiceRunner "$@"
 }
 
 runtime-services-stop() {
   local MAIN=$(cat <<'EOF'
-    echo "Stopping ${SERV_IFACE}..."
+    echo "Stopping ${PROCESS_NAME}..."
     eval "$(ctrlScriptEnv) npx $SERV_SCRIPT stop"
     sleep 1
-    runtime-services-list "${SERV_IFACE}"
+    runtime-services-list "${PROCESS_NAME}"
 EOF
 )
-  runtimeServiceRunner
+  runtimeServiceRunner "$@"
 }
 
 runtime-services-restart() {
