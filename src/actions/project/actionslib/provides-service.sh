@@ -11,12 +11,16 @@ project-provides-service() {
     project-provides-service-delete "$@"
   else # show detail on each named service
     while [[ $# -gt 0 ]]; do
-      echo "$1:"
-      echo
-      echo $PACKAGE | jq ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$1\")"
-      if [[ $# -gt 1 ]]; then
+      if ! echo $PACKAGE | jq -e "(.\"$CAT_PROVIDES_SERVICE\") and (.\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$1\"))" > /dev/null; then
+        echoerr "No such service '$1'."
+      else
+        echo "$1:"
         echo
-        read -p "Hit enter to continue to '$2'..."
+        echo $PACKAGE | jq ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$1\")"
+        if [[ $# -gt 1 ]]; then
+          echo
+          read -p "Hit enter to continue to '$2'..."
+        fi
       fi
       shift
     done
