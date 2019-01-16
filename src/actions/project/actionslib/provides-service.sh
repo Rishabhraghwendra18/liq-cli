@@ -36,7 +36,7 @@ project-provides-service-add() {
   "interface-classes": [],
   "platform-types": [],
   "purposes": [],
-  "ctrl-script": null,
+  "ctrl-scripts": [],
   "params-req": [],
   "params-opt": []
 }
@@ -48,22 +48,22 @@ EOF
     local OPTION
     local OPTIONS_NAME="$1"; shift
     PS3="$1"; shift
-    selectOtherDoneCancelAny OPTIONS "$@"
+    local OPTS_ONLY="$1"; shift
+
+    if [[ -n "$OPTS_ONLY" ]]; then
+      selectDoneCancel OPTIONS "$@"
+    else
+      selectDoneCancelAnyOther OPTIONS "$@"
+    fi
     for OPTION in $OPTIONS; do
       SERVICE_DEF=`echo "$SERVICE_DEF" | jq ". + { \"$OPTIONS_NAME\": (.\"$OPTIONS_NAME\" + [\"$OPTION\"]) }"`
     done
   }
 
-  selectOptions 'interface-classes' 'Interface class: ' $STD_IFACE_CLASSES
-  selectOptions 'platform-types' 'Platform type: ' $STD_PLATFORM_TYPES
-  selectOptions 'purposes' 'Purpose: ' $STD_PURPOSES
-
-  local SCRIPT_FILE
-  PS3='Control script: '
-  select SCRIPT_FILE in `ls ${BASE_DIR}/bin`; do
-    SERVICE_DEF=`basename "$SERVICE_DEF" | jq "setpath([\"ctrl-script\"]; \"$SCRIPT_FILE\")"`
-    break
-  done
+  selectOptions 'interface-classes' 'Interface class: ' '' $STD_IFACE_CLASSES
+  selectOptions 'platform-types' 'Platform type: ' '' $STD_PLATFORM_TYPES
+  selectOptions 'purposes' 'Purpose: ' '' $STD_PURPOSES
+  selectOptions 'ctrl-scripts' "Control script: " true `find "${BASE_DIR}/bin/" -type f -not -name '*~' -prune -execdir echo '{}' \;`
 
   echo "Enter required parameters. Enter blank line when done."
   local PARAM_NAME

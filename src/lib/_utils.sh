@@ -295,8 +295,15 @@ _commonSelectHelper() {
   local _OPTIONS="$@"
   local _QUIT='false'
 
+  if [[ -n "$_PRE_OPTS" ]]; then
+    _OPTIONS="$_PRE_OPTS $_OPTIONS"
+  fi
+  if [[ -n "$_POST_OPTS" ]]; then
+    _OPTIONS="$_OPTIONS $_POST_OPTS"
+  fi
+
   while [[ $_QUIT == 'false' ]]; do
-    select _SELECTION in $_PRE_OPTS $_OPTIONS $_POST_OPTS; do
+    select _SELECTION in $_OPTIONS; do
       case "$_SELECTION" in
         '<cancel>')
           exit;;
@@ -315,19 +322,31 @@ _commonSelectHelper() {
       esac
       echo "Current selections: ${!_VAR_NAME}"
       _OPTIONS=${_OPTIONS/$_SELECTION/}
+      # if we only have the default options left, then we're done
+      echo $_OPTIONS
+      _OPTIONS=`echo "$_OPTIONS" | sed -Ee 's/^<done> <cancel>[ ]*(<any>)?[ ]*(<other>)?$//'`
+      echo $_OPTIONS
+      if [[ -z "$_OPTIONS" ]]; then
+        _QUIT='true'
+      fi
       break
     done
   done
 }
 
-selectOtherDoneCancelAny() {
+selectDoneCancelAnyOther() {
   local VAR_NAME="$1"; shift
   _commonSelectHelper "$VAR_NAME" '<done> <cancel>' '<any> <other>' "$@"
 }
 
-selectOtherDoneCancel() {
+selectDoneCancelOther() {
   local VAR_NAME="$1"; shift
   _commonSelectHelper "$VAR_NAME" '<done> <cancel>' '<other>' "$@"
+}
+
+selectDoneCancel() {
+  local VAR_NAME="$1"; shift
+  _commonSelectHelper "$VAR_NAME" '<done> <cancel>' '' "$@"
 }
 
 getRequiredParameters() {

@@ -11,7 +11,7 @@ project-requires-service() {
     if [[ $# -eq 0 ]]; then # interactive add
       local REQ_SERVICES
       PS3="Required service interface: "
-      selectOtherDoneCancel REQ_SERVICES $STD_IFACE_CLASSES
+      selectDoneCancelOther REQ_SERVICES $STD_IFACE_CLASSES
       for IFACE_CLASS in $REQ_SERVICES; do
         PACKAGE=`echo "$PACKAGE" | jq ". + { \"$CAT_REQ_SERVICES_KEY\" : ( .\"$CAT_REQ_SERVICES_KEY\" + [ \"$IFACE_CLASS\" ] ) }"`
       done
