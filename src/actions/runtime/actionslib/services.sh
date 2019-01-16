@@ -58,8 +58,8 @@ runtimeServiceRunner() {
 }
 
 runtime-services-list() {
-  local MAIN=$(cat <<EOF
-    echo "\$SERV_IFACE (\$(eval "\$(ctrlScriptEnv) npx \$SERV_SCRIPT status"))"
+  local MAIN=$(cat <<'EOF'
+    echo "$SERV_IFACE ($(eval "$(ctrlScriptEnv) npx $SERV_SCRIPT status"))"
 EOF
 )
   runtimeServiceRunner
@@ -84,22 +84,14 @@ EOF
 }
 
 runtime-services-stop() {
-  source "${CURR_ENV_FILE}"
-  local SERVICE_KEY
-  for SERVICE_KEY in ${CURR_ENV_SERVICES[@]}; do
-    local SERV_IFACE=`echo "$SERVICE_KEY" | cut -d: -f1`
-    if testServMatch "$SERV_IFACE" "$@"; then
-      local SERV_PACKAGE_NAME=`echo "$SERVICE_KEY" | cut -d: -f2`
-      local SERV_NAME=`echo "$SERVICE_KEY" | cut -d: -f3`
-      local SERV_PACKAGE=`npm explore "$SERV_PACKAGE_NAME" -- cat package.json`
-      local SERV_SCRIPT=`echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"ctrl-script\" | @sh" | tr -d "'"`
-
-      echo "Stopping ${SERV_IFACE}..."
-      eval "$(ctrlScriptEnv) npx $SERV_SCRIPT stop"
-      sleep 1
-      runtime-services-list "${SERV_IFACE}"
-    fi
-  done
+  local MAIN=$(cat <<'EOF'
+    echo "Stopping ${SERV_IFACE}..."
+    eval "$(ctrlScriptEnv) npx $SERV_SCRIPT stop"
+    sleep 1
+    runtime-services-list "${SERV_IFACE}"
+EOF
+)
+  runtimeServiceRunner
 }
 
 runtime-services-restart() {
