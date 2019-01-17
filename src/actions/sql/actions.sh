@@ -2,10 +2,6 @@ _select_db() {
   if [[ x"$1" == "xtest" ]]; then echo ${CLOUDSQL_DB_TEST}; else echo ${CLOUDSQL_DB_DEV}; fi;
 }
 
-sql-view-proxy-log() {
-  less "${BASE_DIR}/sql-proxy.log"
-}
-
 sql-connect() {
   local CLOUDSQL_DB=`_select_db "$1"`
   local TZ=`date +%z`
