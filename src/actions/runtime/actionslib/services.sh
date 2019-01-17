@@ -65,7 +65,7 @@ runtimeServiceRunner() {
     local I=$(( ${#CURR_ENV_SERVICES[@]} - 1 ))
     while (( $I >= 0 )); do
       ENV_SERVICES+=("${CURR_ENV_SERVICES[$I]}")
-      (( $I-- ))
+      I=$(( $I - 1 ))
     done
   fi
   for SERVICE_KEY in ${ENV_SERVICES[@]}; do
