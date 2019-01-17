@@ -14,12 +14,26 @@ data-sql() {
   fi
 }
 
-data-sql-rebuild() {
+data-sql-dropall() {
   echo "Dropping..."
   # colorerr "cat '$(dirname ${BASH_SOURCE[0]})/../../../../tools/data/drop_all.sql' | catalyst runtime services connect sql"
-  cat "$(dirname ${BASH_SOURCE[0]})/../../../../tools/data/drop_all.sql" | catalyst runtime services connect sql
+  cat "$(dirname ${BASH_SOURCE[0]})/../../../../tools/data/drop_all.sql" | runtime-services-connect sql
+}
+
+data-sql-load-schema() {
+  echo -n "Creating schema; "
+  source "${CURR_ENV_FILE}"
+  local SQL_VARIANT=`echo "${CURR_ENV_SERVICES[@]}" | sed -Ee 's/.*(^| *)(sql(-[^:]+)?).*/\2/'`
+  local SCHEMA_FILES=`findDataFiles "$SQL_VARIANT" "schema"`
+  local SCHEMA_FILE_COUNT=$(echo "$SCHEMA_FILES" | wc -l | tr -d ' ')
+  echo "loading $SCHEMA_FILE_COUNT schema files..."
+  cat $SCHEMA_FILES | runtime-services-connect sql
+}
+
+data-sql-rebuild() {
+  data-sql-dropall
+  data-sql-load-schema
   exit
-  echo "Setting schema..."
   for i in `ls ${SQL_DIR}/schema-* | sort -n -t '-' -k 2`; do
     local FILE=`basename "$i"`
     echo "loading '$FILE'..."

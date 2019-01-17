@@ -39,16 +39,14 @@ updateEnvParam() {
 findProvidersFor() {
   local REQ_SERVICE="${1}"
   local RESULT_VAR_NAME="${2}"
-  local NPM_ROOT=`npm root`
 
-  local CAT_PACKAGE_PATHS=`find "$NPM_ROOT"/\@* -maxdepth 2 -name ".catalyst"`
-  CAT_PACKAGE_PATHS="${CAT_PACKAGE_PATHS} "`find "$NPM_ROOT" -maxdepth 2 -name ".catalyst"`
+  local CAT_PACKAGE_PATHS=`getCatPackagePaths`
   declare -a SERVICES
   declare -a SERVICE_PACKAGES
   local CAT_PACKAGE_PATH
   for CAT_PACKAGE_PATH in $CAT_PACKAGE_PATHS; do
-    local NPM_PACKAGE=`cat $(dirname $CAT_PACKAGE_PATH)/package.json`
-    local PACKAGE_NAME=`cat $(dirname $CAT_PACKAGE_PATH)/package.json | jq --raw-output ".name"`
+    local NPM_PACKAGE=`cat "${CAT_PACKAGE_PATH}/package.json"`
+    local PACKAGE_NAME=`cat "${CAT_PACKAGE_PATH}/package.json" | jq --raw-output ".name"`
     for SERVICE in `echo "$NPM_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select((.\"interface-classes\" | .[] | select(. == \"$REQ_SERVICE\")) | length > 0) | .name | @sh" | tr -d "'"`; do
       SERVICES+=("$SERVICE")
       SERVICE_PACKAGES+=("$PACKAGE_NAME")
