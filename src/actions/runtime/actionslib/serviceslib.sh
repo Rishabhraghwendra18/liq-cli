@@ -17,7 +17,11 @@ testServMatch() {
   local CANDIDATE
   for CANDIDATE in "$@"; do
     # Match on the interface class only; trim the script name.
-    if [[ "$KEY" == `echo $CANDIDATE | sed -Ee 's/\..+//'` ]]; then
+    CANDIDATE=`echo $CANDIDATE | sed -Ee 's/\..+//'`
+    # Unlike the 'provides' matching, we match only on major-interface types.
+    KEY=`echo $KEY | sed -Ee 's/-.+//'`
+    CANDIDATE=`echo $CANDIDATE | sed -Ee 's/-.+//'`
+    if [[ "$KEY" ==  "$CANDIDATE" ]]; then
       return 0
     fi
   done
@@ -59,6 +63,8 @@ runtimeServiceRunner() {
   local SERVICE_KEY
   for SERVICE_KEY in ${ENV_SERVICES[@]}; do
     local SERV_IFACE=`echo "$SERVICE_KEY" | cut -d: -f1`
+    local MAJOR_SERV_IFACE=`echo "$SERV_IFACE" | cut -d- -f1`
+    local MINOR_SERV_IFACE=`echo "$SERV_IFACE" | cut -d- -f2`
     if testServMatch "$SERV_IFACE" "$@"; then
       local SERV_PACKAGE_NAME=`echo "$SERVICE_KEY" | cut -d: -f2`
       local SERV_NAME=`echo "$SERVICE_KEY" | cut -d: -f3`
@@ -89,14 +95,15 @@ runtimeServiceRunner() {
           local PID_FILE="${SERV_OUT_BASE}.pid"
           eval "$MAIN"
 
-          UNMATCHED_SERV_SPECS=`echo $UNMATCHED_SERV_SPECS | sed -Ee "s/(^|\s+)${SERV_IFACE}\.${SCRIPT_NAME}(\s+|\$)//"`
+          # Again, notice that the service match is only on the major interface class.
+          UNMATCHED_SERV_SPECS=`echo $UNMATCHED_SERV_SPECS | sed -Ee 's/(^|\s+)'${MAJOR_SERV_IFACE}'(-.+)?\.'${SCRIPT_NAME}'(\s+|$)//'`
         fi
         if [[ -n "${ALWAYS_RUN:-}" ]]; then
           eval "$ALWAYS_RUN"
         fi
         SERV_SCRIPT_INDEX=$(( $SERV_SCRIPT_INDEX + 1))
       done
-      UNMATCHED_SERV_SPECS=`echo $UNMATCHED_SERV_SPECS | sed -Ee "s/(^|\s+)$SERV_IFACE(\s+|\$)//"`
+      UNMATCHED_SERV_SPECS=`echo $UNMATCHED_SERV_SPECS | sed -Ee "s/(^|\s+)$MAJOR_SERV_IFACE(-\.+)?(\s+|\$)//"`
     fi
   done
 
