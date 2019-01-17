@@ -41,13 +41,13 @@ testScriptMatch() {
 }
 
 runtime-services() {
-  if [[ "$1" == "-s" ]]; then
+  if [[ "${1:-}" == "-s" ]]; then
     shift
     runtime-services-start "$@"
-  elif [[ "$1" == "-S" ]]; then
+  elif [[ "${1:-}" == "-S" ]]; then
     shift
     runtime-services-stop "$@"
-  elif [[ "$1" == "-r" ]]; then
+  elif [[ "${1:-}" == "-r" ]]; then
     shift
     runtime-services-restart "$@"
   else
@@ -58,8 +58,17 @@ runtime-services() {
 runtimeServiceRunner() {
   # TODO: currently, we check for matches before running, but we don't give any feedback on bad specs that don't match anything
   source "${CURR_ENV_FILE}"
-  local SERVICE_KEY
-  for SERVICE_KEY in ${CURR_ENV_SERVICES[@]}; do
+  declare -a ENV_SERVICES
+  if [[ -z "${REVERSE_ORDER:-}" ]]; then
+    ENV_SERVICES=("${CURR_ENV_SERVICES[@]}")
+  else
+    local I=$(( ${#CURR_ENV_SERVICES[@]} - 1 ))
+    while (( $I >= 0 )); do
+      ENV_SERVICES+=("${CURR_ENV_SERVICES[$I]}")
+      (( $I-- ))
+    done
+  fi
+  for SERVICE_KEY in ${ENV_SERVICES[@]}; do
     local SERV_IFACE=`echo "$SERVICE_KEY" | cut -d: -f1`
     if testServMatch "$SERV_IFACE" "$@"; then
       local SERV_PACKAGE_NAME=`echo "$SERVICE_KEY" | cut -d: -f2`
@@ -122,6 +131,7 @@ runtime-services-stop() {
     runtime-services-list "${PROCESS_NAME}"
 EOF
 )
+  local REVERSE_ORDER=true
   runtimeServiceRunner "$@"
 }
 
