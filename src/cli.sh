@@ -24,7 +24,7 @@ done
 # see note in lib/utils.sh:colorerr re. SAW_ERROR
 # local SAW_ERROR=''
 if [[ $# -lt 1 ]]; then
-  print_usage
+  usage
   echoerr "Invalid invocation. See usage above."
   exit 1
 fi

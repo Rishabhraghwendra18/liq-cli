@@ -39,19 +39,18 @@ ensureConfig() {
 }
 
 exitUnknownGlobal() {
-  print_usage
-  echoerr "No such component or global action '$COMPONENT'."
-  exit 1
+  usage
+  echoerrandexit "No such component or global action '$COMPONENT'."
+}
+
+exitUnknownSubgroup() {
+  print_${GROUP}_usage # TODO: change format to usage-${group}
+  echoerrandexit "Unknown sub-group '$SUBGROUP'. See usage above."
 }
 
 exitUnknownAction() {
-  print_${COMPONENT}_usage
-  if [[ -z "$ACTION" ]]; then
-    echoerr "Must specify action."
-  else
-    echoerr "Unknown action '$ACTION' for component '$COMPONENT'."
-  fi
-  exit 1
+  usage-${GROUP}-${SUBGROUP}
+  echoerrandexit "Unknown action '$ACTION'. See usage above."
 }
 
 findFile() {
@@ -356,4 +355,9 @@ getRequiredParameters() {
   local SERV_PACKAGE=`npm explore "$SERV_PACKAGE_NAME" -- cat package.json`
 
   echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"params-req\" | @sh" | tr -d "'"
+}
+
+pressAnyKeyToContinue() {
+  read -n 1 -s -r -p "Press any key to continue..."
+  echo
 }

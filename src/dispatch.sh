@@ -1,59 +1,58 @@
-COMPONENT="${1:-}"; shift # or global command
-case "$COMPONENT" in
+GROUP="${1:-}"; shift # or global command
+case "$GROUP" in
   # global actions
   help)
-    global-help "${1-}";; # ACTION may be empty
+    global-help "${1-}";; # SUBGROUP may be empty
   # components and actionsprojct
   *)
-    ACTION="${1:-}"; shift
-    case "$COMPONENT" in
+    SUBGROUP="${1:-}"; shift
+    case "$GROUP" in
       environment)
-        case "$ACTION" in
+        case "$SUBGROUP" in
           show|list|add|delete|select)
             requireCatalystfile
             requireNpmPackage
-            ${COMPONENT}-${ACTION} "$@";;
+            ${GROUP}-${SUBGROUP} "$@";;
           *)
-            exitUnknownAction;;
+            exitUnknownSubgroup;;
           esac;;
       go)
         requireCatalystfile
-        case "$ACTION" in
+        case "$SUBGROUP" in
           get-deps|build|test|start|stop|view-log)
             requireGlobals 'GOPATH' 'REL_GOAPP_PATH' || exit $?
-            ${COMPONENT}-${ACTION} "$@";;
+            ${GROUP}-${SUBGROUP} "$@";;
           configure)
-            ${COMPONENT}-${ACTION} "$@";;
+            ${GROUP}-${SUBGROUP} "$@";;
           *)
-            exitUnknownAction
+            exitUnknownSubgroup
         esac;;
       local)
         requireCatalystfile
-        case "$ACTION" in
+        case "$SUBGROUP" in
           start|stop|restart|clear-logs)
-            ${COMPONENT}-${ACTION} "$@";;
-          *) exitUnknownAction;;
+            ${GROUP}-${SUBGROUP} "$@";;
+          *) exitUnknownSubgroup;;
         esac;;
       project)
-        case "$ACTION" in
+        case "$SUBGROUP" in
           setup-scripts|build|start|lint|lint-fix|test|npm-check|npm-update|qa|deploy|add-mirror|link|link-dev|ignore-rest)
             sourceCatalystfile
-            ${COMPONENT}-${ACTION} "$@";;
+            ${GROUP}-${SUBGROUP} "$@";;
           setup|import|close)
-            ${COMPONENT}-${ACTION} "$@";;
+            ${GROUP}-${SUBGROUP} "$@";;
           requires-service|provides-service)
             requireNpmPackage
             requireCatalystfile
-            ${COMPONENT}-${ACTION} "$@";;
-          *) exitUnknownAction;;
+            ${GROUP}-${SUBGROUP} "$@";;
+          *) exitUnknownSubgroup;;
         esac;;
       runtime)
-        case "$ACTION" in
-          services)
-            requireEnvironment
-            ${COMPONENT}-${ACTION} "$@";;
-          *) exitUnknownAction;;
-        esac;;
+        if [[ $(type -t ${GROUP}-${SUBGROUP}) == 'function' ]]; then
+          ${GROUP}-${SUBGROUP} "$@"
+        else
+          exitUnknownSubgroup
+        fi;;
       sql)
         requireCatalystfile
         if [ ! -f ~/.my.cnf ]; then
@@ -65,40 +64,40 @@ user=the_user_name
 password=the_password
 EOF
         fi
-        case "$ACTION" in
+        case "$SUBGROUP" in
           start-proxy|stop-proxy|view-proxy-log|connect|rebuild)
             requireGlobals 'SQL_DIR' 'TEST_DATA_DIR' 'CLOUDSQL_CONNECTION_NAME' \
               'CLOUDSQL_CREDS' 'CLOUDSQL_DB_DEV' 'CLOUDSQL_DB_TEST'
-            ${COMPONENT}-${ACTION} "$@";;
+            ${GROUP}-${SUBGROUP} "$@";;
           configure)
-            ${COMPONENT}-${ACTION} "$@";;
+            ${GROUP}-${SUBGROUP} "$@";;
           *)
-            exitUnknownAction
+            exitUnknownSubgroup
         esac;;
       webapp)
         requireCatalystfile
-        case "$ACTION" in
+        case "$SUBGROUP" in
           audit|build|start|stop|view-log)
             requireGlobals 'WEB_APP_DIR'
-            ${COMPONENT}-${ACTION} "$@";;
+            ${GROUP}-${SUBGROUP} "$@";;
           configure)
-            ${COMPONENT}-${ACTION} "$@";;
-          *) exitUnknownAction
+            ${GROUP}-${SUBGROUP} "$@";;
+          *) exitUnknownSubgroup
         esac;;
       work)
-        case "$ACTION" in
+        case "$SUBGROUP" in
           diff-master|edit|merge|report|start)
-            ${COMPONENT}-${ACTION} "$@";;
-          *) exitUnknownAction
+            ${GROUP}-${SUBGROUP} "$@";;
+          *) exitUnknownSubgroup
         esac;;
       workspace)
-        case "$ACTION" in
+        case "$SUBGROUP" in
           report|branch|stash|merge|diff-master) # TODO: go ahead and implement 'ignore-rest'
             requireWorkspaceConfig
-            ${COMPONENT}-${ACTION} "$@";;
+            ${GROUP}-${SUBGROUP} "$@";;
           init)
-            ${COMPONENT}-${ACTION} "$@";;
-          *) exitUnknownAction
+            ${GROUP}-${SUBGROUP} "$@";;
+          *) exitUnknownSubgroup
         esac;;
       *)
         exitUnknownGlobal

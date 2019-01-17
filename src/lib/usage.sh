@@ -1,4 +1,4 @@
-print_usage() {
+usage() {
   echo "Usage:"
   echo
   echo "  catalyst help : Prints help info."

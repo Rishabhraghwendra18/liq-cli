@@ -1,7 +1,7 @@
 usage-runtime-environments() {
   local TAB="${1:-}"
   local PREFIX
-  if [[ -z "$TAB" ]]; then PREFIX='catalyst runtime'; fi
+  if [[ -z "$TAB" ]]; then PREFIX='catalyst runtime '; fi
 
   echo "${TAB}${PREFIX}environments [<name>|-a [<name>]|-d [<name>...]] :"
   echo "${TAB}  no args : Lists environments for the current project."
@@ -13,7 +13,7 @@ usage-runtime-environments() {
 usage-runtime-services() {
   local TAB="${1:-}"
   local PREFIX
-  if [[ -z "$TAB" ]]; then PREFIX='catalyst runtime'; fi
+  if [[ -z "$TAB" ]]; then PREFIX='catalyst runtime '; fi
 
   echo "${TAB}${PREFIX}services [<iface class>|-a [<iface class>]|-d [<iface class>...]] :"
   echo "${TAB}  no args : Lists runtime services for the current environment and their status."

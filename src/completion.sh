@@ -1,6 +1,7 @@
 # After updating this file, run './install.sh' and open a new terminal for the
 # changes to take effect.
 
+# TODO: we could generate this from the usage docs... make the spec central!
 _catalyst()
 {
     local cur prev opts
@@ -9,10 +10,12 @@ _catalyst()
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     case "${prev}" in
+      # the command
       catalyst)
         global_actions="help"
         components="environment go local project runtime sql webapp work workspace"
         opts="${global_actions} ${components}";;
+      # the groups
       environment)
         opts="add delete list select show";;
       go)
@@ -31,6 +34,9 @@ _catalyst()
         opts="diff-master edit merge report start";;
       workspace)
         opts="init branch stash merge diff-master";;
+      # the sub-groups
+      services)
+        opts="list start stop restart log err-log connect";;
       *)
       ;;
     esac
