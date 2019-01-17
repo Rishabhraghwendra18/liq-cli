@@ -13,9 +13,11 @@ _catalyst()
       # the command
       catalyst)
         global_actions="help"
-        components="environment go local project runtime sql webapp work workspace"
+        components="data environment go local project runtime webapp work workspace"
         opts="${global_actions} ${components}";;
       # the groups
+      data)
+        opts="dropall load-schema load-data";;
       environment)
         opts="add delete list select show";;
       go)
@@ -26,8 +28,6 @@ _catalyst()
         opts="requires-service provides-service import setup setup-scripts build start lint lint-fix test npm-check npm-update qa link link-dev close deploy add-mirror set-billing ignore-rest";;
       runtime)
         opts="environments services";;
-      sql)
-        opts="configure start-proxy stop-proxy view-proxy-log connect rebuild";;
       webapp)
         opts="configure audit build start stop view-log";;
       work)

@@ -7,6 +7,14 @@ case "$GROUP" in
   *)
     SUBGROUP="${1:-}"; shift
     case "$GROUP" in
+      # THIS is the new style
+      data|runtime)
+        if [[ $(type -t ${GROUP}-${SUBGROUP}) == 'function' ]]; then
+          ${GROUP}-${SUBGROUP} "$@"
+        else
+          exitUnknownSubgroup
+        fi;;
+      # TODO: Deprecated older, manual dispatch
       environment)
         case "$SUBGROUP" in
           show|list|add|delete|select)
@@ -46,33 +54,6 @@ case "$GROUP" in
             requireCatalystfile
             ${GROUP}-${SUBGROUP} "$@";;
           *) exitUnknownSubgroup;;
-        esac;;
-      runtime)
-        if [[ $(type -t ${GROUP}-${SUBGROUP}) == 'function' ]]; then
-          ${GROUP}-${SUBGROUP} "$@"
-        else
-          exitUnknownSubgroup
-        fi;;
-      sql)
-        requireCatalystfile
-        if [ ! -f ~/.my.cnf ]; then
-          cat <<EOF
-No '~/.my.cnf' file found; some 'db' actions won't work. File should contain:
-
-[client]
-user=the_user_name
-password=the_password
-EOF
-        fi
-        case "$SUBGROUP" in
-          start-proxy|stop-proxy|view-proxy-log|connect|rebuild)
-            requireGlobals 'SQL_DIR' 'TEST_DATA_DIR' 'CLOUDSQL_CONNECTION_NAME' \
-              'CLOUDSQL_CREDS' 'CLOUDSQL_DB_DEV' 'CLOUDSQL_DB_TEST'
-            ${GROUP}-${SUBGROUP} "$@";;
-          configure)
-            ${GROUP}-${SUBGROUP} "$@";;
-          *)
-            exitUnknownSubgroup
         esac;;
       webapp)
         requireCatalystfile

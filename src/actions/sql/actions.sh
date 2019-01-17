@@ -2,14 +2,6 @@ _select_db() {
   if [[ x"$1" == "xtest" ]]; then echo ${CLOUDSQL_DB_TEST}; else echo ${CLOUDSQL_DB_DEV}; fi;
 }
 
-sql-connect() {
-  local CLOUDSQL_DB=`_select_db "$1"`
-  local TZ=`date +%z`
-  TZ=`echo ${TZ: 0: 3}:${TZ: -2}`
-  echo "Setting time zone: $TZ"
-  mysql -h127.0.0.1 "${CLOUDSQL_DB}" --init-command 'SET time_zone="'$TZ'"'
-}
-
 sql-rebuild() {
   local CLOUDSQL_DB=`_select_db "$1"`
   echo "Using DB '$CLOUDSQL_DB':"
