@@ -104,3 +104,26 @@ runtime-services-err-log() {
 
   runtimeServiceRunner "$@"
 }
+
+runtime-services-connect() {
+  onAmbiguousSpec() {
+    usage-runtime-services
+    # TODO: pull names from scripts and use here
+    echoerrandexit "Connect requires specification of a process. '$SERV_IFACE' has ${SERV_SCRIPT_COUNT} associated processes. Use 'x.y' service spec."
+  }
+
+  ON_AMBIGUOUS_SPEC=onAmbiguousSpec
+
+  if (( $# != 1 )); then
+    usage-runtime-services
+    echoerrandexit "Connect requires specification of a single service."
+  fi
+
+  local MAIN=$(cat <<'EOF'
+    npx --no-install $SERV_SCRIPT connect-check 2> /dev/null || echoerrandexit "${PROCESS_NAME}' does not support connections."
+    eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT connect"
+EOF
+)
+
+  runtimeServiceRunner "$@"
+}

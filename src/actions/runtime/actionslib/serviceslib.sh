@@ -55,6 +55,7 @@ runtimeServiceRunner() {
   fi
 
   # TODO: Might be worth tweaking interactive-CLI by passing in vars indicating whether working on single or multiple, 'item' number and total, and whether current item is first, middle or last.
+  local SERVICE_KEY
   for SERVICE_KEY in ${ENV_SERVICES[@]}; do
     local SERV_IFACE=`echo "$SERVICE_KEY" | cut -d: -f1`
     if testServMatch "$SERV_IFACE" "$@"; then
@@ -65,11 +66,17 @@ runtimeServiceRunner() {
       local SERV_SCRIPTS=`echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"ctrl-scripts\" | @sh" | tr -d "'"`
       local SERV_SCRIPT_ARRAY=( $SERV_SCRIPTS )
       local SERV_SCRIPT_COUNT=${#SERV_SCRIPT_ARRAY[@]}
+      # test if we require a single spec
+      if [[ -n "${ON_AMBIGUOUS_SPEC:-}" ]] && (( $SERV_SCRIPT_COUNT > 0 )) && ( (( $# > 1 )) || [[ "${1:-}" != *'.'* ]]); then
+        $ON_AMBIGUOUS_SPEC
+      fi
+      # give the process scripts their proper, self-declared order
       if (( $SERV_SCRIPT_COUNT > 1 )); then
         for SERV_SCRIPT in $SERV_SCRIPTS; do
           SERV_SCRIPT_ARRAY[`eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT myorder"`]="$SERV_SCRIPT"
         done
       fi
+
       for SERV_SCRIPT in ${SERV_SCRIPT_ARRAY[@]}; do
         local SCRIPT_NAME=$(npx --no-install $SERV_SCRIPT name)
         local PROCESS_NAME="${SERV_IFACE}"

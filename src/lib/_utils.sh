@@ -1,4 +1,4 @@
-# https://stackoverflow.com/questions/5947742/how-to-change-the-output-color-of-echo-in-linux
+# http://linuxcommand.org/lc3_adv_tput.php
 red=`tput setaf 1`
 green=`tput setaf 2`
 yellow=`tput setaf 3`
