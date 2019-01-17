@@ -76,7 +76,7 @@ logMain() {
     echo "${FILE_NAME}"
     if [[ -f "${FILE_NAME}" ]]; then
       if stat -f'%z' ${FILE_NAME} | grep -qE '^\s*0\s*\$'; then
-        echo "Error log for '${green}\${PROCESS_NAME}${green}' is empty."
+        echo "Error log for '${green}\${PROCESS_NAME}${reset}' is empty."
         pressAnyKeyToContinue
         echo
       else
