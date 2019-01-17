@@ -41,7 +41,6 @@ testScriptMatch() {
 }
 
 runtimeServiceRunner() {
-  # TODO: currently, we check for matches before running, but we don't give any feedback on bad specs that don't match anything
   source "${CURR_ENV_FILE}"
   declare -a ENV_SERVICES
   if [[ -z "${REVERSE_ORDER:-}" ]]; then
@@ -53,6 +52,8 @@ runtimeServiceRunner() {
       I=$(( $I - 1 ))
     done
   fi
+  local UNMATCHED_SERV_SPEC # used later
+  local UNMATCHED_SERV_SPECS="$@"
 
   # TODO: Might be worth tweaking interactive-CLI by passing in vars indicating whether working on single or multiple, 'item' number and total, and whether current item is first, middle or last.
   local SERVICE_KEY
@@ -66,10 +67,6 @@ runtimeServiceRunner() {
       local SERV_SCRIPTS=`echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"ctrl-scripts\" | @sh" | tr -d "'"`
       local SERV_SCRIPT_ARRAY=( $SERV_SCRIPTS )
       local SERV_SCRIPT_COUNT=${#SERV_SCRIPT_ARRAY[@]}
-      # test if we require a single spec
-      if [[ -n "${ON_AMBIGUOUS_SPEC:-}" ]] && (( $SERV_SCRIPT_COUNT > 0 )) && ( (( $# > 1 )) || [[ "${1:-}" != *'.'* ]]); then
-        $ON_AMBIGUOUS_SPEC
-      fi
       # give the process scripts their proper, self-declared order
       if (( $SERV_SCRIPT_COUNT > 1 )); then
         for SERV_SCRIPT in $SERV_SCRIPTS; do
@@ -77,20 +74,33 @@ runtimeServiceRunner() {
         done
       fi
 
+      local SERV_SCRIPT_INDEX=0
+      local SERV_SCRIPTS_COOKIE
       for SERV_SCRIPT in ${SERV_SCRIPT_ARRAY[@]}; do
         local SCRIPT_NAME=$(npx --no-install $SERV_SCRIPT name)
         local PROCESS_NAME="${SERV_IFACE}"
+        if (( $SERV_SCRIPT_COUNT > 1 )); then
+          PROCESS_NAME="${SERV_IFACE}.${SCRIPT_NAME}"
+        fi
         if testScriptMatch "$SCRIPT_NAME" "$@"; then
-          if (( $SERV_SCRIPT_COUNT > 1 )); then
-            PROCESS_NAME="${SERV_IFACE}.${SCRIPT_NAME}"
-          fi
           local SERV_OUT_BASE="${_CATALYST_ENV_LOGS}/${SERV_IFACE}.${SCRIPT_NAME}"
           local SERV_LOG="${SERV_OUT_BASE}.log"
           local SERV_ERR="${SERV_OUT_BASE}.err"
           local PID_FILE="${SERV_OUT_BASE}.pid"
           eval "$MAIN"
+
+          UNMATCHED_SERV_SPECS=`echo $UNMATCHED_SERV_SPECS | sed -Ee "s/(^|\s+)${SERV_IFACE}\.${SCRIPT_NAME}(\s+|\$)//"`
         fi
+        if [[ -n "${ALWAYS_RUN:-}" ]]; then
+          eval "$ALWAYS_RUN"
+        fi
+        SERV_SCRIPT_INDEX=$(( $SERV_SCRIPT_INDEX + 1))
       done
+      UNMATCHED_SERV_SPECS=`echo $UNMATCHED_SERV_SPECS | sed -Ee "s/(^|\s+)$SERV_IFACE(\s+|\$)//"`
     fi
+  done
+
+  for UNMATCHED_SERV_SPEC in $UNMATCHED_SERV_SPECS; do
+    echoerr "Did not match service spec '$UNMATCHED_SERV_SPEC'."
   done
 }
