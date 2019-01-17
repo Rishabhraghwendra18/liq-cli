@@ -41,9 +41,7 @@ testScriptMatch() {
 }
 
 runtime-services() {
-  if [[ $# -eq 0 ]]; then
-    runtime-services-list
-  elif [[ "$1" == "-s" ]]; then
+  if [[ "$1" == "-s" ]]; then
     shift
     runtime-services-start "$@"
   elif [[ "$1" == "-S" ]]; then
@@ -128,7 +126,12 @@ EOF
 }
 
 runtime-services-restart() {
-  runtime-services-stop "$@"
-  # TODO: check that status really stopped
-  runtime-services-start "$@"
+  local MAIN=$(cat <<'EOF'
+    echo "Restarting ${PROCESS_NAME}..."
+    eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT restart"
+    sleep 1
+    runtime-services-list "${PROCESS_NAME}"
+EOF
+)
+  runtimeServiceRunner "$@"
 }
