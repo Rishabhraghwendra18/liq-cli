@@ -36,3 +36,4 @@ BEGIN
 
 DELIMITER ;
 CALL procDropAllTables();
+DROP PROCEDURE procDropAllTables;
