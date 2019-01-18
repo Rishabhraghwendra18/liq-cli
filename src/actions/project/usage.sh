@@ -1,5 +1,16 @@
 # TODO: should be 'provided-services' and 'required-services'
 
+usage-project-packages() {
+  local TAB="${1:-}"
+  local PREFIX
+  if [[ -z "$TAB" ]]; then PREFIX="catalyst project "; fi
+
+  echo "${TAB}${PREFIX}${cyan_u}packages${reset} :"
+  echo "${TAB}  build [<name>]: Builds all or the named (NPM) package in the current project."
+  echo "${TAB}  audit [<name>]: Runs a security audit for all or the named (NPM) package in the current project."
+  echo "${TAB}  lint [-f|--fix] [<name>]: Lints all or the named (NPM) package in the current project."
+}
+
 usage-project-provides-service() {
   local TAB="${1:-}"
   local PREFIX="${2:-}"
@@ -25,14 +36,13 @@ print_project_usage() {
   if [[ -z "$TAB" ]]; then
     echo -e "Project project commands:\n"
   fi
+  usage-project-packages "$TAB"
   usage-project-provides-service "$TAB"
   usage-project-requires-service "$TAB"
-  echo "${TAB}build : Builds the project for distribution."
   # TODO: change to 'mirrors'; list with no args, take options to add and delete
   echo "${TAB}add-mirror : Adds a mirror, which will receive 'git push' updates."
   # TODO: init?
   echo "${TAB}setup : Initializes the current directory as the root for local Catalyst project checkout."
-
   # TODO: move to 'work'; change to 'prune'; removes all local copies not in the current workset
   echo "${TAB}close : Removes the local workspace copy of the project after checking that all updates have been pushed."
   # TODO: move to 'work'

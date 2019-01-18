@@ -3,8 +3,26 @@ STD_IFACE_CLASSES="http http-html http-rest sql sql-mysql"
 STD_PLATFORM_TYPES="local gcp aws"
 STD_PURPOSES="dev test pre-production produciton"
 
-source "`dirname ${BASH_SOURCE[0]}`/actionslib/requires-service.sh"
+source "`dirname ${BASH_SOURCE[0]}`/actionslib/packages.sh"
 source "`dirname ${BASH_SOURCE[0]}`/actionslib/provides-service.sh"
+source "`dirname ${BASH_SOURCE[0]}`/actionslib/requires-service.sh"
+
+runtime-environment() {
+  requireCatalystfile
+  requireNpmPackage
+
+  if [[ $# -eq 0 ]]; then
+    usage-runtime-environments
+    echoerrandexit "Missing action argument. See usage above."
+  else
+    local ACTION="$1"; shift
+    if type -t ${GROUP}-${SUBGROUP}-${ACTION} | grep -q 'function'; then
+      ${GROUP}-${SUBGROUP}-${ACTION} "$@"
+    else
+      exitUnknownAction
+    fi
+  fi
+}
 
 project-setup_git_setup() {
   local HAS_FILES=`ls -a "${BASE_DIR}" | (grep -ve '^\.$' || true) | (grep -ve '^\.\.$' || true) | wc -w`
@@ -148,50 +166,15 @@ _project_script() {
       echoerr ""
       echoerrandexit "npm install --save-dev @liquid-labs/catalyst-scripts"
     fi
-    "${CATALYST_SCRIPTS}" "${BASE_DIR}" $ACTION
+    # kill the debug trap because if the script exits with an error (as in a
+    # failed lint), that's OK and the debug doesn't provide any useful info.
+    "${CATALYST_SCRIPTS}" "${BASE_DIR}" $ACTION || true
   fi
-}
-
-project-build() {
-  _project_script build
-}
-
-project-start() {
-  _project_script start
-}
-
-project-lint() {
-  _project_script lint
-}
-
-project-lint-fix() {
-  _project_script lint-fix
 }
 
 project-test() {
   _project_script pretest
   _project_script test
-}
-
-_require-npm-check() {
-  if ! which -s npm-check; then
-    echoerr "'npm-check' not found; could not check package status. Install with:"
-    echoerr ''
-    echoerr '    npm install -g npm-check'
-    echoerr ''
-    exit 10
-  fi
-}
-
-project-npm-check() {
-  _require-npm-check
-  source "$BASE_DIR/${_PROJECT_PUB_CONFIG}"
-  if npm-check ${NPM_CHECK_OPTS:-}; then
-    return 0
-  else
-    return 1
-  fi
-
 }
 
 project-npm-update() {

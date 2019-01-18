@@ -13,7 +13,7 @@ _catalyst()
       # the command
       catalyst)
         global_actions="help"
-        components="data environment go local project runtime work workspace"
+        components="data go local project runtime work workspace"
         opts="${global_actions} ${components}";;
       # the groups
       data)
@@ -22,19 +22,26 @@ _catalyst()
         opts="configure build get-deps start stop view-log";;
       local)
         opts="start stop restart clear-logs";;
+
+      # primary group
       project)
-        opts="requires-service provides-service import setup setup-scripts build start lint lint-fix test npm-check npm-update qa link link-dev close deploy add-mirror set-billing ignore-rest";;
+        opts="packages requires-service provides-service import setup setup-scripts lint lint-fix test npm-check npm-update qa link link-dev close deploy add-mirror set-billing ignore-rest";;
+      # project sub-groups
+      packages)
+        opts="build audit version-check";;
+
+      # primary group
       runtime)
         opts="environments services";;
-      work)
-        opts="diff-master edit merge report start";;
-      workspace)
-        opts="init branch stash merge diff-master";;
-      # the sub-groups
+      # runtime sub-groups
       services)
         opts="list start stop restart log err-log connect";;
       environments)
         opts="add delete deselect list select set show";;
+      work)
+        opts="diff-master edit merge report start";;
+      workspace)
+        opts="init branch stash merge diff-master";;
       *)
       ;;
     esac

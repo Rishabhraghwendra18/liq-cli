@@ -347,7 +347,6 @@ _commonSelectHelper() {
       _OPTIONS=${_OPTIONS/$_SELECTION/}
       # if we only have the default options left, then we're done
       _OPTIONS=`echo "$_OPTIONS" | sed -Ee 's/^<done> <cancel>[ ]*(<any>)?[ ]*(<other>)?$//'`
-      echo $_OPTIONS
       if [[ -z "$_OPTIONS" ]]; then
         _QUIT='true'
       fi
@@ -396,6 +395,7 @@ getCatPackagePaths() {
 
 setSimpleOptions() {
   local VAR_SPEC SHORT_OPTS LONG_OPTS LOCAL_DECLS
+  local OPTS_COUNT=0
   # This looks like a straight up bug in bash, but the left-paren in '--)' was
   # matching the '$(' and causing a syntax error. So we use ']' and replace it
   # later.
@@ -410,21 +410,23 @@ EOF
     if [[ "$VAR_SPEC" == '--' ]]; then
       break
     elif [[ "$VAR_SPEC" == *':'* ]]; then
-      echoerr "We do not yet support complex variable specifications."
+      VAR_NAME=$(echo "$VAR_SPEC" | cut -d: -f1)
+      SHORT_OPT=$(echo "$VAR_SPEC" | cut -d: -f2)
     else # each input is a variable name
       VAR_NAME="$VAR_SPEC"
-      LOWER_NAME=`echo "$VAR_NAME" | tr '[:upper:]' '[:lower:]'`
-      SHORT_OPT=${LOWER_NAME::1}
-      LONG_OPT=`echo "${LOWER_NAME}" | tr '_' '-'`
+      SHORT_OPT=$(echo "${VAR_NAME::1}" | tr '[:upper:]' '[:lower:]')
     fi
+    LOWER_NAME=`echo "$VAR_NAME" | tr '[:upper:]' '[:lower:]'`
+    LONG_OPT=`echo "${LOWER_NAME}" | tr '_' '-'`
 
     SHORT_OPTS="${SHORT_OPTS}${SHORT_OPT}"
-    LONG_OPTS=$( ( test ${#LONG_OPTS} -gt 0 && echo "${LONGOPTS},") || true && echo "$LONG_OPT")
+    LONG_OPTS=$( ( test ${#LONG_OPTS} -gt 0 && echo "${LONG_OPTS},") || true && echo "$LONG_OPT")
     LOCAL_DECLS="${LOCAL_DECLS}local $VAR_NAME;"
     CASE_HANDLER=$(cat <<EOF
     ${CASE_HANDLER}
       -${SHORT_OPT}|--${LONG_OPT}]
-        echo "${VAR_NAME}=true;";;
+        echo "${VAR_NAME}=true;"
+        OPTS_COUNT=\$(( \$OPTS_COUNT + 1));;
 EOF
 )
   done
@@ -448,5 +450,6 @@ EOF
   done
   shift
 
+  echo "local _OPTS_COUNT=${OPTS_COUNT};"
   echo set -- "$@"
 }

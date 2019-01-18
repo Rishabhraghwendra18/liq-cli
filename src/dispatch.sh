@@ -8,7 +8,7 @@ case "$GROUP" in
     SUBGROUP="${1:-}"; shift
     case "$GROUP" in
       # THIS is the new style; once moved over we can drop the match and just run the test
-      data|runtime)
+      data|runtime|project)
         if [[ $(type -t ${GROUP}-${SUBGROUP}) == 'function' ]]; then
           ${GROUP}-${SUBGROUP} "$@"
         else
@@ -35,7 +35,7 @@ case "$GROUP" in
         esac;;
       project)
         case "$SUBGROUP" in
-          setup-scripts|build|start|lint|lint-fix|test|npm-check|npm-update|qa|deploy|add-mirror|link|link-dev|ignore-rest)
+          setup-scripts|start|lint|lint-fix|test|npm-check|npm-update|qa|deploy|add-mirror|link|link-dev|ignore-rest)
             sourceCatalystfile
             ${GROUP}-${SUBGROUP} "$@";;
           setup|import|close)
