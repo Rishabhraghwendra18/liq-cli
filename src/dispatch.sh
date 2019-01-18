@@ -55,16 +55,6 @@ case "$GROUP" in
             ${GROUP}-${SUBGROUP} "$@";;
           *) exitUnknownSubgroup;;
         esac;;
-      webapp)
-        requireCatalystfile
-        case "$SUBGROUP" in
-          audit|build|start|stop|view-log)
-            requireGlobals 'WEB_APP_DIR'
-            ${GROUP}-${SUBGROUP} "$@";;
-          configure)
-            ${GROUP}-${SUBGROUP} "$@";;
-          *) exitUnknownSubgroup
-        esac;;
       work)
         case "$SUBGROUP" in
           diff-master|edit|merge|report|start)

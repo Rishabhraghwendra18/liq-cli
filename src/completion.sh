@@ -13,7 +13,7 @@ _catalyst()
       # the command
       catalyst)
         global_actions="help"
-        components="data environment go local project runtime webapp work workspace"
+        components="data environment go local project runtime work workspace"
         opts="${global_actions} ${components}";;
       # the groups
       data)
@@ -28,8 +28,6 @@ _catalyst()
         opts="requires-service provides-service import setup setup-scripts build start lint lint-fix test npm-check npm-update qa link link-dev close deploy add-mirror set-billing ignore-rest";;
       runtime)
         opts="environments services";;
-      webapp)
-        opts="configure audit build start stop view-log";;
       work)
         opts="diff-master edit merge report start";;
       workspace)
