@@ -137,24 +137,19 @@ project-setup-scripts() {
 
 _project_script() {
   local ACTION="$1"
-  cd "${BASE_DIR}"
-  if [[ "$ACTION" == 'build' ]] || [[ "$ACTION" == 'start' ]]; then
-    source "$BASE_DIR/${_PROJECT_PUB_CONFIG}"
-    if [[ "${IS_APP:-}" -eq 1 ]] || [[ "${BUILD_WITH_NPM:-}" -eq 1 ]]; then
-      npm run $ACTION
-      return
-    fi
-  fi
-  # If we get here, then it's either an action we always handle with
-  # catalyst-scripts or CRA is not used in the target project.
 
-  local CATALYST_SCRIPTS=$(npm bin)/catalyst-scripts
-  if [[ ! -x "$CATALYST_SCRIPTS" ]]; then
-    echoerr "This project does not appear to be using 'catalyst-scripts'. Try:"
-    echoerr ""
-    echoerrandexit "npm install --save-dev @liquid-labs/catalyst-scripts"
+  cd "${BASE_DIR}"
+  if cat package.json | jq -e "(.scripts | keys | map(select(. == \"$ACTION\")) | length) == 1" > /dev/null; then
+    npm run-script "${ACTION}"
+  else
+    local CATALYST_SCRIPTS=$(npm bin)/catalyst-scripts
+    if [[ ! -x "$CATALYST_SCRIPTS" ]]; then
+      echoerr "This project does not appear to be using 'catalyst-scripts'. Try:"
+      echoerr ""
+      echoerrandexit "npm install --save-dev @liquid-labs/catalyst-scripts"
+    fi
+    "${CATALYST_SCRIPTS}" "${BASE_DIR}" $ACTION
   fi
-  "${CATALYST_SCRIPTS}" "${BASE_DIR}" $ACTION
 }
 
 project-build() {

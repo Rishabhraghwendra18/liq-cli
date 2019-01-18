@@ -1,3 +1,5 @@
+# TODO: should be 'provided-services' and 'required-services'
+
 usage-project-provides-service() {
   local TAB="${1:-}"
   local PREFIX="${2:-}"
@@ -25,6 +27,7 @@ print_project_usage() {
   fi
   usage-project-provides-service "$TAB"
   usage-project-requires-service "$TAB"
+  echo "${TAB}build : Builds the project for distribution."
   # TODO: change to 'mirrors'; list with no args, take options to add and delete
   echo "${TAB}add-mirror : Adds a mirror, which will receive 'git push' updates."
   # TODO: init?
