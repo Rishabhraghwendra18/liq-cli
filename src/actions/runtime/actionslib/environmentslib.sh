@@ -1,6 +1,6 @@
 doEnvironmentList() {
   local PACKAGE_NAME=`cat $BASE_DIR/package.json | jq --raw-output ".name"`
-  find "${_CATALYST_ENVS}/${PACKAGE_NAME}" -mindepth 1 -maxdepth 1 -type f -exec basename '{}' \;
+  find "${_CATALYST_ENVS}/${PACKAGE_NAME}" -mindepth 1 -maxdepth 1 -type f -not -name "*~" -exec basename '{}' \;
 }
 
 updateEnvironment() {
