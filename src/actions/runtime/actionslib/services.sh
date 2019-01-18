@@ -17,10 +17,30 @@ runtime-services() {
 }
 
 runtime-services-list() {
-  local MAIN=$(cat <<'EOF'
-    echo "$PROCESS_NAME ($(eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT status"))"
-EOF
-)
+  local SHOW_STATUS
+  local TMP # because of the '||', we have to break up the set
+  TMP=`${GNU_GETOPT} -o 's' --long 'show-status' -- "$@"` \
+    || ( usage-runtime-services && echoerrandexit "Bad options." )
+  eval set -- "$TMP"
+  while true; do
+    case "${1:-}" in
+      -s|--show-status)
+        SHOW_STATUS=true;;
+      --)
+        break;;
+    esac
+    shift
+  done
+  shift
+
+  local MAIN='echo "$PROCESS_NAME"'
+  if [[ -n "$SHOW_STATUS" ]]; then
+    MAIN='echo "$PROCESS_NAME ($(eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT status"))"'
+  fi
+#  MAIN=$(cat <<'EOF'
+#    echo "$PROCESS_NAME ($(eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT status"))"
+#EOF
+#)
   runtimeServiceRunner "$@"
 }
 

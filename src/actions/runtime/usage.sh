@@ -24,7 +24,7 @@ usage-runtime-services() {
   if [[ -z "$TAB" ]]; then PREFIX="catalyst runtime "; fi
 
   echo "${TAB}${PREFIX}${cyan_u}services${reset} :"
-  echo "${TAB}  list [<service spec>...] : Lists all or named runtime services for the current environment and their status."
+  echo "${TAB}  list [-s|--show-status] [<service spec>...] : Lists all or named runtime services for the current environment and their status."
   echo "${TAB}  start [<service spec>...] : Starts all or named services for the current environment."
   echo "${TAB}  stop [<service spec>...] : Stops all or named services for the current environment."
   echo "${TAB}  log [<service spec>...] : Displays logs for all or named services for the current environment."
