@@ -1,8 +1,26 @@
+# TODO: move this def
 STD_ENV_PUPRPOSES='dev test pre-production production'
 
-source "`dirname ${BASH_SOURCE[0]}`/lib.sh"
+source "`dirname ${BASH_SOURCE[0]}`/environmentslib.sh"
 
-environment-show() {
+runtime-environments() {
+  requireCatalystfile
+  requireNpmPackage
+
+  if [[ $# -eq 0 ]]; then
+    usage-runtime-environments
+    echoerrandexit "Missing action argument. See usage above."
+  else
+    local ACTION="$1"; shift
+    if type -t ${GROUP}-${SUBGROUP}-${ACTION} | grep -q 'function'; then
+      ${GROUP}-${SUBGROUP}-${ACTION} "$@"
+    else
+      exitUnknownAction
+    fi
+  fi
+}
+
+runtime-environments-show() {
   local ENV_NAME="${1:-}"
   local PACKAGE_NAME=`cat $BASE_DIR/package.json | jq --raw-output ".name"`
 
@@ -31,7 +49,7 @@ environment-show() {
   #fi
 }
 
-environment-set() {
+runtime-environments-set() {
   echoerr "TODO: sorry, 'set' implementation is outdated"
   exit
   local ENV_NAME KEY VALUE
@@ -61,7 +79,7 @@ environment-set() {
   updateEnvironment
 }
 
-environment-add() {
+runtime-environments-add() {
   local ENV_NAME="${1:-}"
   # TODO: echo "Adding environment for project $CURR_PROJECT"
   if [ -z "${ENV_NAME}" ]; then
@@ -94,7 +112,7 @@ environment-add() {
   updateEnvironment
 
   function selectNewEnv() {
-    environment-select "${ENV_NAME}"
+    runtime-environments-select "${ENV_NAME}"
   }
 
   yesno "Would you like to select the newly added '${ENV_NAME}'? (Y\n) " \
@@ -102,7 +120,7 @@ environment-add() {
     selectNewEnv
 }
 
-environment-list() {
+runtime-environments-list() {
   if test -n "$(doEnvironmentList)"; then
     doEnvironmentList
   else
@@ -110,7 +128,7 @@ environment-list() {
   fi
 }
 
-environment-select() {
+runtime-environments-select() {
   local ENV_NAME="${1:-}"
   local PACKAGE_NAME=`cat $BASE_DIR/package.json | jq --raw-output ".name"`
   if [[ -z "$ENV_NAME" ]]; then
@@ -131,12 +149,12 @@ environment-select() {
   loadCurrEnv
 }
 
-environment-deselect() {
+runtime-environments-deselect() {
   test -L $CURR_ENV_FILE && rm $CURR_ENV_FILE
   loadCurrEnv
 }
 
-environment-delete() {
+runtime-environments-delete() {
   local ENV_NAME="${1:-}"
   test -n "$ENV_NAME" || echoerrandexit "Must specify enviromnent for deletion."
   local PACKAGE_NAME=`cat $BASE_DIR/package.json | jq --raw-output ".name"`
@@ -147,7 +165,7 @@ environment-delete() {
 
   onDeleteCurrent() {
     onDeleteConfirm
-    environment-select 'none'
+    runtime-environments-select 'none'
   }
 
   onDeleteCancel() {

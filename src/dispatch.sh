@@ -7,7 +7,7 @@ case "$GROUP" in
   *)
     SUBGROUP="${1:-}"; shift
     case "$GROUP" in
-      # THIS is the new style
+      # THIS is the new style; once moved over we can drop the match and just run the test
       data|runtime)
         if [[ $(type -t ${GROUP}-${SUBGROUP}) == 'function' ]]; then
           ${GROUP}-${SUBGROUP} "$@"
@@ -15,15 +15,6 @@ case "$GROUP" in
           exitUnknownSubgroup
         fi;;
       # TODO: Deprecated older, manual dispatch
-      environment)
-        case "$SUBGROUP" in
-          show|list|add|delete|select)
-            requireCatalystfile
-            requireNpmPackage
-            ${GROUP}-${SUBGROUP} "$@";;
-          *)
-            exitUnknownSubgroup;;
-          esac;;
       go)
         requireCatalystfile
         case "$SUBGROUP" in

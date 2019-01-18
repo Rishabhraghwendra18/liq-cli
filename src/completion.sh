@@ -18,8 +18,6 @@ _catalyst()
       # the groups
       data)
         opts="dropall load-schema load-data";;
-      environment)
-        opts="add delete list select show";;
       go)
         opts="configure build get-deps start stop view-log";;
       local)
@@ -35,6 +33,8 @@ _catalyst()
       # the sub-groups
       services)
         opts="list start stop restart log err-log connect";;
+      environments)
+        opts="add delete deselect list select set show";;
       *)
       ;;
     esac
