@@ -393,3 +393,60 @@ getCatPackagePaths() {
 
   echo "$CAT_PACKAGE_PATHS"
 }
+
+setSimpleOptions() {
+  local VAR_SPEC SHORT_OPTS LONG_OPTS LOCAL_DECLS
+  # This looks like a straight up bug in bash, but the left-paren in '--)' was
+  # matching the '$(' and causing a syntax error. So we use ']' and replace it
+  # later.
+  local CASE_HANDLER=$(cat <<EOF
+    --]
+      break;;
+EOF
+)
+  while true; do
+    VAR_SPEC="$1"; shift
+    local VAR_NAME LOWER_NAME SHORT_OPT LONG_OPT
+    if [[ "$VAR_SPEC" == '--' ]]; then
+      break
+    elif [[ "$VAR_SPEC" == *':'* ]]; then
+      echoerr "We do not yet support complex variable specifications."
+    else # each input is a variable name
+      VAR_NAME="$VAR_SPEC"
+      LOWER_NAME=`echo "$VAR_NAME" | tr '[:upper:]' '[:lower:]'`
+      SHORT_OPT=${LOWER_NAME::1}
+      LONG_OPT=`echo "${LOWER_NAME}" | tr '_' '-'`
+    fi
+
+    SHORT_OPTS="${SHORT_OPTS}${SHORT_OPT}"
+    LONG_OPTS=$( ( test ${#LONG_OPTS} -gt 0 && echo "${LONGOPTS},") || true && echo "$LONG_OPT")
+    LOCAL_DECLS="${LOCAL_DECLS}local $VAR_NAME;"
+    CASE_HANDLER=$(cat <<EOF
+    ${CASE_HANDLER}
+      -${SHORT_OPT}|--${LONG_OPT}]
+        echo "${VAR_NAME}=true;";;
+EOF
+)
+  done
+  CASE_HANDLER=$(cat <<EOF
+    case "\$1" in
+      $CASE_HANDLER
+    esac
+EOF
+)
+  CASE_HANDLER=`echo "$CASE_HANDLER" | tr ']' ')'`
+
+  echo "$LOCAL_DECLS"
+
+  local TMP # because of the '||', we have to break up the set
+  TMP=`${GNU_GETOPT} -o "${SHORT_OPTS}" --long "${LONG_OPTS}" -- "$@"` \
+    || exit 1
+  eval set -- "$TMP"
+  while true; do
+    eval "$CASE_HANDLER"
+    shift
+  done
+  shift
+
+  echo set -- "$@"
+}

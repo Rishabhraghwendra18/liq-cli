@@ -17,30 +17,19 @@ runtime-services() {
 }
 
 runtime-services-list() {
-  local SHOW_STATUS
-  local TMP # because of the '||', we have to break up the set
-  TMP=`${GNU_GETOPT} -o 's' --long 'show-status' -- "$@"` \
-    || ( usage-runtime-services && echoerrandexit "Bad options." )
-  eval set -- "$TMP"
-  while true; do
-    case "${1:-}" in
-      -s|--show-status)
-        SHOW_STATUS=true;;
-      --)
-        break;;
-    esac
-    shift
-  done
-  shift
+  local TMP
+  # If you try to set TMP with 'local' and use the '||', it silently ignores the
+  # '||'. I guess it gets parse as part of the varible set, and then ignored due
+  # to word splitting.
+  TMP=$(setSimpleOptions SHOW_STATUS -- "$@") \
+    || ( usage-runtime-services; echoerrandexit "Bad options." )
+  eval "$TMP"
 
   local MAIN='echo "$PROCESS_NAME"'
   if [[ -n "$SHOW_STATUS" ]]; then
     MAIN='echo "$PROCESS_NAME ($(eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT status"))"'
   fi
-#  MAIN=$(cat <<'EOF'
-#    echo "$PROCESS_NAME ($(eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT status"))"
-#EOF
-#)
+
   runtimeServiceRunner "$@"
 }
 
