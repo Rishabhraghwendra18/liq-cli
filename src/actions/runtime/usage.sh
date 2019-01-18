@@ -11,11 +11,14 @@ usage-runtime-environments() {
   local PREFIX
   if [[ -z "$TAB" ]]; then PREFIX="catalyst runtime "; fi
 
-  echo "${TAB}${PREFIX}${cyan_u}environments${reset} [<name>|-a [<name>]|-d [<name>...]] :"
-  echo "${TAB}  no args : Lists environments for the current project."
-  echo "${TAB}  <name>... : Gives detailed info for each named environment."
-  echo "${TAB}  -a [<name>] : Interactively adds a new environment definition."
-  echo "${TAB}  -d <name>... : Deletes the named environments associated to the current project."
+  echo "${TAB}${PREFIX}${cyan_u}environments${reset} :"
+  echo "${TAB}  list : List available environments for the current project."
+  echo "${TAB}  show [<name>] : Display the named or current environment."
+  echo "${TAB}  add [<name>] : Interactively adds a new environment definition to the current project."
+  echo "${TAB}  delete <name> : Deletes named environment for the current project."
+  echo "${TAB}  select [<name>] : Selects one of the available environment."
+  echo "${TAB}  deselect : Unsets the current environment."
+  echo "${TAB}  set [<key> <value>] | [<env name> <key> <value>]: Updates environment settings."
 }
 
 usage-runtime-services() {

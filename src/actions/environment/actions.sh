@@ -121,15 +121,18 @@ environment-select() {
     select ENV_NAME in `doEnvironmentList`; do break; done
   fi
   local CURR_ENV_FILE="${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env"
-  if [[ "${ENV_NAME}" == 'none' ]]; then
-    test -L $CURR_ENV_FILE && rm $CURR_ENV_FILE
-  elif [[ -f "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
+  if [[ -f "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
     test -L $CURR_ENV_FILE && rm $CURR_ENV_FILE
     cd "${_CATALYST_ENVS}/${PACKAGE_NAME}/" && ln -s "./${ENV_NAME}" curr_env
   else
     echoerrandexit "No such environment '$ENV_NAME' defined."
   fi
   # if not error and exit
+  loadCurrEnv
+}
+
+environment-deselect() {
+  test -L $CURR_ENV_FILE && rm $CURR_ENV_FILE
   loadCurrEnv
 }
 
