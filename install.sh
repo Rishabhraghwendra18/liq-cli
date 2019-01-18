@@ -7,8 +7,9 @@ COMPLETION_PATH="/usr/local/etc/bash_completion.d"
 BREW_UPDATED=''
 brewInstall() {
   local EXEC="$1"
-  local POST_INSTALL="${2:-}"
-  if ! which -s $EXEC; then
+  local INSTALL_TEST="$2"
+  local POST_INSTALL="${3:-}"
+  if ! $INSTALL_TEST; then
     if ! which -s brew; then
       echoerr "Required executable '${EXEC}' not found."
       echoerr "Install Homebrew and re-run installation, or install '${EXEC}' manually."
@@ -37,8 +38,12 @@ brewInstall() {
   fi
 }
 
-brewInstall jq
-brewInstall gnu-getopt "addLineIfNotPresentInFile ~/.bash_profile 'alias gnu-getopt=\"\$(brew --prefix gnu-getopt)/bin/getopt\"'"
+brewInstall jq 'which -s jq'
+# Without the 'eval', the tick quotes are treated as part of the filename.
+# Without the tickquotes we're vulnerable to spaces in the path.
+brewInstall gnu-getopt \
+  "eval test -f '$(brew --prefix gnu-getopt)/bin/getopt'" \
+  "addLineIfNotPresentInFile ~/.bash_profile 'alias gnu-getopt=\"\$(brew --prefix gnu-getopt)/bin/getopt\"'"
 
 cp ./src/completion.sh "${COMPLETION_PATH}/catalyst"
 addLineIfNotPresentInFile ~/.bash_profile "[ -d '$COMPLETION_PATH' ] && . '${COMPLETION_PATH}/catalyst'"
