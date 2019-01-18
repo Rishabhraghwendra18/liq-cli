@@ -56,7 +56,6 @@ runtimeServiceRunner() {
       I=$(( $I - 1 ))
     done
   fi
-  local UNMATCHED_SERV_SPEC # used later
   local UNMATCHED_SERV_SPECS="$@"
 
   # TODO: Might be worth tweaking interactive-CLI by passing in vars indicating whether working on single or multiple, 'item' number and total, and whether current item is first, middle or last.
@@ -96,17 +95,18 @@ runtimeServiceRunner() {
           eval "$MAIN"
 
           # Again, notice that the service match is only on the major interface class.
-          UNMATCHED_SERV_SPECS=`echo $UNMATCHED_SERV_SPECS | sed -Ee 's/(^|\s+)'${MAJOR_SERV_IFACE}'(-.+)?\.'${SCRIPT_NAME}'(\s+|$)//'`
+          UNMATCHED_SERV_SPECS=`echo $UNMATCHED_SERV_SPECS | sed -Ee 's/(^| +)'${MAJOR_SERV_IFACE}'(-[^ ]+)?\.'${SCRIPT_NAME}'( +|$)//'`
         fi
         if [[ -n "${ALWAYS_RUN:-}" ]]; then
           eval "$ALWAYS_RUN"
         fi
         SERV_SCRIPT_INDEX=$(( $SERV_SCRIPT_INDEX + 1))
       done
-      UNMATCHED_SERV_SPECS=`echo $UNMATCHED_SERV_SPECS | sed -Ee "s/(^|\s+)$MAJOR_SERV_IFACE(-\.+)?(\s+|\$)//"`
+      UNMATCHED_SERV_SPECS=`echo $UNMATCHED_SERV_SPECS | sed -Ee 's/(^| +)'$MAJOR_SERV_IFACE'(-[^ ]+)?( +|$)//'`
     fi
   done
 
+  local UNMATCHED_SERV_SPEC
   for UNMATCHED_SERV_SPEC in $UNMATCHED_SERV_SPECS; do
     echoerr "Did not match service spec '$UNMATCHED_SERV_SPEC'."
   done
