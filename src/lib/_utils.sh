@@ -339,7 +339,12 @@ _commonSelectHelper() {
           eval $_VAR_NAME=\"${!_VAR_NAME}'${_SELECTION}' \";;
         '<any>')
           echo "Final selection: 'any'"
-          eval $_VAR_NAME='any';;
+          eval $_VAR_NAME='any'
+          _QUIT='true';;
+        '<all>')
+          echo "Final selection: 'all'"
+          eval $_VAR_NAME=\""$@"\"
+          _QUIT='true';;
         *)
           eval $_VAR_NAME=\"${!_VAR_NAME}'${_SELECTION}' \";;
       esac
@@ -348,7 +353,7 @@ _commonSelectHelper() {
       fi
       _OPTIONS=${_OPTIONS/$_SELECTION/}
       # if we only have the default options left, then we're done
-      _OPTIONS=`echo "$_OPTIONS" | sed -Ee 's/^<done> <cancel>[ ]*(<any>)?[ ]*(<other>)?$//'`
+      _OPTIONS=`echo "$_OPTIONS" | sed -Ee 's/^<done> <cancel>[ ]*(<all>)?[ ]*(<any>)?[ ]*(<other>)?$//'`
       if [[ -z "$_OPTIONS" ]]; then
         _QUIT='true'
       fi
@@ -370,6 +375,11 @@ selectDoneCancelOther() {
 selectDoneCancel() {
   local VAR_NAME="$1"; shift
   _commonSelectHelper "$VAR_NAME" '<done> <cancel>' '' "$@"
+}
+
+selectDoneCancelAll() {
+  local VAR_NAME="$1"; shift
+  _commonSelectHelper "$VAR_NAME" '<done> <cancel>' '<all>' "$@"
 }
 
 getRequiredParameters() {
