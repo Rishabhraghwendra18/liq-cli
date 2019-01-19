@@ -66,7 +66,7 @@ project-packages-version-check() {
   fi
 
   if [[ -n "$UPDATE" ]] \
-      && ( (( ${_OPTS_COUNT} > 2 )) || ( (( ${_OPTS_COUNT} == 1 )) && [[ -z $OPTIONS ]]) ); then
+      && ( (( ${_OPTS_COUNT} > 2 )) || ( (( ${_OPTS_COUNT} == 1 )) && [[ -z $OPTIONS_SET ]]) ); then
     echoerrandexit "'--update' option may only be combined with '--options'."
   elif [[ -n "$IGNORE" ]] || [[ -n "$UNIGNORE" ]]; then
     if [[ -n "$IGNORE" ]] && [[ -n "$UNIGNORE" ]]; then
@@ -143,8 +143,12 @@ project-packages-version-check() {
     else
       echo "Additional options: $CMD_OPTS"
     fi
-  elif [[ -n "$OPTIONS" ]] && (( $_OPTS_COUNT == 1 )); then
-    PACKAGE=$(echo "$PACKAGE" | jq 'setpath(["catalyst","version-check","options"]; "'$OPTIONS'")')
+  elif [[ -n "$OPTIONS_SET" ]] && (( $_OPTS_COUNT == 1 )); then
+    if [[ -n "$OPTIONS" ]]; then
+      PACKAGE=$(echo "$PACKAGE" | jq 'setpath(["catalyst","version-check","options"]; "'$OPTIONS'")')
+    elif [[ -z "$OPTIONS" ]]; then
+      PACKAGE=$(echo "$PACKAGE" | jq 'del(.catalyst."version-check".options)')
+    fi
     echo "$PACKAGE" > "$PACKAGE_FILE"
   else # actually do the check
     for IPACKAGE in $IGNORED_PACKAGES; do
@@ -153,7 +157,6 @@ project-packages-version-check() {
     if [[ -n "$UPDATE" ]]; then
       CMD_OPTS="${CMD_OPTS} -u"
     fi
-    echo npm-check ${CMD_OPTS}
     npm-check ${CMD_OPTS} || true
   fi
 }
