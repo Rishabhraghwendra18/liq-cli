@@ -45,7 +45,7 @@ runtime-services-start() {
       cat "${SERV_ERR}"
       echoerr "Possible errors while starting ${PROCESS_NAME}. See error log above."
     fi
-    runtime-services-list "${PROCESS_NAME}"
+    runtime-services-list -s "${PROCESS_NAME}"
 EOF
 )
   runtimeServiceRunner "$@"
@@ -57,7 +57,7 @@ runtime-services-stop() {
     echo "Stopping ${PROCESS_NAME}..."
     eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT stop"
     sleep 1
-    runtime-services-list "${PROCESS_NAME}"
+    runtime-services-list -s "${PROCESS_NAME}"
 EOF
 )
   local REVERSE_ORDER=true
