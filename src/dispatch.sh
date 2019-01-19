@@ -35,7 +35,7 @@ case "$GROUP" in
         esac;;
       project)
         case "$SUBGROUP" in
-          setup-scripts|start|lint|lint-fix|test|npm-check|npm-update|qa|deploy|add-mirror|link|link-dev|ignore-rest)
+          setup-scripts|start|lint|lint-fix|test|qa|deploy|add-mirror|link|link-dev|ignore-rest)
             sourceCatalystfile
             ${GROUP}-${SUBGROUP} "$@";;
           setup|import|close)

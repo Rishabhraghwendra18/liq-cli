@@ -162,6 +162,7 @@ _project_script() {
   else
     local CATALYST_SCRIPTS=$(npm bin)/catalyst-scripts
     if [[ ! -x "$CATALYST_SCRIPTS" ]]; then
+      # TODO: offer to install and re-run
       echoerr "This project does not appear to be using 'catalyst-scripts'. Try:"
       echoerr ""
       echoerrandexit "npm install --save-dev @liquid-labs/catalyst-scripts"
@@ -175,14 +176,6 @@ _project_script() {
 project-test() {
   _project_script pretest
   _project_script test
-}
-
-project-npm-update() {
-  _require-npm-check
-  source "$BASE_DIR/${_PROJECT_PUB_CONFIG}"
-  npm-check -u ${NPM_CHECK_OPTS:-}
-  # TODO: by default, it should also swap out any 'file:' based installation of
-  # internal projects with the latest published internal
 }
 
 project-qa() {

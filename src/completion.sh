@@ -25,7 +25,7 @@ _catalyst()
 
       # primary group
       project)
-        opts="packages requires-service provides-service import setup setup-scripts lint lint-fix test npm-check npm-update qa link link-dev close deploy add-mirror set-billing ignore-rest";;
+        opts="packages requires-service provides-service import setup setup-scripts lint lint-fix test qa link link-dev close deploy add-mirror set-billing ignore-rest";;
       # project sub-groups
       packages)
         opts="build audit version-check";;
