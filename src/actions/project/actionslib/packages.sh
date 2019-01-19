@@ -70,7 +70,7 @@ project-packages-version-check() {
       local IPACKAGES
       local LIVE_PACKAGES=`echo "$PACKAGE" | jq --raw-output '.dependencies | keys | @sh' | tr -d "'"`
       for IPACKAGE in $IGNORED_PACKAGES; do
-        LIVE_PACKAGES=$(echo "$LIVE_PACKAGES" | sed -Ee 's/(^| +)'$IPACKAGE'( +|$)//')
+        LIVE_PACKAGES=$(echo "$LIVE_PACKAGES" | sed -Ee 's~(^| +)'$IPACKAGE'( +|$)~~')
       done
       if (( $# == 0 )); then # interactive add
         PS3="Exclude package: "
@@ -81,10 +81,10 @@ project-packages-version-check() {
 
       local IPACKAGE
       for IPACKAGE in $IPACKAGES; do
-        if ! echo "$LIVE_PACKAGES" | grep -Eq '(^| +)'$IPACKAGE'( +|$)'; then
-          echoerr "No such package '$IPACKAGE' in dependencies."
-        elif echo "$IGNORED_PACKAGES" | grep -Eq '(^| +)'$IPACKAGE'( +|$)'; then
+        if echo "$IGNORED_PACKAGES" | grep -Eq '(^| +)'$IPACKAGE'( +|$)'; then
           echoerr "Package '$IPACKAGE' already ignored."
+        elif ! echo "$LIVE_PACKAGES" | grep -Eq '(^| +)'$IPACKAGE'( +|$)'; then
+          echoerr "No such package '$IPACKAGE' in dependencies."
         else
           if [[ -z "$IGNORED_PACKAGES" ]]; then
             PACKAGE=`echo "$PACKAGE" | jq 'setpath(["catalyst","version-check","ignore"]; ["'$IPACKAGE'"])'`
@@ -100,10 +100,13 @@ project-packages-version-check() {
     fi
 
     if [[ -n "$LIST_IGNORED" ]]; then
-      echo "UI LIST IGNORED"
+      echo -e "\nIgnored packages now: "
+      project-packages-version-check -l
     fi
   elif [[ -n "$LIST_IGNORED" ]]; then
-    echo "LIST IGNORED"
+    # on error, assume there's nothing to show
+    echo "$PACKAGE" | jq --raw-output 'getpath(["catalyst","version-check","ignore"]) | @sh' | tr -d "'" | sort | tr " " "\n" \
+      || echo ""
   else # actually do the check
     set_npm_check_opts
     if [[ -n "$UPDATE" ]]; then
