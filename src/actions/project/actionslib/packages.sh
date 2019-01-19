@@ -58,12 +58,16 @@ project-packages-version-check() {
   local IGNORED_PACKAGES IPACKAGE
   # the '@sh' breaks '-e'; https://github.com/stedolan/jq/issues/1792
   if echo "$PACKAGE" | jq -e --raw-output '.catalyst."version-check".ignore' > /dev/null; then
-    IGNORED_PACKAGES=`echo "$PACKAGE" | jq -e --raw-output '.catalyst."version-check".ignore | @sh' 2> /dev/null | tr -d "'"`
+    IGNORED_PACKAGES=`echo "$PACKAGE" | jq --raw-output '.catalyst."version-check".ignore | @sh' | tr -d "'" | sort`
+  fi
+  local CMD_OPTS="$OPTIONS"
+  if [[ -z "$CMD_OPTS" ]] && echo "$PACKAGE" | jq -e --raw-output '.catalyst."version-check".options' > /dev/null; then
+    CMD_OPTS=`echo "$PACKAGE" | jq --raw-output '.catalyst."version-check".options'`
   fi
 
   if [[ -n "$UPDATE" ]] \
       && ( (( ${_OPTS_COUNT} > 2 )) || ( (( ${_OPTS_COUNT} == 1 )) && [[ -z $OPTIONS ]]) ); then
-    echoerrandexit "The 'update' option can only be combined with '--options'."
+    echoerrandexit "'--update' option may only be combined with '--options'."
   elif [[ -n "$IGNORE" ]] || [[ -n "$UNIGNORE" ]]; then
     if [[ -n "$IGNORE" ]] && [[ -n "$UNIGNORE" ]]; then
       echoerrandexit "Cannot 'ignore' and 'unignore' packages in same command."
@@ -125,22 +129,31 @@ project-packages-version-check() {
     fi
 
     if [[ -n "$SHOW_CONFIG" ]]; then
-      echo -e "\nIgnored packages now: "
-      project-packages-version-check -l
+      project-packages-version-check -c
     fi
   elif [[ -n "$SHOW_CONFIG" ]]; then
-    # on error, assume there's nothing to show
-    echo "$PACKAGE" | jq --raw-output 'getpath(["catalyst","version-check","ignore"]) | @sh' | tr -d "'" | sort | tr " " "\n" \
-      || echo ""
+    if [[ -z "$IGNORED_PACKAGES" ]]; then
+      echo "Ignored packages: none"
+    else
+      echo "Ignored packages:"
+      echo "$IGNORED_PACKAGES" | tr " " "\n" | sed -E 's/^/  /'
+    fi
+    if [[ -z "$CMD_OPTS" ]]; then
+      echo "Additional options: none"
+    else
+      echo "Additional options: $CMD_OPTS"
+    fi
+  elif [[ -n "$OPTIONS" ]] && (( $_OPTS_COUNT == 1 )); then
+    PACKAGE=$(echo "$PACKAGE" | jq 'setpath(["catalyst","version-check","options"]; "'$OPTIONS'")')
+    echo "$PACKAGE" > "$PACKAGE_FILE"
   else # actually do the check
-    local CHECK_OPTS
     for IPACKAGE in $IGNORED_PACKAGES; do
-      CHECK_OPTS="${CHECK_OPTS} -i ${IPACKAGE}"
+      CMD_OPTS="${CMD_OPTS} -i ${IPACKAGE}"
     done
     if [[ -n "$UPDATE" ]]; then
-      CHECK_OPTS="${CHECK_OPTS} -u"
-    else
-      npm-check ${CHECK_OPTS} || true
+      CMD_OPTS="${CMD_OPTS} -u"
     fi
+    echo npm-check ${CMD_OPTS}
+    npm-check ${CMD_OPTS} || true
   fi
 }
