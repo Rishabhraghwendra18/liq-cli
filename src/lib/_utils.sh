@@ -343,7 +343,9 @@ _commonSelectHelper() {
         *)
           eval $_VAR_NAME=\"${!_VAR_NAME}'${_SELECTION}' \";;
       esac
-      echo "Current selections: ${!_VAR_NAME}"
+      if [[ -z "$_QUIT" ]]; then
+        echo "Current selections: ${!_VAR_NAME}"
+      fi
       _OPTIONS=${_OPTIONS/$_SELECTION/}
       # if we only have the default options left, then we're done
       _OPTIONS=`echo "$_OPTIONS" | sed -Ee 's/^<done> <cancel>[ ]*(<any>)?[ ]*(<other>)?$//'`
@@ -421,7 +423,8 @@ EOF
 
     SHORT_OPTS="${SHORT_OPTS}${SHORT_OPT}"
     LONG_OPTS=$( ( test ${#LONG_OPTS} -gt 0 && echo "${LONG_OPTS},") || true && echo "$LONG_OPT")
-    LOCAL_DECLS="${LOCAL_DECLS}local $VAR_NAME;"
+    # set on declaration so nested calles get reset
+    LOCAL_DECLS="${LOCAL_DECLS}local $VAR_NAME='';"
     CASE_HANDLER=$(cat <<EOF
     ${CASE_HANDLER}
       -${SHORT_OPT}|--${LONG_OPT}]
