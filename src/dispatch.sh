@@ -2,7 +2,7 @@ GROUP="${1:-}"; shift # or global command
 case "$GROUP" in
   # global actions
   help)
-    global-help "${1-}";; # SUBGROUP may be empty
+    help "$@";;
   # components and actionsprojct
   *)
     SUBGROUP="${1:-}"; shift

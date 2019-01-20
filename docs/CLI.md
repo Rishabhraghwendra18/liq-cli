@@ -15,6 +15,9 @@ The Catalyst CLI tool is used to:
 * Manage the workflow through the [`work` commands](#work-commands).
 * Manage data through the [`data` commands](#data-commands).
 
+Tool actions are invoked by selecting a resource and an action to take. E.g. `catalyst work start`.
+
+
 ### Projects
 
 Organize code and other artifacts.
