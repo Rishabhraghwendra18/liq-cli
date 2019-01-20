@@ -1,10 +1,10 @@
 usage-workspace() {
   local PREFIX="${1:-}"
 
-  cat <<EOF
+  handleSummary "${PREFIX}${cyan_u}workspace${reset} <action>: Manages the local workspace." || cat <<EOF
 ${PREFIX}${cyan_u}workspace${reset} <action>:
-   init: Initializes the workspace.
-   import <git url>: Imports a repository into the workspace.
-   close <name>: Closes the named repository.
+   ${underline}init${reset}: Initializes the workspace.
+   ${underline}import${reset} <git url>: Imports a repository into the workspace.
+   ${underline}close${reset} <name>: Closes the named repository.
 EOF
 }

@@ -1,7 +1,7 @@
 usage-provided-services() {
   local PREFIX="${1:-}"
 
-cat <<EOF
+handleSummary "${PREFIX}${cyan_u}provided-services${reset} <action>: Manages package service declarations." || cat <<EOF
 ${PREFIX}${cyan_u}provided-services${reset} <action>:
   ${underline}list${reset} [<package name>...]: Lists the services provided by the named packages or
     all packages in the current repository.
@@ -15,5 +15,5 @@ The ${underline}package name${reset} parameter in the 'add' and 'delete' actions
 there is a single package in the current repository.
 EOF
 
-  helperHandler "$PREFIX" usageHelperAlphaPackagesNote
+  test -n "$SUMMARY_ONLY" || helperHandler "$PREFIX" usageHelperAlphaPackagesNote
 }

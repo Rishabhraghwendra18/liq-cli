@@ -1,4 +1,4 @@
-CATALYST_COMMAND_GROUPS=(data packages provided-services remotes required-services services work workspace)
+CATALYST_COMMAND_GROUPS=(data environments packages provided-services remotes required-services services work workspace)
 
 help() {
   local TMP
@@ -22,8 +22,10 @@ EOF
       usage-${GROUP}
     done
 
-    echo
-    usageHelperAlphaPackagesNote
+    if [[ -z "$SUMMARY_ONLY" ]]; then
+      echo
+      usageHelperAlphaPackagesNote
+    fi
   elif (( $# == 1 )); then
     if type -t usage-${GROUP} | grep -q 'function'; then
       usage-${GROUP} "catalyst "

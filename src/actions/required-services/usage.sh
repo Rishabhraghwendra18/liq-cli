@@ -1,7 +1,7 @@
 usage-required-services() {
   local PREFIX="${1:-}"
 
-  handleSummary 'required-services' || cat <<EOF
+  handleSummary "${PREFIX}${cyan_u}required-services${reset} <action>: Configures runtime service requirements." || cat <<EOF
 ${PREFIX}${cyan_u}required-services${reset} <action>:"
   ${underline}list${reset} [<package name>...]: Lists the services required by the named packages or
     all packages in the current repository.
@@ -15,5 +15,5 @@ The ${underline}package name${reset} parameter in the 'add' and 'delete' actions
 there is a single package in the current repository.
 EOF
 
-  helperHandler "$PREFIX" usageHelperAlphaPackagesNote
+  test -n "$SUMMARY_ONLY" || helperHandler "$PREFIX" usageHelperAlphaPackagesNote
 }
