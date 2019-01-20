@@ -1,10 +1,16 @@
-print_work_usage() {
+usage-work() {
   local PREFIX="${1:-}"
-  if [[ -z "$PREFIX" ]]; then
-    echo -e "Valid work actions are:\n"
-  fi
-  echo "${PREFIX}diff-master : shows committed changes since branch from 'master'"
-  echo "${PREFIX}edit : opens project editor on the localhost"
-  echo "${PREFIX}merge : merges current work branch commits to master and deletes work branch"
-  echo "${PREFIX}start <desc> : creates work branch and switches to it"
+
+  cat <<EOF
+${PREFIX}${cyan_u}workspace${reset} <action>:
+  involve <repository name>: Involves the named repository in the current unit
+    of work.
+  start <desc>: creates work branch and switches to it.
+  edit: Opens a local project editor for all involved repositories.
+  diff-master: Shows committed changes since branch from 'master' for all
+    involved repositories.
+  ignore-rest: Adds any currently untracked files to '.gitignore'.
+  merge: Merges current work branch commits to master, deletes the current work
+    branch, and attempts to push changes to all mirrors.
+EOF
 }

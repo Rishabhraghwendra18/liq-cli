@@ -7,7 +7,7 @@ purple=`tput setaf 5`
 cyan=`tput setaf 6`
 white=`tput setaf 7`
 
-bold=`tput setaf bold`
+bold=`tput bold`
 red_b="${red}${bold}"
 green_b="${green}${bold}"
 yellow_b="${yellow}${bold}"
@@ -62,9 +62,10 @@ ensureConfig() {
   mkdir -p "$_CATALYST_ENVS"
 }
 
-exitUnknownGlobal() {
-  usage
-  echoerrandexit "No such component or global action '$COMPONENT'."
+exitUnknownGroup() {
+  help --summary-only
+
+  echoerrandexit "No such resource or group '$GROUP'. See usage above."
 }
 
 exitUnknownSubgroup() {

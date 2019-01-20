@@ -1,28 +1,73 @@
-CATALYST_COMMAND_GROUPS=(project runtime work data)
+CATALYST_COMMAND_GROUPS=(data packages provided-services remotes required-services services work workspace)
 
 help() {
-  cat <<EOF
-General Usage:
+  local TMP
+  TMP=$(setSimpleOptions SUMMARY_ONLY -- "$@") \
+    || ( usage-runtime-services; echoerrandexit "Bad options." )
+  eval "$TMP"
 
-  catalyst <resource> <action> [...options...] [...selectors...]
+  local GROUP="${1:-}"
+  local ACTION="${2:-}"
+
+  if (( $# == 0 )); then
+    cat <<EOF
+Usage:
+  catalyst <resource/group> <action> [...options...] [...selectors...]
   catalyst ${cyan_u}help${reset} [<group or resource> [<action>]
-
-See below for valid ${underline}resource${reset} and the optional ${underline}action${reset} arguments.
-
-Resources are organized into logical groups:
-$(echo "${CATALYST_COMMAND_GROUPS[@]}" | tr " " "\n" | sed -Ee 's/^/*  /')
-
-'${underline}catalyst help <group>${reset}' will provide group info.
 EOF
 
-  # We looked into dynamically generating based on a breadth-first sort with an
-  # alpha sub-sort at each level. We did find this bit of perl to do the breadth
-  # first sort, which could be augmented to provde the intra-level alpha sort,
-  # but rather than get caught in another rabbit hole, we'll just statically
-  # link for now.
-  # find . -name "usage.sh" | perl -e 'print sort {$a=~s!/!/! <=> $b=~s!/!/!} <>'
-  local GROUP
-  for GROUP in ${CATALYST_COMMAND_GROUPS[@]}; do
-    usage-${GROUP}
-  done
+    local GROUP
+    for GROUP in ${CATALYST_COMMAND_GROUPS[@]}; do
+      echo
+      usage-${GROUP}
+    done
+
+    echo
+    usageHelperAlphaPackagesNote
+  elif (( $# == 1 )); then
+    if type -t usage-${GROUP} | grep -q 'function'; then
+      usage-${GROUP} "catalyst "
+    else
+      exitUnknownGroup
+    fi
+  elif (( $# == 2 )); then
+    if type -t usage-${GROUP}-${ACTION} | grep -q 'function'; then
+      usage-${GROUP}-${ACTION} "catalyst ${GROUP} "
+    else
+      exitUnknownAction
+    fi
+  else
+    echo "Usage:"
+    echo "catalyst ${cyan_u}help${reset} [<group or resource> [<action>]"
+    echoerrandexit "To many arguments in help."
+  fi
+}
+
+helperHandler() {
+  local PREFIX="$1"; shift
+  if [[ -n "$PREFIX" ]]; then
+    local HELPER
+    for HELPER in "$@"; do
+      echo
+      $HELPER
+    done
+  fi
+}
+
+usageHelperAlphaPackagesNote() {
+cat <<EOF
+${red_b}Alpha note:${reset} There is currently no support for multiple packages in a single
+repository and the 'package.json' file is assumed to be in the project root.
+EOF
+}
+
+handleSummary() {
+  local SUMMARY="${1}"; shift
+
+  if [[ -n "${SUMMARY_ONLY:-}" ]]; then
+    echo "$SUMMARY"
+    return 0
+  else
+    return 1
+  fi
 }
