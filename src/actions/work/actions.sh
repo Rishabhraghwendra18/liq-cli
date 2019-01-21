@@ -1,9 +1,12 @@
+requirements-work() {
+  sourceCatalystfile
+}
+
 work-diff-master() {
   git diff HEAD..$(git merge-base master HEAD)
 }
 
 work-edit() {
-  requireCatalystfile
   # TODO: make editor configurable
   local EDITOR_CMD='atom'
   local OPEN_PROJ_CMD="${EDITOR_CMD} ."
@@ -20,8 +23,6 @@ work-start() {
 }
 
 work-ignore-rest() {
-  sourceCatalystfile
-
   pushd "${BASE_DIR}" > /dev/null
   touch .gitignore
   # first ignore whole directories
@@ -32,8 +33,6 @@ work-ignore-rest() {
 }
 
 work-merge() {
-  sourceCatalystfile
-
   git diff-index --quiet HEAD -- \
     || echoerrandexit 'Currint working branch has uncommitted changes. Please resolve before merging.' 1
 
