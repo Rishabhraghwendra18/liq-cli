@@ -1,5 +1,5 @@
 requirements-remotes() {
-
+  sourceCatalystfile
 }
 
 remotes-add() {
