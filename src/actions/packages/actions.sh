@@ -53,17 +53,6 @@ packages-lint() {
   fi
 }
 
-packages-qa() {
-  echo "Checking local repo status..."
-  work-report
-  echo "Checking package dependencies..."
-  packages-version-check
-  echo "Linting code..."
-  packages-lint
-  echo "Running tests..."
-  packages-test
-}
-
 packages-test() {
   runPackageScript pretest
   runPackageScript test

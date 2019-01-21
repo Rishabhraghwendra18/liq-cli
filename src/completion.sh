@@ -6,7 +6,7 @@ _catalyst()
 {
     local cur prev opts
     local global_actions="help"
-    local groups="data environments packages project provided-services required-services services work workspace"
+    local groups="data environments packages project provided-services remotes required-services services work workspace"
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
@@ -23,18 +23,21 @@ _catalyst()
       environments)
         opts="add delete deselect list select set show";;
       packages)
-        opts="audit build deploy lint link qa test version-check";;
+        opts="audit build deploy lint link test version-check";;
       project)
-        opts="init publish  ignore-rest";;
-
-
-
+        opts="init publish";;
+      provided-services)
+        opts="list add delete";;
+      remotes)
+        opts="add delete set-main";;
+      required-services)
+        opts="list add delete";;
       services)
-        opts="list start stop restart log err-log connect";;
+        opts="connect err-log list log restart start stop";;
       work)
-        opts="diff-master edit merge report start";;
+        opts="diff-master edit ignore-rest involve merge qa report start";;
       workspace)
-        opts="init close import    branch stash merge diff-master";;
+        opts="init close import";;
       *)
       ;;
     esac

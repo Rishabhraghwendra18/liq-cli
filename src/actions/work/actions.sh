@@ -68,6 +68,17 @@ work-merge() {
   echo "linecount change: $DIFF_COUNT"
 }
 
+work-qa() {
+  echo "Checking local repo status..."
+  work-report
+  echo "Checking package dependencies..."
+  packages-version-check
+  echo "Linting code..."
+  packages-lint
+  echo "Running tests..."
+  packages-test
+}
+
 work-report() {
   local BRANCH_NAME
   statusReport() {
