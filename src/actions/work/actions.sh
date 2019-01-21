@@ -3,7 +3,7 @@ requirements-work() {
 }
 
 work-diff-master() {
-  git diff HEAD..$(git merge-base master HEAD)
+  git diff $(git merge-base master HEAD)..HEAD "$@"
 }
 
 work-edit() {
