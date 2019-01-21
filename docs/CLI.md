@@ -1,47 +1,120 @@
 # Catalyst CLI
 
-Catalyst CLI provides (more or less) complete support for managing, testing, and deploying Catalyst projects. The goal is to (more or less) cover the entire development and sysops lifecycles.
+Catalyst CLI provides comprehensive development and operational support for
+managing, testing, and deploying Catalyst projects.
 
 ## Audience & scope
 
-This document defines the command line interface for the Catalyst CLI tool and is aimed at tool users.
+This document describes the Catalyst Command Line Interface (CLI) tool. The
+primary audience is developers and system operations personnel.
 
-## General concepts
+## Command organization
 
-The Catalyst CLI tool is used to:
+Commands are specified by selecting a resource (or group) and an action. The
+general form is:
 
-* Manage project and package configuration through the [`project` commands](#project-commands).
-* Manage services and environment through the [`runtime` commands](#runtime-commands).
-* Manage the workflow through the [`work` commands](#work-commands).
-* Manage data through the [`data` commands](#data-commands).
+  catalyst <resource/group> <action> [<option>...] [<target>...]
 
-Tool actions are invoked by selecting a resource and an action to take. E.g. `catalyst work start`.
+There are ten command groups in all. Three of these deal primarily with
+[project configuration and management](#project-configuration-and-management):
 
+* project
+* packages
+* remotes
 
-### Projects
+Five command groups deal with runtime configuration and management:
 
-Organize code and other artifacts.
+* provided-services
+* required-services
+* environments
+* services
+* data
 
-### Runtimes
+The final two command groups deal with workflow:
 
-A package may require all needed services by referring to service "interface classes". Here, services are primarily network services and the interface class describes both the method and general syntax provided by the service.
+* work
+* workspace
 
-Any given project may both require and provide services.
+## Basic concepts
 
-## Global actions
+"Plain" NPM packages are turned into catalyst packages with:
 
-* `help` : prints a list of available Modules.
+`catalyst packages init`
+
+### Static components
+
+A Catalyst _project_ is a regular NPM package that can also conforms to Catalyst
+standards and can be managed by the Catalyst tools. A number of bootstrap
+projects are maintained as part of the Catalyst core for the express purpose
+of kickstarting new projects.
+
+Each project is identified with a primary repository. The project may
+be mirrored to any number of 'mirror repositories'. Primary and mirror
+repositories are managed through the [`remotes` commands](#remotes-commands)
+
+A project may  contain multiple _packages_. **ALPHA NOTE**: The current alpha
+version only supports a single package per-repository.
+
+### Runtime components
+
+A _service_ is a runtime process. Services are classified by their _interface
+class_. A _primary interface class_ is a general category which is usually
+defined as a broad industry standard, like `sql`. A _secondary interface class_
+denotes a sub-class which varies somewhat but is largely compatible with the
+primary class. E.g., `sql-mysql`. Secondary classes are always written in the
+form of '<primary class>-<secondary designation>'.
+
+A _required service_ is simply a declaration that a package requires a service
+of a particular interface class at runtime. A _provided service_ declares that
+a package provides a service of a particular interface class. When creating a
+runtime environment, Catalyst will inspect a packages dependencies to find
+suitable providers for all required services.
+
+A _service_ is an actual runtime process or processes. Services may be either
+remote or local.
+
+An _environment_ is essentially a collection of services along with a particular
+configuration. A user may create any number of environments for many purposes.
+A developer for example will commonly create a developer environment, which is
+isolated to their own work, and configure a shared test environment which will
+be used for final verification.
+
+### Workflow components
+
+The Catalyst workflow provides a thin abstraction over standard git and QA
+flows to ensure consistent branching, merging, logging, etc. The workflow also
+helps enforce certain minimum quality standards.
 
 ## Command spec
 
-### `project` commands
-
 -- TODO: can we push the 'usage' output into the document?
 
-### `runtime` commands
+### Global commands
 
-### `work` commands
+#### `help` command
 
-### `data` commands
+### Static configuration command groups
 
-Manage schema defined by projects and data sets.
+#### `project` commands
+
+#### `packages` commands
+
+#### `remotes` commands
+
+### Runtime command groups
+
+#### `required-sevices` commands
+
+#### `provided-sevices` commands
+
+#### `environments` commands
+
+#### `required-sevices` commands
+
+#### `data` commands
+
+### Workflow command groups
+
+#### `work` commands
+
+#### `workflow` commands
