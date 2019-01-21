@@ -94,7 +94,7 @@ runtime-environments-add() {
     fi
   fi
 
-  local REQ_SERVICES=`project-requires-service`
+  local REQ_SERVICES=`project-required-services`
   local REQ_SERVICE
   CURR_ENV_SERVICES=()
   for REQ_SERVICE in $REQ_SERVICES; do

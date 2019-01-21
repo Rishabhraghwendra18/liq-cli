@@ -1,10 +1,10 @@
 CAT_REQ_SERVICES_KEY='_catalystRequiresService'
 
-project-requires-service() {
+project-required-services() {
   local PACKAGE=`cat "$PACKAGE_FILE"`
 
   if [[ $# -eq 0 ]]; then # list
-    project-requires-service-list
+    project-required-services-list
   elif [[ "$1" == '-a' ]]; then
     shift
     local IFACE_CLASS
@@ -27,7 +27,7 @@ project-requires-service() {
     if [[ $# -eq 0 ]]; then # interactive delete
       local DEL
       while [[ $DEL != '...quit...' ]]; do
-        local OPTIONS=`project-requires-service-list`
+        local OPTIONS=`project-required-services-list`
         # TODO: rework to support canctel; add and use 'selectDone'?
         if [[ -z "$OPTIONS" ]]; then
           echo "Nothing left to delete."
@@ -39,7 +39,7 @@ project-requires-service() {
                 DEL='...quit...'
                 break;;
               *)
-                project-requires-service -d "$DEL"
+                project-required-services -d "$DEL"
                 PACKAGE=`cat "$PACKAGE_FILE"`
                 break;;
             esac
@@ -63,11 +63,11 @@ project-requires-service() {
     echo "$PACKAGE" | jq > "$PACKAGE_FILE"
   else
     echoerrandexit "Unknown command options: '$@'"
-    usage-project-requires-service
+    usage-project-required-services
   fi
 }
 
-project-requires-service-list() {
+project-required-services-list() {
   if echo "$PACKAGE" | jq -e "(.$CAT_REQ_SERVICES_KEY | length) > 0" > /dev/null; then
     echo "$PACKAGE" | jq --raw-output ".$CAT_REQ_SERVICES_KEY | @sh" | tr -d "'"
   fi

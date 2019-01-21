@@ -5,43 +5,36 @@
 _catalyst()
 {
     local cur prev opts
+    local global_actions="help"
+    local groups="data environments packages project provided-services required-services services work workspace"
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     case "${prev}" in
-      # the command
       catalyst)
-        global_actions="help"
-        components="data go local project runtime work workspace"
-        opts="${global_actions} ${components}";;
-      # the groups
+        opts="${global_actions} ${groups}";;
+      # globals
+      help)
+        opts="${groups}";;
+      # command groups
       data)
-        opts="dropall load-schema load-data";;
-      go)
-        opts="configure build get-deps start stop view-log";;
-      local)
-        opts="start stop restart clear-logs";;
-
-      # primary group
-      project)
-        opts="packages requires-service provides-service import setup setup-scripts lint lint-fix test qa link link-dev close deploy add-mirror set-billing ignore-rest";;
-      # project sub-groups
-      packages)
-        opts="build audit version-check";;
-
-      # primary group
-      runtime)
-        opts="environments services";;
-      # runtime sub-groups
-      services)
-        opts="list start stop restart log err-log connect";;
+        opts="build clear load rebuild reset";;
       environments)
         opts="add delete deselect list select set show";;
+      packages)
+        opts="audit build deploy lint link qa test version-check";;
+      project)
+        opts="init publish  ignore-rest";;
+
+
+
+      services)
+        opts="list start stop restart log err-log connect";;
       work)
         opts="diff-master edit merge report start";;
       workspace)
-        opts="init branch stash merge diff-master";;
+        opts="init close import    branch stash merge diff-master";;
       *)
       ;;
     esac

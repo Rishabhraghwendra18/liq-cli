@@ -19,6 +19,18 @@ work-start() {
   || exit $?
 }
 
+work-ignore-rest() {
+  sourceCatalystfile
+
+  pushd "${BASE_DIR}" > /dev/null
+  touch .gitignore
+  # first ignore whole directories
+  for i in `git ls-files . --exclude-standard --others --directory`; do
+    echo "${i}" >> .gitignore
+  done
+  popd > /dev/null
+}
+
 work-merge() {
   sourceCatalystfile
 

@@ -21,13 +21,17 @@ runtime-services-list() {
   # If you try to set TMP with 'local' and use the '||', it silently ignores the
   # '||'. I guess it gets parse as part of the varible set, and then ignored due
   # to word splitting.
-  TMP=$(setSimpleOptions SHOW_STATUS -- "$@") \
+  TMP=$(setSimpleOptions SHOW_STATUS PORCELAIN -- "$@") \
     || ( usage-runtime-services; echoerrandexit "Bad options." )
   eval "$TMP"
 
   local MAIN='echo "$PROCESS_NAME"'
   if [[ -n "$SHOW_STATUS" ]]; then
-    MAIN='echo "$PROCESS_NAME ($(eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT status"))"'
+    if [[ -n "$PORCELAIN" ]]; then
+      MAIN='echo "$PROCESS_NAME:$(eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT status")"'
+    else
+      MAIN='echo "$PROCESS_NAME ($(eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT status"))"'
+    fi
   fi
 
   runtimeServiceRunner "$@"

@@ -1,0 +1,4 @@
+requirements-environments() {
+  requireCatalystfile
+  requireNpmPackage
+}

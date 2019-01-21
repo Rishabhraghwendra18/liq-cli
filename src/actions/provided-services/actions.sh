@@ -1,14 +1,14 @@
-project-provides-service() {
+project-provided-services() {
   local PACKAGE=`cat "$PACKAGE_FILE"`
 
   if [[ $# -eq 0 ]]; then #list
     echo $PACKAGE | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | .\"name\""
   elif [[ "$1" == '-a' ]]; then # add
     shift
-    project-provides-service-add "$@"
+    project-provided-services-add "$@"
   elif [[ "$1" == '-d' ]]; then # delete
     shift
-    project-provides-service-delete "$@"
+    project-provided-services-delete "$@"
   else # show detail on each named service
     while [[ $# -gt 0 ]]; do
       if ! echo $PACKAGE | jq -e "(.\"$CAT_PROVIDES_SERVICE\") and (.\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$1\"))" > /dev/null; then
@@ -27,7 +27,7 @@ project-provides-service() {
   fi
 }
 
-project-provides-service-add() {
+project-provided-services-add() {
   # TODO: check for global to allow programatic use
   local SERVICE_NAME="${1:-}"
   if [[ -z "$SERVICE_NAME" ]]; then
@@ -95,7 +95,7 @@ EOF
   echo "$PACKAGE" | jq > "$PACKAGE_FILE"
 }
 
-project-provides-service-delete() {
+project-provided-services-delete() {
   if (( $# == 0 )); then
     echoerrandexit "Must specify service names to delete."
   fi

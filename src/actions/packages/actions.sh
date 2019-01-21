@@ -14,6 +14,32 @@ packages-build() {
   runPackageScript build
 }
 
+packages-deploy() {
+  if [[ -z "${GOPATH:-}" ]]; then
+    echoerr "'GOPATH' is not defined. Run 'catalyst go configure'."
+    exit 1
+  fi
+  colorerr "GOPATH=$GOPATH bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; gcloud app deploy'"
+}
+
+packages-link() {
+  echoerrandexit "The 'link' action is disabled in this version pending testing."
+
+  local TMP
+  TMP=$(setSimpleOptions DEV -- "$@") \
+    || ( usage-packages; echoerrandexit "Bad options." )
+  eval "$TMP"
+
+  local LINK_PROJECT="${1:-}"
+  local LINK_PACKAGE_NAME=`packagesProjectLink "$@" | tail -n 1`
+  if [[ -n "$LINK_PACKAGE_NAME" ]]; then
+    local SAVE_OPT='--save'
+    if [[ -n "$DEV" ]]; then SAVE_OPT='--save-dev'; fi
+    npm install --save "file:/usr/local/lib/node_modules/${LINK_PACKAGE_NAME}"
+    echo "Linked Catalyst project '$LINK_PROJECT' as dependency."
+  fi
+}
+
 packages-lint() {
   local TMP
   TMP=$(setSimpleOptions FIX -- "$@") \
@@ -25,6 +51,22 @@ packages-lint() {
   else
     runPackageScript lint-fix
   fi
+}
+
+packages-qa() {
+  echo "Checking local repo status..."
+  work-report
+  echo "Checking package dependencies..."
+  packages-version-check
+  echo "Linting code..."
+  packages-lint
+  echo "Running tests..."
+  packages-test
+}
+
+packages-test() {
+  runPackageScript pretest
+  runPackageScript test
 }
 
 packages-version-check() {
@@ -60,23 +102,5 @@ packages-version-check() {
     packagesVersionCheckSetOptions
   else # actually do the check
     packagesVersionCheck
-  fi
-}
-
-packages-link() {
-  echoerrandexit "The 'link' action is disabled in this version pending testing."
-
-  local TMP
-  TMP=$(setSimpleOptions DEV -- "$@") \
-    || ( usage-packages; echoerrandexit "Bad options." )
-  eval "$TMP"
-
-  local LINK_PROJECT="${1:-}"
-  local LINK_PACKAGE_NAME=`packagesProjectLink "$@" | tail -n 1`
-  if [[ -n "$LINK_PACKAGE_NAME" ]]; then
-    local SAVE_OPT='--save'
-    if [[ -n "$DEV" ]]; then SAVE_OPT='--save-dev'; fi
-    npm install --save "file:/usr/local/lib/node_modules/${LINK_PACKAGE_NAME}"
-    echo "Linked Catalyst project '$LINK_PROJECT' as dependency."
   fi
 }
