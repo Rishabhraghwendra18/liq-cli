@@ -3,9 +3,9 @@ STD_IFACE_CLASSES="http http-html http-rest sql sql-mysql"
 STD_PLATFORM_TYPES="local gcp aws"
 STD_PURPOSES="dev test pre-production produciton"
 
-source "`dirname ${BASH_SOURCE[0]}`/actionslib/packages.sh"
-source "`dirname ${BASH_SOURCE[0]}`/actionslib/provides-service.sh"
-source "`dirname ${BASH_SOURCE[0]}`/actionslib/requires-service.sh"
+#source "`dirname ${BASH_SOURCE[0]}`/actionslib/packages.sh"
+#source "`dirname ${BASH_SOURCE[0]}`/actionslib/provided-services.sh"
+#source "`dirname ${BASH_SOURCE[0]}`/actionslib/required-services.sh"
 
 runtime-environment() {
   requireCatalystfile
@@ -153,29 +153,9 @@ project-setup-scripts() {
   fi
 }
 
-_project_script() {
-  local ACTION="$1"
-
-  cd "${BASE_DIR}"
-  if cat package.json | jq -e "(.scripts | keys | map(select(. == \"$ACTION\")) | length) == 1" > /dev/null; then
-    npm run-script "${ACTION}"
-  else
-    local CATALYST_SCRIPTS=$(npm bin)/catalyst-scripts
-    if [[ ! -x "$CATALYST_SCRIPTS" ]]; then
-      # TODO: offer to install and re-run
-      echoerr "This project does not appear to be using 'catalyst-scripts'. Try:"
-      echoerr ""
-      echoerrandexit "npm install --save-dev @liquid-labs/catalyst-scripts"
-    fi
-    # kill the debug trap because if the script exits with an error (as in a
-    # failed lint), that's OK and the debug doesn't provide any useful info.
-    "${CATALYST_SCRIPTS}" "${BASE_DIR}" $ACTION || true
-  fi
-}
-
 project-test() {
-  _project_script pretest
-  _project_script test
+  runPackageScript pretest
+  runPackageScript test
 }
 
 project-qa() {
@@ -185,81 +165,6 @@ project-qa() {
   project-npm-check
   echo "Linting code..."
   project-lint
-}
-
-_project-link() {
-  local LINK_PROJECT="${1:-}"
-  requireArgs "$LINK_PROJECT" || exit 1
-  local PACKAGE_REL_PATH="${2:-}" # this one's optional
-
-  local CURR_PROJECT_DIR="${BASE_DIR}"
-  cd "${CURR_PROJECT_DIR}"
-  local OUR_PACKAGE_DIR=`find . -name "package.json" -not -path "*/node_modules/*"`
-  local PACKAGE_COUNT=`echo "$OUR_PACKAGE_DIR" | wc -l`
-  if (( $PACKAGE_COUNT == 0 )); then
-    echoerrandexit "Did not find local 'package.json'."
-  elif (( $PACKAGE_COUNT > 1 )); then
-    # TODO: requrie the user to be in the dir with the package.json
-    echoerrandexit "Found multiple 'package.json' files; this is currently a limitation, perform linking manually."
-  fi
-
-  if [[ -z "$OUR_PACKAGE_DIR" ]]; then
-    echoerrandexit "Did not find 'package.json' in current project"
-  else
-    OUR_PACKAGE_DIR=`dirname "$OUR_PACKAGE_DIR"`
-  fi
-
-  requireWorkspaceConfig
-  cd "${BASE_DIR}" # now workspace base
-  if [[ ! -d "$LINK_PROJECT" ]]; then
-    echoerrandexit "Did not find project '${LINK_PROJECT}' to link."
-  fi
-
-  cd "$LINK_PROJECT"
-  # determine the package-to-link's package.json
-  local LINK_PACKAGE
-  if [[ -n "$PACKAGE_REL_PATH" ]]; then
-    if [[ -f "$PACKAGE_REL_PATH/package.json" ]]; then
-      LINK_PACKAGE="$PACKAGE_REL_PATH/package.json"
-    else
-      echoerrandexit "Did not find 'package.json' under specified path '$PACKAGE_REL_PATH'."
-    fi
-  else
-    LINK_PACKAGE=`find . -name "package.json" -not -path "*/node_modules/*"`
-    local LINK_PACKAGE_COUNT=`echo "$LINK_PACKAGE" | wc -l`
-    if (( $LINK_PACKAGE_COUNT == 0 )); then
-      echoerrandexit "Did not find 'package.json' in '$LINK_PROJECT'."
-    elif (( $LINK_PACKAGE_COUNT > 1 )); then
-      echoerrandexit "Found multiple packages to link in '$LINK_PROJECT'; specify relative package path."
-    fi
-  fi
-
-  local LINK_PACKAGE_NAME=`node -e "const fs = require('fs'); const package = JSON.parse(fs.readFileSync('${LINK_PACKAGE}')); console.log(package.name);"`
-  npm -q link
-
-  cd "$CURR_PROJECT_DIR"
-  cd "$OUR_PACKAGE_DIR"
-  npm -q link "$LINK_PACKAGE_NAME"
-
-  echo "$LINK_PACKAGE_NAME"
-}
-
-project-link() {
-  local LINK_PROJECT="${1:-}"
-  local LINK_PACKAGE_NAME=`_project-link "$@" | tail -n 1`
-  if [[ -n "$LINK_PACKAGE_NAME" ]]; then
-    npm install --save "file:/usr/local/lib/node_modules/${LINK_PACKAGE_NAME}"
-    echo "Linked Catalyst project '$LINK_PROJECT' as dependency."
-  fi
-}
-
-project-link-dev() {
-  local LINK_PROJECT="${1:-}"
-  local LINK_PACKAGE_NAME=`_project-link "$@" | tail -n 1`
-  if [[ -n "$LINK_PACKAGE_NAME" ]]; then
-    npm install --save-dev "file:/usr/local/lib/node_modules/${LINK_PACKAGE_NAME}"
-    echo "Linked Catalyst project '$LINK_PROJECT' as dev dependency."
-  fi
 }
 
 project-close() {

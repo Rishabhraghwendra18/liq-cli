@@ -15,7 +15,8 @@ ${PREFIX}${cyan_u}packages${reset} <action>:
       [-c|--show-config]: Shows the current configuration used with 'npm-check'.
   ${underline}lint${reset} [-f|--fix] [<name>]: Lints all or the named (NPM) package in the current
     project.
-  ${underline}link${reset} <package>: Links (via npm) the named package to the current package.
+  ${underline}link${reset} [-d|--dev] <package>: Links (via npm) the named package to the current
+    package.
 
 Unlike most action, the 'link' works off the current package rather than
 repository context.
