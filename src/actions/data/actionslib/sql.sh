@@ -1,25 +1,9 @@
-data-sql() {
-  requireEnvironment
-
-  if [[ $# -eq 0 ]]; then
-    usage-data-sql
-    echoerrandexit "Missing action argument. See usage above."
-  else
-    local ACTION="$1"; shift
-    if type -t ${GROUP}-${SUBGROUP}-${ACTION} | grep -q 'function'; then
-      ${GROUP}-${SUBGROUP}-${ACTION} "$@"
-    else
-      exitUnknownAction
-    fi
-  fi
-}
-
-data-sql-dropall() {
+data-reset-sql() {
   echo "Dropping..."
   colorerr "cat '$(dirname ${BASH_SOURCE[0]})/../../../../tools/data/drop_all.sql' | runtime-services-connect sql"
 }
 
-data-sql-load-schema() {
+data-build-sql() {
   echo -n "Creating schema; "
   source "${CURR_ENV_FILE}"
   local SQL_VARIANT=`echo "${CURR_ENV_SERVICES[@]}" | sed -Ee 's/.*(^| *)(sql(-[^:]+)?).*/\2/'`
@@ -29,7 +13,7 @@ data-sql-load-schema() {
   cat $SCHEMA_FILES | runtime-services-connect sql
 }
 
-data-sql-rebuild() {
+data-rebuild-sql() {
   data-sql-dropall
   data-sql-load-schema
   exit

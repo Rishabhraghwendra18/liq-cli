@@ -12,6 +12,10 @@ ${PREFIX}${cyan_u}data${reset} <action>:
   ${underline}load${reset} <set name>: Loads the named data set into the project data services. Any
     existing data will be cleared.
 
-The only currently supported interface class is 'sql'.
+The data commands deal exclusively with primary interface classes (${underline}iface${reset}). Thus even
+if the current package requires 'sql-mysql', the data commands will work and
+require an 'iface' designation of 'sql'.
+
+${red_b}ALPHA NOTE:${reset} The only currently supported interface class is 'sql'.
 EOF
 }
