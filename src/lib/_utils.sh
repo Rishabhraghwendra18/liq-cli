@@ -74,7 +74,7 @@ exitUnknownSubgroup() {
 }
 
 exitUnknownAction() {
-  usage-${GROUP}-${SUBGROUP}
+  usage-${GROUP} # TODO: support per-action help.
   echoerrandexit "Unknown action '$ACTION'. See usage above."
 }
 

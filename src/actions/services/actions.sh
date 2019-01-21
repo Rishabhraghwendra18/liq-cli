@@ -1,28 +1,14 @@
-source "`dirname ${BASH_SOURCE[0]}`/serviceslib.sh"
-
-runtime-services() {
+requirements-services() {
   requireEnvironment
-
-  if [[ $# -eq 0 ]]; then
-    usage-runtime-services
-    echoerrandexit "Missing action argument. See usage above."
-  else
-    local ACTION="$1"; shift
-    if type -t ${GROUP}-${SUBGROUP}-${ACTION} | grep -q 'function'; then
-      ${GROUP}-${SUBGROUP}-${ACTION} "$@"
-    else
-      exitUnknownAction
-    fi
-  fi
 }
 
-runtime-services-list() {
+services-list() {
   local TMP
   # If you try to set TMP with 'local' and use the '||', it silently ignores the
   # '||'. I guess it gets parse as part of the varible set, and then ignored due
   # to word splitting.
   TMP=$(setSimpleOptions SHOW_STATUS PORCELAIN -- "$@") \
-    || ( usage-runtime-services; echoerrandexit "Bad options." )
+    || ( usage-services; echoerrandexit "Bad options." )
   eval "$TMP"
 
   local MAIN='echo "$PROCESS_NAME"'
@@ -37,7 +23,7 @@ runtime-services-list() {
   runtimeServiceRunner "$@"
 }
 
-runtime-services-start() {
+services-start() {
   # TODO: check status before starting
   local MAIN=$(cat <<'EOF'
     # rm -f "${SERV_LOG}" "${SERV_ERR}"
@@ -49,31 +35,31 @@ runtime-services-start() {
       cat "${SERV_ERR}"
       echoerr "Possible errors while starting ${PROCESS_NAME}. See error log above."
     fi
-    runtime-services-list -s "${PROCESS_NAME}"
+    services-list -s "${PROCESS_NAME}"
 EOF
 )
   runtimeServiceRunner "$@"
 }
 
-runtime-services-stop() {
+services-stop() {
   # TODO: check status before stopping
   local MAIN=$(cat <<'EOF'
     echo "Stopping ${PROCESS_NAME}..."
     eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT stop"
     sleep 1
-    runtime-services-list -s "${PROCESS_NAME}"
+    services-list -s "${PROCESS_NAME}"
 EOF
 )
   local REVERSE_ORDER=true
   runtimeServiceRunner "$@"
 }
 
-runtime-services-restart() {
+services-restart() {
   local MAIN=$(cat <<'EOF'
     echo "Restarting ${PROCESS_NAME}..."
     eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT restart"
     sleep 1
-    runtime-services-list "${PROCESS_NAME}"
+    services-list "${PROCESS_NAME}"
 EOF
 )
   runtimeServiceRunner "$@"
@@ -106,21 +92,21 @@ EOF
 )
 }
 
-runtime-services-log() {
+services-log() {
   local MAIN; logMain "log" "log"
 
   runtimeServiceRunner "$@"
 }
 
-runtime-services-err-log() {
+services-err-log() {
   local MAIN; logMain "error log" "err"
 
   runtimeServiceRunner "$@"
 }
 
-runtime-services-connect() {
+services-connect() {
   if (( $# != 1 )); then
-    usage-runtime-services
+    usage-services
     echoerrandexit "Connect requires specification of a single service."
   fi
 
