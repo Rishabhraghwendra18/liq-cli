@@ -8,7 +8,7 @@ data-build-sql() {
   source "${CURR_ENV_FILE}"
   local SQL_VARIANT=`echo "${CURR_ENV_SERVICES[@]}" | sed -Ee 's/.*(^| *)(sql(-[^:]+)?).*/\2/'`
   local SCHEMA_FILES
-  findDataFiles "$SQL_VARIANT" "schema2" SCHEMA_FILES
+  findDataFiles "$SQL_VARIANT" "schema" SCHEMA_FILES
   local SCHEMA_FILE_COUNT=$(echo "$SCHEMA_FILES" | wc -l | tr -d ' ')
   echo "loading $SCHEMA_FILE_COUNT schema files..."
   cat $SCHEMA_FILES | services-connect sql
