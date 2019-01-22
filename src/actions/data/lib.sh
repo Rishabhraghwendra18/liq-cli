@@ -13,6 +13,8 @@ findDataFiles() {
       else
         SCHEMA_FILES="${SCHEMA_FILES}"$'\n'"${FIND_RESULTS}"
       fi
+    else
+      echoerrandexit "Could not find data files for interface type '${DATA_IFACE}'."
     fi
   done
   if [[ -d "${BASE_DIR}/data/${DATA_IFACE}/${FILE_TYPE}" ]]; then
