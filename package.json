@@ -1,6 +1,6 @@
 {
   "name": "catalyst-cli",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Local development and management tool for Catalyst projects.",
   "scripts": {
     "install": "./install.sh",
