@@ -9,7 +9,7 @@ case "$GROUP" in
     case "$GROUP" in
       # TODO: build this from constant def... something...
       data|environments|packages|project|remotes|required-services|provided-services|services|work|workspace)
-        if [[ $(type -t ${GROUP}-${ACTION}) == 'function' ]]; then
+        if [[ $(type -t "${GROUP}-${ACTION}" || echo '') == 'function' ]]; then
           requirements-${GROUP}
           ${GROUP}-${ACTION} "$@"
         else

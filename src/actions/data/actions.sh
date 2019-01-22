@@ -18,6 +18,10 @@ data-build() {
   dataRunner "$@"
 }
 
+data-load() {
+  echoerrandexit "The 'load' action has not yet been implemented."
+}
+
 data-reset() {
   local MAIN='data-reset-${IFACE}'
   dataRunner "$@"
