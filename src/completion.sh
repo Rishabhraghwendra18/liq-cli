@@ -8,6 +8,10 @@ _catalyst()
     local global_actions="help"
     local groups="data environments packages project provided-services remotes required-services services work workspace"
     COMPREPLY=()
+    # local WORD_COUNT=${#COMP_WORDS[@]}
+    # TODO: instead of simple 'cur/prev', use the above to see where in the
+    # command we are. This will allow us to implement 'exhaustive' completion.
+    # Switch on what we need: group, action, action opts, or action args.
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
