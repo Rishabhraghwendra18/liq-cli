@@ -45,6 +45,9 @@ testScriptMatch() {
 }
 
 runtimeServiceRunner() {
+  local _MAIN="$1"; shift
+  local _ALWAYS_RUN="$1"; shift
+
   source "${CURR_ENV_FILE}"
   declare -a ENV_SERVICES
   if [[ -z "${REVERSE_ORDER:-}" ]]; then
@@ -80,7 +83,7 @@ runtimeServiceRunner() {
       fi
 
       local SERV_SCRIPT_INDEX=0
-      local SERV_SCRIPTS_COOKIE
+      local SERV_SCRIPTS_COOKIE=''
       for SERV_SCRIPT in ${SERV_SCRIPT_ARRAY[@]}; do
         local SCRIPT_NAME=$(npx --no-install $SERV_SCRIPT name)
         local PROCESS_NAME="${SERV_IFACE}"
@@ -92,13 +95,13 @@ runtimeServiceRunner() {
           local SERV_LOG="${SERV_OUT_BASE}.log"
           local SERV_ERR="${SERV_OUT_BASE}.err"
           local PID_FILE="${SERV_OUT_BASE}.pid"
-          eval "$MAIN"
+          eval "$_MAIN" || return $?
 
           # Again, notice that the service match is only on the major interface class.
           UNMATCHED_SERV_SPECS=`echo $UNMATCHED_SERV_SPECS | sed -Ee 's/(^| +)'${MAJOR_SERV_IFACE}'(-[^ ]+)?\.'${SCRIPT_NAME}'( +|$)//'`
         fi
-        if [[ -n "${ALWAYS_RUN:-}" ]]; then
-          eval "$ALWAYS_RUN"
+        if [[ -n "${_ALWAYS_RUN:-}" ]]; then
+          eval "$_ALWAYS_RUN"
         fi
         SERV_SCRIPT_INDEX=$(( $SERV_SCRIPT_INDEX + 1))
       done
