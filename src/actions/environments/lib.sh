@@ -1,18 +1,18 @@
 doEnvironmentList() {
-  local PACKAGE_NAME=`cat $BASE_DIR/package.json | jq --raw-output ".name"`
+  if [[ ! -d "${_CATALYST_ENVS}/${PACKAGE_NAME}" ]]; then
+    return
+  fi
   local CURR_ENV
   if [[ -L "${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env" ]]; then
     CURR_ENV=`readlink "${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env" | xargs basename`
   fi
   local ENV
   for ENV in `find "${_CATALYST_ENVS}/${PACKAGE_NAME}" -mindepth 1 -maxdepth 1 -type f -not -name "*~" -exec basename '{}' \; | sort`; do
-    ( ( test "$ENV" == "$CURR_ENV" && echo -n '* ' ) || echo -n '  ' ) && echo "$ENV"
+    ( ( test "$ENV" == "${CURR_ENV:-}" && echo -n '* ' ) || echo -n '  ' ) && echo "$ENV"
   done
 }
 
 updateEnvironment() {
-  local PACKAGE_NAME=`cat $BASE_DIR/package.json | jq --raw-output ".name"`
-
   local ENV_PATH="$_CATALYST_ENVS/${PACKAGE_NAME}/${ENV_NAME}"
   mkdir -p "`dirname "$ENV_PATH"`"
 

@@ -1,6 +1,6 @@
 requirements-environments() {
   requireCatalystfile
-  requireNpmPackage
+  requirePackage
 }
 
 # TODO: move this def
@@ -8,7 +8,6 @@ STD_ENV_PUPRPOSES='dev test pre-production production'
 
 environments-show() {
   local ENV_NAME="${1:-}"
-  local PACKAGE_NAME=`cat $BASE_DIR/package.json | jq --raw-output ".name"`
 
   if [[ -n "$ENV_NAME" ]]; then
     if [[ ! -f "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
@@ -107,16 +106,16 @@ environments-add() {
 }
 
 environments-list() {
-  if test -n "$(doEnvironmentList)"; then
-    doEnvironmentList
+  local RESULT="$(doEnvironmentList)"
+  if test -n "$RESULT"; then
+    echo "$RESULT"
   else
-    echo "No environments defined. Use 'catalyst environment add'."
+    echo "No environments defined for '${PACKAGE_NAME}'. Use 'catalyst environment add'."
   fi
 }
 
 environments-select() {
   local ENV_NAME="${1:-}"
-  local PACKAGE_NAME=`cat $BASE_DIR/package.json | jq --raw-output ".name"`
   if [[ -z "$ENV_NAME" ]]; then
     if test -z "$(doEnvironmentList)"; then
       echoerrandexit "No environments defined. Try 'catalyst environment add'."
@@ -143,7 +142,6 @@ environments-deselect() {
 environments-delete() {
   local ENV_NAME="${1:-}"
   test -n "$ENV_NAME" || echoerrandexit "Must specify enviromnent for deletion."
-  local PACKAGE_NAME=`cat $BASE_DIR/package.json | jq --raw-output ".name"`
 
   onDeleteConfirm() {
     rm ${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME} && echo "Local '${ENV_NAME}' entry deleted."
