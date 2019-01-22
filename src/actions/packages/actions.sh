@@ -77,7 +77,7 @@ packages-version-check() {
   fi
 
   if [[ -n "$UPDATE" ]] \
-      && ( (( ${_OPTS_COUNT} > 2 )) || ( (( ${_OPTS_COUNT} == 1 )) && [[ -z $OPTIONS_SET ]]) ); then
+      && ( (( ${_OPTS_COUNT} > 2 )) || ( (( ${_OPTS_COUNT} == 2 )) && [[ -z $OPTIONS_SET ]]) ); then
     echoerrandexit "'--update' option may only be combined with '--options'."
   elif [[ -n "$IGNORE" ]] || [[ -n "$UNIGNORE" ]]; then
     if [[ -n "$IGNORE" ]] && [[ -n "$UNIGNORE" ]]; then
