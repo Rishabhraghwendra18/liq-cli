@@ -117,7 +117,7 @@ test(`project directory is removed on 'project closed' when no changes present`,
 test(`project setup in bare directory`, () => {
   shell.mkdir(testCheckoutDir)
   const initCommand =
-    `catalyst ORIGIN_URL="file://${testOriginDir}" ORGANIZATION_ID=1234 BILLING_ACCOUNT_ID=4321 project setup`
+    `catalyst ORIGIN_URL="file://${testOriginDir}" CURR_ENV_GCP_ORG_ID=1234 CURR_ENV_GCP_BILLING_ID=4321 project setup`
   const result = shell.exec(`cd ${testCheckoutDir} && ${initCommand}`)
   expect(result.stderr).toEqual('')
   expect(result.stdout).toMatch('')

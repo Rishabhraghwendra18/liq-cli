@@ -1,9 +1,12 @@
+requirements-work() {
+  sourceCatalystfile
+}
+
 work-diff-master() {
-  git diff HEAD..$(git merge-base master HEAD)
+  git diff $(git merge-base master HEAD)..HEAD "$@"
 }
 
 work-edit() {
-  requireCatalystfile
   # TODO: make editor configurable
   local EDITOR_CMD='atom'
   local OPEN_PROJ_CMD="${EDITOR_CMD} ."
@@ -19,9 +22,17 @@ work-start() {
   || exit $?
 }
 
-work-merge() {
-  sourceCatalystfile
+work-ignore-rest() {
+  pushd "${BASE_DIR}" > /dev/null
+  touch .gitignore
+  # first ignore whole directories
+  for i in `git ls-files . --exclude-standard --others --directory`; do
+    echo "${i}" >> .gitignore
+  done
+  popd > /dev/null
+}
 
+work-merge() {
   git diff-index --quiet HEAD -- \
     || echoerrandexit 'Currint working branch has uncommitted changes. Please resolve before merging.' 1
 
@@ -54,6 +65,17 @@ work-merge() {
     || echoerr "Could not delete '${WORKBRANCH}'. This can happen if the branch was renamed."
   # TODO: provide a reference for checking the merge is present and if safe to delete.
   echo "linecount change: $DIFF_COUNT"
+}
+
+work-qa() {
+  echo "Checking local repo status..."
+  work-report
+  echo "Checking package dependencies..."
+  packages-version-check
+  echo "Linting code..."
+  packages-lint
+  echo "Running tests..."
+  packages-test
 }
 
 work-report() {
