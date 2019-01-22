@@ -47,7 +47,7 @@ usageActionPrefix() {
 }
 
 echoerr() {
-  echo "${red}$*${reset}" >&2
+  echo -e "${red}$*${reset}" >&2
 }
 
 echoerrandexit() {

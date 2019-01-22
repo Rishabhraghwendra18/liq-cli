@@ -35,8 +35,10 @@ data-rebuild() {
 dataRunner() {
   local SERVICE_STATUSES=`services-list -sp`
 
+  local IFACES="$@"
+
   local IFACE
-  for IFACE in "$@"; do
+  for IFACE in $IFACES; do
     # Check all the parameters are good.
     if [[ "$IFACE" == *'-'* ]]; then
       usage-data "catalyst "
@@ -50,7 +52,12 @@ dataRunner() {
     fi
   done
 
-  for IFACE in "$@"; do
+  if [[ -z "$IFACES" ]]; then
+    source "${CURR_ENV_FILE}"
+    IFACES=$(echo ${CURR_ENV_SERVICES[@]} | tr " " "\n" | sed -Ee 's/^(sql).+/\1/')
+  fi
+
+  for IFACE in $IFACES; do
     eval "$MAIN"
   done
 }
