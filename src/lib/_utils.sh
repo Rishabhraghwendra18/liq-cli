@@ -27,6 +27,25 @@ white_u="${white}${underline}"
 
 reset=`tput sgr0`
 
+indent() {
+  local LEADING_INDENT=''
+  local PAR_INDENT='  '
+  local WIDTH=82
+  if [[ -n "${INDENT:-}" ]]; then
+    LEADING_INDENT=`printf '  %.0s' {1..$INDENT}`
+    PAR_INDENT=`printf '  %.0s' {1..$(( $INDENT + 1))}`
+    WIDTH=$(( $WIDTH - $INDENT * 2 ))
+  fi
+
+  fold -w $WIDTH | sed -e "1,\$s/^/${LEADING_INDENT}/" -e "2,\$s/^/${PAR_INDENT}/"
+}
+
+usageActionPrefix() {
+  if [[ -z "${INDENT:-}" ]]; then
+    echo -n "catalyst $1 "
+  fi
+}
+
 echoerr() {
   echo "${red}$*${reset}" >&2
 }
