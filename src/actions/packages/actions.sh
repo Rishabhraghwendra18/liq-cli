@@ -1,8 +1,8 @@
 requirements-packages() {
   requireCatalystfile
-  # Requiring 'the' NPM package here is an artifact of the alpha-version
-  # limitation to a single package
-  requireNpmPackage
+  # Requiring 'the' NPM package here (rather than based on command parameters)
+  # is an artifact of the alpha-version limitation to a single package.
+  requirePackage
 }
 
 packages-audit() {

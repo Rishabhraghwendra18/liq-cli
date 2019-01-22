@@ -24,5 +24,10 @@
     "@liquid-labs/bash-toolkit": "0.0.3",
     "jest": "^23.5.0",
     "shelljs": "^0.8.2"
+  },
+  "catalyst": {
+    "version-check": {
+      "options": "--skip-unused"
+    }
   }
 }
