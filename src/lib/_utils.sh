@@ -162,7 +162,7 @@ requireEnvironment() {
   requireCatalystfile
   CURR_ENV_FILE="${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env"
   if [[ ! -f "$CURR_ENV_FILE" ]]; then
-    echoerrandexit "Must select environment to work with '${COMPONENT} ${ACTION}' module."
+    echoerrandexit "Must select environment prior to invoking the '${GROUP} ${ACTION}' command."
   fi
   CURR_ENV=`readlink "${CURR_ENV_FILE}" | xargs basename`
 }
