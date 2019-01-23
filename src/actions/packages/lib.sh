@@ -145,8 +145,7 @@ packagesProjectLink() {
     OUR_PACKAGE_DIR=`dirname "$OUR_PACKAGE_DIR"`
   fi
 
-  requireWorkspaceConfig
-  cd "${BASE_DIR}" # now workspace base
+  cd "${CATALYST_PLAYGROUND}"
   if [[ ! -d "$LINK_PROJECT" ]]; then
     echoerrandexit "Did not find project '${LINK_PROJECT}' to link."
   fi

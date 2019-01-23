@@ -41,14 +41,13 @@ workspace-import() {
 
   local PROJECT_URL="${1:-}"
   requireArgs "$PROJECT_URL" || exit 1
-  requireWorkspaceConfig
-  cd "$BASE_DIR"
+  cd "$CATALYST_PLAYGROUND"
   if [ -d "$PROJECT_URL" ]; then
     echo "It looks like '${PROJECT_URL}' has already been imported."
     exit 0
   fi
-  if [[ -f "${BASE_DIR}/${_WORKSPACE_DB}/projects/${PROJECT_URL}" ]]; then
-    source "${BASE_DIR}/${_WORKSPACE_DB}/projects/${PROJECT_URL}"
+  if [[ -f "${CATALYST_PLAYGROUND}/${_WORKSPACE_DB}/projects/${PROJECT_URL}" ]]; then
+    source "${CATALYST_PLAYGROUND}/${_WORKSPACE_DB}/projects/${PROJECT_URL}"
     # TODO: this assumes SSH style access, which we should, but need to enforce
     # the 'ssh' will be denied with 1 if successful and 255 if no key found.
     ssh -qT git@github.com 2> /dev/null || if [ $? -ne 1 ]; then echoerrandexit "Could not connect to github; add your github key with 'ssh-add'."; fi
@@ -60,16 +59,16 @@ workspace-import() {
       PROJECT_NAME=${PROJECT_NAME::${#PROJECT_NAME}-4}
     fi
 
-    (cd "${BASE_DIR}"
+    (cd "${CATALYST_PLAYGROUND}"
      git clone --quiet "$PROJECT_URL" && echo "'${PROJECT_NAME}' imported into workspace.")
     # TODO: suport a 'project fork' that resets the _PROJECT_PUB_CONFIG file?
 
-    local PROJECT_DIR="$BASE_DIR/$PROJECT_NAME"
+    local PROJECT_DIR="$CATALYST_PLAYGROUND/$PROJECT_NAME"
     cd "$PROJECT_DIR"
     git remote set-url --add --push origin "${PROJECT_URL}"
     touch .catalyst # TODO: switch to _PROJECT_CONFIG
     if [[ -f "$_PROJECT_PUB_CONFIG" ]]; then
-      cp "$_PROJECT_PUB_CONFIG" "$BASE_DIR/$_WORKSPACE_DB/projects/"
+      cp "$_PROJECT_PUB_CONFIG" "$CATALYST_PLAYGROUND/$_WORKSPACE_DB/projects/"
       source "$_PROJECT_PUB_CONFIG"
       setupMirrors "$PROJECT_DIR" "$PROJECT_URL" "${PROJECT_MIRRORS:-}"
     else
@@ -85,14 +84,13 @@ workspace-close() {
   echoerrandexit "Action 'close' is temporarily disabled in this version pending testing."
   local PROJECT_NAME="${1:-}"
 
-    # first figure out what to close
+  # first figure out what to close
   if [[ -z "$PROJECT_NAME" ]]; then # try removing the project we're in
     cd "$BASE_DIR"
     PROJECT_NAME=`basename $PWD`
   fi
-  # TODO: confirm this
-  requireWorkspaceConfig
-  cd "$BASE_DIR"
+
+  cd "$CATALYST_PLAYGROUND"
   if [[ -d "$PROJECT_NAME" ]]; then
     cd "$PROJECT_NAME"
     # Is everything comitted?
@@ -100,7 +98,7 @@ workspace-close() {
     if git diff --quiet && git diff --cached --quiet; then
       if (( $(git status --porcelain 2>/dev/null| grep "^??" || true | wc -l) == 0 )); then
         if [[ `git rev-parse --verify master` == `git rev-parse --verify origin/master` ]]; then
-          cd "$BASE_DIR"
+          cd "$CATALYST_PLAYGROUND"
           rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
         else
           echoerrandexit "Not all changes have been pushed to master." 1

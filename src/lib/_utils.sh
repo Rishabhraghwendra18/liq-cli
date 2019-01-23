@@ -37,7 +37,7 @@ indent() {
     WIDTH=$(( $WIDTH - $INDENT * 2 ))
   fi
 
-  fold -w $WIDTH | sed -e "1,\$s/^/${LEADING_INDENT}/" -e "2,\$s/^/${PAR_INDENT}/"
+  fold -sw $WIDTH | sed -e "1,\$s/^/${LEADING_INDENT}/" -e "2,\$s/^/${PAR_INDENT}/"
 }
 
 usageActionPrefix() {
@@ -47,7 +47,11 @@ usageActionPrefix() {
 }
 
 echoerr() {
-  echo -e "${red}$*${reset}" >&2
+  echo -e "${red}$*${reset}" | fold -sw 82 >&2
+}
+
+echowarn() {
+  echo -e "${yellow}$*${reset}" | fold -sw 82 >&2
 }
 
 echoerrandexit() {
@@ -79,6 +83,7 @@ colorerrbg() {
 ensureConfig() {
   mkdir -p "$_CATALYST_DB"
   mkdir -p "$_CATALYST_ENVS"
+  mkdir -p "$CATALYST_WORK_DB"
 }
 
 exitUnknownGroup() {
@@ -132,6 +137,11 @@ sourceFile() {
   }
 }
 
+requireCatalystSettings() {
+  source "${CATALYST_SETTINGS}" 2> /dev/null \
+    || echoerrandexit "Could not source global Catalyst settings. Try:\ncatalyst workspace init"
+}
+
 sourceCatalystfile() {
   sourceFile "${PWD}" '.catalyst'
   return $? # TODO: is this how this works in bash?
@@ -165,11 +175,6 @@ requireEnvironment() {
     echoerrandexit "Must select environment prior to invoking the '${GROUP} ${ACTION}' command."
   fi
   CURR_ENV=`readlink "${CURR_ENV_FILE}" | xargs basename`
-}
-
-requireWorkspaceConfig() {
-  sourceWorkspaceConfig \
-    || echoerrandexit "Run 'catalyst workspace init' from workspace root." 1
 }
 
 yesno() {
@@ -247,8 +252,7 @@ updateCatalystFile() {
 
 updateProjectPubConfig() {
   PROJECT_DIR="$BASE_DIR"
-  requireWorkspaceConfig
-  WORKSPACE_DIR="$BASE_DIR"
+  CATALYST_PLAYGROUND="$BASE_DIR"
   ensureWorkspaceDb
   local SUPPRESS_MSG="${1:-}"
   echo "PROJECT_HOME='$PROJECT_HOME'" > "$PROJECT_DIR/$_PROJECT_PUB_CONFIG"
@@ -267,7 +271,7 @@ updateProjectPubConfig() {
 
 # Sets up Workspace DB directory structure.
 ensureWorkspaceDb() {
-  cd "$WORKSPACE_DIR"
+  cd "$CATALYST_PLAYGROUND"
   mkdir -p "${_WORKSPACE_DB}"
   mkdir -p "${_WORKSPACE_DB}"/projects
 }
@@ -289,6 +293,45 @@ requireArgs() {
   done
 
   return 0
+}
+
+contextHelp() {
+  # TODO: this is a bit of a workaround until all the ACTION usages are broken
+  # out into ther own function.
+  if type -t usage-${GROUP}-${ACTION} | grep -q 'function'; then
+    usage-${GROUP}-${ACTION}
+  else
+    usage-${GROUP}
+  fi
+}
+
+exactUserArgs() {
+  local REQUIRED_ARGS=()
+  while true; do
+    case "$1" in
+      --)
+        break;;
+      *)
+        REQUIRED_ARGS+=("$1");;
+    esac
+    shift
+  done
+  shift
+
+  if (( $# < ${#REQUIRED_ARGS[@]} )); then
+    contextHelp
+    echoerrandexit "Insufficient number of arguments."
+  elif (( $# > ${#REQUIRED_ARGS[@]} )); then
+    contextHelp
+    echoerrandexit "Found extra arguments."
+  else
+    local I=0
+    while (( $# > 0 )); do
+      eval "${REQUIRED_ARGS[$I]}='$1'"
+      shift
+      I=$(( $I + 1 ))
+    done
+  fi
 }
 
 requireGlobals() {

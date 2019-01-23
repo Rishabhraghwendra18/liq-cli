@@ -15,5 +15,9 @@ ${PREFIX}${cyan_u}work${reset} <action>:
     branch, and attempts to push changes to all mirrors.
   ${underline}qa${reset}: Checks the workspace status and runs package audit, version check, and
     tests.
+
+${red_b}ALHPA Note:${reset} 'start' currently branches off the current work branch. Future versions will
+accept a '-m|--master' switch. It is not currenty possible to remove a project repository from the current
+unit of work using the CLI. Future versions will support an 'eject' action.
 EOF
 }
