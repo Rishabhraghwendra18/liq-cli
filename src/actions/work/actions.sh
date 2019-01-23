@@ -158,6 +158,28 @@ work-report() {
   tput sgr0 # TODO: put this in the exit trap, too, I think.
 }
 
+work-show() {
+  local WORK_NAME
+  if (( $# == 0 )); then
+    WORK_NAME=$(basename $(readlink "${CATALYST_WORK_DB}/curr_work"))
+  else
+    exactUserArgs WORK_NAME -- "$@"
+  fi
+
+  echo "Branch name: $WORK_NAME"
+  echo
+  source "${CATALYST_WORK_DB}/${WORK_NAME}"
+  if [[ -z "$INVOLVED_PROJECTS" ]]; then
+    "Involved projects: <none>"
+  else
+    echo "Involved projects:"
+    local IP
+    for IP in $INVOLVED_PROJECTS; do
+      echo "  $IP"
+    done
+  fi
+}
+
 work-start() {
   local WORK_DESC
   exactUserArgs WORK_DESC -- "$@"

@@ -3,6 +3,7 @@ usage-work() {
 
   handleSummary "${PREFIX}${cyan_u}work${reset} <action>: Manages the current unit of work." || cat <<EOF
 ${PREFIX}${cyan_u}work${reset} <action>:
+  ${underline}show${reset} [<name>]: Shows details for the current or named unit of work.
   ${underline}involve${reset} [<repository name>]: Involves the current or named repository in the current unit
     of work.
   ${underline}start${reset} <desc>: Creates a new unit of work and adds the current repository (if any) to it.
