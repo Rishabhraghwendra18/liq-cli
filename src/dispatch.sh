@@ -10,6 +10,11 @@ case "$GROUP" in
       # TODO: build this from constant def... something...
       data|environments|packages|project|remotes|required-services|provided-services|services|work|workspace)
         if [[ $(type -t "${GROUP}-${ACTION}" || echo '') == 'function' ]]; then
+          # the only exception to requiring a workspace configuration is the
+          # 'workspace init' command
+          if [[ "$GROUP" != 'workspace' ]] || [[ "$GROUP" != 'init' ]]; then
+            requireCatalystSettings
+          fi
           requirements-${GROUP}
           ${GROUP}-${ACTION} "$@"
         else
