@@ -68,7 +68,7 @@ work-merge() {
       || echoerrandexit 'Current working branch has uncommitted changes. Please resolve before merging.' 1
 
     local WORKBRANCH=`git branch | (grep '*' || true) | awk '{print $2}'`
-    if [[ "$WORKBRANCH" == "$CURR_WORK" ]]; then
+    if [[ "$WORKBRANCH" != "$CURR_WORK" ]]; then
       echoerrandexit "Project '$IP' is not currently on the expected workbranch '$CURR_WORK'. Please fix and re-run."
     fi
   done
@@ -102,6 +102,12 @@ work-merge() {
     INVOLVED_PROJECTS=$(echo "$INVOLVED_PROJECTS" | sed -E "s/(^| +)$IP( +|\$)//")
     updateWorkDb
   done
+
+  if [[ -n "$INVOLVED_PROJECTS" ]]; then
+    echoerrandexit "Unexpectedly, it may be that not all involved projects were committed. Leaving things as they are. You will need to the current work."
+  fi
+  rm "${CATALYST_WORK_DB}/curr_work"
+  rm "${CATALYST_WORK_DB}/${CURR_WORK}"
 }
 
 work-qa() {
@@ -165,6 +171,12 @@ work-start() {
     echoerrandexit "Unit of work '${BRANCH_NAME}' aready exists. Bailing out."
   fi
 
+  # TODO: check that current work branch is clean before switching away from it
+  # https://github.com/Liquid-Labs/catalyst-cli/issues/14
+
+  if [[ -L "${CATALYST_WORK_DB}/curr_work" ]]; then
+    rm "${CATALYST_WORK_DB}/curr_work"
+  fi
   touch "${CATALYST_WORK_DB}/${BRANCH_NAME}"
   cd ${CATALYST_WORK_DB} && ln -s "${BRANCH_NAME}" curr_work
   updateWorkDb
