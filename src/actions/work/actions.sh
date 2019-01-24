@@ -164,6 +164,8 @@ work-resume() {
   local WORK_NAME
   workUserSelectOne WORK_NAME '' true "$@"
 
+  requireCleanRepos "${WORK_NAME}"
+
   local CURR_WORK
   if [[ -L "${CATALYST_WORK_DB}/curr_work" ]]; then
     CURR_WORK=$(basename $(readlink "${CATALYST_WORK_DB}/curr_work"))
@@ -174,7 +176,8 @@ work-resume() {
     workSwitchBranches master
     rm "${CATALYST_WORK_DB}/curr_work"
   fi
-  cd "${CATALYST_WORK_DB}" && ln -s "$WORK_NAME" curr_work
+  cd "${CATALYST_WORK_DB}" && ln -s "${WORK_NAME}" curr_work
+  source "${CATALYST_WORK_DB}"/curr_work
   workSwitchBranches "$WORK_NAME"
 
   if [[ -n "$CURR_WORK" ]]; then
