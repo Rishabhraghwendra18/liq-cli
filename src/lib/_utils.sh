@@ -374,6 +374,7 @@ loadCurrEnv() {
 
 _commonSelectHelper() {
   # TODO: the '_' is to avoid collision, but is a bit hacky; in particular, some callers were using 'local OPTIONS'
+  local _SELECT_LIMIT="$1"; shift
   local _VAR_NAME="$1"; shift
   local _PRE_OPTS="$1"; shift
   local _POST_OPTS="$1"; shift
@@ -388,6 +389,16 @@ _commonSelectHelper() {
     _OPTIONS="$_OPTIONS $_POST_OPTS"
   fi
 
+  updateVar() {
+    if [[ -z "${!_VAR_NAME}" ]]; then
+      eval "${_VAR_NAME}='${_SELECTION}'"
+    else
+      eval "$_VAR_NAME='${!_VAR_NAME} ${_SELECTION}'"
+    fi
+    _SELECTED_COUNT=$(( $_SELECTED_COUNT + 1 ))
+  }
+
+  local _SELECTED_COUNT=0
   while [[ $_QUIT == 'false' ]]; do
     select _SELECTION in $_OPTIONS; do
       case "$_SELECTION" in
@@ -399,7 +410,7 @@ _commonSelectHelper() {
         '<other>')
           _SELECTION=''
           requireAnswer "$PS3" _SELECTION
-          eval $_VAR_NAME=\"${!_VAR_NAME}'${_SELECTION}' \";;
+          updateVar;;
         '<any>')
           echo "Final selection: 'any'"
           eval $_VAR_NAME='any'
@@ -409,13 +420,9 @@ _commonSelectHelper() {
           eval $_VAR_NAME=\""$@"\"
           _QUIT='true';;
         *)
-          if [[ -z "${!_VAR_NAME}" ]]; then
-            eval "${_VAR_NAME}='${_SELECTION}'"
-          else
-            eval "$_VAR_NAME='${!_VAR_NAME} ${_SELECTION}'"
-          fi
-          ;;
+          updateVar;;
       esac
+      if [[ -n "$_SELECT_LIMIT" ]] && (( $_SELECT_LIMIT >= ))
       if [[ -z "$_QUIT" ]]; then
         echo "Current selections: ${!_VAR_NAME}"
       fi
@@ -430,29 +437,34 @@ _commonSelectHelper() {
   done
 }
 
+selectOneCancel() {
+  local VAR_NAME="$1"; shift
+  _commonSelectHelper 1 "$VAR_NAME" '<cancel>' '' "$@"
+}
+
 selectCancel() {
   local VAR_NAME="$1"; shift
-  _commonSelectHelper "$VAR_NAME" '<cancel>' '' "$@"
+  _commonSelectHelper '' "$VAR_NAME" '<cancel>' '' "$@"
 }
 
 selectDoneCancel() {
   local VAR_NAME="$1"; shift
-  _commonSelectHelper "$VAR_NAME" '<done> <cancel>' '' "$@"
+  _commonSelectHelper '' "$VAR_NAME" '<done> <cancel>' '' "$@"
 }
 
 selectDoneCancelAnyOther() {
   local VAR_NAME="$1"; shift
-  _commonSelectHelper "$VAR_NAME" '<done> <cancel>' '<any> <other>' "$@"
+  _commonSelectHelper '' "$VAR_NAME" '<done> <cancel>' '<any> <other>' "$@"
 }
 
 selectDoneCancelOther() {
   local VAR_NAME="$1"; shift
-  _commonSelectHelper "$VAR_NAME" '<done> <cancel>' '<other>' "$@"
+  _commonSelectHelper '' "$VAR_NAME" '<done> <cancel>' '<other>' "$@"
 }
 
 selectDoneCancelAll() {
   local VAR_NAME="$1"; shift
-  _commonSelectHelper "$VAR_NAME" '<done> <cancel>' '<all>' "$@"
+  _commonSelectHelper '' "$VAR_NAME" '<done> <cancel>' '<all>' "$@"
 }
 
 getRequiredParameters() {
