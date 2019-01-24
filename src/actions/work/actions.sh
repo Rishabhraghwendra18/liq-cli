@@ -63,9 +63,7 @@ work-merge() {
 
   local IP
   for IP in $INVOLVED_PROJECTS; do
-    cd "${CATALYST_PLAYGROUND}/${IP}"
-    git diff-index --quiet HEAD -- \
-      || echoerrandexit 'Current working branch has uncommitted changes. Please resolve before merging.' 1
+    requireCleanRepo "$IP"
 
     local WORKBRANCH=`git branch | (grep '*' || true) | awk '{print $2}'`
     if [[ "$WORKBRANCH" != "$CURR_WORK" ]]; then
@@ -158,13 +156,37 @@ work-report() {
   tput sgr0 # TODO: put this in the exit trap, too, I think.
 }
 
+work-resume() {
+  if [[ -L "${CATALYST_WORK_DB}/curr_work" ]]; then
+    requireCleanRepos
+  fi
+
+  local WORK_NAME
+  workUserSelectOne WORK_NAME '' true "$@"
+
+  local CURR_WORK
+  if [[ -L "${CATALYST_WORK_DB}/curr_work" ]]; then
+    CURR_WORK=$(basename $(readlink "${CATALYST_WORK_DB}/curr_work"))
+    if [[ "${CURR_WORK}" == "${WORK_NAME}" ]]; then
+      echowarn "'$CURR_WORK' is already the current unit of work."
+      exit 0
+    fi
+    workSwitchBranches master
+    rm "${CATALYST_WORK_DB}/curr_work"
+  fi
+  cd "${CATALYST_WORK_DB}" && ln -s "$WORK_NAME" curr_work
+  workSwitchBranches "$WORK_NAME"
+
+  if [[ -n "$CURR_WORK" ]]; then
+    echo "Switched from '$CURR_WORK' to '$WORK_NAME'."
+  else
+    echo "Resumed '$WORK_NAME'."
+  fi
+}
+
 work-show() {
   local WORK_NAME
-  if (( $# == 0 )); then
-    WORK_NAME=$(basename $(readlink "${CATALYST_WORK_DB}/curr_work"))
-  else
-    exactUserArgs WORK_NAME -- "$@"
-  fi
+  workUserSelectOne WORK_NAME true '' "$@"
 
   echo "Branch name: $WORK_NAME"
   echo
@@ -207,5 +229,17 @@ work-start() {
     local CURR_PROJECT=`basename $BASE_DIR`
     echo "Adding current project '$CURR_PROJECT' to unit of work..."
     work-involve "$CURR_PROJECT"
+  fi
+}
+
+work-stop() {
+  if [[ -L "${CATALYST_WORK_DB}/curr_work" ]]; then
+    local CURR_WORK=$(basename $(readlink "${CATALYST_WORK_DB}/curr_work"))
+    requireCleanRepos
+    workSwitchBranches master
+    rm "${CATALYST_WORK_DB}/curr_work"
+    echo "Paused work on '$CURR_WORK'. No current unit of work."
+  else
+    echoerrandexit "No current unit of work to stop."
   fi
 }

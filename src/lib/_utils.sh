@@ -416,13 +416,23 @@ _commonSelectHelper() {
       fi
       _OPTIONS=${_OPTIONS/$_SELECTION/}
       # if we only have the default options left, then we're done
-      _OPTIONS=`echo "$_OPTIONS" | sed -Ee 's/^<done> <cancel>[ ]*(<all>)?[ ]*(<any>)?[ ]*(<other>)?$//'`
+      _OPTIONS=`echo "$_OPTIONS" | sed -Ee 's/^(<done>)? *(<cancel>)?[ ]*(<all>)?[ ]*(<any>)?[ ]*(<other>)?$//'`
       if [[ -z "$_OPTIONS" ]]; then
         _QUIT='true'
       fi
       break
     done
   done
+}
+
+selectCancel() {
+  local VAR_NAME="$1"; shift
+  _commonSelectHelper "$VAR_NAME" '<cancel>' '' "$@"
+}
+
+selectDoneCancel() {
+  local VAR_NAME="$1"; shift
+  _commonSelectHelper "$VAR_NAME" '<done> <cancel>' '' "$@"
 }
 
 selectDoneCancelAnyOther() {
@@ -433,11 +443,6 @@ selectDoneCancelAnyOther() {
 selectDoneCancelOther() {
   local VAR_NAME="$1"; shift
   _commonSelectHelper "$VAR_NAME" '<done> <cancel>' '<other>' "$@"
-}
-
-selectDoneCancel() {
-  local VAR_NAME="$1"; shift
-  _commonSelectHelper "$VAR_NAME" '<done> <cancel>' '' "$@"
 }
 
 selectDoneCancelAll() {
@@ -535,4 +540,22 @@ EOF
 
   echo "local _OPTS_COUNT=${OPTS_COUNT};"
   echo set -- "$@"
+}
+
+requireCleanRepo() {
+  local IP="$1"
+
+  cd "${CATALYST_PLAYGROUND}/${IP}"
+  git diff-index --quiet HEAD -- \
+    || echoerrandexit 'Current unit of work has uncommitted changes. Please resolve.' 1
+}
+
+requireCleanRepos() {
+  # we expect 'curr_work' existence already checked
+  source "${CATALYST_WORK_DB}/curr_work"
+
+  local IP
+  for IP in $INVOLVED_PROJECTS; do
+    requireCleanRepo "$IP"
+  done
 }
