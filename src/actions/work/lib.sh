@@ -47,3 +47,16 @@ workUserSelectOne() {
 
   eval "$_VAR_NAME='${_WORK_NAME}'"
 }
+
+workSwitchBranches() {
+  # We expect that the name and existence of curr_work already checked.
+  local _BRANCH_NAME="$1"
+  source "${CATALYST_WORK_DB}/curr_work"
+  local IP
+  for IP in $INVOLVED_PROJECTS; do
+    echo "Updating project '$IP' to work branch '${_BRANCH_NAME}'"
+    cd "${CATALYST_PLAYGROUND}/${IP}"
+    git checkout "${_BRANCH_NAME}" \
+      || echoerrandexit "Error updating '${IP}' to work branch '${_BRANCH_NAME}'. See above for details."
+  done
+}
