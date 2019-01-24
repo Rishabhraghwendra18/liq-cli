@@ -541,3 +541,21 @@ EOF
   echo "local _OPTS_COUNT=${OPTS_COUNT};"
   echo set -- "$@"
 }
+
+requireCleanRepo() {
+  local IP="$1"
+
+  cd "${CATALYST_PLAYGROUND}/${IP}"
+  git diff-index --quiet HEAD -- \
+    || echoerrandexit 'Current unit of work has uncommitted changes. Please resolve.' 1
+}
+
+requireCleanRepos() {
+  # we expect 'curr_work' existence already checked
+  source "${CATALYST_WORK_DB}/curr_work"
+
+  local IP
+  for IP in $INVOLVED_PROJECTS; do
+    requireCleanRepo "$IP"
+  done
+}
