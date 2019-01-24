@@ -409,7 +409,12 @@ _commonSelectHelper() {
           eval $_VAR_NAME=\""$@"\"
           _QUIT='true';;
         *)
-          eval $_VAR_NAME=\"${!_VAR_NAME}'${_SELECTION}' \";;
+          if [[ -z "${!_VAR_NAME}" ]]; then
+            eval "${_VAR_NAME}='${_SELECTION}'"
+          else
+            eval "$_VAR_NAME='${!_VAR_NAME} ${_SELECTION}'"
+          fi
+          ;;
       esac
       if [[ -z "$_QUIT" ]]; then
         echo "Current selections: ${!_VAR_NAME}"
@@ -543,16 +548,18 @@ EOF
 }
 
 requireCleanRepo() {
-  local IP="$1"
+  local _IP="$1"
 
-  cd "${CATALYST_PLAYGROUND}/${IP}"
+  cd "${CATALYST_PLAYGROUND}/${_IP}"
   git diff-index --quiet HEAD -- \
-    || echoerrandexit 'Current unit of work has uncommitted changes. Please resolve.' 1
+    || echoerrandexit "Cannot perform action '${ACTION}'. '${_IP}' has uncommitted changes. Please resolve." 1
 }
 
 requireCleanRepos() {
-  # we expect 'curr_work' existence already checked
-  source "${CATALYST_WORK_DB}/curr_work"
+  local _WORK_NAME="${1:-curr_work}"
+
+  # we expect existence already ensured
+  source "${CATALYST_WORK_DB}/${_WORK_NAME}"
 
   local IP
   for IP in $INVOLVED_PROJECTS; do
