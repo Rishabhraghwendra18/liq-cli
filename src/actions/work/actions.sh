@@ -63,9 +63,7 @@ work-merge() {
 
   local IP
   for IP in $INVOLVED_PROJECTS; do
-    cd "${CATALYST_PLAYGROUND}/${IP}"
-    git diff-index --quiet HEAD -- \
-      || echoerrandexit 'Current working branch has uncommitted changes. Please resolve before merging.' 1
+    requireCleanRepo "$IP"
 
     local WORKBRANCH=`git branch | (grep '*' || true) | awk '{print $2}'`
     if [[ "$WORKBRANCH" != "$CURR_WORK" ]]; then
@@ -159,6 +157,10 @@ work-report() {
 }
 
 work-resume() {
+  if [[ -L "${CATALYST_WORK_DB}/curr_work" ]]; then
+    requireCleanRepos
+  fi
+
   local WORK_NAME
   workUserSelectOne WORK_NAME '' true "$@"
 
@@ -169,12 +171,14 @@ work-resume() {
       echowarn "'$CURR_WORK' is already the current unit of work."
       exit 0
     fi
+    workSwitchBranches master
     rm "${CATALYST_WORK_DB}/curr_work"
   fi
   cd "${CATALYST_WORK_DB}" && ln -s "$WORK_NAME" curr_work
+  workSwitchBranches "$WORK_NAME"
 
   if [[ -n "$CURR_WORK" ]]; then
-    echo "Switching from '$CURR_WORK' to '$WORK_NAME'."
+    echo "Switched from '$CURR_WORK' to '$WORK_NAME'."
   else
     echo "Resumed '$WORK_NAME'."
   fi
@@ -229,9 +233,10 @@ work-start() {
 }
 
 work-stop() {
-  # TODO: check repo status and switch everything to master
   if [[ -L "${CATALYST_WORK_DB}/curr_work" ]]; then
     local CURR_WORK=$(basename $(readlink "${CATALYST_WORK_DB}/curr_work"))
+    requireCleanRepos
+    workSwitchBranches master
     rm "${CATALYST_WORK_DB}/curr_work"
     echo "Paused work on '$CURR_WORK'. No current unit of work."
   else
