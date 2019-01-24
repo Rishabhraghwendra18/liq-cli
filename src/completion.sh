@@ -39,7 +39,7 @@ _catalyst()
       services)
         opts="connect err-log list log restart start stop";;
       work)
-        opts="diff-master edit ignore-rest involve merge qa report start";;
+        opts="diff-master edit ignore-rest involve merge qa report resume start stop";;
       workspace)
         opts="init close import";;
       *)
