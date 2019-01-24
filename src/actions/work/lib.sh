@@ -26,7 +26,7 @@ workUserSelectOne() {
     if [[ -z "$_OPTIONS" ]]; then
       echoerrandexit "No outstanding work to select."
     else
-      selectCancel _WORK_NAME $_OPTIONS
+      selectOneCancel _WORK_NAME $_OPTIONS
     fi
   }
 
