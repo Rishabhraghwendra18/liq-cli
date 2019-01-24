@@ -422,7 +422,9 @@ _commonSelectHelper() {
         *)
           updateVar;;
       esac
-      if [[ -n "$_SELECT_LIMIT" ]] && (( $_SELECT_LIMIT >= ))
+      if [[ -n "$_SELECT_LIMIT" ]] && (( $_SELECT_LIMIT >= $_SELECTED_COUNT )) then
+        _QUIT='true'
+      fi
       if [[ -z "$_QUIT" ]]; then
         echo "Current selections: ${!_VAR_NAME}"
       fi
