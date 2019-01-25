@@ -82,12 +82,10 @@ work-merge() {
 
     local PUSH_FAILED=N
     # in case the current working dir does not exist in master
-    pushd ${BASE_DIR} > /dev/null \
-    && (git checkout -q master \
-        || (popd > /dev/null && echoerrandexit "Could not switch to master branch in project '$IP'.")) \
+    (git checkout -q master \
+        || echoerrandexit "Could not switch to master branch in project '$IP'.") \
     && (git merge --no-ff -qm "merge branch $WORKBRANCH" "$WORKBRANCH" \
-        || (echoerrandexit "Problem merging work branch with master for project '$IP'. ($?)")) \
-    && popd > /dev/null \
+        || echoerrandexit "Problem merging work branch with master for project '$IP'. ($?)") \
     && ( (git push -q && echo "Work merged and pushed to origin.") \
         || (PUSH_FAILED=Y && echoerr "Local merge successful, but there was a problem pushing work to master."))
     # if we have not exited, then the merge was made and we'll attempt to clean up

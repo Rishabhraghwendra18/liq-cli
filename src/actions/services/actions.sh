@@ -83,7 +83,12 @@ EOF
 services-restart() {
   local MAIN=$(cat <<'EOF'
     echo "Restarting ${PROCESS_NAME}..."
-    eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT restart"
+    if services-list -qe "${SERV_IFACE}.${SCRIPT_NAME}"; then
+      eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT restart"
+    else
+      echowarn "'${PROCESS_NAME}' currently stopped; starting..."
+      eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT start"
+    fi
     sleep 1
     services-list -s "${PROCESS_NAME}"
 EOF
