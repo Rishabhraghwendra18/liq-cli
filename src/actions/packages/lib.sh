@@ -123,58 +123,52 @@ packagesVersionCheck() {
   npm-check ${CMD_OPTS} || true
 }
 
-packagesProjectLink() {
-  local LINK_PROJECT="${1:-}"
-  requireArgs "$LINK_PROJECT" || exit 1
-  local PACKAGE_REL_PATH="${2:-}" # this one's optional
-
-  local CURR_PROJECT_DIR="${BASE_DIR}"
-  cd "${CURR_PROJECT_DIR}"
-  local OUR_PACKAGE_DIR=`find . -name "package.json" -not -path "*/node_modules/*"`
-  local PACKAGE_COUNT=`echo "$OUR_PACKAGE_DIR" | wc -l`
-  if (( $PACKAGE_COUNT == 0 )); then
-    echoerrandexit "Did not find local 'package.json'."
-  elif (( $PACKAGE_COUNT > 1 )); then
-    # TODO: requrie the user to be in the dir with the package.json
-    echoerrandexit "Found multiple 'package.json' files; this is currently a limitation, perform linking manually."
-  fi
-
-  if [[ -z "$OUR_PACKAGE_DIR" ]]; then
-    echoerrandexit "Did not find 'package.json' in current project"
-  else
-    OUR_PACKAGE_DIR=`dirname "$OUR_PACKAGE_DIR"`
-  fi
-
-  cd "${CATALYST_PLAYGROUND}"
-  if [[ ! -d "$LINK_PROJECT" ]]; then
-    echoerrandexit "Did not find project '${LINK_PROJECT}' to link."
-  fi
-
-  cd "$LINK_PROJECT"
-  # determine the package-to-link's package.json
-  local LINK_PACKAGE
-  if [[ -n "$PACKAGE_REL_PATH" ]]; then
-    if [[ -f "$PACKAGE_REL_PATH/package.json" ]]; then
-      LINK_PACKAGE="$PACKAGE_REL_PATH/package.json"
+packagesLinkNodeModules() {
+  local TARGET_DIR="$1"
+  echo "TARGET_DIR: ${TARGET_DIR}"
+  if [[ ! -d "${TARGET_DIR}/node_modules.orig" ]]; then
+    if [[ -d "${TARGET_DIR}/node_modules" ]]; then
+      mv "${TARGET_DIR}/node_modules" "${TARGET_DIR}/node_modules.orig"
     else
-      echoerrandexit "Did not find 'package.json' under specified path '$PACKAGE_REL_PATH'."
+      mkdir "${TARGET_DIR}/node_modules.orig"
     fi
-  else
-    LINK_PACKAGE=`find . -name "package.json" -not -path "*/node_modules/*"`
-    local LINK_PACKAGE_COUNT=`echo "$LINK_PACKAGE" | wc -l`
-    if (( $LINK_PACKAGE_COUNT == 0 )); then
-      echoerrandexit "Did not find 'package.json' in '$LINK_PROJECT'."
-    elif (( $LINK_PACKAGE_COUNT > 1 )); then
-      echoerrandexit "Found multiple packages to link in '$LINK_PROJECT'; specify relative package path."
-    fi
+    mkdir "${TARGET_DIR}/node_modules"
+    local NPM_PACK
+    local ORG_PACK
+    for NPM_PACK in $(ls "${TARGET_DIR}/node_modules.orig/"); do
+      if [[ "$NPM_PACK" == '@'* ]]; then # the pack is an org
+        mkdir "${TARGET_DIR}/node_modules/${NPM_PACK}"
+        ln -s "${TARGET_DIR}/node_modules.orig/${NPM_PACK}/"* "${TARGET_DIR}/node_modules/${NPM_PACK}"
+      else
+        ln -s "${TARGET_DIR}/node_modules.orig/${NPM_PACK}" "${TARGET_DIR}/node_modules"
+      fi
+    done
+    ls -s "${TARGET_DIR}/node_modules.orig/.bin" "${TARGET_DIR}/node_modules"
   fi
+}
 
-  local LINK_PACKAGE_NAME=`node -e "const fs = require('fs'); const package = JSON.parse(fs.readFileSync('${LINK_PACKAGE}')); console.log(package.name);"`
-  npm -q link
+# Could not find peer dependency '@material-ui/core' for 'catalyst-core-ui'.
+# Could not find peer dependency 'classnames' for 'catalyst-core-ui'.
 
-  cd "$CURR_PROJECT_DIR"
-  cd "$OUR_PACKAGE_DIR"
-  npm -q link "$LINK_PACKAGE_NAME"
-
-  echo "$LINK_PACKAGE_NAME"
+packagesLinkPeerDep() {
+  # Yes, fragile, but for now just takes locals from parent func.
+  echo "PLPD: $CANDIDATE_PACKAGE_FILE"
+  echo "CPD: $CANDIDATE_PACKAGE_DIR"
+  local PEER_DEP
+  cat "$CANDIDATE_PACKAGE_FILE" | jq -e --raw-output '.peerDependencies' \
+    || return
+  cat "$CANDIDATE_PACKAGE_FILE" | jq --raw-output '.peerDependencies | keys | @sh'
+  cat "$CANDIDATE_PACKAGE_FILE" | jq --raw-output '.peerDependencies | keys | @sh' | tr -d "'"
+  for PEER_DEP in $(cat "$CANDIDATE_PACKAGE_FILE" | jq --raw-output '.peerDependencies | keys | @sh' | tr -d "'"); do
+    echo "checking: ${BASE_DIR}/node_modules/${PEER_DEP}"
+    if [[ ! -e "${BASE_DIR}/node_modules/${PEER_DEP}" ]]; then
+      echoerr "Could not find peer dependency '${PEER_DEP}' for '${LINK_SPEC}'." # TODO: in current project
+    elif [[ ! -e "${CANDIDATE_PACKAGE_DIR}/node_modules/${PEER_DEP}" ]]; then
+      if [[ "${PEER_DEP}" == '@'*'/'* ]]; then
+        ln -s "${BASE_DIR}/node_modules/${PEER_DEP}" "${CANDIDATE_PACKAGE_DIR}/node_modules/$(dirname "$PEER_DEP")"
+      else
+        ln -s "${BASE_DIR}/node_modules/${PEER_DEP}" "${CANDIDATE_PACKAGE_DIR}/node_modules"
+      fi
+    fi
+  done
 }
