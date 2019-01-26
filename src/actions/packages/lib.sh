@@ -123,58 +123,47 @@ packagesVersionCheck() {
   npm-check ${CMD_OPTS} || true
 }
 
-packagesProjectLink() {
-  local LINK_PROJECT="${1:-}"
-  requireArgs "$LINK_PROJECT" || exit 1
-  local PACKAGE_REL_PATH="${2:-}" # this one's optional
+packagesLink() {
+  local INSTALLED_PACKAGE_DIR="$1"
+  local LINK_PACKAGE_DIR="$2"
 
-  local CURR_PROJECT_DIR="${BASE_DIR}"
-  cd "${CURR_PROJECT_DIR}"
-  local OUR_PACKAGE_DIR=`find . -name "package.json" -not -path "*/node_modules/*"`
-  local PACKAGE_COUNT=`echo "$OUR_PACKAGE_DIR" | wc -l`
-  if (( $PACKAGE_COUNT == 0 )); then
-    echoerrandexit "Did not find local 'package.json'."
-  elif (( $PACKAGE_COUNT > 1 )); then
-    # TODO: requrie the user to be in the dir with the package.json
-    echoerrandexit "Found multiple 'package.json' files; this is currently a limitation, perform linking manually."
+  if [[ -e "$INSTALLED_PACKAGE_DIR" ]]; then
+    mv "$INSTALLED_PACKAGE_DIR" "${INSTALLED_PACKAGE_DIR}.prelink"
   fi
+  mkdir "$INSTALLED_PACKAGE_DIR"
+  bindfs --perms=a-w "$LINK_PACKAGE_DIR" "$INSTALLED_PACKAGE_DIR"
+}
 
-  if [[ -z "$OUR_PACKAGE_DIR" ]]; then
-    echoerrandexit "Did not find 'package.json' in current project"
-  else
-    OUR_PACKAGE_DIR=`dirname "$OUR_PACKAGE_DIR"`
-  fi
+packagesUnlink() {
+  local INSTALLED_PACKAGE_DIR="$1"
+  local LINK_PACKAGE_DIR="$2"
 
-  cd "${CATALYST_PLAYGROUND}"
-  if [[ ! -d "$LINK_PROJECT" ]]; then
-    echoerrandexit "Did not find project '${LINK_PROJECT}' to link."
-  fi
+  # These two used in user output.
+  local LINK_PACKAGE_NAME=$(basename "$LINK_PACKAGE_DIR")
+  local CURR_PACKAGE=$(basename "$BASE_DIR")
 
-  cd "$LINK_PROJECT"
-  # determine the package-to-link's package.json
-  local LINK_PACKAGE
-  if [[ -n "$PACKAGE_REL_PATH" ]]; then
-    if [[ -f "$PACKAGE_REL_PATH/package.json" ]]; then
-      LINK_PACKAGE="$PACKAGE_REL_PATH/package.json"
+  if mount | grep -s "$INSTALLED_PACKAGE_DIR"; then
+    umount "$INSTALLED_PACKAGE_DIR"
+    if [[ -e "${INSTALLED_PACKAGE_DIR}.prelink" ]]; then
+      mv "${INSTALLED_PACKAGE_DIR}.prelink" "${INSTALLED_PACKAGE_DIR}"
     else
-      echoerrandexit "Did not find 'package.json' under specified path '$PACKAGE_REL_PATH'."
+      echowarn "No previous installation for '${LINK_PACKAGE_NAME}' was found to restore. You might want to (re-)install the package."
     fi
+    echo "Package '${LINK_PACKAGE_NAME}' unlinked from '$CURR_PACKAGE'."
   else
-    LINK_PACKAGE=`find . -name "package.json" -not -path "*/node_modules/*"`
-    local LINK_PACKAGE_COUNT=`echo "$LINK_PACKAGE" | wc -l`
-    if (( $LINK_PACKAGE_COUNT == 0 )); then
-      echoerrandexit "Did not find 'package.json' in '$LINK_PROJECT'."
-    elif (( $LINK_PACKAGE_COUNT > 1 )); then
-      echoerrandexit "Found multiple packages to link in '$LINK_PROJECT'; specify relative package path."
-    fi
+    echoerr "'${LINK_PACKAGE_NAME}' does not appear to be linked to '$CURR_PACKAGE'. Perhaps the projects are npm-linked rather than Catalyst linked? You can also try unlinking everything with:\ncatalyst link --unlink ${CURR_PACKAGE}"
   fi
+}
 
-  local LINK_PACKAGE_NAME=`node -e "const fs = require('fs'); const package = JSON.parse(fs.readFileSync('${LINK_PACKAGE}')); console.log(package.name);"`
-  npm -q link
+packagesUnlinkAll() {
+  local PACKAGE_PATH="$1"
 
-  cd "$CURR_PROJECT_DIR"
-  cd "$OUR_PACKAGE_DIR"
-  npm -q link "$LINK_PACKAGE_NAME"
-
-  echo "$LINK_PACKAGE_NAME"
+  local MOUNT_SPEC
+  while read MOUNT_SPEC; do
+    # TODO: a pathname with ' on ' will mess this up. Unfortunately, mount does
+    # not have a clean/safe/scriptable output option.
+    local MOUNT_SRC=$(echo "$MOUNT_SPEC" | sed -Ee 's| on .+||')
+    local MOUNT_POINT=$(echo "$MOUNT_SPEC" | sed -Ee 's|.+ on (/.+) \(.+|\1|')
+    packagesUnlink "$MOUNT_POINT" "$MOUNT_SRC"
+  done < <(mount | grep -s "$PACKAGE_PATH/node_modules" || echowarn "Did not find any linked packages in '$(basename "$PACKAGE_PATH")'.")
 }

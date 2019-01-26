@@ -23,21 +23,61 @@ packages-deploy() {
 }
 
 packages-link() {
-  echoerrandexit "The 'link' action is disabled in this version pending testing."
-
   local TMP
-  TMP=$(setSimpleOptions DEV -- "$@") \
-    || ( usage-packages; echoerrandexit "Bad options." )
+  TMP=$(setSimpleOptions UNLINK -- "$@") \
+    || ( usage-project-packages; echoerrandexit "Bad options." )
   eval "$TMP"
 
-  local LINK_PROJECT="${1:-}"
-  local LINK_PACKAGE_NAME=`packagesProjectLink "$@" | tail -n 1`
-  if [[ -n "$LINK_PACKAGE_NAME" ]]; then
-    local SAVE_OPT='--save'
-    if [[ -n "$DEV" ]]; then SAVE_OPT='--save-dev'; fi
-    npm install --save "file:/usr/local/lib/node_modules/${LINK_PACKAGE_NAME}"
-    echo "Linked Catalyst project '$LINK_PROJECT' as dependency."
+  if [[ -n "$UNLINK" ]] && (( $# == 0 )); then
+    packagesUnlinkAll "$BASE_DIR"
   fi
+
+  local LINK_SPEC
+  for LINK_SPEC in "$@"; do
+    local LINK_PROJECT=$(echo "$LINK_SPEC" | awk -F: '{print $1}')
+    local LINK_PACKAGE=$(echo "$LINK_SPEC" | awk -F: '{print $2}')
+
+    if [[ ! -d "${CATALYST_PLAYGROUND}/${LINK_PROJECT}" ]]; then
+      echoerrandexit "Could not find project directory '${LINK_PROJECT}' in Catalyst playground."
+    fi
+
+    local CANDIDATE_PACKAGE_FILE=''
+    local CANDIDATE_PACKAGE_NAME=''
+    local CANDIDATE_PACKAGE_FILE=''
+    local CANDIDATE_PACKAGE_FILE_IT=''
+    local CANDIDATE_COUNT=0
+    # Huh... piping the find causes everything to be run in a forked process (I
+    # guess) because the vars set in the loop are not set after exiting
+    # read a b dump < <(echo 1 2 3 4 5)
+    while read CANDIDATE_PACKAGE_FILE_IT; do
+      # Not sure why, but the _IT is necessary because setting
+      # CANDIDATE_PACKAGE_FILE directly in the read causes the value to reset
+      # after the loop.
+      CANDIDATE_PACKAGE_FILE="${CANDIDATE_PACKAGE_FILE_IT}"
+    # find -H "${CATALYST_PLAYGROUND}/${LINK_PROJECT}" -name "package.json" -not -path "*/node_modules/*" | while read CANDIDATE_PACKAGE_FILE; do
+    # local CANDIDATE_PACKAGE_FILES="$(find -H "${CATALYST_PLAYGROUND}/${LINK_PROJECT}" -name "package.json" -not -path "*/node_modules/*")"
+    # for CANDIDATE_PACKAGE_FILE in '/Users/zane/playground/catalyst-core-api/package.json'; do
+      CANDIDATE_PACKAGE_NAME=$(cat "$CANDIDATE_PACKAGE_FILE" | jq --raw-output '.name | @sh' | tr -d "'")
+      if [[ -n "$LINK_PACKAGE" ]]; then
+        if [[ "$LINK_PACKAGE" == "$CANDIDATE_PACKAGE_NAME" ]]; then
+          break;
+        fi
+      elif (( $CANDIDATE_COUNT > 0 )); then
+        echoerrandexit "Project '$LINK_PROJECT' contains multiple packages. You must specify the package. Try\ncatalyst packages link $(test ! -n "$UNLINK" || echo "--unlink " )${LINK_PROJECT}:<package name>"
+      fi
+      CANDIDATE_COUNT=$(( $CANDIDATE_COUNT + 1 ))
+    done < <(find -H "${CATALYST_PLAYGROUND}/${LINK_PROJECT}" -name "package.json" -not -path "*/node_modules*/*")
+
+    # If we get here without exiting, then 'CANDIDATE_PACKAGE_FILE' has the
+    # location of the package.json we want to link.
+    local CANDIDATE_PACKAGE_DIR=$(dirname "$CANDIDATE_PACKAGE_FILE")
+    local INSTALLED_PACKAGE_DIR="${BASE_DIR}/node_modules/${CANDIDATE_PACKAGE_NAME}"
+    if [[ -z "$UNLINK" ]]; then
+      packagesLink "$INSTALLED_PACKAGE_DIR" "$CANDIDATE_PACKAGE_DIR"
+    else
+      packagesUnlink "$INSTALLED_PACKAGE_DIR" "$CANDIDATE_PACKAGE_DIR"
+    fi
+  done
 }
 
 packages-lint() {
