@@ -132,6 +132,10 @@ packagesLink() {
   fi
   mkdir "$INSTALLED_PACKAGE_DIR"
   bindfs --perms=a-w "$LINK_PACKAGE_DIR" "$INSTALLED_PACKAGE_DIR"
+
+  local LINK_PACKAGE_NAME=$(basename "$LINK_PACKAGE_DIR")
+  local CURR_PROJECT=$(basename "$BASE_DIR")
+  echo "Linked '${LINK_PACKAGE_NAME}' to '$CURR_PROJECT'."
 }
 
 packagesUnlink() {
@@ -140,18 +144,18 @@ packagesUnlink() {
 
   # These two used in user output.
   local LINK_PACKAGE_NAME=$(basename "$LINK_PACKAGE_DIR")
-  local CURR_PACKAGE=$(basename "$BASE_DIR")
+  local CURR_PROJECT=$(basename "$BASE_DIR")
 
-  if mount | grep -s "$INSTALLED_PACKAGE_DIR"; then
+  if mount | grep -s "$INSTALLED_PACKAGE_DIR" >/dev/null; then
     umount "$INSTALLED_PACKAGE_DIR"
     if [[ -e "${INSTALLED_PACKAGE_DIR}.prelink" ]]; then
       mv "${INSTALLED_PACKAGE_DIR}.prelink" "${INSTALLED_PACKAGE_DIR}"
     else
       echowarn "No previous installation for '${LINK_PACKAGE_NAME}' was found to restore. You might want to (re-)install the package."
     fi
-    echo "Package '${LINK_PACKAGE_NAME}' unlinked from '$CURR_PACKAGE'."
+    echo "Package '${LINK_PACKAGE_NAME}' unlinked from '$CURR_PROJECT'."
   else
-    echoerr "'${LINK_PACKAGE_NAME}' does not appear to be linked to '$CURR_PACKAGE'. Perhaps the projects are npm-linked rather than Catalyst linked? You can also try unlinking everything with:\ncatalyst link --unlink ${CURR_PACKAGE}"
+    echoerr "'${LINK_PACKAGE_NAME}' does not appear to be linked to '$CURR_PROJECT'. Perhaps the projects are npm-linked rather than Catalyst linked? You can also try unlinking everything with:\ncatalyst link --unlink ${CURR_PROJECT}"
   fi
 }
 

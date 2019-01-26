@@ -563,9 +563,12 @@ EOF
 
 requireCleanRepo() {
   local _IP="$1"
+  local _WORK_BRANCH="${2:-}"
 
   cd "${CATALYST_PLAYGROUND}/${_IP}"
-  git diff-index --quiet HEAD -- \
+  ( test -n "$_WORK_BRANCH" \
+      && git branch | grep -sE "^\* ${_WORK_BRANCH}" > /dev/null) \
+    || git diff-index --quiet HEAD -- \
     || echoerrandexit "Cannot perform action '${ACTION}'. '${_IP}' has uncommitted changes. Please resolve." 1
 }
 
@@ -577,6 +580,6 @@ requireCleanRepos() {
 
   local IP
   for IP in $INVOLVED_PROJECTS; do
-    requireCleanRepo "$IP"
+    requireCleanRepo "$IP" "$_WORK_NAME"
   done
 }
