@@ -39,6 +39,7 @@ work-involve() {
 
   source "${CATALYST_WORK_DB}/curr_work"
   local BRANCH_NAME=$(basename $(readlink "${CATALYST_WORK_DB}/curr_work"))
+  requirePackage # used later if auto-linking
 
   cd "${CATALYST_PLAYGROUND}/${PROJECT_NAME}"
   if git branch | grep -qE "^\*? *${BRANCH_NAME}\$"; then
@@ -51,6 +52,17 @@ work-involve() {
 
   INVOLVED_PROJECTS="${INVOLVED_PROJECTS} ${PROJECT_NAME}"
   updateWorkDb
+
+  local PRIMARY_PROJECT=$INVOLVED_PROJECTS
+  if [[ "$PRIMARY_PROJECT" != "$PROJECT_NAME" ]]; then
+    local NEW_PACKAGE_FILE
+    while read NEW_PACKAGE_FILE; do
+      local NEW_PACKAGE_NAME=$(cat "$NEW_PACKAGE_FILE" | jq --raw-output '.name | @sh' | tr -d "'")
+      if echo "$PACKAGE" | jq -e "(.dependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\")) or (.devDependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\"))" > /dev/null; then
+        packages-link "${PROJECT_NAME}:${NEW_PACKAGE_NAME}"
+      fi
+    done < <(find "${CATALYST_PLAYGROUND}/${PROJECT_NAME}" -name "package.json" -not -path "*/node_modules/*")
+  fi
 }
 
 work-merge() {
@@ -234,10 +246,20 @@ work-start() {
 }
 
 work-stop() {
+  local TMP
+  TMP=$(setSimpleOptions KEEP_CHECKOUT -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
   if [[ -L "${CATALYST_WORK_DB}/curr_work" ]]; then
     local CURR_WORK=$(basename $(readlink "${CATALYST_WORK_DB}/curr_work"))
-    requireCleanRepos
-    workSwitchBranches master
+    if [[ -z "$KEEP_CHECKOUT" ]]; then
+      requireCleanRepos
+      workSwitchBranches master
+    else
+      source "${CATALYST_WORK_DB}/curr_work"
+      echo "Current branch "$CURR_WORK" maintained for ${INVOLVED_PROJECTS}."
+    fi
     rm "${CATALYST_WORK_DB}/curr_work"
     echo "Paused work on '$CURR_WORK'. No current unit of work."
   else
