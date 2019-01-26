@@ -123,52 +123,47 @@ packagesVersionCheck() {
   npm-check ${CMD_OPTS} || true
 }
 
-packagesLinkNodeModules() {
-  local TARGET_DIR="$1"
-  echo "TARGET_DIR: ${TARGET_DIR}"
-  if [[ ! -d "${TARGET_DIR}/node_modules.orig" ]]; then
-    if [[ -d "${TARGET_DIR}/node_modules" ]]; then
-      mv "${TARGET_DIR}/node_modules" "${TARGET_DIR}/node_modules.orig"
+packagesLink() {
+  local INSTALLED_PACKAGE_DIR="$1"
+  local LINK_PACKAGE_DIR="$2"
+
+  if [[ -e "$INSTALLED_PACKAGE_DIR" ]]; then
+    mv "$INSTALLED_PACKAGE_DIR" "${INSTALLED_PACKAGE_DIR}.prelink"
+  fi
+  mkdir "$INSTALLED_PACKAGE_DIR"
+  bindfs --perms=a-w "$LINK_PACKAGE_DIR" "$INSTALLED_PACKAGE_DIR"
+}
+
+packagesUnlink() {
+  local INSTALLED_PACKAGE_DIR="$1"
+  local LINK_PACKAGE_DIR="$2"
+
+  # These two used in user output.
+  local LINK_PACKAGE_NAME=$(basename "$LINK_PACKAGE_DIR")
+  local CURR_PACKAGE=$(basename "$BASE_DIR")
+
+  if mount | grep -s "$INSTALLED_PACKAGE_DIR"; then
+    umount "$INSTALLED_PACKAGE_DIR"
+    if [[ -e "${INSTALLED_PACKAGE_DIR}.prelink" ]]; then
+      mv "${INSTALLED_PACKAGE_DIR}.prelink" "${INSTALLED_PACKAGE_DIR}"
     else
-      mkdir "${TARGET_DIR}/node_modules.orig"
+      echowarn "No previous installation for '${LINK_PACKAGE_NAME}' was found to restore. You might want to (re-)install the package."
     fi
-    mkdir "${TARGET_DIR}/node_modules"
-    local NPM_PACK
-    local ORG_PACK
-    for NPM_PACK in $(ls "${TARGET_DIR}/node_modules.orig/"); do
-      if [[ "$NPM_PACK" == '@'* ]]; then # the pack is an org
-        mkdir "${TARGET_DIR}/node_modules/${NPM_PACK}"
-        ln -s "${TARGET_DIR}/node_modules.orig/${NPM_PACK}/"* "${TARGET_DIR}/node_modules/${NPM_PACK}"
-      else
-        ln -s "${TARGET_DIR}/node_modules.orig/${NPM_PACK}" "${TARGET_DIR}/node_modules"
-      fi
-    done
-    ls -s "${TARGET_DIR}/node_modules.orig/.bin" "${TARGET_DIR}/node_modules"
+    echo "Package '${LINK_PACKAGE_NAME}' unlinked from '$CURR_PACKAGE'."
+  else
+    echoerr "'${LINK_PACKAGE_NAME}' does not appear to be linked to '$CURR_PACKAGE'. Perhaps the projects are npm-linked rather than Catalyst linked? You can also try unlinking everything with:\ncatalyst link --unlink ${CURR_PACKAGE}"
   fi
 }
 
-# Could not find peer dependency '@material-ui/core' for 'catalyst-core-ui'.
-# Could not find peer dependency 'classnames' for 'catalyst-core-ui'.
+packagesUnlinkAll() {
+  local PACKAGE_PATH="$1"
 
-packagesLinkPeerDep() {
-  # Yes, fragile, but for now just takes locals from parent func.
-  echo "PLPD: $CANDIDATE_PACKAGE_FILE"
-  echo "CPD: $CANDIDATE_PACKAGE_DIR"
-  local PEER_DEP
-  cat "$CANDIDATE_PACKAGE_FILE" | jq -e --raw-output '.peerDependencies' \
-    || return
-  cat "$CANDIDATE_PACKAGE_FILE" | jq --raw-output '.peerDependencies | keys | @sh'
-  cat "$CANDIDATE_PACKAGE_FILE" | jq --raw-output '.peerDependencies | keys | @sh' | tr -d "'"
-  for PEER_DEP in $(cat "$CANDIDATE_PACKAGE_FILE" | jq --raw-output '.peerDependencies | keys | @sh' | tr -d "'"); do
-    echo "checking: ${BASE_DIR}/node_modules/${PEER_DEP}"
-    if [[ ! -e "${BASE_DIR}/node_modules/${PEER_DEP}" ]]; then
-      echoerr "Could not find peer dependency '${PEER_DEP}' for '${LINK_SPEC}'." # TODO: in current project
-    elif [[ ! -e "${CANDIDATE_PACKAGE_DIR}/node_modules/${PEER_DEP}" ]]; then
-      if [[ "${PEER_DEP}" == '@'*'/'* ]]; then
-        ln -s "${BASE_DIR}/node_modules/${PEER_DEP}" "${CANDIDATE_PACKAGE_DIR}/node_modules/$(dirname "$PEER_DEP")"
-      else
-        ln -s "${BASE_DIR}/node_modules/${PEER_DEP}" "${CANDIDATE_PACKAGE_DIR}/node_modules"
-      fi
-    fi
-  done
+  local MOUNT_SPEC
+  while read MOUNT_SPEC; do
+    # TODO: a pathname with ' on ' will mess this up. Unfortunately, mount does
+    # not have a clean/safe/scriptable output option.
+    local MOUNT_SRC=$(echo "$MOUNT_SPEC" | sed -Ee 's| on .+||')
+    local MOUNT_POINT=$(echo "$MOUNT_SPEC" | sed -Ee 's|.+ on (/.+) \(.+|\1|')
+    packagesUnlink "$MOUNT_POINT" "$MOUNT_SRC"
+  done < <(mount | grep -s "$PACKAGE_PATH/node_modules" || echowarn "Did not find any linked packages in '$(basename "$PACKAGE_PATH")'.")
 }

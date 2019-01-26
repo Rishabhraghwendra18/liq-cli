@@ -23,6 +23,15 @@ packages-deploy() {
 }
 
 packages-link() {
+  local TMP
+  TMP=$(setSimpleOptions UNLINK -- "$@") \
+    || ( usage-project-packages; echoerrandexit "Bad options." )
+  eval "$TMP"
+
+  if [[ -n "$UNLINK" ]] && (( $# == 0 )); then
+    packagesUnlinkAll "$BASE_DIR"
+  fi
+
   local LINK_SPEC
   for LINK_SPEC in "$@"; do
     local LINK_PROJECT=$(echo "$LINK_SPEC" | awk -F: '{print $1}')
@@ -54,7 +63,7 @@ packages-link() {
           break;
         fi
       elif (( $CANDIDATE_COUNT > 0 )); then
-        echoerrandexit "Project '$LINK_PROJECT' contains multiple packages. You must specify the package to link. Try\ncatalyst packages link ${LINK_PROJECT}:<package name>"
+        echoerrandexit "Project '$LINK_PROJECT' contains multiple packages. You must specify the package. Try\ncatalyst packages link $(test ! -n "$UNLINK" || echo "--unlink " )${LINK_PROJECT}:<package name>"
       fi
       CANDIDATE_COUNT=$(( $CANDIDATE_COUNT + 1 ))
     done < <(find -H "${CATALYST_PLAYGROUND}/${LINK_PROJECT}" -name "package.json" -not -path "*/node_modules*/*")
@@ -62,17 +71,11 @@ packages-link() {
     # If we get here without exiting, then 'CANDIDATE_PACKAGE_FILE' has the
     # location of the package.json we want to link.
     local CANDIDATE_PACKAGE_DIR=$(dirname "$CANDIDATE_PACKAGE_FILE")
-    # 1) Setup the to-be-linked-packages dependencies.
-    packagesLinkNodeModules "${CANDIDATE_PACKAGE_DIR}"
-    packagesLinkPeerDep
-    # 2) Link the package to the base project.
-    packagesLinkNodeModules "${BASE_DIR}"
-    # Delete the link to the current install, if any.
-    rm "${BASE_DIR}/node_modules/${CANDIDATE_PACKAGE_NAME}" 2>/dev/null || true
-    if [[ "${CANDIDATE_PACKAGE_NAME}" == '@'*'/'* ]]; then
-      ln -s "${CANDIDATE_PACKAGE_DIR}" "${BASE_DIR}/node_modules/$(dirname "$CANDIDATE_PACKAGE_NAME")"
+    local INSTALLED_PACKAGE_DIR="${BASE_DIR}/node_modules/${CANDIDATE_PACKAGE_NAME}"
+    if [[ -z "$UNLINK" ]]; then
+      packagesLink "$INSTALLED_PACKAGE_DIR" "$CANDIDATE_PACKAGE_DIR"
     else
-      ln -s "${CANDIDATE_PACKAGE_DIR}" "${BASE_DIR}/node_modules"
+      packagesUnlink "$INSTALLED_PACKAGE_DIR" "$CANDIDATE_PACKAGE_DIR"
     fi
   done
 }

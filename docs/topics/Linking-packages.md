@@ -34,9 +34,9 @@ and everything will work fine.
 
 ## Downsides
 
-Because OSX no longer supports hard links (see below) and the built-in 
-`mount -t bind` doesn't work (unknown reason), it's necessary to use OSX Fuse
-+ `bindfs`. The first issue is that while `bindfs` can be installed with
+Because OSX no longer supports hard links (see below) and the built-in
+`mount -t bind` doesn't work (error message unclear), it's necessary to use OSX
+Fuse plus `bindfs`. The first issue is that while `bindfs` can be installed with
 Homebrew, OSX Fuse cannot. While the command-line install process could be
 automated, it would be fragile. So, this does require that the user install
 OSX Fuse.
@@ -55,7 +55,8 @@ presumably work, except that [hard links are no longer supported in OSX as of
 2018](https://stackoverflow.com/a/52754343/929494) (through at least
 2019-01-26). On the plus side, by mounting the bound directory with "read only",
 we avoid the problem of accidentally deleting everything in the source directory
-which would be inherent with the use of hard links.
+which would be inherent with the use of hard links. (Note, `rm -rf` with as root
+can still cause problems.)
 
 ## Other approaches
 
