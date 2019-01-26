@@ -46,17 +46,11 @@ packages-link() {
     local CANDIDATE_PACKAGE_FILE=''
     local CANDIDATE_PACKAGE_FILE_IT=''
     local CANDIDATE_COUNT=0
-    # Huh... piping the find causes everything to be run in a forked process (I
-    # guess) because the vars set in the loop are not set after exiting
-    # read a b dump < <(echo 1 2 3 4 5)
     while read CANDIDATE_PACKAGE_FILE_IT; do
       # Not sure why, but the _IT is necessary because setting
       # CANDIDATE_PACKAGE_FILE directly in the read causes the value to reset
       # after the loop.
       CANDIDATE_PACKAGE_FILE="${CANDIDATE_PACKAGE_FILE_IT}"
-    # find -H "${CATALYST_PLAYGROUND}/${LINK_PROJECT}" -name "package.json" -not -path "*/node_modules/*" | while read CANDIDATE_PACKAGE_FILE; do
-    # local CANDIDATE_PACKAGE_FILES="$(find -H "${CATALYST_PLAYGROUND}/${LINK_PROJECT}" -name "package.json" -not -path "*/node_modules/*")"
-    # for CANDIDATE_PACKAGE_FILE in '/Users/zane/playground/catalyst-core-api/package.json'; do
       CANDIDATE_PACKAGE_NAME=$(cat "$CANDIDATE_PACKAGE_FILE" | jq --raw-output '.name | @sh' | tr -d "'")
       if [[ -n "$LINK_PACKAGE" ]]; then
         if [[ "$LINK_PACKAGE" == "$CANDIDATE_PACKAGE_NAME" ]]; then
