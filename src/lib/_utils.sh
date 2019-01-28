@@ -153,7 +153,7 @@ requireCatalystfile() {
 }
 
 requireNpmPackage() {
-  findFile "${PWD}" 'package.json' PACKAGE_FILE
+  findFile "${BASE_DIR}" 'package.json' PACKAGE_FILE
 }
 
 sourceWorkspaceConfig() {
