@@ -15,5 +15,5 @@ The ${underline}package name${reset} parameter in the 'add' and 'delete' actions
 there is a single package in the current repository.
 EOF
 
-  test -n "$SUMMARY_ONLY" || helperHandler "$PREFIX" usageHelperAlphaPackagesNote
+  test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" usageHelperAlphaPackagesNote
 }

@@ -8,5 +8,5 @@ ${PREFIX}${cyan_u}project${reset} <action>:
   ${underline}publish${reset}: Updates the project site.
 EOF
 
-  test -n "$SUMMARY_ONLY" || helperHandler "$PREFIX" usageHelperAlphaPackagesNote
+  test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" usageHelperAlphaPackagesNote
 }

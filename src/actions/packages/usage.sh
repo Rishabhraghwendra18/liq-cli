@@ -27,5 +27,5 @@ support the definition of test sets based on type (unit, integration, load,
 etc.) and name.
 EOF
 
-  test -n "$SUMMARY_ONLY" || helperHandler "$PREFIX" usageHelperAlphaPackagesNote
+  test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" usageHelperAlphaPackagesNote
 }
