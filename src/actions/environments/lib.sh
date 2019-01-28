@@ -43,9 +43,10 @@ updateEnvParam() {
   declare "$VAR_NAME"="$VALUE"
 }
 
-findProvidersFor() {
+environmentsFindProvidersFor() {
   local REQ_SERVICE="${1}"
   local RESULT_VAR_NAME="${2}"
+  local DEFAULT="${3:-}"
 
   local CAT_PACKAGE_PATHS=`getCatPackagePaths`
   declare -a SERVICES

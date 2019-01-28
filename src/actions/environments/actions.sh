@@ -21,12 +21,12 @@ environments-add() {
     fi
   fi
 
-  local REQ_SERVICES=`project-required-services`
+  local REQ_SERVICES=`required-services-list`
   local REQ_SERVICE
   CURR_ENV_SERVICES=()
   for REQ_SERVICE in $REQ_SERVICES; do
     local ANSWER
-    findProvidersFor "$REQ_SERVICE" ANSWER
+    environmentsFindProvidersFor "$REQ_SERVICE" ANSWER
     CURR_ENV_SERVICES+=("$ANSWER")
     local REQ_PARAM
     for REQ_PARAM in `getRequiredParameters "$ANSWER"`; do
@@ -171,4 +171,9 @@ environments-show() {
   #else
   #  echoerrandexit "No such environment '${ENV_NAME}'."
   #fi
+}
+
+environments-update() {
+  echo "TODO: 'environments update' not yet implemened." >&2
+  exit 10
 }
