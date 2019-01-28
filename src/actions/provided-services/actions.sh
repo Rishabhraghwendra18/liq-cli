@@ -1,3 +1,8 @@
+requirements-provided-services() {
+  requireCatalystfile
+  requirePackage
+}
+
 project-provided-services() {
   local PACKAGE=`cat "$PACKAGE_FILE"`
 
@@ -27,7 +32,7 @@ project-provided-services() {
   fi
 }
 
-project-provided-services-add() {
+provided-services-add() {
   # TODO: check for global to allow programatic use
   local SERVICE_NAME="${1:-}"
   if [[ -z "$SERVICE_NAME" ]]; then
@@ -95,7 +100,7 @@ EOF
   echo "$PACKAGE" | jq > "$PACKAGE_FILE"
 }
 
-project-provided-services-delete() {
+provided-services-delete() {
   if (( $# == 0 )); then
     echoerrandexit "Must specify service names to delete."
   fi
