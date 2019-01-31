@@ -103,3 +103,23 @@ environmentsFindProvidersFor() {
 
   eval "$RESULT_VAR_NAME='${REQ_SERVICE}:${SELECTED_PROVIDER}:${SELECTED_SERVICE}'"
 }
+
+environmentsGetDefaultFromScripts() {
+  local VAR_NAME="$1"
+  local FQ_SERVICE="$2"
+  local REQ_PARAM="$3"
+
+  local SERV_SCRIPT
+  for SERV_SCRIPT in `getCtrlScripts "$FQ_SERVICE"`; do
+    # The script might be our own or an installed dependency.
+    if [[ -e "${BASE_DIR}/bin/${SERV_SCRIPT}" ]]; then
+      DEFAULT_VAL=`"${BASE_DIR}/bin/${SERV_SCRIPT}" param-default "$CURR_ENV_PURPOSE" "$REQ_PARAM"`
+    else
+      DEFAULT_VAL=`npx --no-install $SERV_SCRIPT param-default "$CURR_ENV_PURPOSE" "$REQ_PARAM"`
+    fi
+    if [[ -n "$DEFAULT_VAL" ]]; then
+      eval "$VAR_NAME='$DEFAULT_VAL'"
+      break
+    fi
+  done
+}
