@@ -528,6 +528,29 @@ selectDoneCancelAll() {
   _commonSelectHelper '' "$VAR_NAME" '<done> <cancel>' '<all>' "$@"
 }
 
+getPackageDef() {
+  local VAR_NAME="$1"
+  local FQN_PACKAGE_NAME="$2"
+
+  # The package we're looking at might be our own or might be a dependency.
+  if [[ "$FQN_PACKAGE_NAME" == "$PACKAGE_NAME" ]]; then
+    eval "$VAR_NAME=\"\$PACKAGE\""
+  else
+    eval "$VAR_NAME=\$(npm explore \"$FQN_PACKAGE_NAME\" -- cat package.json)"
+  fi
+}
+
+runScript() {
+  local SERV_SCRIPT="$1"; shift
+
+  # The script might be our own or an installed dependency.
+  if [[ -e "${BASE_DIR}/bin/${SERV_SCRIPT}" ]]; then
+    "${BASE_DIR}/bin/${SERV_SCRIPT}" "$@"
+  else
+    npx --no-install $SERV_SCRIPT "$@"
+  fi
+}
+
 getProvidedServiceValues() {
   local SERV_KEY="$1"
   local FIELD_LABEL="$2"
@@ -536,12 +559,7 @@ getProvidedServiceValues() {
   local SERV_PACKAGE_NAME=`echo "$SERV_KEY" | cut -d: -f2`
   local SERV_NAME=`echo "$SERV_KEY" | cut -d: -f3`
   local SERV_PACKAGE
-  # The package we're looking at might be our own or might be a dependency.
-  if [[ "$SERV_PACKAGE_NAME" == "$PACKAGE_NAME" ]]; then
-    SERV_PACKAGE="$PACKAGE"
-  else
-    SERV_PACKAGE=`npm explore "$SERV_PACKAGE_NAME" -- cat package.json`
-  fi
+  getPackageDef SERV_PACKAGE "$SERV_PACKAGE_NAME"
 
   echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"${FIELD_LABEL}\" | @sh" | tr -d "'"
 }

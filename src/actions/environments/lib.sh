@@ -111,12 +111,7 @@ environmentsGetDefaultFromScripts() {
 
   local SERV_SCRIPT
   for SERV_SCRIPT in `getCtrlScripts "$FQ_SERVICE"`; do
-    # The script might be our own or an installed dependency.
-    if [[ -e "${BASE_DIR}/bin/${SERV_SCRIPT}" ]]; then
-      DEFAULT_VAL=`"${BASE_DIR}/bin/${SERV_SCRIPT}" param-default "$CURR_ENV_PURPOSE" "$REQ_PARAM"`
-    else
-      DEFAULT_VAL=`npx --no-install $SERV_SCRIPT param-default "$CURR_ENV_PURPOSE" "$REQ_PARAM"`
-    fi
+    DEFAULT_VAL=`runScript "$SERV_SCRIPT" param-default "$CURR_ENV_PURPOSE" "$REQ_PARAM"`
     if [[ -n "$DEFAULT_VAL" ]]; then
       eval "$VAR_NAME='$DEFAULT_VAL'"
       break
