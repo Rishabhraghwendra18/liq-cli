@@ -32,7 +32,7 @@ required-services-delete() {
   if [[ $# -eq 0 ]]; then # interactive delete
     local DEL
     while [[ $DEL != '...quit...' ]]; do
-      local OPTIONS=`project-required-services-list`
+      local OPTIONS=`required-services-list`
       # TODO: rework to support canctel; add and use 'selectDone'?
       if [[ -z "$OPTIONS" ]]; then
         echo "Nothing left to delete."
@@ -44,7 +44,7 @@ required-services-delete() {
               DEL='...quit...'
               break;;
             *)
-              project-required-services -d "$DEL"
+              required-services-delete "$DEL"
               PACKAGE=`cat "$PACKAGE_FILE"`
               break;;
           esac

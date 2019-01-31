@@ -214,7 +214,7 @@ requireAnswer() {
   local DEFAULT="${3:-}"
 
   if [[ -n "${DEFAULT}" ]]; then
-    PROMPT="${PROMPT}(${DEFAULT}) "
+    PROMPT="${PROMPT} (${DEFAULT}) "
   fi
 
   while [ -z ${!VAR:-} ]; do
@@ -469,14 +469,24 @@ selectDoneCancelAll() {
   _commonSelectHelper '' "$VAR_NAME" '<done> <cancel>' '<all>' "$@"
 }
 
-getRequiredParameters() {
+getProvidedServiceValues() {
   local SERV_KEY="$1"
+  local FIELD_LABEL="$2"
+
   local SERV_IFACE=`echo "$SERV_KEY" | cut -d: -f1`
   local SERV_PACKAGE_NAME=`echo "$SERV_KEY" | cut -d: -f2`
   local SERV_NAME=`echo "$SERV_KEY" | cut -d: -f3`
   local SERV_PACKAGE=`npm explore "$SERV_PACKAGE_NAME" -- cat package.json`
 
-  echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"params-req\" | @sh" | tr -d "'"
+  echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"${FIELD_LABEL}\" | @sh" | tr -d "'"
+}
+
+getRequiredParameters() {
+  getProvidedServiceValues "$1" "params-req"
+}
+
+getCtrlScripts() {
+  getProvidedServiceValues "$1" "ctrl-scripts"
 }
 
 pressAnyKeyToContinue() {
@@ -486,8 +496,8 @@ pressAnyKeyToContinue() {
 
 getCatPackagePaths() {
   local NPM_ROOT=`npm root`
-  local CAT_PACKAGE_PATHS=`find "$NPM_ROOT"/\@* -maxdepth 2 -name ".catalyst" -exec dirname {} \;`
-  CAT_PACKAGE_PATHS="${CAT_PACKAGE_PATHS} "`find "$NPM_ROOT" -maxdepth 2 -name ".catalyst" -exec dirname {} \;`
+  local CAT_PACKAGE_PATHS=`find "$NPM_ROOT"/\@* -maxdepth 2 -name ".catalyst" -not -path "*.prelink/*" -exec dirname {} \;`
+  CAT_PACKAGE_PATHS="${CAT_PACKAGE_PATHS} "`find "$NPM_ROOT" -maxdepth 2 -name ".catalyst" -not -path "*.prelink/*" -exec dirname {} \;`
 
   echo "$CAT_PACKAGE_PATHS"
 }

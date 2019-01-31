@@ -49,32 +49,25 @@ environmentsFindProvidersFor() {
   local DEFAULT="${3:-}"
 
   local CAT_PACKAGE_PATHS=`getCatPackagePaths`
-  declare -a SERVICES
-  declare -a SERVICE_PACKAGES
-  local CAT_PACKAGE_PATH
+  local SERVICES SERVICE_PACKAGES PROVIDER_OPTIONS CAT_PACKAGE_PATH
   for CAT_PACKAGE_PATH in $CAT_PACKAGE_PATHS; do
     local NPM_PACKAGE=`cat "${CAT_PACKAGE_PATH}/package.json"`
     local PACKAGE_NAME=`cat "${CAT_PACKAGE_PATH}/package.json" | jq --raw-output ".name"`
     for SERVICE in `echo "$NPM_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select((.\"interface-classes\" | .[] | select(. == \"$REQ_SERVICE\")) | length > 0) | .name | @sh" | tr -d "'"`; do
-      SERVICES+=("$SERVICE")
-      SERVICE_PACKAGES+=("$PACKAGE_NAME")
+      SERVICES=$((test -n "$SERVICE" && echo "$SERVICES '$SERVICE'") || echo "'$SERVICE'")
+      SERVICE_PACKAGES=$((test -n "$SERVICE_PACKAGES" && echo "$SERVICE_PACKAGES '$PACKAGE_NAME'") || echo "'$PACKAGE_NAME'")
+      PROVIDER_OPTIONS=$((test -n "$PROVIDER_OPTIONS" && echo "$PROVIDER_OPTIONS '${SERVICE} (from ${PACKAGE_NAME})'") || echo "'${SERVICE} (from ${PACKAGE_NAME})'")
     done
   done
 
-  declare -a PROVIDER_OPTIONS
-  local I=0
-  while (($I < ${#SERVICES[@]})); do
-    PROVIDER_OPTIONS+="${SERVICES[$I]} (from ${SERVICE_PACKAGES[$I]})"
-    I=$(($I + 1))
-  done
-  if (( $I == 0 )); then
+  if test -z "$SERVICES"; then
     echoerrandexit "Could not find any providers for '$REQ_SERVICE'."
   fi
 
   echo "Select provider for required service '$REQ_SERVICE':"
   local PROVIDER
   # TODO: is there a better way to preserve the word boundries? We can use the '${ARRAY[@]@Q}' construct in bash 4.4
-  eval 'select PROVIDER in "<cancel>" '$(printf "'%s' " "${PROVIDER_OPTIONS[@]}")'; do
+  eval 'select PROVIDER in "<cancel>" '$PROVIDER_OPTIONS'; do
     case "$PROVIDER" in
       "<cancel>")
         exit;;

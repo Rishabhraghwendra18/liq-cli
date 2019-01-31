@@ -30,8 +30,18 @@ environments-add() {
     CURR_ENV_SERVICES+=("$ANSWER")
     local REQ_PARAM
     for REQ_PARAM in `getRequiredParameters "$ANSWER"`; do
+
+      local DEFAULT_VAL
+      local SERV_SCRIPT
+      for SERV_SCRIPT in `getCtrlScripts "$ANSWER"`; do
+        DEFAULT_VAL=`npx --no-install $SERV_SCRIPT param-default "$CURR_ENV_PURPOSE" "$REQ_PARAM"`
+        if [[ -n "$DEFAULT_VAL" ]]; then
+          break
+        fi
+      done
+
       local PARAM_VAL=''
-      requireAnswer "Value for required parameter '$REQ_PARAM': " PARAM_VAL
+      requireAnswer "Value for required parameter '$REQ_PARAM': " PARAM_VAL "$DEFAULT_VAL"
       eval "$REQ_PARAM='$PARAM_VAL'"
     done
   done
