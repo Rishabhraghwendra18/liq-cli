@@ -6,6 +6,61 @@ requirements-environments() {
 # TODO: move this def
 STD_ENV_PUPRPOSES='dev test pre-production production'
 
+environments-update() {
+  local ENV_NAME="${1:-}"
+
+  if [[ -z "${ENV_NAME}" ]]; then
+    if [[ -L "${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env" ]]; then
+      requireEnvironment
+      ENV_NAME="$CURR_ENV"
+    else
+      selectOneCancel ENV_NAME $(environments-list --list-only)
+    fi
+  fi
+
+  if [[ ! -f "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
+    contextHelp
+    echoerrandexit "Unknown environment name '${ENV_NAME}'."
+  else
+    source "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}"
+  fi
+
+  local SELECT_DEFAULT="$CURR_ENV_PURPOSE"
+  unset $CURR_ENV_PURPOSE
+  PS3="Select purpose: "
+  selectDoneCancelOtherDefault CURR_ENV_PURPOSE $STD_ENV_PUPRPOSES
+  echo "$CURR_ENV_PURPOSE"
+
+
+
+
+  local REQ_SERV_IFACES=`required-services-list`
+  local REQ_SERV_IFACE
+  local PRIOR_ENV_SERVICES="${CURR_ENV_SERVICES[@]}"
+  CURR_ENV_SERVICES=()
+  for REQ_SERV_IFACE in $REQ_SERV_IFACES; do
+    local PRIOR_MATCH="$(echo "$PRIOR_ENV_SERVICES" | sed -Ee 's/(^|.* +)('$REQ_SERV_IFACE':[^ ]+)( +|$).*/\2/')"
+    if [[ -n "$PRIOR_MATCH" ]]; then
+      echo "(DEBUG) PRIOR_MATCH: $PRIOR_MATCH"
+      local PRIOR_SERVICE=$(echo "$PRIOR_MATCH" | cut -d: -f3)
+      local PRIOR_PACKAGE=$(echo "$PRIOR_MATCH" | cut -d: -f2)
+      echo "$PRIOR_SERVICE"
+      echo "$PRIOR_PACKAGE"
+      environmentsServiceDescription SELECT_DEFAULT "$PRIOR_SERVICE" "$PRIOR_PACKAGE"
+      SELECT_DEFAULT="'${SELECT_DEFAULT}'"
+      echo "1 |${SELECT_DEFAULT}"
+    else
+      echo 2
+      SELECT_DEFAULT=''
+    fi
+    local ANSWER
+    environmentsFindProvidersFor "$REQ_SERV_IFACE" ANSWER
+    CURR_ENV_SERVICES+=("$ANSWER")
+  done
+
+  echo "${CURR_ENV_SERVICES[@]}"
+}
+
 environments-add() {
   local ENV_NAME="${1:-}"
   # TODO: echo "Adding environment for project $CURR_PROJECT"
@@ -14,19 +69,16 @@ environments-add() {
   fi
 
   if [[ -z "${CURR_ENV_PURPOSE:-}" ]]; then
-    echo "Select purpose:"
-    select CURR_ENV_PURPOSE in $STD_ENV_PUPRPOSES '<other>'; do break; done
-    if [[ "$CURR_ENV_PURPOSE" == '<other>' ]]; then
-      requireAnswer 'Purpose label: ' CURR_ENV_PURPOSE
-    fi
+    PS3="Select purpose: "
+    selectDoneCancelAllOther CURR_ENV_PURPOSE $STD_ENV_PUPRPOSES
   fi
 
-  local REQ_SERVICES=`required-services-list`
-  local REQ_SERVICE
+  local REQ_SERV_IFACES=`required-services-list`
+  local REQ_SERV_IFACE
   CURR_ENV_SERVICES=()
-  for REQ_SERVICE in $REQ_SERVICES; do
+  for REQ_SERV_IFACE in $REQ_SERV_IFACES; do
     local ANSWER
-    environmentsFindProvidersFor "$REQ_SERVICE" ANSWER
+    environmentsFindProvidersFor "$REQ_SERV_IFACE" ANSWER
     CURR_ENV_SERVICES+=("$ANSWER")
     local REQ_PARAM
     for REQ_PARAM in `getRequiredParameters "$ANSWER"`; do
@@ -97,7 +149,7 @@ environments-deselect() {
 }
 
 environments-list() {
-  local RESULT="$(doEnvironmentList)"
+  local RESULT="$(doEnvironmentList "$@")"
   if test -n "$RESULT"; then
     echo "$RESULT"
   else
@@ -181,9 +233,4 @@ environments-show() {
   #else
   #  echoerrandexit "No such environment '${ENV_NAME}'."
   #fi
-}
-
-environments-update() {
-  echo "TODO: 'environments update' not yet implemened." >&2
-  exit 10
 }
