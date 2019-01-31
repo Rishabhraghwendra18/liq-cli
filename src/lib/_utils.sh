@@ -391,7 +391,6 @@ _commonSelectHelper() {
     # This is another quote preserving technique. We expect 'SELECT_DEFAULT'
     # might be "'foo bar' 'baz'".
     eval 'for DEFAULT in '${SELECT_DEFAULT:-}'; do
-      echo "DEFAULT: $DEFAULT"
       if [[ "$DEFAULT" == "$OPT" ]]; then
         OPT="*${OPT}"
       fi
@@ -536,7 +535,13 @@ getProvidedServiceValues() {
   local SERV_IFACE=`echo "$SERV_KEY" | cut -d: -f1`
   local SERV_PACKAGE_NAME=`echo "$SERV_KEY" | cut -d: -f2`
   local SERV_NAME=`echo "$SERV_KEY" | cut -d: -f3`
-  local SERV_PACKAGE=`npm explore "$SERV_PACKAGE_NAME" -- cat package.json`
+  local SERV_PACKAGE
+  # The package we're looking at might be our own or might be a dependency.
+  if [[ "$SERV_PACKAGE_NAME" == "$PACKAGE_NAME" ]]; then
+    SERV_PACKAGE="$PACKAGE"
+  else
+    SERV_PACKAGE=`npm explore "$SERV_PACKAGE_NAME" -- cat package.json`
+  fi
 
   echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"${FIELD_LABEL}\" | @sh" | tr -d "'"
 }
@@ -637,7 +642,7 @@ requireCleanRepo() {
 
   cd "${CATALYST_PLAYGROUND}/${_IP}"
   ( test -n "$_WORK_BRANCH" \
-      && git branch | grep -sE "^\* ${_WORK_BRANCH}" > /dev/null) \
+      && git branch | grep -qE "^\* ${_WORK_BRANCH}" ) \
     || git diff-index --quiet HEAD -- \
     || echoerrandexit "Cannot perform action '${ACTION}'. '${_IP}' has uncommitted changes. Please resolve." 1
 }
