@@ -51,16 +51,12 @@ environmentsFindProvidersFor() {
   local CAT_PACKAGE_PATHS=`getCatPackagePaths`
   local SERVICES SERVICE_PACKAGES PROVIDER_OPTIONS CAT_PACKAGE_PATH
   for CAT_PACKAGE_PATH in $CAT_PACKAGE_PATHS; do
-    echo "CAT_PACKAGE_PATH: $CAT_PACKAGE_PATH"
     local NPM_PACKAGE=`cat "${CAT_PACKAGE_PATH}/package.json"`
     local PACKAGE_NAME=`cat "${CAT_PACKAGE_PATH}/package.json" | jq --raw-output ".name"`
     for SERVICE in `echo "$NPM_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select((.\"interface-classes\" | .[] | select(. == \"$REQ_SERVICE\")) | length > 0) | .name | @sh" | tr -d "'"`; do
       SERVICES=$((test -n "$SERVICE" && echo "$SERVICES '$SERVICE'") || echo "'$SERVICE'")
       SERVICE_PACKAGES=$((test -n "$SERVICE_PACKAGES" && echo "$SERVICE_PACKAGES '$PACKAGE_NAME'") || echo "'$PACKAGE_NAME'")
       PROVIDER_OPTIONS=$((test -n "$PROVIDER_OPTIONS" && echo "$PROVIDER_OPTIONS '${SERVICE} (from ${PACKAGE_NAME})'") || echo "'${SERVICE} (from ${PACKAGE_NAME})'")
-      echo $SERVICES
-      echo $SERVICE_PACKAGES
-      echo $PROVIDER_OPTIONS
     done
   done
 
