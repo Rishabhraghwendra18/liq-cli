@@ -6,55 +6,6 @@ requirements-environments() {
 # TODO: move this def
 STD_ENV_PUPRPOSES='dev test pre-production production'
 
-environments-update() {
-  local ENV_NAME="${1:-}"
-
-  if [[ -z "${ENV_NAME}" ]]; then
-    if [[ -L "${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env" ]]; then
-      requireEnvironment
-      ENV_NAME="$CURR_ENV"
-    else
-      selectOneCancel ENV_NAME $(environments-list --list-only)
-    fi
-  fi
-
-  if [[ ! -f "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
-    contextHelp
-    echoerrandexit "Unknown environment name '${ENV_NAME}'."
-  else
-    source "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}"
-  fi
-
-  local SELECT_DEFAULT="$CURR_ENV_PURPOSE"
-  unset CURR_ENV_PURPOSE
-  PS3="Select purpose: "
-  selectDoneCancelOtherDefault CURR_ENV_PURPOSE $STD_ENV_PUPRPOSES
-
-  local REQ_SERV_IFACES=`required-services-list`
-  local REQ_SERV_IFACE
-  local PRIOR_ENV_SERVICES="${CURR_ENV_SERVICES[@]}"
-  CURR_ENV_SERVICES=()
-  for REQ_SERV_IFACE in $REQ_SERV_IFACES; do
-    local PRIOR_MATCH="$(echo "$PRIOR_ENV_SERVICES" | sed -Ee 's/(^|.* +)('$REQ_SERV_IFACE':[^ ]+)( +|$).*/\2/')"
-    if [[ -n "$PRIOR_MATCH" ]]; then
-      echo "(DEBUG) PRIOR_MATCH: $PRIOR_MATCH"
-      local PRIOR_SERVICE=$(echo "$PRIOR_MATCH" | cut -d: -f3)
-      local PRIOR_PACKAGE=$(echo "$PRIOR_MATCH" | cut -d: -f2)
-      echo "$PRIOR_SERVICE"
-      echo "$PRIOR_PACKAGE"
-      environmentsServiceDescription SELECT_DEFAULT "$PRIOR_SERVICE" "$PRIOR_PACKAGE"
-      SELECT_DEFAULT="'${SELECT_DEFAULT}'"
-    else
-      SELECT_DEFAULT=''
-    fi
-    local ANSWER
-    environmentsFindProvidersFor "$REQ_SERV_IFACE" ANSWER
-    CURR_ENV_SERVICES+=("$ANSWER")
-  done
-
-  echo "${CURR_ENV_SERVICES[@]}"
-}
-
 environments-add() {
   local ENV_NAME="${1:-}"
   # TODO: echo "Adding environment for project $CURR_PROJECT"
@@ -71,20 +22,16 @@ environments-add() {
   local REQ_SERV_IFACE
   CURR_ENV_SERVICES=()
   for REQ_SERV_IFACE in $REQ_SERV_IFACES; do
+    # select the service provider
     local ANSWER
     environmentsFindProvidersFor "$REQ_SERV_IFACE" ANSWER
     CURR_ENV_SERVICES+=("$ANSWER")
+
+    # define required params
     local REQ_PARAM
     for REQ_PARAM in `getRequiredParameters "$ANSWER"`; do
-
       local DEFAULT_VAL
-      local SERV_SCRIPT
-      for SERV_SCRIPT in `getCtrlScripts "$ANSWER"`; do
-        DEFAULT_VAL=`npx --no-install $SERV_SCRIPT param-default "$CURR_ENV_PURPOSE" "$REQ_PARAM"`
-        if [[ -n "$DEFAULT_VAL" ]]; then
-          break
-        fi
-      done
+      environmentsGetDefaultFromScripts DEFAULT_VAL "$ANSWER" "$REQ_PARAM"
 
       local PARAM_VAL=''
       requireAnswer "Value for required parameter '$REQ_PARAM': " PARAM_VAL "$DEFAULT_VAL"
@@ -227,4 +174,65 @@ environments-show() {
   #else
   #  echoerrandexit "No such environment '${ENV_NAME}'."
   #fi
+}
+
+# TODO: this shares a lot of code with environments-add
+environments-update() {
+  local ENV_NAME="${1:-}"
+
+  if [[ -z "${ENV_NAME}" ]]; then
+    if [[ -L "${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env" ]]; then
+      requireEnvironment
+      ENV_NAME="$CURR_ENV"
+    else
+      selectOneCancel ENV_NAME $(environments-list --list-only)
+    fi
+  fi
+
+  if [[ ! -f "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
+    contextHelp
+    echoerrandexit "Unknown environment name '${ENV_NAME}'."
+  else
+    source "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}"
+  fi
+
+  local SELECT_DEFAULT="$CURR_ENV_PURPOSE"
+  unset CURR_ENV_PURPOSE
+  PS3="Select purpose: "
+  selectDoneCancelOtherDefault CURR_ENV_PURPOSE $STD_ENV_PUPRPOSES
+
+  local REQ_SERV_IFACES=`required-services-list`
+  local REQ_SERV_IFACE
+  local PRIOR_ENV_SERVICES="${CURR_ENV_SERVICES[@]}"
+  CURR_ENV_SERVICES=()
+  for REQ_SERV_IFACE in $REQ_SERV_IFACES; do
+    local PRIOR_MATCH="$(echo "$PRIOR_ENV_SERVICES" | sed -Ee 's/(^|.* +)('$REQ_SERV_IFACE':[^ ]+)( +|$).*/\2/')"
+    if echo "$PRIOR_ENV_SERVICES" | grep -qE '(^|.* +)('$REQ_SERV_IFACE':[^ ]+)( +|$).*'; then
+      local PRIOR_SERVICE=$(echo "$PRIOR_MATCH" | cut -d: -f3)
+      local PRIOR_PACKAGE=$(echo "$PRIOR_MATCH" | cut -d: -f2)
+      environmentsServiceDescription SELECT_DEFAULT "$PRIOR_SERVICE" "$PRIOR_PACKAGE"
+      SELECT_DEFAULT="'${SELECT_DEFAULT}'"
+    else
+      SELECT_DEFAULT=''
+    fi
+    local ANSWER
+    environmentsFindProvidersFor "$REQ_SERV_IFACE" ANSWER
+    CURR_ENV_SERVICES+=("$ANSWER")
+
+    for REQ_PARAM in `getRequiredParameters "$ANSWER"`; do
+      local DEFAULT_VAL=${!REQ_PARAM:-}
+      if [[ -n "${!REQ_PARAM:-}" ]]; then # it's set in the prior env def
+        eval "$REQ_PARAM=''"
+      else
+        # check the scripts for defaults for new values
+        environmentsGetDefaultFromScripts DEFAULT_VAL "$ANSWER" "$REQ_PARAM"
+      fi
+
+      local PARAM_VAL=''
+      requireAnswer "Value for required parameter '$REQ_PARAM': " PARAM_VAL "$DEFAULT_VAL"
+      eval "$REQ_PARAM='$PARAM_VAL'"
+    done
+  done
+
+  updateEnvironment
 }
