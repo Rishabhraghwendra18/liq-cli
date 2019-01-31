@@ -64,7 +64,7 @@ environmentsFindProvidersFor() {
 
   local CAT_PACKAGE_PATHS=`getCatPackagePaths`
   local SERVICES SERVICE_PACKAGES PROVIDER_OPTIONS CAT_PACKAGE_PATH
-  for CAT_PACKAGE_PATH in $CAT_PACKAGE_PATHS; do
+  for CAT_PACKAGE_PATH in "${BASE_DIR}" $CAT_PACKAGE_PATHS; do
     local NPM_PACKAGE=`cat "${CAT_PACKAGE_PATH}/package.json"`
     local PACKAGE_NAME=`cat "${CAT_PACKAGE_PATH}/package.json" | jq --raw-output ".name"`
     local SERVICE
@@ -84,7 +84,6 @@ environmentsFindProvidersFor() {
   echo "Select provider for required service '$REQ_SERVICE':"
   local PROVIDER
   if [[ -z "${SELECT_DEFAULT:-}" ]]; then
-    echo a
     # TODO: is there a better way to preserve the word boundries? We can use the '${ARRAY[@]@Q}' construct in bash 4.4
     # We 'eval' because 'PROVIDER_OPTIONS' may have quoted words, but if we just
     # expanded it directly, we could options like:
@@ -94,13 +93,9 @@ environmentsFindProvidersFor() {
     # instead of:
     # 1) foo bar
     # 2) baz
-    echo "PO: $PROVIDER_OPTIONS"
-    echo "selectOneCancel PROVIDER $PROVIDER_OPTIONS"
     eval "selectOneCancel PROVIDER $PROVIDER_OPTIONS"
   else
-    echo b
-    eval "selectOneCancel PROVIDER $PROVIDER_OPTIONS"
-    # eval 'selecOneCancelDefault PROVIDER '$PROVIDER_OPTIONS
+    eval "selectOneCancelDefault PROVIDER $PROVIDER_OPTIONS"
   fi
 
   local SELECTED_PROVIDER=`echo "$PROVIDER" | sed -E -e 's/[^(]+from ([^)]+)/\1/'`

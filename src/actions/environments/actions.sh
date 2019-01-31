@@ -26,13 +26,9 @@ environments-update() {
   fi
 
   local SELECT_DEFAULT="$CURR_ENV_PURPOSE"
-  unset $CURR_ENV_PURPOSE
+  unset CURR_ENV_PURPOSE
   PS3="Select purpose: "
   selectDoneCancelOtherDefault CURR_ENV_PURPOSE $STD_ENV_PUPRPOSES
-  echo "$CURR_ENV_PURPOSE"
-
-
-
 
   local REQ_SERV_IFACES=`required-services-list`
   local REQ_SERV_IFACE
@@ -48,9 +44,7 @@ environments-update() {
       echo "$PRIOR_PACKAGE"
       environmentsServiceDescription SELECT_DEFAULT "$PRIOR_SERVICE" "$PRIOR_PACKAGE"
       SELECT_DEFAULT="'${SELECT_DEFAULT}'"
-      echo "1 |${SELECT_DEFAULT}"
     else
-      echo 2
       SELECT_DEFAULT=''
     fi
     local ANSWER

@@ -403,12 +403,6 @@ _commonSelectHelper() {
     fi
   done
 
-  # local DEFAULT
-  # eval 'for DEFAULT in '${SELECT_DEFAULT:-}'; do
-  #echo "s:(^| +)('"'"'?)($DEFAULT)('"'"'?)( +|\$):\\1\\2*\\3\\4\\5:"
-    # _OPTIONS="$(echo "$_OPTIONS" | sed -Ee "s:(^| +)('"'"'?)($DEFAULT)('"'"'?)( +|\$):\\1\\2*\\3\\4\\5:")"
-  #done'
-
   local _OPTIONS="$_ENUM_OPTIONS"
   if [[ -n "$_PRE_OPTS" ]]; then
     _OPTIONS="$(echo "$_PRE_OPTS" | tr ' ' '%')%$_OPTIONS"
@@ -449,7 +443,7 @@ _commonSelectHelper() {
           eval "$_VAR_NAME='$(echo $_ENUM_OPTIONS | tr '%' ' ')'"
           _QUIT='true';;
         '<default>')
-          eval "${_VAR_NAME}='${SELECT_DEFAULT}'"
+          eval "${_VAR_NAME}=\"${SELECT_DEFAULT}\""
           _QUIT='true';;
         *)
           updateVar;;
@@ -457,7 +451,7 @@ _commonSelectHelper() {
 
       # after first selection, 'default' is nullified
       SELECT_DEFAULT=''
-      _POST_OPTS=$(echo "$_POST_OPTS" | sed -Ee 's/(^|%)<default>(%|$)//')
+      _OPTIONS=$(echo "$_OPTIONS" | sed -Ee 's/(^|%)<default>(%|$)//' | tr -d '*')
 
       if [[ -n "$_SELECT_LIMIT" ]] && (( $_SELECT_LIMIT >= $_SELECTED_COUNT )); then
         _QUIT='true'
