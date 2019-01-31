@@ -146,7 +146,7 @@ packagesUnlink() {
   local LINK_PACKAGE_NAME=$(basename "$LINK_PACKAGE_DIR")
   local CURR_PROJECT=$(basename "$BASE_DIR")
 
-  if mount | grep -s "$INSTALLED_PACKAGE_DIR" >/dev/null; then
+  if mount | grep -q "$INSTALLED_PACKAGE_DIR"; then
     umount "$INSTALLED_PACKAGE_DIR"
     if [[ -e "${INSTALLED_PACKAGE_DIR}.prelink" ]]; then
       mv "${INSTALLED_PACKAGE_DIR}.prelink" "${INSTALLED_PACKAGE_DIR}"
