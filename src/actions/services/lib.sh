@@ -1,11 +1,12 @@
 ctrlScriptEnv() {
   local ENV_SETTINGS="BASE_DIR='${BASE_DIR}' _CATALYST_ENV_LOGS='${_CATALYST_ENV_LOGS}' SERV_NAME='${SERV_NAME}' SERV_IFACE='${SERV_IFACE}' PROCESS_NAME='${PROCESS_NAME:-}' SERV_LOG='${SERV_LOG:-}' SERV_ERR='${SERV_ERR:-}' PID_FILE='${PID_FILE:-}'"
+  local REQ_PARAMS=$(getRequiredParameters "$SERVICE_KEY")
   local REQ_PARAM
-  for REQ_PARAM in $(getRequiredParameters "$SERVICE_KEY"); do
+  for REQ_PARAM in $REQ_PARAMS; do
     ENV_SETTINGS="$ENV_SETTINGS $REQ_PARAM='${!REQ_PARAM}'"
   done
 
-  echo "$ENV_SETTINGS"
+  echo "$ENV_SETTINGS REQ_PARAMS='$REQ_PARAMS'"
 }
 
 testServMatch() {
