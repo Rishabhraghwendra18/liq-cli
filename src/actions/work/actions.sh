@@ -198,8 +198,13 @@ work-resume() {
 }
 
 work-show() {
+  local TMP
+  TMP=$(setSimpleOptions SELECT -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
   local WORK_NAME
-  workUserSelectOne WORK_NAME true '' "$@"
+  workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
 
   echo "Branch name: $WORK_NAME"
   echo
