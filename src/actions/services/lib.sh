@@ -1,11 +1,12 @@
 ctrlScriptEnv() {
   local ENV_SETTINGS="BASE_DIR='${BASE_DIR}' _CATALYST_ENV_LOGS='${_CATALYST_ENV_LOGS}' SERV_NAME='${SERV_NAME}' SERV_IFACE='${SERV_IFACE}' PROCESS_NAME='${PROCESS_NAME:-}' SERV_LOG='${SERV_LOG:-}' SERV_ERR='${SERV_ERR:-}' PID_FILE='${PID_FILE:-}'"
+  local REQ_PARAMS=$(getRequiredParameters "$SERVICE_KEY")
   local REQ_PARAM
-  for REQ_PARAM in $(getRequiredParameters "$SERVICE_KEY"); do
+  for REQ_PARAM in $REQ_PARAMS; do
     ENV_SETTINGS="$ENV_SETTINGS $REQ_PARAM='${!REQ_PARAM}'"
   done
 
-  echo "$ENV_SETTINGS"
+  echo "$ENV_SETTINGS REQ_PARAMS='$REQ_PARAMS'"
 }
 
 testServMatch() {
@@ -70,7 +71,8 @@ runtimeServiceRunner() {
     if testServMatch "$SERV_IFACE" "$@"; then
       local SERV_PACKAGE_NAME=`echo "$SERVICE_KEY" | cut -d: -f2`
       local SERV_NAME=`echo "$SERVICE_KEY" | cut -d: -f3`
-      local SERV_PACKAGE=`npm explore "$SERV_PACKAGE_NAME" -- cat package.json`
+      local SERV_PACKAGE
+      getPackageDef SERV_PACKAGE "$SERV_PACKAGE_NAME"
       local SERV_SCRIPT
       local SERV_SCRIPTS=`echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"ctrl-scripts\" | @sh" | tr -d "'"`
       local SERV_SCRIPT_ARRAY=( $SERV_SCRIPTS )
@@ -78,14 +80,14 @@ runtimeServiceRunner() {
       # give the process scripts their proper, self-declared order
       if (( $SERV_SCRIPT_COUNT > 1 )); then
         for SERV_SCRIPT in $SERV_SCRIPTS; do
-          SERV_SCRIPT_ARRAY[`eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT myorder"`]="$SERV_SCRIPT"
+          SERV_SCRIPT_ARRAY[$(eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT myorder")]="$SERV_SCRIPT"
         done
       fi
 
       local SERV_SCRIPT_INDEX=0
       local SERV_SCRIPTS_COOKIE=''
       for SERV_SCRIPT in ${SERV_SCRIPT_ARRAY[@]}; do
-        local SCRIPT_NAME=$(npx --no-install $SERV_SCRIPT name)
+        local SCRIPT_NAME=$(runScript $SERV_SCRIPT name)
         local PROCESS_NAME="${SERV_IFACE}"
         if (( $SERV_SCRIPT_COUNT > 1 )); then
           PROCESS_NAME="${SERV_IFACE}.${SCRIPT_NAME}"

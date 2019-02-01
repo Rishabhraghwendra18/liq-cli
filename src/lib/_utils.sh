@@ -168,11 +168,12 @@ requirePackage() {
 }
 
 requireEnvironment() {
-  requirePackage
   requireCatalystfile
+  requirePackage
   CURR_ENV_FILE="${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env"
-  if [[ ! -f "$CURR_ENV_FILE" ]]; then
-    echoerrandexit "Must select environment prior to invoking the '${GROUP} ${ACTION}' command."
+  if [[ ! -L "$CURR_ENV_FILE" ]]; then
+    contextHelp
+    echoerrandexit "No environment currently selected."
   fi
   CURR_ENV=`readlink "${CURR_ENV_FILE}" | xargs basename`
 }
@@ -374,23 +375,44 @@ loadCurrEnv() {
 
 _commonSelectHelper() {
   # TODO: the '_' is to avoid collision, but is a bit hacky; in particular, some callers were using 'local OPTIONS'
+  # TODO TODO: when declared local here, it should not change the caller... I tihnk the original analysis was flawed.
   local _SELECT_LIMIT="$1"; shift
   local _VAR_NAME="$1"; shift
   local _PRE_OPTS="$1"; shift
   local _POST_OPTS="$1"; shift
   local _SELECTION
-  local _OPTIONS="$@"
   local _QUIT='false'
 
+  local _ENUM_OPTIONS=''
+  # This crazyness is to preserve quotes; we use '%' as IFS later
+  while (( $# > 0 )); do
+    local OPT="$1"; shift
+    local DEFAULT
+    # This is another quote preserving technique. We expect 'SELECT_DEFAULT'
+    # might be "'foo bar' 'baz'".
+    eval 'for DEFAULT in '${SELECT_DEFAULT:-}'; do
+      if [[ "$DEFAULT" == "$OPT" ]]; then
+        OPT="*${OPT}"
+      fi
+    done'
+    if [[ -z "$_ENUM_OPTIONS" ]]; then
+      _ENUM_OPTIONS="$OPT"
+    else
+      _ENUM_OPTIONS="$_ENUM_OPTIONS%$OPT"
+    fi
+  done
+
+  local _OPTIONS="$_ENUM_OPTIONS"
   if [[ -n "$_PRE_OPTS" ]]; then
-    _OPTIONS="$_PRE_OPTS $_OPTIONS"
+    _OPTIONS="$(echo "$_PRE_OPTS" | tr ' ' '%')%$_OPTIONS"
   fi
   if [[ -n "$_POST_OPTS" ]]; then
-    _OPTIONS="$_OPTIONS $_POST_OPTS"
+    _OPTIONS="$_OPTIONS%$(echo "$_POST_OPTS" | tr ' ' '%')"
   fi
 
   updateVar() {
-    if [[ -z "${!_VAR_NAME}" ]]; then
+    _SELECTION="$(echo "$_SELECTION" | sed -Ee 's/^\*//')"
+    if [[ -z "${!_VAR_NAME:-}" ]]; then
       eval "${_VAR_NAME}='${_SELECTION}'"
     else
       eval "$_VAR_NAME='${!_VAR_NAME} ${_SELECTION}'"
@@ -399,49 +421,71 @@ _commonSelectHelper() {
   }
 
   local _SELECTED_COUNT=0
+
   while [[ $_QUIT == 'false' ]]; do
+    local OLDIFS="$IFS"
+    IFS='%'
     select _SELECTION in $_OPTIONS; do
       case "$_SELECTION" in
         '<cancel>')
           exit;;
         '<done>')
-          echo "Final selection: ${!_VAR_NAME}"
           _QUIT='true';;
         '<other>')
           _SELECTION=''
           requireAnswer "$PS3" _SELECTION
           updateVar;;
         '<any>')
-          echo "Final selection: 'any'"
           eval $_VAR_NAME='any'
           _QUIT='true';;
         '<all>')
-          echo "Final selection: 'all'"
-          eval $_VAR_NAME=\""$@"\"
+          eval "$_VAR_NAME='$(echo $_ENUM_OPTIONS | tr '%' ' ')'"
+          _QUIT='true';;
+        '<default>')
+          eval "${_VAR_NAME}=\"${SELECT_DEFAULT}\""
           _QUIT='true';;
         *)
           updateVar;;
       esac
+
+      # after first selection, 'default' is nullified
+      SELECT_DEFAULT=''
+      _OPTIONS=$(echo "$_OPTIONS" | sed -Ee 's/(^|%)<default>(%|$)//' | tr -d '*')
+
       if [[ -n "$_SELECT_LIMIT" ]] && (( $_SELECT_LIMIT >= $_SELECTED_COUNT )); then
         _QUIT='true'
       fi
-      if [[ -z "$_QUIT" ]]; then
+      if [[ "$_QUIT" != 'true' ]]; then
         echo "Current selections: ${!_VAR_NAME}"
+      else
+        echo "Final selections: ${!_VAR_NAME}"
       fi
       _OPTIONS=${_OPTIONS/$_SELECTION/}
+      _OPTIONS=${_OPTIONS//%%/%}
       # if we only have the default options left, then we're done
-      _OPTIONS=`echo "$_OPTIONS" | sed -Ee 's/^(<done>)? *(<cancel>)?[ ]*(<all>)?[ ]*(<any>)?[ ]*(<other>)?$//'`
+      _OPTIONS=`echo "$_OPTIONS" | sed -Ee 's/^(<done>)?%?(<cancel>)?%?(<all>)?%?(<any>)?%?(<default>)?%?(<other>)?$//'`
       if [[ -z "$_OPTIONS" ]]; then
         _QUIT='true'
       fi
       break
     done
+    IFS="$OLDIFS"
   done
 }
 
 selectOneCancel() {
   local VAR_NAME="$1"; shift
   _commonSelectHelper 1 "$VAR_NAME" '<cancel>' '' "$@"
+}
+
+selectOneCancelDefault() {
+  local VAR_NAME="$1"; shift
+  if [[ -z "$SELECT_DEFAULT" ]]; then
+    echowarn "Requested 'default' select, but no default provided. Falling back to non-default selection."
+    selectOneCancel "$VAR_NAME" "$@"
+  else
+    _commonSelectHelper 1 "$VAR_NAME" '<cancel>' '<default>' "$@"
+  fi
 }
 
 selectCancel() {
@@ -454,6 +498,11 @@ selectDoneCancel() {
   _commonSelectHelper '' "$VAR_NAME" '<done> <cancel>' '' "$@"
 }
 
+selectDoneCancelAllOther() {
+  local VAR_NAME="$1"; shift
+  _commonSelectHelper '' "$VAR_NAME" '<done> <cancel>' '<all> <other>' "$@"
+}
+
 selectDoneCancelAnyOther() {
   local VAR_NAME="$1"; shift
   _commonSelectHelper '' "$VAR_NAME" '<done> <cancel>' '<any> <other>' "$@"
@@ -464,9 +513,42 @@ selectDoneCancelOther() {
   _commonSelectHelper '' "$VAR_NAME" '<done> <cancel>' '<other>' "$@"
 }
 
+selectDoneCancelOtherDefault() {
+  local VAR_NAME="$1"; shift
+  if [[ -z "$SELECT_DEFAULT" ]]; then
+    echowarn "Requested 'default' select, but no default provided. Falling back to non-default selection."
+    selectDoneCancelOther "$VAR_NAME" "$@"
+  else
+    _commonSelectHelper '' "$VAR_NAME" '<done> <cancel>' '<other> <default>' "$@"
+  fi
+}
+
 selectDoneCancelAll() {
   local VAR_NAME="$1"; shift
   _commonSelectHelper '' "$VAR_NAME" '<done> <cancel>' '<all>' "$@"
+}
+
+getPackageDef() {
+  local VAR_NAME="$1"
+  local FQN_PACKAGE_NAME="$2"
+
+  # The package we're looking at might be our own or might be a dependency.
+  if [[ "$FQN_PACKAGE_NAME" == "$PACKAGE_NAME" ]]; then
+    eval "$VAR_NAME=\"\$PACKAGE\""
+  else
+    eval "$VAR_NAME=\$(npm explore \"$FQN_PACKAGE_NAME\" -- cat package.json)"
+  fi
+}
+
+runScript() {
+  local SERV_SCRIPT="$1"; shift
+
+  # The script might be our own or an installed dependency.
+  if [[ -e "${BASE_DIR}/bin/${SERV_SCRIPT}" ]]; then
+    "${BASE_DIR}/bin/${SERV_SCRIPT}" "$@"
+  else
+    npx --no-install $SERV_SCRIPT "$@"
+  fi
 }
 
 getProvidedServiceValues() {
@@ -476,7 +558,8 @@ getProvidedServiceValues() {
   local SERV_IFACE=`echo "$SERV_KEY" | cut -d: -f1`
   local SERV_PACKAGE_NAME=`echo "$SERV_KEY" | cut -d: -f2`
   local SERV_NAME=`echo "$SERV_KEY" | cut -d: -f3`
-  local SERV_PACKAGE=`npm explore "$SERV_PACKAGE_NAME" -- cat package.json`
+  local SERV_PACKAGE
+  getPackageDef SERV_PACKAGE "$SERV_PACKAGE_NAME"
 
   echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"${FIELD_LABEL}\" | @sh" | tr -d "'"
 }
@@ -577,7 +660,7 @@ requireCleanRepo() {
 
   cd "${CATALYST_PLAYGROUND}/${_IP}"
   ( test -n "$_WORK_BRANCH" \
-      && git branch | grep -sE "^\* ${_WORK_BRANCH}" > /dev/null) \
+      && git branch | grep -qE "^\* ${_WORK_BRANCH}" ) \
     || git diff-index --quiet HEAD -- \
     || echoerrandexit "Cannot perform action '${ACTION}'. '${_IP}' has uncommitted changes. Please resolve." 1
 }

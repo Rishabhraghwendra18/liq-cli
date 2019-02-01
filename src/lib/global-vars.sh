@@ -18,7 +18,6 @@ _BILLING_ACCT_URL='https://console.cloud.google.com/billing?folder=&organization
 GNU_GETOPT="$(brew --prefix gnu-getopt)/bin/getopt"
 
 # Global variables.
-
 CURR_ENV_FILE='' # set by 'requireEnvironment'
 CURR_ENV='' # set by 'requireEnvironment'
 # 'requireEnvironment' calls 'requirePackage'

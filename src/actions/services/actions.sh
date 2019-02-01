@@ -13,7 +13,7 @@ services-list() {
 
   local GET_STATUS=''
   if [[ -n "$SHOW_STATUS" ]] || [[ -n "$EXIT_ON_STOPPED" ]]; then
-    GET_STATUS='local _SERV_STATUS=$(eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT status");'
+    GET_STATUS='local _SERV_STATUS=$(eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT status");'
   fi
 
   local OUTPUT='echo "$PROCESS_NAME";'
@@ -49,7 +49,7 @@ services-start() {
       return 0
     else
       echo "Starting ${PROCESS_NAME}..."
-      eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT start"
+      eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT start"
       sleep 1
       if [[ -f "${SERV_ERR}" ]] && [[ `wc -l "${SERV_ERR}" | awk '{print $1}'` -gt 0 ]]; then
         cat "${SERV_ERR}"
@@ -70,7 +70,7 @@ services-stop() {
       return 0
     else
       echo "Stopping ${PROCESS_NAME}..."
-      eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT stop"
+      eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT stop"
       sleep 1
       services-list -s "${PROCESS_NAME}"
     fi
@@ -84,10 +84,10 @@ services-restart() {
   local MAIN=$(cat <<'EOF'
     echo "Restarting ${PROCESS_NAME}..."
     if services-list -qe "${SERV_IFACE}.${SCRIPT_NAME}"; then
-      eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT restart"
+      eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT restart"
     else
       echowarn "'${PROCESS_NAME}' currently stopped; starting..."
-      eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT start"
+      eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT start"
     fi
     sleep 1
     services-list -s "${PROCESS_NAME}"
@@ -111,7 +111,7 @@ logMain() {
         echo
       else
         ( echo -e "Local ${DESC} for '${green}\${PROCESS_NAME}${reset}:\n<hit 'q' to adavance to next logs, if any.>\n" && \
-          cat "\${_CATALYST_ENV_LOGS}/\${PROCESS_NAME}.${SUFFIX}" ) | less -R
+          cat "$FILE_NAME" ) | less -R
       fi
     else
       echo "No local logs for '${red}\${PROCESS_NAME}${reset}'."
@@ -123,7 +123,16 @@ EOF
 }
 
 services-log() {
-  runtimeServiceRunner "$(logMain log log)" '' "$@"
+  local TMP
+  TMP=$(setSimpleOptions CLEAR -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
+  if [[ -n "$CLEAR" ]]; then
+    runtimeServiceRunner 'rm -f "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.${SCRIPT_NAME}.log"' '' "$@"
+  else
+    runtimeServiceRunner "$(logMain log log)" '' "$@"
+  fi
 }
 
 services-err-log() {
@@ -137,14 +146,14 @@ services-connect() {
   fi
 
   local MAIN=$(cat <<'EOF'
-    if npx --no-install $SERV_SCRIPT connect-check 2> /dev/null; then
+    if runScript $SERV_SCRIPT connect-check 2> /dev/null; then
       if [[ -n "$SERV_SCRIPTS_COOKIE" ]]; then
         echoerrandexit "Multilpe connection points found; try specifying service process."
       fi
       SERV_SCRIPTS_COOKIE='found'
       services-list -qe "${SERV_IFACE}.${SCRIPT_NAME}" \
         || echoerrandexit "Can't connect to stopped '${SERV_IFACE}.${SCRIPT_NAME}'."
-      eval "$(ctrlScriptEnv) npx --no-install $SERV_SCRIPT connect"
+      eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT connect"
     fi
 EOF
 )

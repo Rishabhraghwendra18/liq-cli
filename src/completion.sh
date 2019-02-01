@@ -25,7 +25,7 @@ _catalyst()
       data)
         opts="build clear load rebuild reset";;
       environments)
-        opts="add delete deselect list select set show";;
+        opts="add delete deselect list select set show update";;
       packages)
         opts="audit build deploy lint link test version-check";;
       project)

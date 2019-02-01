@@ -85,3 +85,24 @@ provided-services-delete() {
   done
   echo "$PACKAGE" | jq > "$PACKAGE_FILE"
 }
+
+provided-services-list() {
+  echo $PACKAGE | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | .\"name\""
+}
+
+provided-services-show() {
+  while [[ $# -gt 0 ]]; do
+    if ! echo $PACKAGE | jq -e "(.\"$CAT_PROVIDES_SERVICE\") and (.\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$1\"))" > /dev/null; then
+      echoerr "No such service '$1'."
+    else
+      echo "$1:"
+      echo
+      echo $PACKAGE | jq ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$1\")"
+      if [[ $# -gt 1 ]]; then
+        echo
+        read -p "Hit enter to continue to '$2'..."
+      fi
+    fi
+    shift
+  done
+}
