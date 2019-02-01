@@ -111,7 +111,7 @@ logMain() {
         echo
       else
         ( echo -e "Local ${DESC} for '${green}\${PROCESS_NAME}${reset}:\n<hit 'q' to adavance to next logs, if any.>\n" && \
-          cat "\${_CATALYST_ENV_LOGS}/\${PROCESS_NAME}.${SUFFIX}" ) | less -R
+          cat "$FILE_NAME" ) | less -R
       fi
     else
       echo "No local logs for '${red}\${PROCESS_NAME}${reset}'."
@@ -123,7 +123,16 @@ EOF
 }
 
 services-log() {
-  runtimeServiceRunner "$(logMain log log)" '' "$@"
+  local TMP
+  TMP=$(setSimpleOptions CLEAR -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
+  if [[ -n "$CLEAR" ]]; then
+    runtimeServiceRunner 'rm -f "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.${SCRIPT_NAME}.log"' '' "$@"
+  else
+    runtimeServiceRunner "$(logMain log log)" '' "$@"
+  fi
 }
 
 services-err-log() {
