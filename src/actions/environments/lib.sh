@@ -57,8 +57,20 @@ environmentsServiceDescription() {
   eval "$VAR_NAME='${SERVICE} from ${PACKAGE_NAME}'"
 }
 
+environmentsFigureFqnService() {
+  local VAR_NAME="$1"
+  local REQ_SERVICE="$2"
+  local SERVICE_DESC="$3"
+
+  local SELECTED_PROVIDER=$(echo "$SERVICE_DESC" | sed -E -e 's/[^ ]+ from (.+)/\1/')
+  local SELECTED_SERVICE=$(echo "$SERVICE_DESC" | sed -E -e 's/ from .+//')
+
+  eval "$VAR_NAME='${REQ_SERVICE}:${SELECTED_PROVIDER}:${SELECTED_SERVICE}'"
+}
+
 environmentsFindProvidersFor() {
   local REQ_SERVICE="${1}"
+  # TODO: put var name first for consistency
   local RESULT_VAR_NAME="${2}"
   local DEFAULT="${3:-}"
 
@@ -98,10 +110,7 @@ environmentsFindProvidersFor() {
     eval "selectOneCancelDefault PROVIDER $PROVIDER_OPTIONS"
   fi
 
-  local SELECTED_PROVIDER=`echo "$PROVIDER" | sed -E -e 's/[^(]+from ([^)]+)/\1/'`
-  local SELECTED_SERVICE=`echo "$PROVIDER" | sed -E -e 's/ from .+//'`
-
-  eval "$RESULT_VAR_NAME='${REQ_SERVICE}:${SELECTED_PROVIDER}:${SELECTED_SERVICE}'"
+  environmentsFigureFqnService "$RESULT_VAR_NAME" "$REQ_SERVICE" "$PROVIDER"
 }
 
 environmentsGetDefaultFromScripts() {

@@ -12,6 +12,6 @@ ${PREFIX}${cyan_u}environments${reset}:
   ${underline}deselect${reset}: Unsets the current environment.
   ${underline}set${reset} [<key> <value>] | [<env name> <key> <value>]: Updates environment
     settings.
-  ${underline}update${reset}: Interactively update the current environment.
+  ${underline}update${reset} [-n|--new-only]: Interactively update the current environment.
 EOF
 }

@@ -23,15 +23,15 @@ environments-add() {
   CURR_ENV_SERVICES=()
   for REQ_SERV_IFACE in $REQ_SERV_IFACES; do
     # select the service provider
-    local ANSWER
-    environmentsFindProvidersFor "$REQ_SERV_IFACE" ANSWER
-    CURR_ENV_SERVICES+=("$ANSWER")
+    local FQN_SERVICE
+    environmentsFindProvidersFor "$REQ_SERV_IFACE" FQN_SERVICE
+    CURR_ENV_SERVICES+=("$FQN_SERVICE")
 
     # define required params
     local REQ_PARAM
-    for REQ_PARAM in `getRequiredParameters "$ANSWER"`; do
+    for REQ_PARAM in `getRequiredParameters "$FQN_SERVICE"`; do
       local DEFAULT_VAL
-      environmentsGetDefaultFromScripts DEFAULT_VAL "$ANSWER" "$REQ_PARAM"
+      environmentsGetDefaultFromScripts DEFAULT_VAL "$FQN_SERVICE" "$REQ_PARAM"
 
       local PARAM_VAL=''
       requireAnswer "Value for required parameter '$REQ_PARAM': " PARAM_VAL "$DEFAULT_VAL"
@@ -178,6 +178,11 @@ environments-show() {
 
 # TODO: this shares a lot of code with environments-add
 environments-update() {
+  local TMP
+  TMP=$(setSimpleOptions NEW_ONLY -- "$@") \
+    || ( usage-project-packages; echoerrandexit "Bad options." )
+  eval "$TMP"
+
   local ENV_NAME="${1:-}"
 
   if [[ -z "${ENV_NAME}" ]]; then
@@ -196,10 +201,13 @@ environments-update() {
     source "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}"
   fi
 
-  local SELECT_DEFAULT="$CURR_ENV_PURPOSE"
-  unset CURR_ENV_PURPOSE
-  PS3="Select purpose: "
-  selectDoneCancelOtherDefault CURR_ENV_PURPOSE $STD_ENV_PUPRPOSES
+  # Handle the purpose
+  if [[ -z "$NEW_ONLY" ]]; then
+    local SELECT_DEFAULT="$CURR_ENV_PURPOSE"
+    unset CURR_ENV_PURPOSE
+    PS3="Select purpose: "
+    selectDoneCancelOtherDefault CURR_ENV_PURPOSE $STD_ENV_PUPRPOSES
+  fi
 
   local REQ_SERV_IFACES=`required-services-list`
   local REQ_SERV_IFACE
@@ -215,22 +223,28 @@ environments-update() {
     else
       SELECT_DEFAULT=''
     fi
-    local ANSWER
-    environmentsFindProvidersFor "$REQ_SERV_IFACE" ANSWER
-    CURR_ENV_SERVICES+=("$ANSWER")
+    local FQN_SERVICE
+    if [[ -z "$NEW_ONLY" ]] || [[ -z "$SELECT_DEFAULT" ]]; then
+      environmentsFindProvidersFor "$REQ_SERV_IFACE" FQN_SERVICE
+    else
+      environmentsFigureFqnService FQN_SERVICE "$REQ_SERV_IFACE" "$(echo "$SELECT_DEFAULT" | tr -d "'")"
+    fi
+    CURR_ENV_SERVICES+=("$FQN_SERVICE")
 
-    for REQ_PARAM in `getRequiredParameters "$ANSWER"`; do
+    for REQ_PARAM in `getRequiredParameters "${FQN_SERVICE:-$SELECT_DEFAULT}"`; do
       local DEFAULT_VAL=${!REQ_PARAM:-}
-      if [[ -n "${!REQ_PARAM:-}" ]]; then # it's set in the prior env def
-        eval "$REQ_PARAM=''"
-      else
-        # check the scripts for defaults for new values
-        environmentsGetDefaultFromScripts DEFAULT_VAL "$ANSWER" "$REQ_PARAM"
-      fi
+      if [[ -z "$NEW_ONLY" ]] || [[ -z "$DEFAULT_VAL" ]]; then
+        if [[ -n "${!REQ_PARAM:-}" ]]; then # it's set in the prior env def
+          eval "$REQ_PARAM=''"
+        else
+          # check the scripts for defaults for new values
+          environmentsGetDefaultFromScripts DEFAULT_VAL "$FQN_SERVICE" "$REQ_PARAM"
+        fi
 
-      local PARAM_VAL=''
-      requireAnswer "Value for required parameter '$REQ_PARAM': " PARAM_VAL "$DEFAULT_VAL"
-      eval "$REQ_PARAM='$PARAM_VAL'"
+        local PARAM_VAL=''
+        requireAnswer "Value for required parameter '$REQ_PARAM': " PARAM_VAL "$DEFAULT_VAL"
+        eval "$REQ_PARAM='$PARAM_VAL'"
+      fi
     done
   done
 
