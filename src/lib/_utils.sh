@@ -488,6 +488,11 @@ selectOneCancelDefault() {
   fi
 }
 
+selectOneCancelOther() {
+  local VAR_NAME="$1"; shift
+  _commonSelectHelper 1 "$VAR_NAME" '<cancel>' '<other>' "$@"
+}
+
 selectCancel() {
   local VAR_NAME="$1"; shift
   _commonSelectHelper '' "$VAR_NAME" '<cancel>' '' "$@"
@@ -674,5 +679,44 @@ requireCleanRepos() {
   local IP
   for IP in $INVOLVED_PROJECTS; do
     requireCleanRepo "$IP" "$_WORK_NAME"
+  done
+}
+
+defineParameters() {
+  local SERVICE_DEF_VAR="$1"
+
+  echo "Enter required parameters. Enter blank line when done."
+  local PARAM_NAME
+  while [[ $PARAM_NAME != '...quit...' ]]; do
+    read -p "Required parameter: " PARAM_NAME
+    if [[ -z "$PARAM_NAME" ]]; then
+      PARAM_NAME='...quit...'
+    else
+      eval $SERVICE_DEF_VAR'=$(echo "$'$SERVICE_DEF_VAR'" | jq ". + { \"params-req\": (.\"params-req\" + [\"'$PARAM_NAME'\"]) }")'
+    fi
+  done
+
+  PARAM_NAME=''
+  echo "Enter optional parameters. Enter blank line when done."
+  while [[ $PARAM_NAME != '...quit...' ]]; do
+    read -p "Optional parameter: " PARAM_NAME
+    if [[ -z "$PARAM_NAME" ]]; then
+      PARAM_NAME='...quit...'
+    else
+      eval $SERVICE_DEF_VAR='$(echo "$'$SERVICE_DEF_VAR'" | jq ". + { \"params-opt\": (.\"params-opt\" + [\"'$PARAM_NAME'\"]) }")'
+    fi
+  done
+
+  PARAM_NAME=''
+  echo "Enter configuration constants. Enter blank line when done."
+  while [[ $PARAM_NAME != '...quit...' ]]; do
+    read -p "Configuration constant: " PARAM_NAME
+    if [[ -z "$PARAM_NAME" ]]; then
+      PARAM_NAME='...quit...'
+    else
+      local PARAM_VAL=''
+      requireAnswer "Value: " PARAM_VAL
+      eval $SERVICE_DEF_VAR='$(echo "$'$SERVICE_DEF_VAR'" | jq ". + { \"config-const\": (.\"config-const\" + { \"'$PARAM_NAME'\" : \"'$PARAM_VAL'\" }) }")'
+    fi
   done
 }
