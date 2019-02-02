@@ -18,7 +18,8 @@ provided-services-add() {
   "purposes": [],
   "ctrl-scripts": [],
   "params-req": [],
-  "params-opt": []
+  "params-opt": [],
+  "config-const": {}
 }
 EOF
 )
@@ -45,27 +46,7 @@ EOF
   selectOptions 'purposes' 'Purpose: ' '' $STD_PURPOSES
   selectOptions 'ctrl-scripts' "Control script: " true `find "${BASE_DIR}/bin/" -type f -not -name '*~' -prune -execdir echo '{}' \;`
 
-  echo "Enter required parameters. Enter blank line when done."
-  local PARAM_NAME
-  while [[ $PARAM_NAME != '...quit...' ]]; do
-    read -p "Required parameter: " PARAM_NAME
-    if [[ -z "$PARAM_NAME" ]]; then
-      PARAM_NAME='...quit...'
-    else
-      SERVICE_DEF=`echo "$SERVICE_DEF" | jq ". + { \"params-req\": (.\"params-req\" + [\"$PARAM_NAME\"]) }"`
-    fi
-  done
-
-  PARAM_NAME=''
-  echo "Enter optional parameters. Enter blank line when done."
-  while [[ $PARAM_NAME != '...quit...' ]]; do
-    read -p "Optional parameter: " PARAM_NAME
-    if [[ -z "$PARAM_NAME" ]]; then
-      PARAM_NAME='...quit...'
-    else
-      SERVICE_DEF=`echo "$SERVICE_DEF" | jq ". + { \"params-opt\": (.\"params-opt\" + [\"$PARAM_NAME\"]) }"`
-    fi
-  done
+  defineParameters SERVICE_DEF
 
   PACKAGE=`echo "$PACKAGE" | jq ". + { \"$CAT_PROVIDES_SERVICE\": (.\"$CAT_PROVIDES_SERVICE\" + [$SERVICE_DEF]) }"`
   echo "$PACKAGE" | jq > "$PACKAGE_FILE"

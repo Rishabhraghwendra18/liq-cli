@@ -1,5 +1,3 @@
-CAT_REQ_SERVICES_KEY='_catalystRequiresService'
-
 requirements-required-services() {
   requirePackage
 }
@@ -15,14 +13,14 @@ required-services-add() {
     done
     local REQ_SERVICES
     PS3="Required service interface: "
-    selectDoneCancelOther REQ_SERVICES $NEW_SERVICES
+    selectOneCancelOther REQ_SERVICES $NEW_SERVICES
     for IFACE_CLASS in $REQ_SERVICES; do
-      PACKAGE=`echo "$PACKAGE" | jq ". + { \"$CAT_REQ_SERVICES_KEY\" : ( .\"$CAT_REQ_SERVICES_KEY\" + [ { \"iface\": \"$IFACE_CLASS\" } ] ) }"`
+      reqServDefine "$IFACE_CLASS"
     done
   else
     while (($# > 0)); do
       IFACE_CLASS="$1"; shift
-      PACKAGE=`echo "$PACKAGE" | jq ". + { \"$CAT_REQ_SERVICES_KEY\" : ( .\"$CAT_REQ_SERVICES_KEY\" + [ { \"iface\": \"$IFACE_CLASS\" } ] ) }"`
+      reqServDefine "$IFACE_CLASS"
     done
   fi
   echo "$PACKAGE" | jq > "$PACKAGE_FILE"
