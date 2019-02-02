@@ -8,7 +8,7 @@ services-list() {
   # '||'. I guess it gets parse as part of the varible set, and then ignored due
   # to word splitting.
   TMP=$(setSimpleOptions SHOW_STATUS PORCELAIN EXIT_ON_STOPPED QUIET -- "$@") \
-    || ( usage-services; echoerrandexit "Bad options." )
+    || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
 
   local GET_STATUS=''
