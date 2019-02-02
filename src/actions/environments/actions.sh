@@ -207,6 +207,7 @@ environments-update() {
 
   if [[ -z "${ENV_NAME}" ]]; then
     if [[ -L "${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env" ]]; then
+      requireEnvironment
       ENV_NAME="$CURR_ENV"
     else
       selectOneCancel ENV_NAME $(environments-list --list-only)
