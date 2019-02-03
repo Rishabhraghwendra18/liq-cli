@@ -535,10 +535,10 @@ selectDoneCancelAll() {
 
 getPackageDef() {
   local VAR_NAME="$1"
-  local FQN_PACKAGE_NAME="$2"
+  local FQN_PACKAGE_NAME="${2:-}"
 
   # The package we're looking at might be our own or might be a dependency.
-  if [[ "$FQN_PACKAGE_NAME" == "$PACKAGE_NAME" ]]; then
+  if [[ -z "$FQN_PACKAGE_NAME" ]] || [[ "$FQN_PACKAGE_NAME" == "$PACKAGE_NAME" ]]; then
     eval "$VAR_NAME=\"\$PACKAGE\""
   else
     eval "$VAR_NAME=\$(npm explore \"$FQN_PACKAGE_NAME\" -- cat package.json)"
@@ -557,24 +557,35 @@ runScript() {
 }
 
 getProvidedServiceValues() {
-  local SERV_KEY="$1"
+  local SERV_KEY="${1:-}"
   local FIELD_LABEL="$2"
 
-  local SERV_IFACE=`echo "$SERV_KEY" | cut -d: -f1`
-  local SERV_PACKAGE_NAME=`echo "$SERV_KEY" | cut -d: -f2`
-  local SERV_NAME=`echo "$SERV_KEY" | cut -d: -f3`
-  local SERV_PACKAGE
-  getPackageDef SERV_PACKAGE "$SERV_PACKAGE_NAME"
+  local SERV_PACKAGE SERV_NAME SERV
+  if [[ -n "$SERV_KEY" ]];then
+    # local SERV_IFACE=`echo "$SERV_KEY" | cut -d: -f1`
+    local SERV_PACKAGE_NAME=`echo "$SERV_KEY" | cut -d: -f2`
+    SERV_NAME=`echo "$SERV_KEY" | cut -d: -f3`
+    getPackageDef SERV_PACKAGE "$SERV_PACKAGE_NAME"
+  else
+    SERV_PACKAGE="$PACKAGE"
+  fi
 
   echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"${FIELD_LABEL}\" | @sh" | tr -d "'"
 }
 
 getRequiredParameters() {
-  getProvidedServiceValues "$1" "params-req"
+  getProvidedServiceValues "${1:-}" "params-req"
+}
+
+# TODO: this is not like the others; it should take an optional package name, and the others should work with package names, not service specs. I.e., decompose externally.
+# TODO: Or maybe not. Have a set of "objective" service key manipulators to build from and extract parts?
+getConfigConstants() {
+  local SERV_IFACE="${1}"
+  echo "$PACKAGE" | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$SERV_IFACE\") | .\"config-const\" | keys | @sh" | tr -d "'"
 }
 
 getCtrlScripts() {
-  getProvidedServiceValues "$1" "ctrl-scripts"
+  getProvidedServiceValues "${1:-}" "ctrl-scripts"
 }
 
 pressAnyKeyToContinue() {

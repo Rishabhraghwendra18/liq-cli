@@ -40,6 +40,11 @@ services-list() {
 }
 
 services-start() {
+  local TMP
+  TMP=$(setSimpleOptions PASSTHRU= -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
   # TODO: check status before starting
   local MAIN=$(cat <<'EOF'
     # rm -f "${SERV_LOG}" "${SERV_ERR}"
@@ -49,7 +54,7 @@ services-start() {
       return 0
     else
       echo "Starting ${PROCESS_NAME}..."
-      eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT start"
+      eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT start ${PASSTHRU}"
       sleep 1
       if [[ -f "${SERV_ERR}" ]] && [[ `wc -l "${SERV_ERR}" | awk '{print $1}'` -gt 0 ]]; then
         cat "${SERV_ERR}"

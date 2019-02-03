@@ -31,7 +31,7 @@ EOF
   local SERV_KEY REQ_PARAM
   # TODO: again, @Q when available
   for SERV_KEY in ${CURR_ENV_SERVICES[@]}; do
-    for REQ_PARAM in `getRequiredParameters "$SERV_KEY"`; do
+    for REQ_PARAM in $(getRequiredParameters "$SERV_KEY"); do
       cat <<EOF >> "$ENV_PATH"
 $REQ_PARAM='${!REQ_PARAM}'
 EOF
@@ -41,13 +41,16 @@ EOF
   local REQ_SERV_IFACES=`required-services-list`
   local REQ_SERV_IFACE
   for REQ_SERV_IFACE in $REQ_SERV_IFACES; do
-    for REQ_PARAM in $(echo $PACKAGE | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"params-req\" | @sh" | tr -d "'"); do
+    for REQ_PARAM in $(echo "$PACKAGE" | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"params-req\" | @sh" | tr -d "'"); do
+      if [[ -z "${!REQ_PARAM:-}" ]]; then
+        echoerrandexit "Did not find definition for '${REQ_PARAM}' while updating environment."
+      fi
       cat <<EOF >> "$ENV_PATH"
 $REQ_PARAM='${!REQ_PARAM}'
 EOF
     done
 
-    for REQ_PARAM in $(echo "$PACKAGE" | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"config-const\" | keys | @sh" | tr -d "'"); do
+    for REQ_PARAM in $(getConfigConstants "$REQ_SERV_IFACE"); do
       local CONFIG_VAL=$(echo "$PACKAGE" | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"config-const\".\"$REQ_PARAM\" | @sh" | tr -d "'")
       cat <<EOF >> "$ENV_PATH"
 $REQ_PARAM='$CONFIG_VAL'

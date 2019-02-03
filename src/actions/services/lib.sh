@@ -1,9 +1,29 @@
 ctrlScriptEnv() {
-  local ENV_SETTINGS="BASE_DIR='${BASE_DIR}' _CATALYST_ENV_LOGS='${_CATALYST_ENV_LOGS}' SERV_NAME='${SERV_NAME}' SERV_IFACE='${SERV_IFACE}' PROCESS_NAME='${PROCESS_NAME:-}' SERV_LOG='${SERV_LOG:-}' SERV_ERR='${SERV_ERR:-}' PID_FILE='${PID_FILE:-}'"
+  local ENV_SETTINGS="PACKAGE_NAME='${PACKAGE_NAME}' BASE_DIR='${BASE_DIR}' _CATALYST_ENV_LOGS='${_CATALYST_ENV_LOGS}' SERV_NAME='${SERV_NAME}' SERV_IFACE='${SERV_IFACE}' PROCESS_NAME='${PROCESS_NAME:-}' SERV_LOG='${SERV_LOG:-}' SERV_ERR='${SERV_ERR:-}' PID_FILE='${PID_FILE:-}'"
   local REQ_PARAMS=$(getRequiredParameters "$SERVICE_KEY")
   local REQ_PARAM
   for REQ_PARAM in $REQ_PARAMS; do
     ENV_SETTINGS="$ENV_SETTINGS $REQ_PARAM='${!REQ_PARAM}'"
+  done
+
+  local SERV_IFACE=`echo "$SERVICE_KEY" | cut -d: -f1`
+  local ADD_REQ_PARAMS=$((echo "$PACKAGE" | jq -e --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$SERV_IFACE\") | .\"params-req\" | @sh" 2> /dev/null || echo '') | tr -d "'")
+  for REQ_PARAM in $ADD_REQ_PARAMS; do
+    ENV_SETTINGS="$ENV_SETTINGS $REQ_PARAM='${!REQ_PARAM}'"
+    if [[ -z "$REQ_PARAMS" ]]; then
+      REQ_PARAMS="${REQ_PARAM}"
+    else
+      REQ_PARAMS="${REQ_PARAMS} ${REQ_PARAM}"
+    fi
+  done
+
+  for REQ_PARAM in $(getConfigConstants "${SERV_IFACE}"); do
+    ENV_SETTINGS="$ENV_SETTINGS $REQ_PARAM='${!REQ_PARAM}'"
+    if [[ -z "$REQ_PARAMS" ]]; then
+      REQ_PARAMS="${REQ_PARAM}"
+    else
+      REQ_PARAMS="${REQ_PARAMS} ${REQ_PARAM}"
+    fi
   done
 
   echo "$ENV_SETTINGS REQ_PARAMS='$REQ_PARAMS'"
