@@ -3,9 +3,6 @@ requirements-environments() {
   requirePackage
 }
 
-# TODO: move this def
-STD_ENV_PUPRPOSES='dev test pre-production production'
-
 environments-add() {
   local ENV_NAME="${1:-}"
   # TODO: echo "Adding environment for project $CURR_PROJECT"
@@ -28,14 +25,31 @@ environments-add() {
     CURR_ENV_SERVICES+=("$FQN_SERVICE")
 
     # define required params
+    local REQ_PARAMS=$(getRequiredParameters "$FQN_SERVICE")
+    local ADD_REQ_PARAMS=$((echo "$PACKAGE" | jq -e --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"params-req\" | @sh" 2> /dev/null || echo '') | tr -d "'")
+    if [[ -n "$ADD_REQ_PARAMS" ]]; then
+      if [[ -n "$REQ_PARAMS" ]]; then
+        REQ_PARAMS="$REQ_PARAMS $ADD_REQ_PARAMS"
+      else
+        REQ_PARAMS="$ADD_REQ_PARAMS"
+      fi
+    fi
     local REQ_PARAM
-    for REQ_PARAM in `getRequiredParameters "$FQN_SERVICE"`; do
-      local DEFAULT_VAL
-      environmentsGetDefaultFromScripts DEFAULT_VAL "$FQN_SERVICE" "$REQ_PARAM"
+    for REQ_PARAM in $REQ_PARAMS; do
+      if [[ -z "${!REQ_PARAM:-}" ]]; then
+        local DEFAULT_VAL
+        environmentsGetDefaultFromScripts DEFAULT_VAL "$FQN_SERVICE" "$REQ_PARAM"
 
-      local PARAM_VAL=''
-      requireAnswer "Value for required parameter '$REQ_PARAM': " PARAM_VAL "$DEFAULT_VAL"
-      eval "$REQ_PARAM='$PARAM_VAL'"
+        local PARAM_VAL=''
+        requireAnswer "Value for required parameter '$REQ_PARAM': " PARAM_VAL "$DEFAULT_VAL"
+        eval "$REQ_PARAM='$PARAM_VAL'"
+      fi
+    done
+
+    # and configuration constants
+    for REQ_PARAM in $(echo $PACKAGE | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"config-const\" | keys | @sh" | tr -d "'"); do
+      local CONFIG_VAL=$(echo "$PACKAGE" | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"config-const\".\"$REQ_PARAM\" | @sh" | tr -d "'")
+      eval "$REQ_PARAM='$CONFIG_VAL'"
     done
   done
 
@@ -54,8 +68,12 @@ environments-delete() {
   local ENV_NAME="${1:-}"
   test -n "$ENV_NAME" || echoerrandexit "Must specify enviromnent for deletion."
 
+  if [[ ! -f "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
+    echoerrandexit "No such environment '$ENV_NAME'."
+  fi
+
   onDeleteConfirm() {
-    rm ${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME} && echo "Local '${ENV_NAME}' entry deleted."
+    rm "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}" && echo "Local '${ENV_NAME}' entry deleted."
   }
 
   onDeleteCurrent() {
@@ -85,7 +103,9 @@ environments-delete() {
 }
 
 environments-deselect() {
-  test -L $CURR_ENV_FILE && rm $CURR_ENV_FILE
+  ( test -L "${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env" \
+    && rm "${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env" ) \
+    || echoerrandexit "No environment currently selected."
   loadCurrEnv
 }
 
@@ -231,7 +251,17 @@ environments-update() {
     fi
     CURR_ENV_SERVICES+=("$FQN_SERVICE")
 
-    for REQ_PARAM in `getRequiredParameters "${FQN_SERVICE:-$SELECT_DEFAULT}"`; do
+    local REQ_PARAMS=$(getRequiredParameters "$FQN_SERVICE")
+    local ADD_REQ_PARAMS=$((echo "$PACKAGE" | jq -e --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"params-req\" | @sh" 2> /dev/null || echo '') | tr -d "'")
+    if [[ -n "$ADD_REQ_PARAMS" ]]; then
+      if [[ -n "$REQ_PARAMS" ]]; then
+        REQ_PARAMS="$REQ_PARAMS $ADD_REQ_PARAMS"
+      else
+        REQ_PARAMS="$ADD_REQ_PARAMS"
+      fi
+    fi
+    local REQ_PARAM
+    for REQ_PARAM in $REQ_PARAMS; do
       local DEFAULT_VAL=${!REQ_PARAM:-}
       if [[ -z "$NEW_ONLY" ]] || [[ -z "$DEFAULT_VAL" ]]; then
         if [[ -n "${!REQ_PARAM:-}" ]]; then # it's set in the prior env def
@@ -245,6 +275,12 @@ environments-update() {
         requireAnswer "Value for required parameter '$REQ_PARAM': " PARAM_VAL "$DEFAULT_VAL"
         eval "$REQ_PARAM='$PARAM_VAL'"
       fi
+    done
+
+    # update configuration constants
+    for REQ_PARAM in $(echo $PACKAGE | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"config-const\" | keys | @sh" | tr -d "'"); do
+      local CONFIG_VAL=$(echo "$PACKAGE" | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"config-const\".\"$REQ_PARAM\" | @sh" | tr -d "'")
+      eval "$REQ_PARAM='$CONFIG_VAL'"
     done
   done
 

@@ -18,6 +18,7 @@ doEnvironmentList() {
 }
 
 updateEnvironment() {
+
   local ENV_PATH="$_CATALYST_ENVS/${PACKAGE_NAME}/${ENV_NAME}"
   mkdir -p "`dirname "$ENV_PATH"`"
 
@@ -27,12 +28,32 @@ CURR_ENV_SERVICES=(${CURR_ENV_SERVICES[@]})
 CURR_ENV_PURPOSE='${CURR_ENV_PURPOSE}'
 EOF
 
-  local SERV_KEY
+  local SERV_KEY REQ_PARAM
   # TODO: again, @Q when available
   for SERV_KEY in ${CURR_ENV_SERVICES[@]}; do
-    for REQ_PARAM in `getRequiredParameters "$SERV_KEY"`; do
+    for REQ_PARAM in $(getRequiredParameters "$SERV_KEY"); do
       cat <<EOF >> "$ENV_PATH"
 $REQ_PARAM='${!REQ_PARAM}'
+EOF
+    done
+  done
+
+  local REQ_SERV_IFACES=`required-services-list`
+  local REQ_SERV_IFACE
+  for REQ_SERV_IFACE in $REQ_SERV_IFACES; do
+    for REQ_PARAM in $(echo "$PACKAGE" | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"params-req\" | @sh" | tr -d "'"); do
+      if [[ -z "${!REQ_PARAM:-}" ]]; then
+        echoerrandexit "Did not find definition for '${REQ_PARAM}' while updating environment."
+      fi
+      cat <<EOF >> "$ENV_PATH"
+$REQ_PARAM='${!REQ_PARAM}'
+EOF
+    done
+
+    for REQ_PARAM in $(getConfigConstants "$REQ_SERV_IFACE"); do
+      local CONFIG_VAL=$(echo "$PACKAGE" | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"config-const\".\"$REQ_PARAM\" | @sh" | tr -d "'")
+      cat <<EOF >> "$ENV_PATH"
+$REQ_PARAM='$CONFIG_VAL'
 EOF
     done
   done
@@ -77,10 +98,10 @@ environmentsFindProvidersFor() {
   local CAT_PACKAGE_PATHS=`getCatPackagePaths`
   local SERVICES SERVICE_PACKAGES PROVIDER_OPTIONS CAT_PACKAGE_PATH
   for CAT_PACKAGE_PATH in "${BASE_DIR}" $CAT_PACKAGE_PATHS; do
-    local NPM_PACKAGE=`cat "${CAT_PACKAGE_PATH}/package.json"`
-    local PACKAGE_NAME=`cat "${CAT_PACKAGE_PATH}/package.json" | jq --raw-output ".name"`
+    local NPM_PACKAGE=$(cat "${CAT_PACKAGE_PATH}/package.json")
+    local PACKAGE_NAME=$(echo "$NPM_PACKAGE" | jq --raw-output ".name")
     local SERVICE
-    for SERVICE in `echo "$NPM_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select((.\"interface-classes\" | .[] | select(. == \"$REQ_SERVICE\")) | length > 0) | .name | @sh" | tr -d "'"`; do
+    for SERVICE in $((echo "$NPM_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select((.\"interface-classes\" | .[] | select(. == \"$REQ_SERVICE\")) | length > 0) | .name | @sh" 2>/dev/null || echo '') | tr -d "'"); do
       SERVICES=$((test -n "$SERVICE" && echo "$SERVICES '$SERVICE'") || echo "'$SERVICE'")
       SERVICE_PACKAGES=$((test -n "$SERVICE_PACKAGES" && echo "$SERVICE_PACKAGES '$PACKAGE_NAME'") || echo "'$PACKAGE_NAME'")
       local SERV_DESC
@@ -93,7 +114,7 @@ environmentsFindProvidersFor() {
     echoerrandexit "Could not find any providers for '$REQ_SERVICE'."
   fi
 
-  echo "Select provider for required service '$REQ_SERVICE':"
+  PS3="Select provider for required service '$REQ_SERVICE':"
   local PROVIDER
   if [[ -z "${SELECT_DEFAULT:-}" ]]; then
     # TODO: is there a better way to preserve the word boundries? We can use the '${ARRAY[@]@Q}' construct in bash 4.4
