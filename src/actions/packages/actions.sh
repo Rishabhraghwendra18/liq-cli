@@ -89,20 +89,12 @@ packages-lint() {
 
 packages-test() {
   local TMP
-  TMP=$(setSimpleOptions TYPE= -- "$@") \
+  TMP=$(setSimpleOptions TYPES= -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
 
-  if [[ -n "$TYPE" ]]; then
-    local TEST_TYPE
-    while IFS=',' read -ra TEST_TYPE; do
-      runPackageScript -s --ignore-missing pretest-${TEST_TYPE}
-      runPackageScript test-${TEST_TYPE}
-    done <<< "$TYPE"
-  else
-    runPackageScript -s --ignore-missing pretest
-    runPackageScript test
-  fi
+  # note that 'pretest' will be calaled before test and 'posttest' after
+  TEST_TYPES="$TYPES" runPackageScript test
 }
 
 packages-version-check() {

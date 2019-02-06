@@ -8,7 +8,7 @@ runPackageScript() {
 
   cd "${BASE_DIR}"
   if cat package.json | jq -e "(.scripts | keys | map(select(. == \"$ACTION\")) | length) == 1" > /dev/null; then
-    npm run-script "${ACTION}" -- "$@"
+    npm run-script "${ACTION}"
   elif [[ -n "$SCRIPT_ONLY" ]] && [[ -z "$IGNORE_MISSING" ]]; then # SCRIPT_ONLY is a temp. workaround to implement future behaior. See note below.
     echoerrandexit "Did not find expected NPM script for '$ACTION'."
   elif [[ -z "$SCRIPT_ONLY" ]]; then
