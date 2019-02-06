@@ -48,7 +48,7 @@ dataRunner() {
       SERV=`echo "$SERVICE_STATUSES" | grep -qE "^${IFACE}(-[^ ]*)?:"` || \
         echoerrandexit "Could not find a service to handle interface class '${IFACE}'. Check package configuration and command typos."
       echo "${SERV}" | cut -d':' -f2 | grep -q 'running' || \
-        echoerrandexit "Service handling iface '$IFACE' is currently stopped. Try 'catalyst services start ${IFACE}'"
+        echoerrandexit "Service handling iface '$IFACE' is currently stopped. Try \ncatalyst services start ${IFACE}"
     fi
   done
 
