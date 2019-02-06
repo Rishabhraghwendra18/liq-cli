@@ -36,6 +36,9 @@ dataRunner() {
   local SERVICE_STATUSES=`services-list -sp`
 
   local IFACES="$@"
+  if (( $# == 0 )); then
+    IFACES=$(echo "$PACKAGE" | jq --raw-output '._catalystRequiresService | .[] | .iface | capture("(?<iface>sql)") | .iface' | tr -d '"')
+  fi
 
   local IFACE
   for IFACE in $IFACES; do
