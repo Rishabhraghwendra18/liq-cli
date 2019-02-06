@@ -94,7 +94,8 @@ packages-test() {
   eval "$TMP"
 
   # note that 'pretest' will be calaled before test and 'posttest' after
-  TEST_TYPES="$TYPES" runPackageScript test
+  TEST_TYPES="$TYPES" runPackageScript test || \
+    echoerrandexit "If failure due to non-running services, you can also run only the unit tests with:\ncatalyst packages test --type=unit" $?
 }
 
 packages-version-check() {
