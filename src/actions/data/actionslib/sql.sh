@@ -1,8 +1,3 @@
-data-reset-sql() {
-  echo "Dropping..."
-  colorerr "cat '$(dirname ${BASH_SOURCE[0]})/../../../../tools/data/drop_all.sql' | services-connect sql"
-}
-
 data-build-sql() {
   echo -n "Creating schema; "
   source "${CURR_ENV_FILE}"
@@ -30,11 +25,40 @@ data-build-sql() {
   echo "INSERT INTO catalystdb (schema_hash, version_spec) VALUES('$SCHEMA_HASH', '${SCHEMA_VER_SPEC[@]}')" | services-connect sql
 }
 
+data-dump-sql() {
+  local MAIN=$(cat <<'EOF'
+    if runScript $SERV_SCRIPT dump-check 2> /dev/null; then
+      if [[ -n "$SERV_SCRIPTS_COOKIE" ]]; then
+        echoerrandexit "Multilpe dump providers found; try specifying service process."
+      fi
+      SERV_SCRIPTS_COOKIE='found'
+      if [[ -n "$OUT_FILE" ]]; then
+        mkdir -p "$(dirname "${OUT_FILE}")"
+        eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT dump" > "$OUT_FILE"
+      else
+        eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT dump"
+      fi
+    fi
+EOF
+)
+  # After we've tried to connect with each process, check if anything worked
+  local ALWAYS_RUN=$(cat <<'EOF'
+    if (( $SERV_SCRIPT_COUNT == ( $SERV_SCRIPT_INDEX + 1 ) )) && [[ -z "$SERV_SCRIPTS_COOKIE" ]]; then
+      echoerrandexit "${PROCESS_NAME}' does not support data dumps."
+    fi
+EOF
+)
+
+  runtimeServiceRunner "$MAIN" "$ALWAYS_RUN" sql
+}
+
 data-rebuild-sql() {
   # TODO: break out the file search and do it first to avoid dropping when the build is sure to fail.
   data-reset-sql
   data-build-sql
-  exit
-  echo "Loading test data..."
-  colorerr "cat '${TEST_DATA_DIR}/test-data.sql' | mysql -h127.0.0.1 '${CLOUDSQL_DB}'"
+}
+
+data-reset-sql() {
+  echo "Dropping..."
+  colorerr "cat '$(dirname ${BASH_SOURCE[0]})/../../../../tools/data/drop_all.sql' | services-connect sql"
 }

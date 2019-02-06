@@ -18,6 +18,35 @@ data-build() {
   dataRunner "$@"
 }
 
+data-dump() {
+  local TMP
+  TMP=$(setSimpleOptions OUTPUT_SET_NAME= -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options."; )
+  eval "$TMP"
+
+  local MAIN=$(cat <<'EOF'
+    local OUT_FILE
+    if [[ -n "${OUTPUT_SET_NAME}" ]]; then
+      OUT_FILE="${BASE_DIR}/data/${IFACE}/${OUTPUT_SET_NAME}/all.sql"
+      if [[ -d "$(dirname "${OUT_FILE}")" ]]; then
+        if [[ -f "$OUT_FILE" ]]; then
+          function clearPrev() { rm "$OUT_FILE"; }
+          function cancelDump() { echo "Bailing out..."; exit 0; }
+          yesno "Found existing dump for '$OUTPUT_SET_NAME'. Would you like to replace? (y\N) " \
+            N \
+            clearPrev \
+            cancelDump
+        else
+          echoerrandexit "It appears there is an existing, manually created '${OUTPUT_SET_NAME}' data set. You must remove it manually to re-use that name."
+        fi
+      fi
+    fi
+    data-dump-${IFACE}
+EOF
+)
+  dataRunner "$@"
+}
+
 data-load() {
   echoerrandexit "The 'load' action has not yet been implemented."
 }
