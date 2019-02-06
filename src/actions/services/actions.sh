@@ -147,7 +147,7 @@ services-err-log() {
 
 services-connect() {
   if (( $# != 1 )); then
-    usage-services
+    contextHelp
     echoerrandexit "Connect requires specification of a single service."
   fi
 
