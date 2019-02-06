@@ -45,10 +45,22 @@ dataRunner() {
       echoerrandexit "The 'data' commands work with primary interfaces. See usage above"
     else
       local SERV
-      SERV=`echo "$SERVICE_STATUSES" | grep -qE "^${IFACE}(-[^ ]*)?:"` || \
+      SERV="$(echo "$SERVICE_STATUSES" | grep -E "^${IFACE}(-[^ ]*)?:")" || \
         echoerrandexit "Could not find a service to handle interface class '${IFACE}'. Check package configuration and command typos."
-      echo "${SERV}" | cut -d':' -f2 | grep -q 'running' || \
-        echoerrandexit "Service handling iface '$IFACE' is currently stopped. Try \ncatalyst services start ${IFACE}"
+      local SERV_SCRIPT NOT_RUNNING SERV_STATUS
+      local SOME_RUNNING=false
+      while read SERV_STATUS; do
+        SERV_SCRIPT="$(echo "${SERV_STATUS}" | cut -d':' -f1)"
+        echo "${SERV_STATUS}" | cut -d':' -f2 | grep -q 'running' && SOME_RUNNING=true || \
+          NOT_RUNNING="${NOT_RUNNING} ${SERV_SCRIPT}"
+      done <<< "${SERV}"
+      if [[ -n "${NOT_RUNNING}" ]]; then
+        if [[ "$SOME_RUNNING" == true ]]; then
+          echoerrandexit "Some necessary processes providing the '${IFACE}' service are not running. Try:\ncatalyst services start${NOT_RUNNING}"
+        else
+          echoerrandexit "The '${IFACE}' service is not available. Try:\ncatalyst services start ${IFACE}"
+        fi
+      fi
     fi
   done
 
