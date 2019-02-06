@@ -22,9 +22,9 @@ services-list() {
   else
     if [[ -n "$SHOW_STATUS" ]]; then
       if [[ -n "$PORCELAIN" ]]; then
-        OUTPUT='echo "$PROCESS_NAME:_SERV_STATUS";'
+        OUTPUT='echo "${PROCESS_NAME}:${_SERV_STATUS}";'
       else
-        OUTPUT='( test "$_SERV_STATUS" == "running" && echo "$PROCESS_NAME (${green}$_SERV_STATUS${reset})" ) || echo "$PROCESS_NAME (${yellow}$_SERV_STATUS${reset})";'
+        OUTPUT='( test "$_SERV_STATUS" == "running" && echo "${PROCESS_NAME} (${green}${_SERV_STATUS}${reset})" ) || echo "$PROCESS_NAME (${yellow}${_SERV_STATUS}${reset})";'
       fi
     fi
   fi
@@ -116,7 +116,8 @@ logMain() {
         echo
       else
         ( echo -e "Local ${DESC} for '${green}\${PROCESS_NAME}${reset}:\n<hit 'q' to adavance to next logs, if any.>\n" && \
-          cat "$FILE_NAME" ) | less -R
+          # tail -f "${FILE_NAME}" )
+          cat "${FILE_NAME}" ) | less -R
       fi
     else
       echo "No local logs for '${red}\${PROCESS_NAME}${reset}'."
