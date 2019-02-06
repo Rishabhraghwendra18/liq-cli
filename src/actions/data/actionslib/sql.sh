@@ -26,6 +26,7 @@ data-build-sql() {
 }
 
 data-dump-sql() {
+  local DATE_FMT='%Y-%m-%d %H:%M:%S %z'
   local MAIN=$(cat <<'EOF'
     if runScript $SERV_SCRIPT dump-check 2> /dev/null; then
       if [[ -n "$SERV_SCRIPTS_COOKIE" ]]; then
@@ -34,9 +35,13 @@ data-dump-sql() {
       SERV_SCRIPTS_COOKIE='found'
       if [[ -n "$OUT_FILE" ]]; then
         mkdir -p "$(dirname "${OUT_FILE}")"
-        eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT dump" > "$OUT_FILE"
+        echo "-- start $(date +'%Y-%m-%d %H:%M:%S %z')" > "${OUT_FILE}"
+        eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT dump" >> "${OUT_FILE}"
+        echo "-- end $(date +'%Y-%m-%d %H:%M:%S %z')" >> "${OUT_FILE}"
       else
+        echo "-- start $(date +"${DATE_FMT}")"
         eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT dump"
+        echo "-- end $(date +"${DATE_FMT}")"
       fi
     fi
 EOF

@@ -20,7 +20,7 @@ data-build() {
 
 data-dump() {
   local TMP
-  TMP=$(setSimpleOptions OUTPUT_SET_NAME= -- "$@") \
+  TMP=$(setSimpleOptions OUTPUT_SET_NAME= FORCE -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options."; )
   eval "$TMP"
 
@@ -28,7 +28,7 @@ data-dump() {
     local OUT_FILE
     if [[ -n "${OUTPUT_SET_NAME}" ]]; then
       OUT_FILE="${BASE_DIR}/data/${IFACE}/${OUTPUT_SET_NAME}/all.sql"
-      if [[ -d "$(dirname "${OUT_FILE}")" ]]; then
+      if [[ -d "$(dirname "${OUT_FILE}")" ]] && [[ -z "$FORCE" ]]; then
         if [[ -f "$OUT_FILE" ]]; then
           function clearPrev() { rm "$OUT_FILE"; }
           function cancelDump() { echo "Bailing out..."; exit 0; }
