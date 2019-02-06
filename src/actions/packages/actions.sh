@@ -77,7 +77,7 @@ packages-link() {
 packages-lint() {
   local TMP
   TMP=$(setSimpleOptions FIX -- "$@") \
-    || ( usage-project-packages; echoerrandexit "Bad options." )
+    || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
 
   if [[ -z "$FIX" ]]; then
@@ -88,8 +88,21 @@ packages-lint() {
 }
 
 packages-test() {
-  runPackageScript pretest
-  runPackageScript test
+  local TMP
+  TMP=$(setSimpleOptions TYPE= -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
+  if [[ -n "$TYPE" ]]; then
+    local TEST_TYPE
+    while IFS=',' read -ra TEST_TYPE; do
+      runPackageScript -s --ignore-missing pretest-${TEST_TYPE}
+      runPackageScript test-${TEST_TYPE}
+    done <<< "$TYPE"
+  else
+    runPackageScript -s --ignore-missing pretest
+    runPackageScript test
+  fi
 }
 
 packages-version-check() {
