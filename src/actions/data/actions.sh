@@ -48,7 +48,15 @@ EOF
 }
 
 data-load() {
-  echoerrandexit "The 'load' action has not yet been implemented."
+  if (( $# != 1 )); then
+    contextHelp
+    echoerrandexit "Must specify exactly one data set name."
+  fi
+
+  local MAIN='data-load-${IFACE}'
+  # notice 'load' is a little different
+  local SET_NAME="${1}"
+  dataRunner
 }
 
 data-reset() {
