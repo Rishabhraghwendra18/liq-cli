@@ -143,7 +143,8 @@ packagesLink() {
     mv "$INSTALLED_PACKAGE_DIR" "${INSTALLED_PACKAGE_DIR}.prelink"
   fi
   mkdir "$INSTALLED_PACKAGE_DIR"
-  bindfs --perms=a-w "$LINK_PACKAGE_DIR" "$INSTALLED_PACKAGE_DIR"
+  # TODO: we were experiencing problems where the file viewed from the link would not always update, so we're trying turning off "unified buffer cache" to see if that fixes the problem.
+  bindfs --perms=a-w -o noubc "$LINK_PACKAGE_DIR" "$INSTALLED_PACKAGE_DIR"
 
   local LINK_PACKAGE_NAME=$(basename "$LINK_PACKAGE_DIR")
   local CURR_PROJECT=$(basename "$BASE_DIR")
@@ -151,6 +152,7 @@ packagesLink() {
 }
 
 packagesUnlink() {
+  # TODO: possible bug? Maybe when it is catalyst-scripts itself which is linked, this hangs because the script itself causes the mount to be busy
   local INSTALLED_PACKAGE_DIR="$1"
   local LINK_PACKAGE_DIR="$2"
 
