@@ -50,7 +50,7 @@ work-involve() {
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
 
-  INVOLVED_PROJECTS="${INVOLVED_PROJECTS} ${PROJECT_NAME}"
+  listAddItem INVOLVED_PROJECTS "${PROJECT_NAME}"
   updateWorkDb
 
   local PRIMARY_PROJECT=$INVOLVED_PROJECTS
@@ -61,7 +61,7 @@ work-involve() {
       if echo "$PACKAGE" | jq -e ".dependencies and ((.dependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\"))) or (.devDependencies and (.devDependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\")))" > /dev/null; then
         packages-link "${PROJECT_NAME}:${NEW_PACKAGE_NAME}"
       fi
-    done < <(find "${CATALYST_PLAYGROUND}/${PROJECT_NAME}" -name "package.json" -not -path "*/node_modules/*")
+    done < <(find "${CATALYST_PLAYGROUND}/${PROJECT_NAME}" -name "package.json" -not -path "*node_modules/*")
   fi
 }
 
