@@ -1,32 +1,3 @@
-# http://linuxcommand.org/lc3_adv_tput.php
-red=`tput setaf 1`
-green=`tput setaf 2`
-yellow=`tput setaf 3`
-blue=`tput setaf 4`
-purple=`tput setaf 5`
-cyan=`tput setaf 6`
-white=`tput setaf 7`
-
-bold=`tput bold`
-red_b="${red}${bold}"
-green_b="${green}${bold}"
-yellow_b="${yellow}${bold}"
-blue_b="${blue}${bold}"
-purple_b="${purple}${bold}"
-cyan_b="${cyan}${bold}"
-white_b="${white}${bold}"
-
-underline=`tput smul`
-red_u="${red}${underline}"
-green_u="${green}${underline}"
-yellow_u="${yellow}${underline}"
-blue_u="${blue}${underline}"
-purple_u="${purple}${underline}"
-cyan_u="${cyan}${underline}"
-white_u="${white}${underline}"
-
-reset=`tput sgr0`
-
 indent() {
   local LEADING_INDENT=''
   local PAR_INDENT='  '
@@ -44,21 +15,6 @@ usageActionPrefix() {
   if [[ -z "${INDENT:-}" ]]; then
     echo -n "catalyst $1 "
   fi
-}
-
-echoerr() {
-  echo -e "${red}$*${reset}" | fold -sw 82 >&2
-}
-
-echowarn() {
-  echo -e "${yellow}$*${reset}" | fold -sw 82 >&2
-}
-
-echoerrandexit() {
-  local MSG="$1"
-  local EXIT_CODE="${2:-10}"
-  echoerr "$MSG"
-  exit $EXIT_CODE
 }
 
 colorerr() {
@@ -730,18 +686,4 @@ defineParameters() {
       eval $SERVICE_DEF_VAR='$(echo "$'$SERVICE_DEF_VAR'" | jq ". + { \"config-const\": (.\"config-const\" + { \"'$PARAM_NAME'\" : \"'$PARAM_VAL'\" }) }")'
     fi
   done
-}
-
-listAddItem() {
-  local LIST_VAR="${1}"
-  local ITEM="${2}"
-  local SEP="${3:- }"
-
-  if [[ -n "$ITEM" ]]; then
-    if [[ -z "${!LIST_VAR:-}" ]]; then
-      eval $LIST_VAR='"$ITEM"'
-    else
-      eval $LIST_VAR='"$(echo -e "${!LIST_VAR}${SEP}${ITEM}")"'
-    fi
-  fi
 }

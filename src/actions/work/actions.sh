@@ -50,7 +50,7 @@ work-involve() {
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
 
-  listAddItem INVOLVED_PROJECTS "${PROJECT_NAME}"
+  list-add-item INVOLVED_PROJECTS "${PROJECT_NAME}"
   updateWorkDb
 
   local PRIMARY_PROJECT=$INVOLVED_PROJECTS
