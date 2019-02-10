@@ -3,9 +3,15 @@
   "version": "0.0.3",
   "description": "Local development and management tool for Catalyst projects.",
   "scripts": {
+    "prebuild": "mkdir -p ./dist && rm -rf ./dist/*",
+    "build": "rollup-bash ./src/cli.sh ./dist/catalyst.sh",
+    "watch": "watch 'npm run build' ./src",
+    "pretest": "catalyst-scripts pretest",
+    "test": "catalyst-scripts test",
+    "posttest": "rm -rf test-tmp/",
+    "prepare": "npm run build",
     "install": "./install.sh",
-    "pretest": "rm -rf test-staging/* && babel --source-maps inline src -d test-staging",
-    "test": "jest -i ./test-staging"
+    "install-clean": "rm -rf package-lock.json node_modules/ && npm install"
   },
   "repository": {
     "type": "git",
@@ -15,13 +21,13 @@
   "license": "ISC",
   "dependencies": {},
   "bin": {
-    "catalyst": "./src/cli.sh"
+    "catalyst": "./dist/catalyst.sh"
   },
   "devDependencies": {
     "@babel/cli": "^7.2.3",
     "@babel/core": "^7.2.2",
     "@babel/preset-env": "^7.3.1",
-    "@liquid-labs/bash-toolkit": "0.0.3",
+    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.8",
     "jest": "^23.6.0",
     "shelljs": "^0.8.3"
   },
