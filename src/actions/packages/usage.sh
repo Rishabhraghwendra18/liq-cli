@@ -22,10 +22,12 @@ ${PREFIX}${cyan_u}packages${reset} <action>:
   ${underline}lint${reset} [-f|--fix] [<name>]: Lints all or the named (NPM) package in the current
     project.
   ${underline}deploy${reset} [<name>...]: Deploys all or named packages to the current environment.
-  ${underline}link${reset} <package spec>...:[-u|--unlink] [<package spec>...]: Links (via npm) the
-    named packages to the current package. The '--unlink' version will unlink
-    all Catalyst linked packages from the current package unless specific
-    packages are specified.
+  ${underline}link${reset} [-l|--list][-f|--fix][-u|--unlink]<package spec>...: Links (via npm) the
+    named packages to the current package. '--list' lists the packages linked in
+    the current project and takes no arguements. The '--unlink' version will
+    unlink all Catalyst linked packages from the current package unless specific
+    packages are specified. '--fix' will check and attempt to fix any broken
+    package links in the current project and takes no arguments.
 
 ${red_b}ALPHA NOTE:${reset} The 'test' action is likely to chaneg significantly in the future to
 support the definition of test sets based on type (unit, integration, load,

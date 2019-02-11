@@ -1,3 +1,8 @@
+# TODO: move to bash-toolkit
+echogreen() {
+  echo -e "${green}$*${reset}" | fold -sw 82
+}
+
 indent() {
   local LEADING_INDENT=''
   local PAR_INDENT='  '
