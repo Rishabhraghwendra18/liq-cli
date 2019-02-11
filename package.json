@@ -29,7 +29,8 @@
     "@babel/preset-env": "^7.3.1",
     "@liquid-labs/bash-toolkit": "^1.0.0-alpha.8",
     "jest": "^23.6.0",
-    "shelljs": "^0.8.3"
+    "shelljs": "^0.8.3",
+    "watch": "^1.0.2"
   },
   "catalyst": {
     "version-check": {
