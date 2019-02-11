@@ -54,7 +54,8 @@ services-start() {
       return 0
     else
       echo "Starting ${PROCESS_NAME}..."
-      eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT start ${PASSTHRU}"
+      eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT start ${PASSTHRU}" \
+        || echoerrandexit "Attempt to start service '${PROCESS_NAME}' failed."
       sleep 1
       if [[ -f "${SERV_ERR}" ]] && [[ `wc -l "${SERV_ERR}" | awk '{print $1}'` -gt 0 ]]; then
         cat "${SERV_ERR}"
