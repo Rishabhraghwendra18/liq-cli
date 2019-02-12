@@ -190,38 +190,38 @@ packages-link-dolink() {
 }
 
 packagesUnlink() {
-  # TODO: possible bug? Maybe when it is catalyst-scripts itself which is linked, this hangs because the script itself causes the mount to be busy
-  local INSTALLED_PACKAGE_DIR="$1"
-  local LINK_PACKAGE_DIR="$2"
+  local PACKAGE_TO_UNLINK="$1"
 
-  # These two used in user output.
-  local LINK_PACKAGE_NAME=$(basename "$LINK_PACKAGE_DIR")
-  local CURR_PROJECT=$(basename "$BASE_DIR")
+  local NPM_ROOT="$(npm root)"
+  local LINK_DIR="${NPM_ROOT}/${PACKAGE_TO_UNLINK}"
+  local PRELINK_DIR="${LINK_DIR}.prelink"
+  local CURR_PROJECT=$(basename "${BASE_DIR}")
 
-  if mount | grep -q "$INSTALLED_PACKAGE_DIR"; then
-    umount "$INSTALLED_PACKAGE_DIR"
-    if [[ -e "${INSTALLED_PACKAGE_DIR}.prelink" ]]; then
-      mv "${INSTALLED_PACKAGE_DIR}.prelink" "${INSTALLED_PACKAGE_DIR}"
-    else
-      echowarn "No previous installation for '${LINK_PACKAGE_NAME}' was found to restore. You might want to (re-)install the package."
-    fi
-    echo "Package '${LINK_PACKAGE_NAME}' unlinked from '$CURR_PROJECT'."
+  if [[ ! -d "${PRELINK_DIR}" ]]; then
+    echoerr "'${PACKAGE_TO_UNLINK}' does not appear to be linked to '${CURR_PROJECT}'. Perhaps the projects are npm-linked rather than Catalyst linked? You can also try unlinking everything with:\ncatalyst link --unlink ${CURR_PROJECT}"
   else
-    echoerr "'${LINK_PACKAGE_NAME}' does not appear to be linked to '$CURR_PROJECT'. Perhaps the projects are npm-linked rather than Catalyst linked? You can also try unlinking everything with:\ncatalyst link --unlink ${CURR_PROJECT}"
+    if mount | grep -q "on ${LINK_DIR}"; then
+      if ! umount "${LINK_DIR}"; then
+        echoerrandexit "Failed to unmount '${LINK_DIR}'. If there are running service scripts, you will need to stop them before un-linking the package. Try:\ncatalyst services stop"
+      fi
+    fi
+
+    if ! rmdir "${LINK_DIR}"; then
+      echoerrandexit "Could not remove the link mount-point '${LINK_DIR}'. Please inspect and remove manually."
+    elif ! mv "${PRELINK_DIR}" "${LINK_DIR}"; then
+      echoerrandexit "Moving archived directory '${PRELINK_DIR}.prelink' back in place failed. Inspect and restore manually."
+    fi
+    echo "Package '${PACKAGE_TO_UNLINK}' unlinked from '$CURR_PROJECT'."
   fi
 }
 
 packagesUnlinkAll() {
   local PACKAGE_PATH="$1"
 
-  local MOUNT_SPEC
-  while read MOUNT_SPEC; do
-    # TODO: a pathname with ' on ' will mess this up. Unfortunately, mount does
-    # not have a clean/safe/scriptable output option.
-    local MOUNT_SRC=$(echo "$MOUNT_SPEC" | sed -Ee 's| on .+||')
-    local MOUNT_POINT=$(echo "$MOUNT_SPEC" | sed -Ee 's|.+ on (/.+) \(.+|\1|')
-    packagesUnlink "$MOUNT_POINT" "$MOUNT_SRC"
-  done < <(mount | grep -s "$PACKAGE_PATH/node_modules" || echowarn "Did not find any linked packages in '$(basename "$PACKAGE_PATH")'.")
+  local UNLINK_PACKAGE
+  for UNLINK_PACKAGE in $(packages-link-list); do
+    packagesUnlink "$UNLINK_PACKAGE"
+  done
 }
 
 packages-link-list() {

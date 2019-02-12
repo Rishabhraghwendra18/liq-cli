@@ -81,15 +81,15 @@ packages-link() {
   else # we need to link or unlink specific packages
     local LINK_SPEC
     for LINK_SPEC in "$@"; do
-      local LINK_PACKAGE_FILE LINK_PACKAGE_NAME
-      packages-find-package LINK_PACKAGE_FILE LINK_PACKAGE_NAME "$LINK_SPEC"
+      local UNLINK_PACKAGE_FILE UNLINK_PACKAGE_NAME
+      packages-find-package UNLINK_PACKAGE_FILE UNLINK_PACKAGE_NAME "$LINK_SPEC"
 
-      local LINK_PACKAGE_DIR=$(dirname "$LINK_PACKAGE_FILE")
-      local INSTALLED_PACKAGE_DIR="${BASE_DIR}/node_modules/${LINK_PACKAGE_NAME}"
+      local LINK_PACKAGE_DIR=$(dirname "$UNLINK_PACKAGE_FILE")
+      local INSTALLED_PACKAGE_DIR="${BASE_DIR}/node_modules/${UNLINK_PACKAGE_NAME}"
       if [[ -z "$UNLINK" ]]; then
         packages-link-dolink "$INSTALLED_PACKAGE_DIR" "$LINK_PACKAGE_DIR"
       else
-        packagesUnlink "$INSTALLED_PACKAGE_DIR" "$LINK_PACKAGE_DIR"
+        packagesUnlink "${UNLINK_PACKAGE_NAME}"
       fi
     done
   fi
