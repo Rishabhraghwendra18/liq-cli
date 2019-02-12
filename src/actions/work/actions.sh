@@ -50,7 +50,7 @@ work-involve() {
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
 
-  INVOLVED_PROJECTS="${INVOLVED_PROJECTS} ${PROJECT_NAME}"
+  list-add-item INVOLVED_PROJECTS "${PROJECT_NAME}"
   updateWorkDb
 
   local PRIMARY_PROJECT=$INVOLVED_PROJECTS
@@ -61,30 +61,53 @@ work-involve() {
       if echo "$PACKAGE" | jq -e ".dependencies and ((.dependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\"))) or (.devDependencies and (.devDependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\")))" > /dev/null; then
         packages-link "${PROJECT_NAME}:${NEW_PACKAGE_NAME}"
       fi
-    done < <(find "${CATALYST_PLAYGROUND}/${PROJECT_NAME}" -name "package.json" -not -path "*/node_modules/*")
+    done < <(find "${CATALYST_PLAYGROUND}/${PROJECT_NAME}" -name "package.json" -not -path "*node_modules/*")
   fi
 }
 
 work-merge() {
+  if [[ ! -f "${CATALYST_WORK_DB}/curr_work" ]]; then
+    echoerrandexit "You can only merge work in the current unit of work. Try:\ncatalyst work select"
+  fi
+
   source "${CATALYST_WORK_DB}/curr_work"
   local CURR_WORK=$(basename $(readlink "${CATALYST_WORK_DB}/curr_work" ))
 
   if [[ -z "$INVOLVED_PROJECTS" ]]; then
     echoerrandexit "No projects involved in the current unit of work '$CURR_WORK'."
   fi
+  if (( $# == 0 )) && ! yesno "Are you sure want to merge the entire unit of work? (y/N)" 'N'; then
+    return
+  fi
 
-  local IP
-  for IP in $INVOLVED_PROJECTS; do
-    requireCleanRepo "$IP"
+  local TO_MERGE="$@"
+  if [[ -z "$TO_MERGE" ]]; then
+    TO_MERGE="$INVOLVED_PROJECTS"
+  fi
+
+  convert-dot() {
+    if [[ . == "$TM" ]]; then
+      TM=$(basename "$BASE_DIR")
+    fi
+  }
+
+  local TM
+  for TM in $TO_MERGE; do
+    convert-dot
+    if ! echo "$INVOLVED_PROJECTS" | grep -qE '(^| +)'$TM'( +|$)'; then
+      echoerrandexit "Project '$TM' not in the current unit of work."
+    fi
+    requireCleanRepo "$TM"
 
     local WORKBRANCH=`git branch | (grep '*' || true) | awk '{print $2}'`
     if [[ "$WORKBRANCH" != "$CURR_WORK" ]]; then
-      echoerrandexit "Project '$IP' is not currently on the expected workbranch '$CURR_WORK'. Please fix and re-run."
+      echoerrandexit "Project '$TM' is not currently on the expected workbranch '$CURR_WORK'. Please fix and re-run."
     fi
   done
 
-  for IP in $INVOLVED_PROJECTS; do
-    cd "${CATALYST_PLAYGROUND}/${IP}"
+  for TM in $TO_MERGE; do
+    convert-dot
+    cd "${CATALYST_PLAYGROUND}/${TM}"
     local SHORT_STAT=`git diff --shortstat master ${WORKBRANCH}`
     local INS_COUNT=`echo "${SHORT_STAT}" | egrep -Eio -e '\d+ insertion' | awk '{print $1}' || true`
     INS_COUNT=${INS_COUNT:-0}
@@ -95,9 +118,9 @@ work-merge() {
     local PUSH_FAILED=N
     # in case the current working dir does not exist in master
     (git checkout -q master \
-        || echoerrandexit "Could not switch to master branch in project '$IP'.") \
+        || echoerrandexit "Could not switch to master branch in project '$TM'.") \
     && (git merge --no-ff -qm "merge branch $WORKBRANCH" "$WORKBRANCH" \
-        || echoerrandexit "Problem merging work branch with master for project '$IP'. ($?)") \
+        || echoerrandexit "Problem merging work branch with master for project '$TM'. ($?)") \
     && ( (git push -q && echo "Work merged and pushed to origin.") \
         || (PUSH_FAILED=Y && echoerr "Local merge successful, but there was a problem pushing work to master."))
     # if we have not exited, then the merge was made and we'll attempt to clean up
@@ -105,17 +128,20 @@ work-merge() {
     git branch -qd "$WORKBRANCH" \
       || echoerr "Could not delete '${WORKBRANCH}'. This can happen if the branch was renamed."
     # TODO: provide a reference for checking the merge is present and if safe to delete.
-    echo "$IP linecount change: $DIFF_COUNT"
+    echo "$TM linecount change: $DIFF_COUNT"
 
-    INVOLVED_PROJECTS=$(echo "$INVOLVED_PROJECTS" | sed -E "s/(^| +)$IP( +|\$)//")
+    # TODO: create and use 'lists-remove-item' in bash-tools
+    INVOLVED_PROJECTS=$(echo "$INVOLVED_PROJECTS" | sed -Ee 's/(^| +)'$TM'( +|$)/\2|/' -e 's/^ (.*)/\1/')
     updateWorkDb
   done
 
-  if [[ -n "$INVOLVED_PROJECTS" ]]; then
-    echoerrandexit "Unexpectedly, it may be that not all involved projects were committed. Leaving things as they are. You will need to the current work."
+  if (( $# == 0 )) && [[ -n "$INVOLVED_PROJECTS" ]]; then
+    echoerrandexit "It may be that not all involved projects were committed. Leaving possibly uncomitted projects as part of the current unit of work."
   fi
-  rm "${CATALYST_WORK_DB}/curr_work"
-  rm "${CATALYST_WORK_DB}/${CURR_WORK}"
+  if [[ -z "${INVOLVED_PROJECTS}" ]]; then
+    rm "${CATALYST_WORK_DB}/curr_work"
+    rm "${CATALYST_WORK_DB}/${CURR_WORK}"
+  fi
 }
 
 work-qa() {

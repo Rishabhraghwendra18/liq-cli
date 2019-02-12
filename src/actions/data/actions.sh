@@ -1,6 +1,4 @@
-source "`dirname ${BASH_SOURCE[0]}`/lib.sh"
-
-source "`dirname ${BASH_SOURCE[0]}`/actionslib/sql.sh"
+source ./actionslib/sql.sh
 
 requirements-data() {
   requireEnvironment
@@ -18,8 +16,45 @@ data-build() {
   dataRunner "$@"
 }
 
+data-dump() {
+  local TMP
+  TMP=$(setSimpleOptions OUTPUT_SET_NAME= FORCE -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options."; )
+  eval "$TMP"
+
+  local MAIN=$(cat <<'EOF'
+    local OUT_FILE
+    if [[ -n "${OUTPUT_SET_NAME}" ]]; then
+      OUT_FILE="${BASE_DIR}/data/${IFACE}/${OUTPUT_SET_NAME}/all.sql"
+      if [[ -d "$(dirname "${OUT_FILE}")" ]] && [[ -z "$FORCE" ]]; then
+        if [[ -f "$OUT_FILE" ]]; then
+          function clearPrev() { rm "$OUT_FILE"; }
+          function cancelDump() { echo "Bailing out..."; exit 0; }
+          yesno "Found existing dump for '$OUTPUT_SET_NAME'. Would you like to replace? (y\N) " \
+            N \
+            clearPrev \
+            cancelDump
+        else
+          echoerrandexit "It appears there is an existing, manually created '${OUTPUT_SET_NAME}' data set. You must remove it manually to re-use that name."
+        fi
+      fi
+    fi
+    data-dump-${IFACE}
+EOF
+)
+  dataRunner "$@"
+}
+
 data-load() {
-  echoerrandexit "The 'load' action has not yet been implemented."
+  if (( $# != 1 )); then
+    contextHelp
+    echoerrandexit "Must specify exactly one data set name."
+  fi
+
+  local MAIN='data-load-${IFACE}'
+  # notice 'load' is a little different
+  local SET_NAME="${1}"
+  dataRunner
 }
 
 data-reset() {
@@ -36,6 +71,9 @@ dataRunner() {
   local SERVICE_STATUSES=`services-list -sp`
 
   local IFACES="$@"
+  if (( $# == 0 )); then
+    IFACES=$(echo "$PACKAGE" | jq --raw-output '._catalystRequiresService | .[] | .iface | capture("(?<iface>sql)") | .iface' | tr -d '"')
+  fi
 
   local IFACE
   for IFACE in $IFACES; do
@@ -45,10 +83,22 @@ dataRunner() {
       echoerrandexit "The 'data' commands work with primary interfaces. See usage above"
     else
       local SERV
-      SERV=`echo "$SERVICE_STATUSES" | grep -qE "^${IFACE}(-[^ ]*)?:"` || \
+      SERV="$(echo "$SERVICE_STATUSES" | grep -E "^${IFACE}(-[^ ]*)?:")" || \
         echoerrandexit "Could not find a service to handle interface class '${IFACE}'. Check package configuration and command typos."
-      echo "${SERV}" | cut -d':' -f2 | grep -q 'running' || \
-        echoerrandexit "Service handling iface '$IFACE' is currently stopped. Try 'catalyst services start ${IFACE}'"
+      local SERV_SCRIPT NOT_RUNNING SERV_STATUS
+      local SOME_RUNNING=false
+      while read SERV_STATUS; do
+        SERV_SCRIPT="$(echo "${SERV_STATUS}" | cut -d':' -f1)"
+        echo "${SERV_STATUS}" | cut -d':' -f2 | grep -q 'running' && SOME_RUNNING=true || \
+          NOT_RUNNING="${NOT_RUNNING} ${SERV_SCRIPT}"
+      done <<< "${SERV}"
+      if [[ -n "${NOT_RUNNING}" ]]; then
+        if [[ "$SOME_RUNNING" == true ]]; then
+          echoerrandexit "Some necessary processes providing the '${IFACE}' service are not running. Try:\ncatalyst services start${NOT_RUNNING}"
+        else
+          echoerrandexit "The '${IFACE}' service is not available. Try:\ncatalyst services start ${IFACE}"
+        fi
+      fi
     fi
   done
 

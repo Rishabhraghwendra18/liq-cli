@@ -141,7 +141,8 @@ environmentsGetDefaultFromScripts() {
 
   local SERV_SCRIPT
   for SERV_SCRIPT in `getCtrlScripts "$FQ_SERVICE"`; do
-    DEFAULT_VAL=`runScript "$SERV_SCRIPT" param-default "$CURR_ENV_PURPOSE" "$REQ_PARAM"`
+    DEFAULT_VAL=`runScript "$SERV_SCRIPT" param-default "$CURR_ENV_PURPOSE" "$REQ_PARAM"` \
+      || echoerrandexit "Service script '$SERV_SCRIPT' does not support 'param-default'. Perhaps the package is out of date?"
     if [[ -n "$DEFAULT_VAL" ]]; then
       eval "$VAR_NAME='$DEFAULT_VAL'"
       break

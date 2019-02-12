@@ -22,9 +22,9 @@ services-list() {
   else
     if [[ -n "$SHOW_STATUS" ]]; then
       if [[ -n "$PORCELAIN" ]]; then
-        OUTPUT='echo "$PROCESS_NAME:_SERV_STATUS";'
+        OUTPUT='echo "${PROCESS_NAME}:${_SERV_STATUS}";'
       else
-        OUTPUT='( test "$_SERV_STATUS" == "running" && echo "$PROCESS_NAME (${green}$_SERV_STATUS${reset})" ) || echo "$PROCESS_NAME (${yellow}$_SERV_STATUS${reset})";'
+        OUTPUT='( test "$_SERV_STATUS" == "running" && echo "${PROCESS_NAME} (${green}${_SERV_STATUS}${reset})" ) || echo "$PROCESS_NAME (${yellow}${_SERV_STATUS}${reset})";'
       fi
     fi
   fi
@@ -54,7 +54,8 @@ services-start() {
       return 0
     else
       echo "Starting ${PROCESS_NAME}..."
-      eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT start ${PASSTHRU}"
+      eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT start ${PASSTHRU}" \
+        || echoerrandexit "Attempt to start service '${PROCESS_NAME}' failed."
       sleep 1
       if [[ -f "${SERV_ERR}" ]] && [[ `wc -l "${SERV_ERR}" | awk '{print $1}'` -gt 0 ]]; then
         cat "${SERV_ERR}"
@@ -116,7 +117,8 @@ logMain() {
         echo
       else
         ( echo -e "Local ${DESC} for '${green}\${PROCESS_NAME}${reset}:\n<hit 'q' to adavance to next logs, if any.>\n" && \
-          cat "$FILE_NAME" ) | less -R
+          # tail -f "${FILE_NAME}" )
+          cat "${FILE_NAME}" ) | less -R
       fi
     else
       echo "No local logs for '${red}\${PROCESS_NAME}${reset}'."
@@ -146,7 +148,7 @@ services-err-log() {
 
 services-connect() {
   if (( $# != 1 )); then
-    usage-services
+    contextHelp
     echoerrandexit "Connect requires specification of a single service."
   fi
 

@@ -25,7 +25,6 @@ PACKAGE='' # set by 'requirePackage'
 PACKAGE_NAME='' # set by 'requirePackage'
 PACKAGE_FILE='' # set by 'requirePackage', 'requireNpmPackage'
 
-SOURCE_DIR="$SOURCE_DIR" # TODO: huh?
 BASE_DIR=''
 WORKSPACE_DIR=''
 

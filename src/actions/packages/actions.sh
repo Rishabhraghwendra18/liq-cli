@@ -24,60 +24,81 @@ packages-deploy() {
 
 packages-link() {
   local TMP
-  TMP=$(setSimpleOptions UNLINK -- "$@") \
-    || ( usage-project-packages; echoerrandexit "Bad options." )
+  TMP=$(setSimpleOptions FIX LIST UNLINK -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
 
-  if [[ -n "$UNLINK" ]] && (( $# == 0 )); then
-    packagesUnlinkAll "$BASE_DIR"
-  fi
-
-  local LINK_SPEC
-  for LINK_SPEC in "$@"; do
-    local LINK_PROJECT=$(echo "$LINK_SPEC" | awk -F: '{print $1}')
-    local LINK_PACKAGE=$(echo "$LINK_SPEC" | awk -F: '{print $2}')
-
-    if [[ ! -d "${CATALYST_PLAYGROUND}/${LINK_PROJECT}" ]]; then
-      echoerrandexit "Could not find project directory '${LINK_PROJECT}' in Catalyst playground."
-    fi
-
-    local CANDIDATE_PACKAGE_FILE=''
-    local CANDIDATE_PACKAGE_NAME=''
-    local CANDIDATE_PACKAGE_FILE=''
-    local CANDIDATE_PACKAGE_FILE_IT=''
-    local CANDIDATE_COUNT=0
-    while read CANDIDATE_PACKAGE_FILE_IT; do
-      # Not sure why, but the _IT is necessary because setting
-      # CANDIDATE_PACKAGE_FILE directly in the read causes the value to reset
-      # after the loop.
-      CANDIDATE_PACKAGE_FILE="${CANDIDATE_PACKAGE_FILE_IT}"
-      CANDIDATE_PACKAGE_NAME=$(cat "$CANDIDATE_PACKAGE_FILE" | jq --raw-output '.name | @sh' | tr -d "'")
-      if [[ -n "$LINK_PACKAGE" ]]; then
-        if [[ "$LINK_PACKAGE" == "$CANDIDATE_PACKAGE_NAME" ]]; then
-          break;
+  # First, vet the option combinations
+  if [[ -n "${FIX}" ]] && (( ( $_OPTS_COUNT + $# ) > 1 )); then
+    contextHelp
+    echoerrandexit "The '--fix' option is not compatible with other options and takes no arguments."
+  elif [[ -n "${LIST}" ]] && (( ( $_OPTS_COUNT + $# ) > 1 )); then
+    contextHelp
+    echoerrandexit "The '--list' option is not compatible with other options and takes no arguments."
+  elif [[ -n "${UNLINK}" ]] && (( $_OPTS_COUNT > 1 )); then
+    contextHelp
+    echoerrandexit "Cannot combine '--fix' with other options."
+  #Now, execute based on the sub-action indicated by options
+  elif [[ -n "${FIX}" ]]; then
+    local ERROR_COUNT=0
+    local NPM_ROOT=$(npm root)
+    local LINKED_PACKAGE
+    for LINKED_PACKAGE in $(packages-link-list); do
+      echo -n "Checking '$LINKED_PACKAGE'... "
+      if [[ ! -f "${NPM_ROOT}/${LINKED_PACKAGE}.prelink"/package.json ]]; then
+        echoerr "\nThe 'prelink' archive seems to be corrupted! Fix manually."
+        ERROR_COUNT=$(( $ERROR_COUNT + 1 ))
+      else
+        local IS_MOUNTED=$(mount | grep "${NPM_ROOT}/${LINKED_PACKAGE}" || true)
+        if [[ -n "$IS_MOUNTED" ]]; then
+          if [[ -f "${NPM_ROOT}/${LINKED_PACKAGE}"/package.json ]]; then
+            echogreen "Looks good."
+          else
+            echoerr "'$LINKED_PACKAGE' appears mounted, but also corrupt. Fix manually."
+            ERROR_COUNT=$(( $ERROR_COUNT + 1 ))
+          fi
+        else # not mounted
+          echowarn "link has come un-mounted. Attempting fix..."
+          if [[ -e "${NPM_ROOT}/${LINKED_PACKAGE}" ]] && [[ ! -d "${NPM_ROOT}/${LINKED_PACKAGE}" ]]; then
+            echoerr "Expected link directory '${NPM_ROOT}/${LINKED_PACKAGE}' is not a directory as expected. Fix manually."
+            ERROR_COUNT=$(( $ERROR_COUNT + 1 ))
+          elif ! rmdir "${NPM_ROOT}/${LINKED_PACKAGE}"; then
+            echoerr "Could not remove link directory '${NPM_ROOT}/${LINKED_PACKAGE}'. Check if empty and permissions. Automated fix failed."
+            ERROR_COUNT=$(( $ERROR_COUNT + 1 ))
+          elif ! mv "${NPM_ROOT}/${LINKED_PACKAGE}.prelink" "${NPM_ROOT}/${LINKED_PACKAGE}"; then
+            echoerr "mv "${NPM_ROOT}/${LINKED_PACKAGE}.prelink" "${NPM_ROOT}/${LINKED_PACKAGE}" failed while attempting to re-link. Automated fix failed."
+            ERROR_COUNT=$(( $ERROR_COUNT + 1 ))
+          else
+            packages-link $(basename "${LINKED_PACKAGE}")
+          fi
         fi
-      elif (( $CANDIDATE_COUNT > 0 )); then
-        echoerrandexit "Project '$LINK_PROJECT' contains multiple packages. You must specify the package. Try\ncatalyst packages link $(test ! -n "$UNLINK" || echo "--unlink " )${LINK_PROJECT}:<package name>"
       fi
-      CANDIDATE_COUNT=$(( $CANDIDATE_COUNT + 1 ))
-    done < <(find -H "${CATALYST_PLAYGROUND}/${LINK_PROJECT}" -name "package.json" -not -path "*/node_modules*/*")
+    done
+  elif [[ -n "${LIST}" ]]; then
+    packages-link-list
+  elif [[ -n "$UNLINK" ]] && (( $# == 0 )); then
+    packagesUnlinkAll "$BASE_DIR"
+  else # we need to link or unlink specific packages
+    local LINK_SPEC
+    for LINK_SPEC in "$@"; do
+      local LINK_PACKAGE_FILE LINK_PACKAGE_NAME
+      packages-find-package LINK_PACKAGE_FILE LINK_PACKAGE_NAME "$LINK_SPEC"
 
-    # If we get here without exiting, then 'CANDIDATE_PACKAGE_FILE' has the
-    # location of the package.json we want to link.
-    local CANDIDATE_PACKAGE_DIR=$(dirname "$CANDIDATE_PACKAGE_FILE")
-    local INSTALLED_PACKAGE_DIR="${BASE_DIR}/node_modules/${CANDIDATE_PACKAGE_NAME}"
-    if [[ -z "$UNLINK" ]]; then
-      packagesLink "$INSTALLED_PACKAGE_DIR" "$CANDIDATE_PACKAGE_DIR"
-    else
-      packagesUnlink "$INSTALLED_PACKAGE_DIR" "$CANDIDATE_PACKAGE_DIR"
-    fi
-  done
+      local LINK_PACKAGE_DIR=$(dirname "$LINK_PACKAGE_FILE")
+      local INSTALLED_PACKAGE_DIR="${BASE_DIR}/node_modules/${LINK_PACKAGE_NAME}"
+      if [[ -z "$UNLINK" ]]; then
+        packages-link-dolink "$INSTALLED_PACKAGE_DIR" "$LINK_PACKAGE_DIR"
+      else
+        packagesUnlink "$INSTALLED_PACKAGE_DIR" "$LINK_PACKAGE_DIR"
+      fi
+    done
+  fi
 }
 
 packages-lint() {
   local TMP
   TMP=$(setSimpleOptions FIX -- "$@") \
-    || ( usage-project-packages; echoerrandexit "Bad options." )
+    || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
 
   if [[ -z "$FIX" ]]; then
@@ -88,8 +109,14 @@ packages-lint() {
 }
 
 packages-test() {
-  runPackageScript pretest
-  runPackageScript test
+  local TMP
+  TMP=$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
+  # note that 'pretest' will be calaled before test and 'posttest' after
+  TEST_TYPES="$TYPES" NO_DATA_RESET="$NO_DATA_RESET" GO_RUN="$GO_RUN" runPackageScript test || \
+    echoerrandexit "If failure due to non-running services, you can also run only the unit tests with:\ncatalyst packages test --type=unit" $?
 }
 
 packages-version-check() {

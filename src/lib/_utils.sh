@@ -1,31 +1,7 @@
-# http://linuxcommand.org/lc3_adv_tput.php
-red=`tput setaf 1`
-green=`tput setaf 2`
-yellow=`tput setaf 3`
-blue=`tput setaf 4`
-purple=`tput setaf 5`
-cyan=`tput setaf 6`
-white=`tput setaf 7`
-
-bold=`tput bold`
-red_b="${red}${bold}"
-green_b="${green}${bold}"
-yellow_b="${yellow}${bold}"
-blue_b="${blue}${bold}"
-purple_b="${purple}${bold}"
-cyan_b="${cyan}${bold}"
-white_b="${white}${bold}"
-
-underline=`tput smul`
-red_u="${red}${underline}"
-green_u="${green}${underline}"
-yellow_u="${yellow}${underline}"
-blue_u="${blue}${underline}"
-purple_u="${purple}${underline}"
-cyan_u="${cyan}${underline}"
-white_u="${white}${underline}"
-
-reset=`tput sgr0`
+# TODO: move to bash-toolkit
+echogreen() {
+  echo -e "${green}$*${reset}" | fold -sw 82
+}
 
 indent() {
   local LEADING_INDENT=''
@@ -44,21 +20,6 @@ usageActionPrefix() {
   if [[ -z "${INDENT:-}" ]]; then
     echo -n "catalyst $1 "
   fi
-}
-
-echoerr() {
-  echo -e "${red}$*${reset}" | fold -sw 82 >&2
-}
-
-echowarn() {
-  echo -e "${yellow}$*${reset}" | fold -sw 82 >&2
-}
-
-echoerrandexit() {
-  local MSG="$1"
-  local EXIT_CODE="${2:-10}"
-  echoerr "$MSG"
-  exit $EXIT_CODE
 }
 
 colorerr() {
@@ -179,32 +140,35 @@ requireEnvironment() {
 }
 
 yesno() {
+  default-yes() { return 0; }
+  default-no() { return 1; } # bash fals-y
+
   local PROMPT="$1"
   local DEFAULT=$2
-  local HANDLE_YES=$3
-  local HANDLE_NO="${4:-}" # default to noop
+  local HANDLE_YES="${3:-default-yes}"
+  local HANDLE_NO="${4:-default-no}" # default to noop
 
   local ANSWER=''
   read -p "$PROMPT" ANSWER
   if [ -z "$ANSWER" ]; then
     case "$DEFAULT" in
       Y*|y*)
-        $HANDLE_YES;;
+        $HANDLE_YES; return $?;;
       N*|n*)
-        $HANDLE_NO;;
+        $HANDLE_NO; return $?;;
       *)
-        echo "Bad default, please answer explicitly."
+        echo "You must choose an answer."
         yesno "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO
     esac
   else
     case "$ANSWER" in
       Y*|y*)
-        $HANDLE_YES;;
+        $HANDLE_YES; return $?;;
       N*|n*)
-        $HANDLE_NO;;
+        $HANDLE_NO; return $?;;
       *)
         echo "Did not understand response, please answer 'y(es)' or 'n(o)'."
-        yesno "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO
+        yesno "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO;;
     esac
   fi
 }

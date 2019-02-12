@@ -18,6 +18,10 @@ ctrlScriptEnv() {
   done
 
   for REQ_PARAM in $(getConfigConstants "${SERV_IFACE}"); do
+    if [[ -z "${!REQ_PARAM:-}" ]]; then
+      # TODO: ideally we'd load constants from the package.json, not environment.
+      echoerrandexit "No value for config const '$REQ_PARAM'. Try updating the environment:\ncatalyst environment update -n"
+    fi
     ENV_SETTINGS="$ENV_SETTINGS $REQ_PARAM='${!REQ_PARAM}'"
     if [[ -z "$REQ_PARAMS" ]]; then
       REQ_PARAMS="${REQ_PARAM}"
