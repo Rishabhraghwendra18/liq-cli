@@ -130,7 +130,8 @@ work-merge() {
     # TODO: provide a reference for checking the merge is present and if safe to delete.
     echo "$TM linecount change: $DIFF_COUNT"
 
-    INVOLVED_PROJECTS=$(echo "$INVOLVED_PROJECTS" | sed -E "s/(^| +)$TM( +|\$)//")
+    # TODO: create and use 'lists-remove-item' in bash-tools
+    INVOLVED_PROJECTS=$(echo "$INVOLVED_PROJECTS" | sed -Ee 's/(^| +)'$TM'( +|$)/\2|/' -e 's/^ (.*)/\1/')
     updateWorkDb
   done
 
