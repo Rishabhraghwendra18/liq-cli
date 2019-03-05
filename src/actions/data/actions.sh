@@ -104,7 +104,7 @@ dataRunner() {
 
   if [[ -z "$IFACES" ]]; then
     source "${CURR_ENV_FILE}"
-    IFACES=$(echo ${CURR_ENV_SERVICES[@]} | tr " " "\n" | sed -Ee 's/^(sql).+/\1/')
+    IFACES=$(echo ${CURR_ENV_SERVICES[@]:-} | tr " " "\n" | sed -Ee 's/^(sql).+/\1/')
   fi
 
   for IFACE in $IFACES; do

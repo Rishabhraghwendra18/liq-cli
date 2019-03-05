@@ -231,7 +231,7 @@ environments-update() {
 
   local REQ_SERV_IFACES=`required-services-list`
   local REQ_SERV_IFACE
-  local PRIOR_ENV_SERVICES="${CURR_ENV_SERVICES[@]}"
+  local PRIOR_ENV_SERVICES="${CURR_ENV_SERVICES[@]:-}"
   CURR_ENV_SERVICES=()
   for REQ_SERV_IFACE in $REQ_SERV_IFACES; do
     local PRIOR_MATCH="$(echo "$PRIOR_ENV_SERVICES" | sed -Ee 's/(^|.* +)('$REQ_SERV_IFACE':[^ ]+)( +|$).*/\2/')"

@@ -76,20 +76,22 @@ runtimeServiceRunner() {
 
   source "${CURR_ENV_FILE}"
   declare -a ENV_SERVICES
-  if [[ -z "${REVERSE_ORDER:-}" ]]; then
-    ENV_SERVICES=("${CURR_ENV_SERVICES[@]}")
-  else
-    local I=$(( ${#CURR_ENV_SERVICES[@]} - 1 ))
-    while (( $I >= 0 )); do
-      ENV_SERVICES+=("${CURR_ENV_SERVICES[$I]}")
-      I=$(( $I - 1 ))
-    done
+  if [[ -n "${CURR_ENV_SERVICES:-}" ]]; then
+    if [[ -z "${REVERSE_ORDER:-}" ]]; then
+      ENV_SERVICES=("${CURR_ENV_SERVICES[@]}")
+    else
+      local I=$(( ${#CURR_ENV_SERVICES[@]} - 1 ))
+      while (( $I >= 0 )); do
+        ENV_SERVICES+=("${CURR_ENV_SERVICES[$I]}")
+        I=$(( $I - 1 ))
+      done
+    fi
   fi
   local UNMATCHED_SERV_SPECS="$@"
 
   # TODO: Might be worth tweaking interactive-CLI by passing in vars indicating whether working on single or multiple, 'item' number and total, and whether current item is first, middle or last.
   local SERVICE_KEY
-  for SERVICE_KEY in ${ENV_SERVICES[@]}; do
+  for SERVICE_KEY in ${ENV_SERVICES[@]:-}; do
     local SERV_IFACE=`echo "$SERVICE_KEY" | cut -d: -f1`
     local MAJOR_SERV_IFACE=`echo "$SERV_IFACE" | cut -d- -f1`
     local MINOR_SERV_IFACE=`echo "$SERV_IFACE" | cut -d- -f2`

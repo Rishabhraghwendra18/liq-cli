@@ -18,19 +18,18 @@ doEnvironmentList() {
 }
 
 updateEnvironment() {
-
   local ENV_PATH="$_CATALYST_ENVS/${PACKAGE_NAME}/${ENV_NAME}"
   mkdir -p "`dirname "$ENV_PATH"`"
 
   # TODO: use '${CURR_ENV_SERVICES[@]@Q}' once upgraded to bash 4.4
   cat <<EOF > "$ENV_PATH"
-CURR_ENV_SERVICES=(${CURR_ENV_SERVICES[@]})
+CURR_ENV_SERVICES=(${CURR_ENV_SERVICES[@]:-})
 CURR_ENV_PURPOSE='${CURR_ENV_PURPOSE}'
 EOF
 
   local SERV_KEY REQ_PARAM
   # TODO: again, @Q when available
-  for SERV_KEY in ${CURR_ENV_SERVICES[@]}; do
+  for SERV_KEY in ${CURR_ENV_SERVICES[@]:-}; do
     for REQ_PARAM in $(getRequiredParameters "$SERV_KEY"); do
       cat <<EOF >> "$ENV_PATH"
 $REQ_PARAM='${!REQ_PARAM}'
