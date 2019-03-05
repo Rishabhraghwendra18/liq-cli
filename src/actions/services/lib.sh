@@ -119,7 +119,15 @@ runtimeServiceRunner() {
         if (( $SERV_SCRIPT_COUNT > 1 )); then
           PROCESS_NAME="${SERV_IFACE}.${SCRIPT_NAME}"
         fi
-        if testScriptMatch "$SCRIPT_NAME" "$@"; then
+        local CURR_SERV_SPECS=''
+        local SPEC_CANDIDATE
+        for SPEC_CANDIDATE in "$@"; do
+          if testServMatch "$SERV_IFACE" "$SPEC_CANDIDATE"; then
+            list-add-item CURR_SERV_SPECS "$SPEC_CANDIDATE"
+          fi
+          # else it's a spec for another service interface
+        done
+        if testScriptMatch "$SCRIPT_NAME" "$CURR_SERV_SPECS"; then
           local SERV_OUT_BASE="${_CATALYST_ENV_LOGS}/${SERV_IFACE}.${SCRIPT_NAME}"
           local SERV_LOG="${SERV_OUT_BASE}.log"
           local SERV_ERR="${SERV_OUT_BASE}.err"
