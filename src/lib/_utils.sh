@@ -516,7 +516,7 @@ runScript() {
   if [[ -e "${BASE_DIR}/bin/${SERV_SCRIPT}" ]]; then
     "${BASE_DIR}/bin/${SERV_SCRIPT}" "$@"
   else
-    npx --no-install $SERV_SCRIPT "$@"
+    ( cd "${BASE_DIR}"; npx --no-install $SERV_SCRIPT "$@" )
   fi
 }
 

@@ -1,7 +1,7 @@
 data-build-sql() {
   echo -n "Creating schema; "
   source "${CURR_ENV_FILE}"
-  local SQL_VARIANT=`echo "${CURR_ENV_SERVICES[@]}" | sed -Ee 's/.*(^| *)(sql(-[^:]+)?).*/\2/'`
+  local SQL_VARIANT=`echo "${CURR_ENV_SERVICES[@]:-}" | sed -Ee 's/.*(^| *)(sql(-[^:]+)?).*/\2/'`
   local SCHEMA_FILES SCHEMA_FILE_COUNT
   findDataFiles SCHEMA_FILES SCHEMA_FILE_COUNT "$SQL_VARIANT" "schema"
   echo "Loading $SCHEMA_FILE_COUNT schema files..."
@@ -75,5 +75,6 @@ data-rebuild-sql() {
 
 data-reset-sql() {
   echo "Dropping..."
-  colorerr "cat '$(dirname ${BASH_SOURCE[0]})/../../../../tools/data/drop_all.sql' | services-connect sql"
+  # relative to dist
+  colorerr "cat '$(dirname $(real_path ${BASH_SOURCE[0]}))/../tools/data/drop_all.sql' | services-connect sql"
 }

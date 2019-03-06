@@ -76,20 +76,22 @@ runtimeServiceRunner() {
 
   source "${CURR_ENV_FILE}"
   declare -a ENV_SERVICES
-  if [[ -z "${REVERSE_ORDER:-}" ]]; then
-    ENV_SERVICES=("${CURR_ENV_SERVICES[@]}")
-  else
-    local I=$(( ${#CURR_ENV_SERVICES[@]} - 1 ))
-    while (( $I >= 0 )); do
-      ENV_SERVICES+=("${CURR_ENV_SERVICES[$I]}")
-      I=$(( $I - 1 ))
-    done
+  if [[ -n "${CURR_ENV_SERVICES:-}" ]]; then
+    if [[ -z "${REVERSE_ORDER:-}" ]]; then
+      ENV_SERVICES=("${CURR_ENV_SERVICES[@]}")
+    else
+      local I=$(( ${#CURR_ENV_SERVICES[@]} - 1 ))
+      while (( $I >= 0 )); do
+        ENV_SERVICES+=("${CURR_ENV_SERVICES[$I]}")
+        I=$(( $I - 1 ))
+      done
+    fi
   fi
   local UNMATCHED_SERV_SPECS="$@"
 
   # TODO: Might be worth tweaking interactive-CLI by passing in vars indicating whether working on single or multiple, 'item' number and total, and whether current item is first, middle or last.
   local SERVICE_KEY
-  for SERVICE_KEY in ${ENV_SERVICES[@]}; do
+  for SERVICE_KEY in ${ENV_SERVICES[@]:-}; do
     local SERV_IFACE=`echo "$SERVICE_KEY" | cut -d: -f1`
     local MAJOR_SERV_IFACE=`echo "$SERV_IFACE" | cut -d- -f1`
     local MINOR_SERV_IFACE=`echo "$SERV_IFACE" | cut -d- -f2`
@@ -117,7 +119,15 @@ runtimeServiceRunner() {
         if (( $SERV_SCRIPT_COUNT > 1 )); then
           PROCESS_NAME="${SERV_IFACE}.${SCRIPT_NAME}"
         fi
-        if testScriptMatch "$SCRIPT_NAME" "$@"; then
+        local CURR_SERV_SPECS=''
+        local SPEC_CANDIDATE
+        for SPEC_CANDIDATE in "$@"; do
+          if testServMatch "$SERV_IFACE" "$SPEC_CANDIDATE"; then
+            list-add-item CURR_SERV_SPECS "$SPEC_CANDIDATE"
+          fi
+          # else it's a spec for another service interface
+        done
+        if testScriptMatch "$SCRIPT_NAME" "$CURR_SERV_SPECS"; then
           local SERV_OUT_BASE="${_CATALYST_ENV_LOGS}/${SERV_IFACE}.${SCRIPT_NAME}"
           local SERV_LOG="${SERV_OUT_BASE}.log"
           local SERV_ERR="${SERV_OUT_BASE}.err"
