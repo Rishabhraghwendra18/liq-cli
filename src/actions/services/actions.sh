@@ -51,7 +51,6 @@ services-start() {
 
     if services-list -qe "${SERV_IFACE}.${SCRIPT_NAME}"; then
       echo "${PROCESS_NAME} already running." >&2
-      return 0
     else
       echo "Starting ${PROCESS_NAME}..."
       eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT start ${PASSTHRU}" \
@@ -73,7 +72,6 @@ services-stop() {
   local MAIN=$(cat <<'EOF'
     if ! services-list -qe "${SERV_IFACE}.${SCRIPT_NAME}"; then
       echo "${PROCESS_NAME} already stopped." >&2
-      return 0
     else
       echo "Stopping ${PROCESS_NAME}..."
       eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT stop"
