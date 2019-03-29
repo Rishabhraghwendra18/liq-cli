@@ -85,11 +85,22 @@ EOF
 }
 
 services-restart() {
+  local TMP
+  TMP=$(setSimpleOptions NO_START:S -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
   local MAIN=$(cat <<'EOF'
     echo "Restarting ${PROCESS_NAME}..."
     if services-list -qe "${SERV_IFACE}.${SCRIPT_NAME}"; then
       eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT restart"
     else
+      if [[ -n "$NO_START" ]]; then
+        echowarn "'${PROCESS_NAME}' currently stopped; skipping."
+        # even from the 'eval', this will affect the outer loop and go onto the
+        # next service (if any) to restart
+        continue
+      fi
       echowarn "'${PROCESS_NAME}' currently stopped; starting..."
       eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT start"
     fi
