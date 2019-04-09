@@ -110,11 +110,13 @@ packages-lint() {
 
 packages-test() {
   local TMP
+  # TODO https://github.com/Liquid-Labs/catalyst-cli/issues/27
+  # TODO https://github.com/Liquid-Labs/catalyst-cli/issues/28
   TMP=$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
 
-  # note that 'pretest' will be calaled before test and 'posttest' after
+  # note this entails 'pretest' and 'posttest' as well
   TEST_TYPES="$TYPES" NO_DATA_RESET="$NO_DATA_RESET" GO_RUN="$GO_RUN" runPackageScript test || \
     echoerrandexit "If failure due to non-running services, you can also run only the unit tests with:\ncatalyst packages test --type=unit" $?
 }
