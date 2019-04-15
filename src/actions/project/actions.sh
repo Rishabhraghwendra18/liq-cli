@@ -26,8 +26,6 @@ project-init() {
   # TODO: verify that the parent directory is a workspace?
 
   projectGitSetup
-
-  updateCatalystFile
 }
 
 project-publish() {

@@ -3,7 +3,6 @@ source ./data/lib.sh
 source ./data/usage.sh
 
 source ./environments/actions.sh
-source ./environments/lib.sh
 source ./environments/usage.sh
 
 source ./packages/actions.sh

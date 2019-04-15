@@ -12,21 +12,21 @@ ctrlScriptEnv() {
   local REQ_PARAMS=$(getRequiredParameters "$SERVICE_KEY")
   local REQ_PARAM
   for REQ_PARAM in $REQ_PARAMS; do
-    check-param-err REQ_PARAM "service-source parameter"
+    check-param-err "$REQ_PARAM" "service-source parameter"
     ENV_SETTINGS="$ENV_SETTINGS $REQ_PARAM='${!REQ_PARAM}'"
   done
 
   local SERV_IFACE=`echo "$SERVICE_KEY" | cut -d: -f1`
   local ADD_REQ_PARAMS=$((echo "$PACKAGE" | jq -e --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$SERV_IFACE\") | .\"params-req\" | @sh" 2> /dev/null || echo '') | tr -d "'")
   for REQ_PARAM in $ADD_REQ_PARAMS; do
-    check-param-err REQ_PARAM "service-local parameter"
+    check-param-err "$REQ_PARAM" "service-local parameter"
     ENV_SETTINGS="$ENV_SETTINGS $REQ_PARAM='${!REQ_PARAM}'"
     list-add-item REQ_PARAMS "${REQ_PARAM}"
   done
 
   for REQ_PARAM in $(getConfigConstants "${SERV_IFACE}"); do
     # TODO: ideally we'd load constants from the package.json, not environment.
-    check-param-err $REQ_PARAM "config const"
+    check-param-err "$REQ_PARAM" "config const"
     ENV_SETTINGS="$ENV_SETTINGS $REQ_PARAM='${!REQ_PARAM}'"
     list-add-item REQ_PARAMS "${REQ_PARAM}"
   done
