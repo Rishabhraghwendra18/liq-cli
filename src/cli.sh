@@ -8,7 +8,9 @@ set -o pipefail
 import colors
 import echoerr
 import lists
+import prompt
 import real_path
+import select
 source ./actions/inc.sh
 source ./lib/inc.sh
 # process global overrides of the form 'key="value"'

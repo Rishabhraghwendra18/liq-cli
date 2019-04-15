@@ -3,65 +3,38 @@ requirements-environments() {
   requirePackage
 }
 
+source ./actionslib/common.sh
+source ./actionslib/query.sh
+source ./actionslib/update.sh
+source ./gcplib/organizations.sh
+source ./gcplib/projects.sh
+source ./gcplib/utils.sh
+
 environments-add() {
-  local ENV_NAME="${1:-}"
-  # TODO: echo "Adding environment for project $CURR_PROJECT"
-  if [ -z "${ENV_NAME}" ]; then
-    requireAnswer 'Local environment name: ' ENV_NAME
-  fi
-
-  if [[ -z "${CURR_ENV_PURPOSE:-}" ]]; then
-    PS3="Select purpose: "
-    selectDoneCancelAllOther CURR_ENV_PURPOSE $STD_ENV_PUPRPOSES
-  fi
-
-  local REQ_SERV_IFACES=`required-services-list`
-  local REQ_SERV_IFACE
+  local ENV_NAME REQ_PARAMS
   CURR_ENV_SERVICES=()
-  for REQ_SERV_IFACE in $REQ_SERV_IFACES; do
-    # select the service provider
-    local FQN_SERVICE
-    environmentsFindProvidersFor "$REQ_SERV_IFACE" FQN_SERVICE
-    CURR_ENV_SERVICES+=("$FQN_SERVICE")
-
-    # define required params
-    local REQ_PARAMS=$(getRequiredParameters "$FQN_SERVICE")
-    local ADD_REQ_PARAMS=$((echo "$PACKAGE" | jq -e --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"params-req\" | @sh" 2> /dev/null || echo '') | tr -d "'")
-    if [[ -n "$ADD_REQ_PARAMS" ]]; then
-      if [[ -n "$REQ_PARAMS" ]]; then
-        REQ_PARAMS="$REQ_PARAMS $ADD_REQ_PARAMS"
-      else
-        REQ_PARAMS="$ADD_REQ_PARAMS"
-      fi
-    fi
+  eval `environmentsGatherEnvironmentSettings "$@"`
+  
+  if [[ -n "$REQ_PARAMS" ]]; then
     local REQ_PARAM
     for REQ_PARAM in $REQ_PARAMS; do
       if [[ -z "${!REQ_PARAM:-}" ]]; then
-        local DEFAULT_VAL
-        environmentsGetDefaultFromScripts DEFAULT_VAL "$FQN_SERVICE" "$REQ_PARAM"
-
         local PARAM_VAL=''
-        requireAnswer "Value for required parameter '$REQ_PARAM': " PARAM_VAL "$DEFAULT_VAL"
-        eval "$REQ_PARAM='$PARAM_VAL'"
+        local DEFAULT_VAR_NAME="${REQ_PARAM}_DEFAULT_VAL"
+        if declare -F environmentsGet-$REQ_PARAM >/dev/null; then
+          environmentsGet-$REQ_PARAM
+        fi
+        if [[ -z ${!REQ_PARAM} ]]; then
+          require-answer "Value for required parameter '$REQ_PARAM': " PARAM_VAL "${!DEFAULT_VAR_NAME}"
+          eval "$REQ_PARAM='$PARAM_VAL'"
+        fi
       fi
     done
-
-    # and configuration constants
-    for REQ_PARAM in $(echo $PACKAGE | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"config-const\" | keys | @sh" | tr -d "'"); do
-      local CONFIG_VAL=$(echo "$PACKAGE" | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"config-const\".\"$REQ_PARAM\" | @sh" | tr -d "'")
-      eval "$REQ_PARAM='$CONFIG_VAL'"
-    done
-  done
+  fi
+  # else, there are no required service interfaces and we're done.
 
   updateEnvironment
-
-  function selectNewEnv() {
-    environments-select "${ENV_NAME}"
-  }
-
-  yesno "Would you like to select the newly added '${ENV_NAME}'? (Y\n) " \
-    Y \
-    selectNewEnv
+  environmentsAskIfSelect
 }
 
 environments-delete() {
@@ -156,9 +129,9 @@ environments-set() {
     # TODO: add 'selectOrOther' function; we use this pattern in a few places
     select KEY in `getEnvTypeKeys` '<other>'; do break; done
     if [[ "$KEY" == '<other>' ]]; then
-      requireAnswer 'Parameter key: ' KEY
+      require-answer 'Parameter key: ' KEY
     fi
-    requireAnswer 'Parameter value: ' VALUE
+    require-answer 'Parameter value: ' VALUE
     updateEnvParam "$KEY" "$VALUE"
   else
     echoerrandexit "Unexpected number of arguments to 'catalyst environment set'."
@@ -272,7 +245,7 @@ environments-update() {
         fi
 
         local PARAM_VAL=''
-        requireAnswer "Value for required parameter '$REQ_PARAM': " PARAM_VAL "$DEFAULT_VAL"
+        require-answer "Value for required parameter '$REQ_PARAM': " PARAM_VAL "$DEFAULT_VAL"
         eval "$REQ_PARAM='$PARAM_VAL'"
       fi
     done

@@ -7,7 +7,7 @@ provided-services-add() {
   # TODO: check for global to allow programatic use
   local SERVICE_NAME="${1:-}"
   if [[ -z "$SERVICE_NAME" ]]; then
-    requireAnswer "Service name: " SERVICE_NAME
+    require-answer "Service name: " SERVICE_NAME
   fi
 
   local SERVICE_DEF=$(cat <<EOF
