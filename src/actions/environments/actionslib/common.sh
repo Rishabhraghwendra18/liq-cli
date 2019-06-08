@@ -4,7 +4,6 @@ function environmentsGatherEnvironmentSettings() {
   # CURR_ENV_SERVICES as global
   environmentsCheckCloudSDK
 
-  local DEFAULT_SETTINGS
   ENV_NAME="${1:-}"
 
   if [ -z "${ENV_NAME}" ]; then
@@ -25,7 +24,7 @@ function environmentsGatherEnvironmentSettings() {
     CURR_ENV_SERVICES+=("$FQN_SERVICE")
 
     # define required params
-    local REQ_PARAMS=$(getRequiredParameters "$FQN_SERVICE")
+    REQ_PARAMS=$(getRequiredParameters "$FQN_SERVICE")
     local ADD_REQ_PARAMS=$((echo "$PACKAGE" | jq -e --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"params-req\" | @sh" 2> /dev/null || echo '') | tr -d "'")
     if [[ -n "$ADD_REQ_PARAMS" ]]; then
       list-add-item REQ_PARAMS ADD_REQ_PARAMS
@@ -36,7 +35,7 @@ function environmentsGatherEnvironmentSettings() {
       local DEFAULT_VAL
       environmentsGetDefaultFromScripts DEFAULT_VAL "$FQN_SERVICE" "$REQ_PARAM"
       if [[ -n "$DEFAULT_VAL" ]]; then
-        list-add-item "$DEFAULT_SETTINGS" "local ${REQ_PARAM}_DEFAULT_VAL='$DEFAULT_VAL'" "\n"
+        eval "${REQ_PARAM}_DEFAULT_VAL='$DEFAULT_VAL'"
       fi
     done
 
@@ -46,8 +45,6 @@ function environmentsGatherEnvironmentSettings() {
       eval "$REQ_PARAM='$CONFIG_VAL'"
     done
   done
-
-  echo "$DEFAULT_SETTINGS"
 }
 
 function environmentsAskIfSelect() {

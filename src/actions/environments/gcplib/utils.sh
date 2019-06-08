@@ -10,7 +10,7 @@ function environmentsCheckCloudSDK() {
   # than deal with whether or not they need billing management
   local COM
   for COM in beta ; do
-    if [ 0 -eq `gcloud --verbosity error components list --filter="status='Installed'" --format="value(Name)" 2>/dev/null | grep $COM | wc -l` ]; then
+    if [ 0 -eq `gcloud --verbosity error components list --filter="Status='Installed'" --format="value(ID)" 2>/dev/null | grep $COM | wc -l` ]; then
       gcloud components install $COM
     fi
   done
@@ -33,7 +33,7 @@ function environmentsGoogleCloudOptions() {
     local VALS=($LINE)
     NAME=${VALS[0]}
     ID=${VALS[1]}
-    list-add-item NAMES "$NAME"
-    list-add-item IDS "$ID"
-  done < <($QUERY)
+    list-add-item NAMES "$NAME" "\n"
+    list-add-item IDS "$ID" "\n"
+  done < <(eval "$QUERY")
 }

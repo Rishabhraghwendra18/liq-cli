@@ -14,6 +14,9 @@ EOF
   # TODO: again, @Q when available
   for SERV_KEY in ${CURR_ENV_SERVICES[@]:-}; do
     for REQ_PARAM in $(getRequiredParameters "$SERV_KEY"); do
+      if [[ -z "${!REQ_PARAM:-}" ]]; then
+        echoerrandexit "Did not find definition for required parameter '${REQ_PARAM}'."
+      fi
       cat <<EOF >> "$ENV_PATH"
 $REQ_PARAM='${!REQ_PARAM}'
 EOF
@@ -25,7 +28,7 @@ EOF
   for REQ_SERV_IFACE in $REQ_SERV_IFACES; do
     for REQ_PARAM in $(echo "$PACKAGE" | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"params-req\" | @sh" | tr -d "'"); do
       if [[ -z "${!REQ_PARAM:-}" ]]; then
-        echoerrandexit "Did not find definition for '${REQ_PARAM}' while updating environment."
+        echoerrandexit "Did not find definition for required parameter '${REQ_PARAM}'."
       fi
       cat <<EOF >> "$ENV_PATH"
 $REQ_PARAM='${!REQ_PARAM}'

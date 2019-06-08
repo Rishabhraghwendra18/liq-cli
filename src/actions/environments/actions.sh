@@ -11,10 +11,10 @@ source ./gcplib/projects.sh
 source ./gcplib/utils.sh
 
 environments-add() {
-  local ENV_NAME REQ_PARAMS
+  local ENV_NAME REQ_PARAMS DEFAULT_SETTINGS
   CURR_ENV_SERVICES=()
-  eval `environmentsGatherEnvironmentSettings "$@"`
-  
+  environmentsGatherEnvironmentSettings "$@"
+
   if [[ -n "$REQ_PARAMS" ]]; then
     local REQ_PARAM
     for REQ_PARAM in $REQ_PARAMS; do
@@ -22,7 +22,7 @@ environments-add() {
         local PARAM_VAL=''
         local DEFAULT_VAR_NAME="${REQ_PARAM}_DEFAULT_VAL"
         if declare -F environmentsGet-$REQ_PARAM >/dev/null; then
-          environmentsGet-$REQ_PARAM
+          environmentsGet-$REQ_PARAM $REQ_PARAM
         fi
         if [[ -z ${!REQ_PARAM} ]]; then
           require-answer "Value for required parameter '$REQ_PARAM': " PARAM_VAL "${!DEFAULT_VAR_NAME}"
