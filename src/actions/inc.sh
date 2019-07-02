@@ -5,6 +5,9 @@ source ./data/usage.sh
 source ./environments/actions.sh
 source ./environments/usage.sh
 
+source ./meta/actions.sh
+source ./meta/usage.sh
+
 source ./packages/actions.sh
 source ./packages/lib.sh
 source ./packages/usage.sh

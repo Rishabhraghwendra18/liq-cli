@@ -8,7 +8,7 @@ case "$GROUP" in
     ACTION="${1:-}"; shift
     case "$GROUP" in
       # TODO: build this from constant def... something...
-      data|environments|packages|project|remotes|required-services|provided-services|services|work|workspace)
+      data|environments|meta|packages|project|remotes|required-services|provided-services|services|work|workspace)
         if [[ $(type -t "${GROUP}-${ACTION}" || echo '') == 'function' ]]; then
           # the only exception to requiring a workspace configuration is the
           # 'workspace init' command

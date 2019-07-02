@@ -26,6 +26,8 @@ _catalyst()
         opts="build clear load rebuild reset";;
       environments)
         opts="add delete deselect list select set show update";;
+      meta)
+        opts="bash-config";;
       packages)
         opts="audit build deploy lint link test version-check";;
       project)

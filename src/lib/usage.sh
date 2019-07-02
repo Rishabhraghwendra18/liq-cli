@@ -1,4 +1,4 @@
-CATALYST_COMMAND_GROUPS=(data environments packages project provided-services remotes required-services services work workspace)
+CATALYST_COMMAND_GROUPS=(data environments meta packages project provided-services remotes required-services services work workspace)
 
 help() {
   local TMP
