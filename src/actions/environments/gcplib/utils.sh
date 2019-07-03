@@ -29,10 +29,12 @@ function environmentsGoogleCloudOptions() {
 
   # expects 'NAMES' and 'IDS' to have been declared by caller
   local LINE NAME ID
+  function split() {
+    NAME="$1"
+    ID="$2"
+  }
   while read LINE; do
-    local VALS=($LINE)
-    NAME=${VALS[0]}
-    ID=${VALS[1]}
+    eval "split $LINE"
     list-add-item NAMES "$NAME" "\n"
     list-add-item IDS "$ID" "\n"
   done < <(eval "$QUERY")
