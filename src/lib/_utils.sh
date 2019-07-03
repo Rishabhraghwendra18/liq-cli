@@ -341,7 +341,7 @@ getRequiredParameters() {
 # TODO: Or maybe not. Have a set of "objective" service key manipulators to build from and extract parts?
 getConfigConstants() {
   local SERV_IFACE="${1}"
-  echo "$PACKAGE" | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$SERV_IFACE\") | .\"config-const\" | keys | @sh" | tr -d "'"
+  echo "$PACKAGE" | jq --raw-output ".catalyst.requires | .[] | select(.iface==\"$SERV_IFACE\") | .\"config-const\" | keys | @sh" | tr -d "'"
 }
 
 getCtrlScripts() {

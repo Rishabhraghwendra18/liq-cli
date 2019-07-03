@@ -12,6 +12,6 @@ EOF
 
   defineParameters SERVICE_DEF
 
-  PACKAGE=`echo "$PACKAGE" | jq ". + { \"$CAT_REQ_SERVICES_KEY\" : ( .\"$CAT_REQ_SERVICES_KEY\" + [ $SERVICE_DEF ] ) }"`
+  PACKAGE=`echo "$PACKAGE" | jq ".catalyst + { \"requires\" : ( .catalyst.requires + [ $SERVICE_DEF ] ) }"`
   echo "$PACKAGE" | jq > "$PACKAGE_FILE"
 }

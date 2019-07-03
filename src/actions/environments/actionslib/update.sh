@@ -26,7 +26,7 @@ EOF
   local REQ_SERV_IFACES=`required-services-list`
   local REQ_SERV_IFACE
   for REQ_SERV_IFACE in $REQ_SERV_IFACES; do
-    for REQ_PARAM in $(echo "$PACKAGE" | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"params-req\" | @sh" | tr -d "'"); do
+    for REQ_PARAM in $(echo "$PACKAGE" | jq --raw-output ".catalyst.requires | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"params-req\" | @sh" | tr -d "'"); do
       if [[ -z "${!REQ_PARAM:-}" ]]; then
         echoerrandexit "Did not find definition for required parameter '${REQ_PARAM}'."
       fi
@@ -36,7 +36,7 @@ EOF
     done
 
     for REQ_PARAM in $(getConfigConstants "$REQ_SERV_IFACE"); do
-      local CONFIG_VAL=$(echo "$PACKAGE" | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"config-const\".\"$REQ_PARAM\" | @sh" | tr -d "'")
+      local CONFIG_VAL=$(echo "$PACKAGE" | jq --raw-output ".catalyst.requires | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"config-const\".\"$REQ_PARAM\" | @sh" | tr -d "'")
       cat <<EOF >> "$ENV_PATH"
 $REQ_PARAM='$CONFIG_VAL'
 EOF

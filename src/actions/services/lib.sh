@@ -17,7 +17,7 @@ ctrlScriptEnv() {
   done
 
   local SERV_IFACE=`echo "$SERVICE_KEY" | cut -d: -f1`
-  local ADD_REQ_PARAMS=$((echo "$PACKAGE" | jq -e --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$SERV_IFACE\") | .\"params-req\" | @sh" 2> /dev/null || echo '') | tr -d "'")
+  local ADD_REQ_PARAMS=$((echo "$PACKAGE" | jq -e --raw-output ".catalyst.requires | .[] | select(.iface==\"$SERV_IFACE\") | .\"params-req\" | @sh" 2> /dev/null || echo '') | tr -d "'")
   for REQ_PARAM in $ADD_REQ_PARAMS; do
     check-param-err "$REQ_PARAM" "service-local parameter"
     ENV_SETTINGS="$ENV_SETTINGS $REQ_PARAM='${!REQ_PARAM}'"

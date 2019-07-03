@@ -72,7 +72,7 @@ dataRunner() {
 
   local IFACES="$@"
   if (( $# == 0 )); then
-    IFACES=$(echo "$PACKAGE" | jq --raw-output '._catalystRequiresService | .[] | .iface | capture("(?<iface>sql)") | .iface' | tr -d '"')
+    IFACES=$(echo "$PACKAGE" | jq --raw-output '.catalyst.requires | .[] | .iface | capture("(?<iface>sql)") | .iface' | tr -d '"')
   fi
 
   local IFACE
