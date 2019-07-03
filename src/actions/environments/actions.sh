@@ -24,8 +24,8 @@ environments-add() {
         if declare -F environmentsGet-$REQ_PARAM >/dev/null; then
           environmentsGet-$REQ_PARAM $REQ_PARAM
         fi
-        if [[ -z ${!REQ_PARAM} ]]; then
-          require-answer "Value for required parameter '$REQ_PARAM': " PARAM_VAL "${!DEFAULT_VAR_NAME}"
+        if [[ -z ${!REQ_PARAM:-} ]]; then
+          require-answer "Value for required parameter '$REQ_PARAM': " PARAM_VAL "${!DEFAULT_VAR_NAME:-}"
           eval "$REQ_PARAM='$PARAM_VAL'"
         fi
       fi
