@@ -314,17 +314,6 @@ getPackageDef() {
   fi
 }
 
-runScript() {
-  local SERV_SCRIPT="$1"; shift
-
-  # The script might be our own or an installed dependency.
-  if [[ -e "${BASE_DIR}/bin/${SERV_SCRIPT}" ]]; then
-    "${BASE_DIR}/bin/${SERV_SCRIPT}" "$@"
-  else
-    ( cd "${BASE_DIR}"; npx --no-install $SERV_SCRIPT "$@" )
-  fi
-}
-
 getProvidedServiceValues() {
   local SERV_KEY="${1:-}"
   local FIELD_LABEL="$2"
@@ -339,7 +328,9 @@ getProvidedServiceValues() {
     SERV_PACKAGE="$PACKAGE"
   fi
 
-  echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"${FIELD_LABEL}\" | @sh" | tr -d "'"
+  echo "$SERV_PACKAGE" | jq --raw-output ".catalyst.provides | .[] | select(.name == \"$SERV_NAME\") | .\"${FIELD_LABEL}\" | @sh" | tr -d "'" \
+    || ( ( [[ -n $SERV_PACKAGE_NAME ]] && echoerrandexit "$SERV_PACKAGE_NAME package.json does not define .catalyst.provides[${SERV_NAME}]." ) || \
+         echoerrandexit "Local package.json does not define .catalyst.provides[${SERV_NAME}]." )
 }
 
 getRequiredParameters() {

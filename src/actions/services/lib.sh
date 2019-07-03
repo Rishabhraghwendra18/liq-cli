@@ -34,6 +34,33 @@ ctrlScriptEnv() {
   echo "$ENV_SETTINGS REQ_PARAMS='$REQ_PARAMS'"
 }
 
+runServiceCtrlScript() {
+  local TMP # see https://unix.stackexchange.com/a/88338/84520
+  TMP=$(setSimpleOptions NO_ENV -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
+  local SERV_SCRIPT="$1"; shift
+
+  if [[ -z $NO_ENV ]]; then
+    local SCRIPT_ENV
+    SCRIPT_ENV=$(ctrlScriptEnv) || return $?
+
+    # The script might be our own or an installed dependency.
+    if [[ -e "${BASE_DIR}/bin/${SERV_SCRIPT}" ]]; then
+      ( export $SCRIPT_ENV; "${BASE_DIR}/bin/${SERV_SCRIPT}" "$@" )
+    else
+      ( export $SCRIPT_ENV; cd "${BASE_DIR}"; npx --no-install $SERV_SCRIPT "$@" )
+    fi
+  else
+    if [[ -e "${BASE_DIR}/bin/${SERV_SCRIPT}" ]]; then
+      "${BASE_DIR}/bin/${SERV_SCRIPT}" "$@"
+    else
+      ( cd "${BASE_DIR}"; npx --no-install $SERV_SCRIPT "$@" )
+    fi
+  fi
+}
+
 testServMatch() {
   local KEY="$1"; shift
   if [[ -z "${1:-}" ]]; then
@@ -101,20 +128,25 @@ runtimeServiceRunner() {
       local SERV_PACKAGE
       getPackageDef SERV_PACKAGE "$SERV_PACKAGE_NAME"
       local SERV_SCRIPT
-      local SERV_SCRIPTS=`echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"ctrl-scripts\" | @sh" | tr -d "'"`
+      local SERV_SCRIPTS=`echo "$SERV_PACKAGE" | jq --raw-output ".catalyst.provides | .[] | select(.name == \"$SERV_NAME\") | .\"ctrl-scripts\" | @sh" 2> /dev/null | tr -d "'"`
+      [[ -n $SERV_SCRIPTS ]] || echoerrandexit "$SERV_PACKAGE_NAME package.json does not properly define 'catalyst.provides.$SERV_NAME.ctrl-scripts'."
       local SERV_SCRIPT_ARRAY=( $SERV_SCRIPTS )
       local SERV_SCRIPT_COUNT=${#SERV_SCRIPT_ARRAY[@]}
       # give the process scripts their proper, self-declared order
       if (( $SERV_SCRIPT_COUNT > 1 )); then
         for SERV_SCRIPT in $SERV_SCRIPTS; do
-          SERV_SCRIPT_ARRAY[$(eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT myorder")]="$SERV_SCRIPT"
+          local SCRIPT_ORDER # see https://unix.stackexchange.com/a/88338/84520
+          SCRIPT_ORDER=$(runServiceCtrlScript --no-env $SERV_SCRIPT myorder)
+          [[ -n $SCRIPT_ORDER ]] || echoerrandexit "Could not determine script run order."
+          SERV_SCRIPT_ARRAY[$SCRIPT_ORDER]="$SERV_SCRIPT"
         done
       fi
 
       local SERV_SCRIPT_INDEX=0
       local SERV_SCRIPTS_COOKIE=''
       for SERV_SCRIPT in ${SERV_SCRIPT_ARRAY[@]}; do
-        local SCRIPT_NAME=$(runScript $SERV_SCRIPT name)
+        local SCRIPT_NAME # see https://unix.stackexchange.com/a/88338/84520
+        SCRIPT_NAME=$(runServiceCtrlScript --no-env $SERV_SCRIPT name)
         local PROCESS_NAME="${SERV_IFACE}"
         if (( $SERV_SCRIPT_COUNT > 1 )); then
           PROCESS_NAME="${SERV_IFACE}.${SCRIPT_NAME}"

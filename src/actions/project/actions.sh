@@ -1,4 +1,3 @@
-CAT_PROVIDES_SERVICE="_catServices"
 STD_IFACE_CLASSES="http html rest sql sql-mysql"
 STD_PLATFORM_TYPES="local gcp aws"
 STD_PURPOSES="dev test pre-production produciton"
