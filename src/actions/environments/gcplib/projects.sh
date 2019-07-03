@@ -21,10 +21,11 @@ function environmentsGet-GCP_PROJECT_ID() {
   else
     PS3="Project name:"
     echo "To create a new project, select '<other>' and provide the project name."
-    selectOneCancelOther PROJ_NAME $NAMES
-    local SELECT_IDX=$(list-get-index NAMES "$PROJ_NAME" "\n")
+    selectOneCancelOther PROJ_NAME "$NAMES"
+    local SELECT_IDX
+    SELECT_IDX=$(list-get-index NAMES "$PROJ_NAME" "\n")
     if [[ -n "$SELECT_IDX" ]]; then
-      PROJ_ID=$(list-get-item IDS $SELECT_IDX "\n")
+      PROJ_ID=$(list-get-item IDS $SELECT_IDX $'\n')
     else # it's a new project
       createNew
     fi
