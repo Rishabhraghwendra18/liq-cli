@@ -13,7 +13,7 @@ required-services-add() {
     done
     local REQ_SERVICES
     PS3="Required service interface: "
-    selectOneCancelOther REQ_SERVICES $NEW_SERVICES
+    selectOneCancelOther REQ_SERVICES NEW_SERVICES
     for IFACE_CLASS in $REQ_SERVICES; do
       reqServDefine "$IFACE_CLASS"
     done

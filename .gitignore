@@ -1,3 +1,5 @@
+/.yalc
+/yalc.lock
 /.catalyst
 node_modules/
 /test-staging/

@@ -24,7 +24,7 @@ function environmentsGet-CLOUDSQL_SERVICE_ACCOUNT() {
     createNew
   else
     PS3="Service account:"
-    selectOneCancelOther ACCT_NAME $NAMES
+    selectOneCancelOther ACCT_NAME NAMES
     echo "To create a new service acct, select '<other>' and provide the instance name."
     local SELECT_IDX=$(list-get-index NAMES "$ACCT_NAME")
     if [[ -z "$SELECT_IDX" ]]; then # it's a new instance

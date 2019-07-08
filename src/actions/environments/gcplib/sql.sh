@@ -22,7 +22,7 @@ function environmentsGet-CLOUDSQL_INSTANCE_NAME() {
   else
     PS3="CloudSQL instance:"
     echo "To create a new instance, select '<other>' and provide the instance name."
-    selectOneCancelOther INSTANCE_NAME $NAMES
+    selectOneCancelOther INSTANCE_NAME NAMES
     local SELECT_IDX=$(list-get-index NAMES "$INSTANCE_NAME")
     if [[ -z "$SELECT_IDX" ]]; then # it's a new instance
       createNew
@@ -84,7 +84,7 @@ function environmentsGet-CLOUDSQL_DB() {
   else
     PS3="Database:"
     echo "To create a new DB, select '<other>' and provide the DB name."
-    selectOneCancelOther DB_NAME $NAMES
+    selectOneCancelOther DB_NAME NAMES
     local SELECT_IDX=$(list-get-index NAMES "$DB_NAME")
     if [[ -z "$SELECT_IDX" ]]; then # it's a new instance
       createNew
@@ -132,7 +132,7 @@ function environmentsGet-CLOUDSQL_USER() {
   else
     PS3="DB user:"
     echo "To create a new DB user, select '<other>' and provide the user name."
-    selectOneCancelOther USER_NAME $NAMES
+    selectOneCancelOther USER_NAME NAMES
     local SELECT_IDX=$(list-get-index NAMES "$USER_NAME")
     setPwFile
     if [[ -z "$SELECT_IDX" ]]; then # it's a new instance

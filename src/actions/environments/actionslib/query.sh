@@ -53,7 +53,7 @@ environmentsFindProvidersFor() {
       SERVICE_PACKAGES=$((test -n "$SERVICE_PACKAGES" && echo "$SERVICE_PACKAGES '$PACKAGE_NAME'") || echo "'$PACKAGE_NAME'")
       local SERV_DESC
       environmentsServiceDescription SERV_DESC "$SERVICE" "$PACKAGE_NAME"
-      PROVIDER_OPTIONS=$((test -n "$PROVIDER_OPTIONS" && echo "$PROVIDER_OPTIONS '${SERV_DESC}'") || echo "'${SERV_DESC}'")
+      list-add-item PROVIDER_OPTIONS "$SERV_DESC"
     done
   done
 
@@ -73,9 +73,9 @@ environmentsFindProvidersFor() {
     # instead of:
     # 1) foo bar
     # 2) baz
-    eval "selectOneCancel PROVIDER $PROVIDER_OPTIONS"
+    eval "selectOneCancel PROVIDER PROVIDER_OPTIONS"
   else
-    eval "selectOneCancelDefault PROVIDER $PROVIDER_OPTIONS"
+    eval "selectOneCancelDefault PROVIDER PROVIDER_OPTIONS"
   fi
 
   environmentsFigureFqnService "$RESULT_VAR_NAME" "$REQ_SERVICE" "$PROVIDER"

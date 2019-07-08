@@ -36,4 +36,6 @@ INVOLVED_PROJECTS='' # defined in the $CATALYST_WORK_DB files
 # Configurable globals.
 ORIGIN_URL='' # can be set externally to avoid interactive questions on 'project init'
 
-STD_ENV_PUPRPOSES='dev test pre-production production'
+STD_ENV_PURPOSES=dev$'\n'test$'\n'pre-production$'\n'production
+STD_IFACE_CLASSES=http$'\n'html$'\n'rest$'\n'sql
+STD_PLATFORM_TYPES=local$'\n'gcp$'\n'aws

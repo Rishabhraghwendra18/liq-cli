@@ -35,7 +35,7 @@ function environmentsGoogleCloudOptions() {
   }
   while read LINE; do
     eval "split $LINE"
-    list-add-item NAMES "$NAME" "\n"
-    list-add-item IDS "$ID" "\n"
+    list-add-item NAMES "$NAME"
+    list-add-item IDS "$ID"
   done < <(eval "$QUERY")
 }

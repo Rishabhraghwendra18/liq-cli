@@ -50,7 +50,7 @@ packagesVersionCheckManageIgnored() {
     done
     if (( $# == 0 )); then # interactive add
       PS3="Exclude package: "
-      selectDoneCancel IPACKAGES $LIVE_PACKAGES
+      selectDoneCancel IPACKAGES LIVE_PACKAGES
     else
       IPACKAGES="$@"
     fi
@@ -80,7 +80,7 @@ packagesVersionCheckManageIgnored() {
     fi
     if (( $# == 0 )); then # interactive add
       PS3="Include package: "
-      selectDoneCancelAll IPACKAGES $IGNORED_PACKAGES
+      selectDoneCancelAll IPACKAGES IGNORED_PACKAGES
     else
       IPACKAGES="$@"
     fi
@@ -234,10 +234,12 @@ packages-link-list() {
   local LINKED_PACKAGES=$(find "$NPM_ROOT"/\@* -maxdepth 1 -type d -name "*.prelink" \
     | $TFORMER)
   # TODO: once we have 'list-add-all', use that here
-  local ANOTHER
-  for ANOTHER in $(find "$NPM_ROOT" -maxdepth 1 -type d -name "*.prelink" | $TFORMER); do
-    list-add-item LINKED_PACKAGES "$ANOTHER"
-  done
+  # TESTING...
+  list-add-item LINKED_PACKAGES $(find "$NPM_ROOT" -maxdepth 1 -type d -name "*.prelink" | $TFORMER)
+  #local ANOTHER
+  #for ANOTHER in $(find "$NPM_ROOT" -maxdepth 1 -type d -name "*.prelink" | $TFORMER); do
+  #  list-add-item LINKED_PACKAGES "$ANOTHER"
+  #done
   echo "$LINKED_PACKAGES"
   # For reference, the following will find links by mountpint:
   # mount | grep -s "$PACKAGE_PATH/node_modules" | sed -Ee 's|.+ on (/[^@]*)?/(\@[^/]+/)?([^/]+) \(.+|\2\3|'

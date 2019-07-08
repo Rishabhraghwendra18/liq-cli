@@ -12,7 +12,7 @@ function environmentsGatherEnvironmentSettings() {
 
   if [[ -z "${CURR_ENV_PURPOSE:-}" ]]; then
     PS3="Select purpose: "
-    selectDoneCancelAllOther CURR_ENV_PURPOSE $STD_ENV_PUPRPOSES
+    selectDoneCancelAllOther CURR_ENV_PURPOSE STD_ENV_PURPOSES
   fi
 
   local REQ_SERV_IFACES=`required-services-list`

@@ -27,7 +27,7 @@
     "@babel/cli": "^7.2.3",
     "@babel/core": "^7.2.2",
     "@babel/preset-env": "^7.3.1",
-    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.11",
+    "@liquid-labs/bash-toolkit": "file:.yalc/@liquid-labs/bash-toolkit",
     "jest": "^23.6.0",
     "shelljs": "^0.8.3",
     "watch": "^1.0.2"

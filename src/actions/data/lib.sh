@@ -10,13 +10,13 @@ findDataFiles() {
   for CAT_PACKAGE in `getCatPackagePaths`; do
     if [[ -d "${CAT_PACKAGE}/data/${DATA_IFACE}/${FILE_TYPE}" ]]; then
       FIND_RESULTS="$(find "${CAT_PACKAGE}/data/${DATA_IFACE}/${FILE_TYPE}" -type f)"
-      list-add-item _FILES "$FIND_RESULTS" "\n"
+      list-add-item _FILES "$FIND_RESULTS"
     fi
   done
   # search our own package
   if [[ -d "${BASE_DIR}/data/${DATA_IFACE}/${FILE_TYPE}" ]]; then
     FIND_RESULTS="$(find "${BASE_DIR}/data/${DATA_IFACE}/${FILE_TYPE}" -type f)"
-    list-add-item _FILES "$FIND_RESULTS" "\n"
+    list-add-item _FILES "$FIND_RESULTS"
   fi
 
   if [[ -z "$_FILES" ]]; then
