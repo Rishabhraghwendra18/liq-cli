@@ -39,3 +39,9 @@ function environmentsGoogleCloudOptions() {
     list-add-item IDS "$ID"
   done < <(eval "$QUERY")
 }
+
+function environmentsGcpEnsureProjectId() {
+  if [[ -z $GCP_PROJECT_ID ]]; then
+    echoerrandexit "'GCP_PROJECT_ID' unset; likely program error."
+  fi
+}

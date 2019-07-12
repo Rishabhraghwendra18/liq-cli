@@ -159,3 +159,39 @@ function environmentsGet-CLOUDSQL_DB() {
 
   eval "$RESULT_VAR='$DB_NAME'"
 }
+
+function environmentsGet-CLOUDSQL_SERVICE_ACCT() {
+  local RESULT_VAR="${1}"
+
+  local NAMES IDS
+  environmentsGoogleCloudOptions 'iam service-accounts' 'displayName' 'email' "projectId=$GCP_PROJECT_ID"
+
+  local DISPLAY_NAME ACCT_ID
+
+  function createNew() {
+    ACCT_ID=$(environmentsGcpIamCreateAccount "$DISPLAY_NAME")
+    environmentsGcpProjectsBindPolicies "$ACCT_ID" "cloudsql.client"
+    environmentsGcpIamCreateKeys "$ACCT_ID"
+  }
+
+  if [[ -z "$NAMES" ]]; then
+    local _DEFAULT="${GCP_PROJECT_ID}-cloudsql-srvacct"
+    require-answer "No service accounts found. Please provide display name: " DISPLAY_NAME "$_DEFAULT"
+    createNew
+  else
+    PS3="Service account:"
+    local DISPLAY_NAME
+    selectOneCancelOther DISPLAY_NAME NAMES
+    echo "To create a new service acct, select '<other>' and provide the account display name name."
+    local SELECT_IDX=$(list-get-index NAMES "$DISPLAY_NAME")
+    if [[ -z "$SELECT_IDX" ]]; then # it's a new instance
+      createNew
+    else
+      ACCT_ID=$(list-get-item IDS "$SELECT_IDX")
+      environmentsGcpProjectsBindPolicies "${ACCT_ID}" "roles/cloudsql.client"
+      environmentsGcpIamCreateKeys "${ACCT_ID}"
+    fi
+  fi
+
+  eval "$RESULT_VAR='$ACCT_ID'"
+}
