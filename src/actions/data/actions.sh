@@ -68,7 +68,8 @@ data-rebuild() {
 }
 
 dataRunner() {
-  local SERVICE_STATUSES=`services-list -sp`
+  local SERVICE_STATUSES
+  SERVICE_STATUSES=`services-list -sp`
 
   local IFACES="$@"
   if (( $# == 0 )); then

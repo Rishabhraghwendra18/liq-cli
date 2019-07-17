@@ -12,7 +12,7 @@ function environmentsGatherEnvironmentSettings() {
 
   if [[ -z "${CURR_ENV_PURPOSE:-}" ]]; then
     PS3="Select purpose: "
-    selectDoneCancelAllOther CURR_ENV_PURPOSE STD_ENV_PURPOSES
+    selectOneCancelOther CURR_ENV_PURPOSE STD_ENV_PURPOSES
   fi
 
   local REQ_SERV_IFACES=`required-services-list`
@@ -54,5 +54,6 @@ function environmentsAskIfSelect() {
 
   yesno "Would you like to select the newly added '${ENV_NAME}'? (Y\n) " \
     Y \
-    selectNewEnv
+    selectNewEnv \
+    || true
 }

@@ -8,13 +8,17 @@ function environmentsGcpProjectsBindPolicies() {
   while (( $# > 0 )); do
     local POLICY_NAME="$1"; shift
 
+    echo -n "Checking if '${ACCT_ID}' has '${POLICY_NAME}'... "
     local GRANTED
     # I don't believe the test can be accomplished with just gcloud as of 2019-07-12
-    GRANTED=$(gcloud projects get-iam-policy ${GCP_PROJECT_ID} --filter="bindings.members='serviceAccount:${ACCT_ID}'" --format=json \
+    GRANTED=$(gcloud projects get-iam-policy ${GCP_PROJECT_ID} --filter="bindings.members='serviceAccount:${ACCT_ID}'" --format=json --project="${GCP_PROJECT_ID}" \
                 | jq ".[].bindings[] | select(.members[]==\"serviceAccount:${ACCT_ID}\") | select(.role==\"${POLICY_NAME}\")")
     if [[ -z "$GRANTED" ]]; then
-      gcloud projects add-iam-policy-bindng ${GCP_PROJECT_ID} --member="serviceAccount:${ACCT_ID}" --role="${POLICY_NAME}" \
+      echo "no; granting..."
+      gcloud projects add-iam-policy-binding ${GCP_PROJECT_ID} --member="serviceAccount:${ACCT_ID}" --role="${POLICY_NAME}" \
         || echoerrandexit "Problem encountered while granting role '${POLICY_NAME}' to service account '$ACCT_ID'.\nPlease update the role manually."
+    else
+      echo "yes."
     fi
   done
 }
@@ -40,9 +44,8 @@ function environmentsGet-GCP_PROJECT_ID() {
     require-answer "No projects found. Please provide name: " PROJ_NAME
     createNew
   else
-    PS3="Project name:"
-    echo "To create a new project, select '<other>' and provide the project name."
-    selectOneCancelOther PROJ_NAME NAMES
+    PS3="Project name: "
+    selectOneCancelNew PROJ_NAME NAMES
     local SELECT_IDX
     SELECT_IDX=$(list-get-index NAMES "$PROJ_NAME")
     if [[ -n "$SELECT_IDX" ]]; then

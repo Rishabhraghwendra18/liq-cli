@@ -61,7 +61,7 @@ environmentsFindProvidersFor() {
     echoerrandexit "Could not find any providers for '$REQ_SERVICE'."
   fi
 
-  PS3="Select provider for required service '$REQ_SERVICE':"
+  PS3="Select provider for required service '$REQ_SERVICE': "
   local PROVIDER
   if [[ -z "${SELECT_DEFAULT:-}" ]]; then
     # TODO: is there a better way to preserve the word boundries? We can use the '${ARRAY[@]@Q}' construct in bash 4.4

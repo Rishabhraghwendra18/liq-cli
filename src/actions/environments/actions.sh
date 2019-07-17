@@ -6,8 +6,11 @@ requirements-environments() {
 source ./actionslib/common.sh
 source ./actionslib/query.sh
 source ./actionslib/update.sh
+source ./gcplib/iam.sh
 source ./gcplib/organizations.sh
 source ./gcplib/projects.sh
+source ./gcplib/services.sh
+source ./gcplib/sql.sh
 source ./gcplib/utils.sh
 
 environments-add() {
@@ -21,7 +24,6 @@ environments-add() {
       if [[ -z "${!REQ_PARAM:-}" ]]; then
         local PARAM_VAL=''
         local DEFAULT_VAR_NAME="${REQ_PARAM}_DEFAULT_VAL"
-        echo "TESTING for '$REQ_PARAM'"
         if declare -F environmentsGet-$REQ_PARAM >/dev/null; then
           environmentsGet-$REQ_PARAM $REQ_PARAM
         fi
@@ -202,7 +204,7 @@ environments-update() {
     local SELECT_DEFAULT="$CURR_ENV_PURPOSE"
     unset CURR_ENV_PURPOSE
     PS3="Select purpose: "
-    selectDoneCancelOtherDefault CURR_ENV_PURPOSE STD_ENV_PURPOSES
+    selectOneCancelOtherDefault CURR_ENV_PURPOSE STD_ENV_PURPOSES
   fi
 
   local REQ_SERV_IFACES=`required-services-list`

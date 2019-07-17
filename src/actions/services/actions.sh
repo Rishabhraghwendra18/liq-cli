@@ -11,7 +11,7 @@ services-list() {
   local GET_STATUS=''
   if [[ -n "$SHOW_STATUS" ]] || [[ -n "$EXIT_ON_STOPPED" ]]; then
     # see https://unix.stackexchange.com/a/88338/84520
-    GET_STATUS='local _SERV_STATUS; SERV_STATUS=$(runServiceCtrlScript $SERV_SCRIPT status);'
+    GET_STATUS='local _SERV_STATUS; _SERV_STATUS=$(runServiceCtrlScript $SERV_SCRIPT status);'
   fi
 
   local OUTPUT='echo "$PROCESS_NAME";'

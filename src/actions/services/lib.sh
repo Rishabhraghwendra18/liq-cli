@@ -1,37 +1,45 @@
+# ctrlScriptEnv generates the environment settings and required parameters list
+# for control scripts.
+#
+# The method will set 'EXPORT_PARAMS', which should be declared local by the
+# caller.
+#
+# The method will normally echo an error and force an exit
+# if a required parameter is not found. If '_SKIP_CURR_ENV_FILE' is set to any
+# value, this check will be skipped and the variable will be set to blank. This
+# is in support of internal flows which may which may define a subset of the
+# required parameters in order to initiate an operation that only requires that
+# subset.
 ctrlScriptEnv() {
   check-param-err() {
     local REQ_PARAM="${1}"; shift
     local DESC="${1}"; shift
 
-    if [[ -z "${!REQ_PARAM:-}" ]]; then
+    if [[ -z "${!REQ_PARAM:-}" ]] && [[ -z "${_SKIP_CURR_ENV_FILE:-}" ]]; then
       echoerrandexit "No value for ${DESC} '$REQ_PARAM'. Try updating the environment:\ncatalyst environment update -n"
     fi
   }
 
-  local ENV_SETTINGS="PACKAGE_NAME='${PACKAGE_NAME}' BASE_DIR='${BASE_DIR}' _CATALYST_ENV_LOGS='${_CATALYST_ENV_LOGS}' SERV_NAME='${SERV_NAME}' SERV_IFACE='${SERV_IFACE}' PROCESS_NAME='${PROCESS_NAME:-}' SERV_LOG='${SERV_LOG:-}' SERV_ERR='${SERV_ERR:-}' PID_FILE='${PID_FILE:-}'"
+  EXPORT_PARAMS=PACKAGE_NAME$'\n'BASE_DIR$'\n'_CATALYST_ENV_LOGS$'\n'SERV_NAME$'\n'SERV_IFACE$'\n'PROCESS_NAME$'\n'SERV_LOG$'\n'SERV_ERR$'\n'PID_FILE
   local REQ_PARAMS=$(getRequiredParameters "$SERVICE_KEY")
   local REQ_PARAM
   for REQ_PARAM in $REQ_PARAMS; do
     check-param-err "$REQ_PARAM" "service-source parameter"
-    ENV_SETTINGS="$ENV_SETTINGS $REQ_PARAM='${!REQ_PARAM}'"
+    list-add-item EXPORT_PARAMS "${REQ_PARAM}"
   done
 
   local SERV_IFACE=`echo "$SERVICE_KEY" | cut -d: -f1`
   local ADD_REQ_PARAMS=$((echo "$PACKAGE" | jq -e --raw-output ".catalyst.requires | .[] | select(.iface==\"$SERV_IFACE\") | .\"params-req\" | @sh" 2> /dev/null || echo '') | tr -d "'")
   for REQ_PARAM in $ADD_REQ_PARAMS; do
     check-param-err "$REQ_PARAM" "service-local parameter"
-    ENV_SETTINGS="$ENV_SETTINGS $REQ_PARAM='${!REQ_PARAM}'"
-    list-add-item REQ_PARAMS "${REQ_PARAM}"
+    list-add-item EXPORT_PARAMS "${REQ_PARAM}"
   done
 
   for REQ_PARAM in $(getConfigConstants "${SERV_IFACE}"); do
     # TODO: ideally we'd load constants from the package.json, not environment.
     check-param-err "$REQ_PARAM" "config const"
-    ENV_SETTINGS="$ENV_SETTINGS $REQ_PARAM='${!REQ_PARAM}'"
-    list-add-item REQ_PARAMS "${REQ_PARAM}"
+    list-add-item EXPORT_PARAMS "${REQ_PARAM}"
   done
-
-  echo "$ENV_SETTINGS REQ_PARAMS='$REQ_PARAMS'"
 }
 
 runServiceCtrlScript() {
@@ -43,14 +51,14 @@ runServiceCtrlScript() {
   local SERV_SCRIPT="$1"; shift
 
   if [[ -z $NO_ENV ]]; then
-    local SCRIPT_ENV
-    SCRIPT_ENV=$(ctrlScriptEnv) || return $?
+    local EXPORT_PARAMS
+    ctrlScriptEnv
 
     # The script might be our own or an installed dependency.
     if [[ -e "${BASE_DIR}/bin/${SERV_SCRIPT}" ]]; then
-      ( export $SCRIPT_ENV; "${BASE_DIR}/bin/${SERV_SCRIPT}" "$@" )
+      ( export $EXPORT_PARAMS; "${BASE_DIR}/bin/${SERV_SCRIPT}" "$@" )
     else
-      ( export $SCRIPT_ENV; cd "${BASE_DIR}"; npx --no-install $SERV_SCRIPT "$@" )
+      ( export $EXPORT_PARAMS; cd "${BASE_DIR}"; npx --no-install $SERV_SCRIPT "$@" )
     fi
   else
     if [[ -e "${BASE_DIR}/bin/${SERV_SCRIPT}" ]]; then
@@ -101,7 +109,9 @@ runtimeServiceRunner() {
   local _MAIN="$1"; shift
   local _ALWAYS_RUN="$1"; shift
 
-  source "${CURR_ENV_FILE}"
+  if [[ -z ${_SKIP_CURR_ENV_FILE:-} ]]; then
+    source "${CURR_ENV_FILE}"
+  fi
   declare -a ENV_SERVICES
   if [[ -n "${CURR_ENV_SERVICES:-}" ]]; then
     if [[ -z "${REVERSE_ORDER:-}" ]]; then

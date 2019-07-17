@@ -416,7 +416,7 @@ EOF
 
   echo "$LOCAL_DECLS"
 
-  local TMP # because of the '||', we have to break up the set
+  local TMP # see https://unix.stackexchange.com/a/88338/84520
   TMP=`${GNU_GETOPT} -o "${SHORT_OPTS}" -l "${LONG_OPTS}" -- "$@"` \
     || exit 1
   eval set -- "$TMP"
