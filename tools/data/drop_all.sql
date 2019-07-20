@@ -1,3 +1,4 @@
+-- for MySQL
 DROP PROCEDURE IF EXISTS procDropAllTables;
 
 DELIMITER //
