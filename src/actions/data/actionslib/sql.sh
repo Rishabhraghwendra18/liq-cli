@@ -40,7 +40,7 @@ data-build-sql() {
 
 data-dump-sql() {
   dataSQLCheckRunning "$@" > /dev/null
-  
+
   local DATE_FMT='%Y-%m-%d %H:%M:%S %z'
   local MAIN=$(cat <<'EOF'
     if runServiceCtrlScript --no-env $SERV_SCRIPT dump-check 2> /dev/null; then
@@ -96,6 +96,20 @@ data-reset-sql() {
   dataSQLCheckRunning "$@" > /dev/null
 
   echo "Dropping..."
+  # https://stackoverflow.com/a/36023359/929494
+  cat <<'EOF' | services-connect sql > /dev/null
+DO $$ DECLARE
+    r RECORD;
+BEGIN
+    -- if the schema you operate on is not "current", you will want to
+    -- replace current_schema() in query with 'schematodeletetablesfrom'
+    -- *and* update the generate 'DROP...' accordingly.
+    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = current_schema()) LOOP
+        EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+    END LOOP;
+END $$;
+EOF
+  # for MySQL
   # relative to dist
-  colorerr "cat '$(dirname $(real_path ${BASH_SOURCE[0]}))/../tools/data/drop_all.sql' | services-connect sql"
+  # colorerr "cat '$(dirname $(real_path ${BASH_SOURCE[0]}))/../tools/data/drop_all.sql' | services-connect sql"
 }
