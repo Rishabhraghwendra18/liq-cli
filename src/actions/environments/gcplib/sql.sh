@@ -34,7 +34,7 @@ function environmentsGet-CLOUDSQL_INSTANCE_NAME() {
     gcloud beta sql instances create "$INSTANCE_NAME" $POSTGRES_OPTIONS \
         --tier="db-f1-micro" --activation-policy="always" --project="${GCP_PROJECT_ID}" \
       || ( echo "Startup may be taking a little extra time. We'll give it another 5 minutes. (error $?)"; \
-           gcloud sql operations wait --quiet $(gcloud sql operations list --instance="${INSTANCE_NAME}" --filter='status=RUNNING' --format="value(NAME)" --project="${GCP_PROJECT_ID}") ) \
+           gcloud sql operations wait --quiet $(gcloud sql operations list --instance="${INSTANCE_NAME}" --filter='status=RUNNING' --format="value(NAME)" --project="${GCP_PROJECT_ID}") --project="${GCP_PROJECT_ID}" ) \
       || echoerrandexit "Problem encountered while creating instance (see above). Check status via:\nhttps://console.cloud.google.com/"
   }
 

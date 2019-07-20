@@ -1,4 +1,18 @@
+function dataSQLCheckRunning() {
+  local TMP
+  TMP=$(setSimpleOptions NO_CHECK -- "$@") \
+    || ( usage-project-packages; echoerrandexit "Bad options." )
+  eval "$TMP"
+  if [[ -z "$NO_CHECK" ]] && ! services-list --exit-on-stopped -q sql; then
+    services-start sql
+  fi
+
+  echo "$@"
+}
+
 data-build-sql() {
+  dataSQLCheckRunning "$@" > /dev/null
+
   echo -n "Creating schema; "
   source "${CURR_ENV_FILE}"
   local SQL_VARIANT=`echo "${CURR_ENV_SERVICES[@]:-}" | sed -Ee 's/.*(^| *)(sql(-[^:]+)?).*/\2/'`
@@ -25,6 +39,8 @@ data-build-sql() {
 }
 
 data-dump-sql() {
+  dataSQLCheckRunning "$@" > /dev/null
+  
   local DATE_FMT='%Y-%m-%d %H:%M:%S %z'
   local MAIN=$(cat <<'EOF'
     if runServiceCtrlScript --no-env $SERV_SCRIPT dump-check 2> /dev/null; then
@@ -57,6 +73,8 @@ EOF
 }
 
 data-load-sql() {
+  dataSQLCheckRunning "$@" > /dev/null
+
   if [[ ! -d "${BASE_DIR}/data/sql/${SET_NAME}" ]]; then
     echoerrandexit "No such set '$SET_NAME' found."
   fi
@@ -68,12 +86,15 @@ data-load-sql() {
 }
 
 data-rebuild-sql() {
+  dataSQLCheckRunning "$@" > /dev/null
   # TODO: break out the file search and do it first to avoid dropping when the build is sure to fail.
-  data-reset-sql
-  data-build-sql
+  data-reset-sql --no-check
+  data-build-sql --no-check
 }
 
 data-reset-sql() {
+  dataSQLCheckRunning "$@" > /dev/null
+
   echo "Dropping..."
   # relative to dist
   colorerr "cat '$(dirname $(real_path ${BASH_SOURCE[0]}))/../tools/data/drop_all.sql' | services-connect sql"
