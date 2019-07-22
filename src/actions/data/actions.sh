@@ -67,6 +67,20 @@ data-rebuild() {
   dataRunner "$@"
 }
 
+data-test() {
+  local TMP
+  TMP=$(setSimpleOptions SKIP_REBUILD -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options."; )
+  eval "$TMP"
+
+  if [[ -z "$SKIP_REBUILD" ]]; then
+    data-rebuild
+  fi
+
+  local MAIN='data-test-${IFACE}'
+  dataRunner "$@"
+}
+
 dataRunner() {
   local SERVICE_STATUSES
   SERVICE_STATUSES=`services-list -sp`

@@ -10,12 +10,16 @@ function dataSQLCheckRunning() {
   echo "$@"
 }
 
+function dataSqlGetSqlVariant() {
+  echo "${CURR_ENV_SERVICES[@]:-}" | sed -Ee 's/.*(^| *)(sql(-[^:]+)?).*/\2/'
+}
+
 data-build-sql() {
   dataSQLCheckRunning "$@" > /dev/null
 
   echo -n "Creating schema; "
   source "${CURR_ENV_FILE}"
-  local SQL_VARIANT=`echo "${CURR_ENV_SERVICES[@]:-}" | sed -Ee 's/.*(^| *)(sql(-[^:]+)?).*/\2/'`
+  local SQL_VARIANT=$(dataSqlGetSqlVariant)
   local SCHEMA_FILES SCHEMA_FILE_COUNT
   findDataFiles SCHEMA_FILES SCHEMA_FILE_COUNT "$SQL_VARIANT" "schema"
   echo "Loading $SCHEMA_FILE_COUNT schema files..."
@@ -112,4 +116,16 @@ EOF
   # for MySQL
   # relative to dist
   # colorerr "cat '$(dirname $(real_path ${BASH_SOURCE[0]}))/../tools/data/drop_all.sql' | services-connect sql"
+}
+
+data-test-sql() {
+  dataSQLCheckRunning "$@" > /dev/null
+
+  echo "Starting tests..."
+  source "${CURR_ENV_FILE}"
+  local SQL_VARIANT=$(dataSqlGetSqlVariant)
+  local TEST_FILES TEST_FILE_COUNT
+  findDataFiles TEST_FILES TEST_FILE_COUNT "$SQL_VARIANT" "test"
+  cat $TEST_FILES | services-connect sql
+  echo "Testing complete!"
 }
