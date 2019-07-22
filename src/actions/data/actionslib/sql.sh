@@ -119,13 +119,23 @@ EOF
 }
 
 data-test-sql() {
-  dataSQLCheckRunning "$@" > /dev/null
-
-  echo "Starting tests..."
+  echo "Checking for SQL unit test files..."
   source "${CURR_ENV_FILE}"
   local SQL_VARIANT=$(dataSqlGetSqlVariant)
   local TEST_FILES TEST_FILE_COUNT
   findDataFiles TEST_FILES TEST_FILE_COUNT "$SQL_VARIANT" "test"
-  cat $TEST_FILES | services-connect sql
-  echo "Testing complete!"
+  if (( $TEST_FILE_COUNT > 0 )); then
+    echo "Found $TEST_FILE_COUNT unit test files."
+    if [[ -z "$SKIP_REBUILD" ]]; then
+      data-rebuild-sql
+    else
+      echo "Skipping RDB rebuild."
+    fi
+    dataSQLCheckRunning "$@" > /dev/null
+    echo "Starting tests..."
+    cat $TEST_FILES | services-connect sql
+    echo "Testing complete!"
+  else
+    echo "No SQL unit tests found."
+  fi
 }

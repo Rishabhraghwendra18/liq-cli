@@ -73,10 +73,6 @@ data-test() {
     || ( contextHelp; echoerrandexit "Bad options."; )
   eval "$TMP"
 
-  if [[ -z "$SKIP_REBUILD" ]]; then
-    data-rebuild
-  fi
-
   local MAIN='data-test-${IFACE}'
   dataRunner "$@"
 }
