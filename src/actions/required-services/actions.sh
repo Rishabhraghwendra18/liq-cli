@@ -13,7 +13,7 @@ required-services-add() {
     done
     local REQ_SERVICES
     PS3="Required service interface: "
-    selectOneCancelOther REQ_SERVICES $NEW_SERVICES
+    selectOneCancelOther REQ_SERVICES NEW_SERVICES
     for IFACE_CLASS in $REQ_SERVICES; do
       reqServDefine "$IFACE_CLASS"
     done
@@ -52,22 +52,22 @@ required-services-delete() {
   else
     while (($# > 0)); do
       local IFACE_CLASS="$1"; shift
-      if ! echo "$PACKAGE" | jq -e "(.$CAT_REQ_SERVICES_KEY | map(select(.iface == \"$IFACE_CLASS\")) | length) > 0" > /dev/null; then
+      if ! echo "$PACKAGE" | jq -e "(.catalyst.requires | map(select(.iface == \"$IFACE_CLASS\")) | length) > 0" > /dev/null; then
         echoerr "No such requirement '$IFACE_CLASS' found."
       else
-        PACKAGE=`echo "$PACKAGE" | jq ". + {\"$CAT_REQ_SERVICES_KEY\": [ .\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface != \"$IFACE_CLASS\") ] }"`
+        PACKAGE=`echo "$PACKAGE" | jq ".catalyst + { requires: [ .catalyst.requires | .[] | select(.iface != \"$IFACE_CLASS\") ] }"`
       fi
     done
   fi
-  # cleanup $CAT_REQ_SERVICES_KEY if empty
-  if echo "$PACKAGE" | jq -e "(.$CAT_REQ_SERVICES_KEY | length) == 0" > /dev/null; then
-    PACKAGE=`echo "$PACKAGE" | jq "del(.$CAT_REQ_SERVICES_KEY)"`
+  # cleanup .catalyst.requires if empty
+  if echo "$PACKAGE" | jq -e "(.catalyst.requires | length) == 0" > /dev/null; then
+    PACKAGE=`echo "$PACKAGE" | jq "del(.catalyst.requires)"`
   fi
   echo "$PACKAGE" | jq > "$PACKAGE_FILE"
 }
 
 required-services-list() {
-  if echo "$PACKAGE" | jq -e "(.$CAT_REQ_SERVICES_KEY | length) > 0" > /dev/null; then
-    echo "$PACKAGE" | jq --raw-output ".$CAT_REQ_SERVICES_KEY | .[] | .iface | @sh" | tr -d "'"
+  if echo "$PACKAGE" | jq -e "(.catalyst.requires | length) > 0" > /dev/null; then
+    echo "$PACKAGE" | jq --raw-output ".catalyst.requires | .[] | .iface | @sh" | tr -d "'"
   fi
 }

@@ -6,8 +6,11 @@ requirements-environments() {
 source ./actionslib/common.sh
 source ./actionslib/query.sh
 source ./actionslib/update.sh
+source ./gcplib/iam.sh
 source ./gcplib/organizations.sh
 source ./gcplib/projects.sh
+source ./gcplib/services.sh
+source ./gcplib/sql.sh
 source ./gcplib/utils.sh
 
 environments-add() {
@@ -24,8 +27,8 @@ environments-add() {
         if declare -F environmentsGet-$REQ_PARAM >/dev/null; then
           environmentsGet-$REQ_PARAM $REQ_PARAM
         fi
-        if [[ -z ${!REQ_PARAM} ]]; then
-          require-answer "Value for required parameter '$REQ_PARAM': " PARAM_VAL "${!DEFAULT_VAR_NAME}"
+        if [[ -z ${!REQ_PARAM:-} ]]; then
+          require-answer "Value for required parameter '$REQ_PARAM': " PARAM_VAL "${!DEFAULT_VAR_NAME:-}"
           eval "$REQ_PARAM='$PARAM_VAL'"
         fi
       fi
@@ -183,7 +186,9 @@ environments-update() {
       requireEnvironment
       ENV_NAME="$CURR_ENV"
     else
-      selectOneCancel ENV_NAME $(environments-list --list-only)
+      local ENV_LIST
+      ENV_LIST=$(environments-list --list-only)
+      selectOneCancel ENV_NAME ENV_LIST
     fi
   fi
 
@@ -199,7 +204,7 @@ environments-update() {
     local SELECT_DEFAULT="$CURR_ENV_PURPOSE"
     unset CURR_ENV_PURPOSE
     PS3="Select purpose: "
-    selectDoneCancelOtherDefault CURR_ENV_PURPOSE $STD_ENV_PUPRPOSES
+    selectOneCancelOtherDefault CURR_ENV_PURPOSE STD_ENV_PURPOSES
   fi
 
   local REQ_SERV_IFACES=`required-services-list`
@@ -225,7 +230,7 @@ environments-update() {
     CURR_ENV_SERVICES+=("$FQN_SERVICE")
 
     local REQ_PARAMS=$(getRequiredParameters "$FQN_SERVICE")
-    local ADD_REQ_PARAMS=$((echo "$PACKAGE" | jq -e --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"params-req\" | @sh" 2> /dev/null || echo '') | tr -d "'")
+    local ADD_REQ_PARAMS=$((echo "$PACKAGE" | jq -e --raw-output ".catalyst.requires | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"params-req\" | @sh" 2> /dev/null || echo '') | tr -d "'")
     if [[ -n "$ADD_REQ_PARAMS" ]]; then
       if [[ -n "$REQ_PARAMS" ]]; then
         REQ_PARAMS="$REQ_PARAMS $ADD_REQ_PARAMS"
@@ -251,8 +256,8 @@ environments-update() {
     done
 
     # update configuration constants
-    for REQ_PARAM in $(echo $PACKAGE | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"config-const\" | keys | @sh" | tr -d "'"); do
-      local CONFIG_VAL=$(echo "$PACKAGE" | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"config-const\".\"$REQ_PARAM\" | @sh" | tr -d "'")
+    for REQ_PARAM in $(echo $PACKAGE | jq --raw-output ".catalyst.requires | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"config-const\" | keys | @sh" | tr -d "'"); do
+      local CONFIG_VAL=$(echo "$PACKAGE" | jq --raw-output ".catalyst.requires | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"config-const\".\"$REQ_PARAM\" | @sh" | tr -d "'")
       eval "$REQ_PARAM='$CONFIG_VAL'"
     done
   done

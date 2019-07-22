@@ -67,12 +67,23 @@ data-rebuild() {
   dataRunner "$@"
 }
 
+data-test() {
+  local TMP
+  TMP=$(setSimpleOptions SKIP_REBUILD -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options."; )
+  eval "$TMP"
+
+  local MAIN='data-test-${IFACE}'
+  dataRunner "$@"
+}
+
 dataRunner() {
-  local SERVICE_STATUSES=`services-list -sp`
+  local SERVICE_STATUSES
+  SERVICE_STATUSES=`services-list -sp`
 
   local IFACES="$@"
   if (( $# == 0 )); then
-    IFACES=$(echo "$PACKAGE" | jq --raw-output '._catalystRequiresService | .[] | .iface | capture("(?<iface>sql)") | .iface' | tr -d '"')
+    IFACES=$(echo "$PACKAGE" | jq --raw-output '.catalyst.requires | .[] | .iface | capture("(?<iface>sql)") | .iface' | tr -d '"')
   fi
 
   local IFACE

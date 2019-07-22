@@ -26,7 +26,7 @@ colorerr() {
   # TODO: in the case of long output, it would be nice to notice whether we saw
   # error or not and tell the user to scroll back and check the logs. e.g., if
   # we see an error and then 20+ lines of stuff, then emit advice.
-  (trap 'EXIT_STATUS=$?; tput sgr0; exit $EXIT_STATUS' EXIT; eval "$* 2> >(echo -n \"${red}\"; cat -;)")
+  (eval "$* 2> >(echo -n \"${red}\"; cat -; tput sgr0)")
 }
 
 # TODO: is this better? We switched to it for awhile, but there were problems.
@@ -314,17 +314,6 @@ getPackageDef() {
   fi
 }
 
-runScript() {
-  local SERV_SCRIPT="$1"; shift
-
-  # The script might be our own or an installed dependency.
-  if [[ -e "${BASE_DIR}/bin/${SERV_SCRIPT}" ]]; then
-    "${BASE_DIR}/bin/${SERV_SCRIPT}" "$@"
-  else
-    ( cd "${BASE_DIR}"; npx --no-install $SERV_SCRIPT "$@" )
-  fi
-}
-
 getProvidedServiceValues() {
   local SERV_KEY="${1:-}"
   local FIELD_LABEL="$2"
@@ -339,7 +328,9 @@ getProvidedServiceValues() {
     SERV_PACKAGE="$PACKAGE"
   fi
 
-  echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"${FIELD_LABEL}\" | @sh" | tr -d "'"
+  echo "$SERV_PACKAGE" | jq --raw-output ".catalyst.provides | .[] | select(.name == \"$SERV_NAME\") | .\"${FIELD_LABEL}\" | @sh" | tr -d "'" \
+    || ( ( [[ -n $SERV_PACKAGE_NAME ]] && echoerrandexit "$SERV_PACKAGE_NAME package.json does not define .catalyst.provides[${SERV_NAME}]." ) || \
+         echoerrandexit "Local package.json does not define .catalyst.provides[${SERV_NAME}]." )
 }
 
 getRequiredParameters() {
@@ -350,7 +341,7 @@ getRequiredParameters() {
 # TODO: Or maybe not. Have a set of "objective" service key manipulators to build from and extract parts?
 getConfigConstants() {
   local SERV_IFACE="${1}"
-  echo "$PACKAGE" | jq --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$SERV_IFACE\") | .\"config-const\" | keys | @sh" | tr -d "'"
+  echo "$PACKAGE" | jq --raw-output ".catalyst.requires | .[] | select(.iface==\"$SERV_IFACE\") | .\"config-const\" | keys | @sh" | tr -d "'"
 }
 
 getCtrlScripts() {
@@ -425,7 +416,7 @@ EOF
 
   echo "$LOCAL_DECLS"
 
-  local TMP # because of the '||', we have to break up the set
+  local TMP # see https://unix.stackexchange.com/a/88338/84520
   TMP=`${GNU_GETOPT} -o "${SHORT_OPTS}" -l "${LONG_OPTS}" -- "$@"` \
     || exit 1
   eval set -- "$TMP"

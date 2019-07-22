@@ -1,3 +1,6 @@
+if (( $# == 0 )); then
+  echoerrandexit "No arguments provided. Try:\ncatalyst help"
+fi
 GROUP="${1:-}"; shift # or global command
 case "$GROUP" in
   # global actions
@@ -5,10 +8,13 @@ case "$GROUP" in
     help "$@";;
   # components and actionsprojct
   *)
-    ACTION="${1:-}"; shift
     case "$GROUP" in
       # TODO: build this from constant def... something...
       data|environments|meta|packages|project|remotes|required-services|provided-services|services|work|workspace)
+        if (( $# == 0 )); then
+          echoerrandexit "No action argument provided."
+        fi
+        ACTION="${1:-}"; shift
         if [[ $(type -t "${GROUP}-${ACTION}" || echo '') == 'function' ]]; then
           # the only exception to requiring a workspace configuration is the
           # 'workspace init' command

@@ -1,7 +1,25 @@
+function dataSQLCheckRunning() {
+  local TMP
+  TMP=$(setSimpleOptions NO_CHECK -- "$@") \
+    || ( usage-project-packages; echoerrandexit "Bad options." )
+  eval "$TMP"
+  if [[ -z "$NO_CHECK" ]] && ! services-list --exit-on-stopped -q sql; then
+    services-start sql
+  fi
+
+  echo "$@"
+}
+
+function dataSqlGetSqlVariant() {
+  echo "${CURR_ENV_SERVICES[@]:-}" | sed -Ee 's/.*(^| *)(sql(-[^:]+)?).*/\2/'
+}
+
 data-build-sql() {
+  dataSQLCheckRunning "$@" > /dev/null
+
   echo -n "Creating schema; "
   source "${CURR_ENV_FILE}"
-  local SQL_VARIANT=`echo "${CURR_ENV_SERVICES[@]:-}" | sed -Ee 's/.*(^| *)(sql(-[^:]+)?).*/\2/'`
+  local SQL_VARIANT=$(dataSqlGetSqlVariant)
   local SCHEMA_FILES SCHEMA_FILE_COUNT
   findDataFiles SCHEMA_FILES SCHEMA_FILE_COUNT "$SQL_VARIANT" "schema"
   echo "Loading $SCHEMA_FILE_COUNT schema files..."
@@ -25,9 +43,11 @@ data-build-sql() {
 }
 
 data-dump-sql() {
+  dataSQLCheckRunning "$@" > /dev/null
+
   local DATE_FMT='%Y-%m-%d %H:%M:%S %z'
   local MAIN=$(cat <<'EOF'
-    if runScript $SERV_SCRIPT dump-check 2> /dev/null; then
+    if runServiceCtrlScript --no-env $SERV_SCRIPT dump-check 2> /dev/null; then
       if [[ -n "$SERV_SCRIPTS_COOKIE" ]]; then
         echoerrandexit "Multilpe dump providers found; try specifying service process."
       fi
@@ -35,11 +55,11 @@ data-dump-sql() {
       if [[ -n "$OUT_FILE" ]]; then
         mkdir -p "$(dirname "${OUT_FILE}")"
         echo "-- start $(date +'%Y-%m-%d %H:%M:%S %z')" > "${OUT_FILE}"
-        eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT dump" >> "${OUT_FILE}"
+        runServiceCtrlScript $SERV_SCRIPT dump >> "${OUT_FILE}"
         echo "-- end $(date +'%Y-%m-%d %H:%M:%S %z')" >> "${OUT_FILE}"
       else
         echo "-- start $(date +"${DATE_FMT}")"
-        eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT dump"
+        runServiceCtrlScript $SERV_SCRIPT dump
         echo "-- end $(date +"${DATE_FMT}")"
       fi
     fi
@@ -57,6 +77,8 @@ EOF
 }
 
 data-load-sql() {
+  dataSQLCheckRunning "$@" > /dev/null
+
   if [[ ! -d "${BASE_DIR}/data/sql/${SET_NAME}" ]]; then
     echoerrandexit "No such set '$SET_NAME' found."
   fi
@@ -68,13 +90,52 @@ data-load-sql() {
 }
 
 data-rebuild-sql() {
+  dataSQLCheckRunning "$@" > /dev/null
   # TODO: break out the file search and do it first to avoid dropping when the build is sure to fail.
-  data-reset-sql
-  data-build-sql
+  data-reset-sql --no-check
+  data-build-sql --no-check
 }
 
 data-reset-sql() {
+  dataSQLCheckRunning "$@" > /dev/null
+
   echo "Dropping..."
+  # https://stackoverflow.com/a/36023359/929494
+  cat <<'EOF' | services-connect sql > /dev/null
+DO $$ DECLARE
+    r RECORD;
+BEGIN
+    -- if the schema you operate on is not "current", you will want to
+    -- replace current_schema() in query with 'schematodeletetablesfrom'
+    -- *and* update the generate 'DROP...' accordingly.
+    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = current_schema()) LOOP
+        EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
+    END LOOP;
+END $$;
+EOF
+  # for MySQL
   # relative to dist
-  colorerr "cat '$(dirname $(real_path ${BASH_SOURCE[0]}))/../tools/data/drop_all.sql' | services-connect sql"
+  # colorerr "cat '$(dirname $(real_path ${BASH_SOURCE[0]}))/../tools/data/drop_all.sql' | services-connect sql"
+}
+
+data-test-sql() {
+  echo "Checking for SQL unit test files..."
+  source "${CURR_ENV_FILE}"
+  local SQL_VARIANT=$(dataSqlGetSqlVariant)
+  local TEST_FILES TEST_FILE_COUNT
+  findDataFiles TEST_FILES TEST_FILE_COUNT "$SQL_VARIANT" "test"
+  if (( $TEST_FILE_COUNT > 0 )); then
+    echo "Found $TEST_FILE_COUNT unit test files."
+    if [[ -z "$SKIP_REBUILD" ]]; then
+      data-rebuild-sql
+    else
+      echo "Skipping RDB rebuild."
+    fi
+    dataSQLCheckRunning "$@" > /dev/null
+    echo "Starting tests..."
+    cat $TEST_FILES | services-connect sql
+    echo "Testing complete!"
+  else
+    echo "No SQL unit tests found."
+  fi
 }

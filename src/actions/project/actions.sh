@@ -1,12 +1,3 @@
-CAT_PROVIDES_SERVICE="_catServices"
-STD_IFACE_CLASSES="http html rest sql sql-mysql"
-STD_PLATFORM_TYPES="local gcp aws"
-STD_PURPOSES="dev test pre-production produciton"
-
-#source "`dirname ${BASH_SOURCE[0]}`/actionslib/packages.sh"
-#source "`dirname ${BASH_SOURCE[0]}`/actionslib/provided-services.sh"
-#source "`dirname ${BASH_SOURCE[0]}`/actionslib/required-services.sh"
-
 requirements-project() {
   if [[ "${ACTION}" != "init" ]]; then
     sourceCatalystfile

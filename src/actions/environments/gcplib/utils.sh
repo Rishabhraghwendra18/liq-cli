@@ -17,23 +17,41 @@ function environmentsCheckCloudSDK() {
 }
 
 function environmentsGoogleCloudOptions() {
-  local GROUP="${1}"
-  local NAME_FIELD="${2}"
-  local ID_FIELD="${3}"
-  local FILTER="${4:-}"
+  # TODO: can't use setSimpleOptions because it doesn't handle input with spaces correctly.
+  # local TMP # see https://unix.stackexchange.com/a/88338/84520
+  # TMP=$(setSimpleOptions FILTER= -- "$@") \
+  #  || ( contextHelp; echoerrandexit "Bad options." )
+  # eval "$TMP"
+
+  local GROUP="${1}"; shift
+  local NAME_FIELD="${1}"; shift
+  local ID_FIELD="${1}"; shift
+  local FILTER="${1:-}"
+  if (( $# > 0 )); then shift; fi
 
   local QUERY="gcloud $GROUP list --format=\"value($NAME_FIELD,$ID_FIELD)[quote,separator=' ']\""
   if [[ -n "$FILTER" ]]; then
     QUERY="$QUERY --filter=\"$FILTER\""
   fi
+  if [[ "$GROUP" != 'projects' ]] && [[ "$GROUP" != 'organizations' ]]; then
+    QUERY="$QUERY --project='${GCP_PROJECT_ID}'"
+  fi
 
   # expects 'NAMES' and 'IDS' to have been declared by caller
   local LINE NAME ID
+  function split() {
+    NAME="$1"
+    ID="$2"
+  }
   while read LINE; do
-    local VALS=($LINE)
-    NAME=${VALS[0]}
-    ID=${VALS[1]}
-    list-add-item NAMES "$NAME" "\n"
-    list-add-item IDS "$ID" "\n"
-  done < <(eval "$QUERY")
+    eval "split $LINE"
+    list-add-item NAMES "$NAME"
+    list-add-item IDS "$ID"
+  done < <(eval "$QUERY" "$@")
+}
+
+function environmentsGcpEnsureProjectId() {
+  if [[ -z $GCP_PROJECT_ID ]]; then
+    echoerrandexit "'GCP_PROJECT_ID' unset; likely program error."
+  fi
 }

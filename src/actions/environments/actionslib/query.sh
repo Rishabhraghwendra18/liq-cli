@@ -48,12 +48,12 @@ environmentsFindProvidersFor() {
     local NPM_PACKAGE=$(cat "${CAT_PACKAGE_PATH}/package.json")
     local PACKAGE_NAME=$(echo "$NPM_PACKAGE" | jq --raw-output ".name")
     local SERVICE
-    for SERVICE in $((echo "$NPM_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select((.\"interface-classes\" | .[] | select(. == \"$REQ_SERVICE\")) | length > 0) | .name | @sh" 2>/dev/null || echo '') | tr -d "'"); do
+    for SERVICE in $((echo "$NPM_PACKAGE" | jq --raw-output ".catalyst.provides | .[] | select((.\"interface-classes\" | .[] | select(. == \"$REQ_SERVICE\")) | length > 0) | .name | @sh" 2>/dev/null || echo '') | tr -d "'"); do
       SERVICES=$((test -n "$SERVICE" && echo "$SERVICES '$SERVICE'") || echo "'$SERVICE'")
       SERVICE_PACKAGES=$((test -n "$SERVICE_PACKAGES" && echo "$SERVICE_PACKAGES '$PACKAGE_NAME'") || echo "'$PACKAGE_NAME'")
       local SERV_DESC
       environmentsServiceDescription SERV_DESC "$SERVICE" "$PACKAGE_NAME"
-      PROVIDER_OPTIONS=$((test -n "$PROVIDER_OPTIONS" && echo "$PROVIDER_OPTIONS '${SERV_DESC}'") || echo "'${SERV_DESC}'")
+      list-add-item PROVIDER_OPTIONS "$SERV_DESC"
     done
   done
 
@@ -61,7 +61,7 @@ environmentsFindProvidersFor() {
     echoerrandexit "Could not find any providers for '$REQ_SERVICE'."
   fi
 
-  PS3="Select provider for required service '$REQ_SERVICE':"
+  PS3="Select provider for required service '$REQ_SERVICE': "
   local PROVIDER
   if [[ -z "${SELECT_DEFAULT:-}" ]]; then
     # TODO: is there a better way to preserve the word boundries? We can use the '${ARRAY[@]@Q}' construct in bash 4.4
@@ -73,9 +73,9 @@ environmentsFindProvidersFor() {
     # instead of:
     # 1) foo bar
     # 2) baz
-    eval "selectOneCancel PROVIDER $PROVIDER_OPTIONS"
+    eval "selectOneCancel PROVIDER PROVIDER_OPTIONS"
   else
-    eval "selectOneCancelDefault PROVIDER $PROVIDER_OPTIONS"
+    eval "selectOneCancelDefault PROVIDER PROVIDER_OPTIONS"
   fi
 
   environmentsFigureFqnService "$RESULT_VAR_NAME" "$REQ_SERVICE" "$PROVIDER"
@@ -88,7 +88,7 @@ environmentsGetDefaultFromScripts() {
 
   local SERV_SCRIPT
   for SERV_SCRIPT in `getCtrlScripts "$FQ_SERVICE"`; do
-    DEFAULT_VAL=`runScript "$SERV_SCRIPT" param-default "$CURR_ENV_PURPOSE" "$REQ_PARAM"` \
+    DEFAULT_VAL=`runServiceCtrlScript --no-env "$SERV_SCRIPT" param-default "$CURR_ENV_PURPOSE" "$REQ_PARAM"` \
       || echoerrandexit "Service script '$SERV_SCRIPT' does not support 'param-default'. Perhaps the package is out of date?"
     if [[ -n "$DEFAULT_VAL" ]]; then
       eval "$VAR_NAME='$DEFAULT_VAL'"

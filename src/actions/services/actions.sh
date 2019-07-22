@@ -3,17 +3,15 @@ requirements-services() {
 }
 
 services-list() {
-  local TMP
-  # If you try to set TMP with 'local' and use the '||', it silently ignores the
-  # '||'. I guess it gets parse as part of the varible set, and then ignored due
-  # to word splitting.
+  local TMP # see https://unix.stackexchange.com/a/88338/84520
   TMP=$(setSimpleOptions SHOW_STATUS PORCELAIN EXIT_ON_STOPPED QUIET -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
 
   local GET_STATUS=''
   if [[ -n "$SHOW_STATUS" ]] || [[ -n "$EXIT_ON_STOPPED" ]]; then
-    GET_STATUS='local _SERV_STATUS=$(eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT status");'
+    # see https://unix.stackexchange.com/a/88338/84520
+    GET_STATUS='local _SERV_STATUS; _SERV_STATUS=$(runServiceCtrlScript $SERV_SCRIPT status);'
   fi
 
   local OUTPUT='echo "$PROCESS_NAME";'
@@ -34,26 +32,28 @@ services-list() {
     CHECK_EXIT='test "$_SERV_STATUS" == "running" || return 27;'
   fi
 
-  local MAIN="${GET_STATUS}${OUTPUT}${CHECK_EXIT}"
+  local MAIN # see https://unix.stackexchange.com/a/88338/84520
+  MAIN="${GET_STATUS}${OUTPUT}${CHECK_EXIT}"
 
   runtimeServiceRunner "$MAIN" '' "$@"
 }
 
 services-start() {
-  local TMP
+  local TMP # see https://unix.stackexchange.com/a/88338/84520
   TMP=$(setSimpleOptions PASSTHRU= -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
 
   # TODO: check status before starting
-  local MAIN=$(cat <<'EOF'
+  local MAIN # see https://unix.stackexchange.com/a/88338/84520
+  MAIN=$(cat <<'EOF'
     # rm -f "${SERV_LOG}" "${SERV_ERR}"
 
     if services-list -qe "${SERV_IFACE}.${SCRIPT_NAME}"; then
       echo "${PROCESS_NAME} already running." >&2
     else
       echo "Starting ${PROCESS_NAME}..."
-      eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT start ${PASSTHRU}" \
+      runServiceCtrlScript $SERV_SCRIPT start ${PASSTHRU} \
         || echoerrandexit "Attempt to start service '${PROCESS_NAME}' failed."
       sleep 1
       if [[ -f "${SERV_ERR}" ]] && [[ `wc -l "${SERV_ERR}" | awk '{print $1}'` -gt 0 ]]; then
@@ -69,12 +69,13 @@ EOF
 
 services-stop() {
   # TODO: check status before stopping
-  local MAIN=$(cat <<'EOF'
+  local MAIN # see https://unix.stackexchange.com/a/88338/84520
+  MAIN=$(cat <<'EOF'
     if ! services-list -qe "${SERV_IFACE}.${SCRIPT_NAME}"; then
       echo "${PROCESS_NAME} already stopped." >&2
     else
       echo "Stopping ${PROCESS_NAME}..."
-      eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT stop"
+      runServiceCtrlScript $SERV_SCRIPT stop
       sleep 1
       services-list -s "${PROCESS_NAME}"
     fi
@@ -85,15 +86,16 @@ EOF
 }
 
 services-restart() {
-  local TMP
+  local TMP # see https://unix.stackexchange.com/a/88338/84520
   TMP=$(setSimpleOptions NO_START:S -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
 
-  local MAIN=$(cat <<'EOF'
+  local MAIN # see https://unix.stackexchange.com/a/88338/84520
+  MAIN=$(cat <<'EOF'
     echo "Restarting ${PROCESS_NAME}..."
     if services-list -qe "${SERV_IFACE}.${SCRIPT_NAME}"; then
-      eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT restart"
+      runServiceCtrlScript $SERV_SCRIPT restart
     else
       if [[ -n "$NO_START" ]]; then
         echowarn "'${PROCESS_NAME}' currently stopped; skipping."
@@ -102,7 +104,7 @@ services-restart() {
         continue
       fi
       echowarn "'${PROCESS_NAME}' currently stopped; starting..."
-      eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT start"
+      runServiceCtrlScript $SERV_SCRIPT start
     fi
     sleep 1
     services-list -s "${PROCESS_NAME}"
@@ -115,7 +117,8 @@ EOF
 logMain() {
   local DESC="$1"
   local SUFFIX="$2"
-  local FILE_NAME='${_CATALYST_ENV_LOGS}/${SERV_IFACE}.${SCRIPT_NAME}.'${SUFFIX}
+  local FILE_NAME # see https://unix.stackexchange.com/a/88338/84520
+  FILE_NAME='${_CATALYST_ENV_LOGS}/${SERV_IFACE}.${SCRIPT_NAME}.'${SUFFIX}
 
   cat <<EOF
     echo "${FILE_NAME}"
@@ -139,7 +142,7 @@ EOF
 }
 
 services-log() {
-  local TMP
+  local TMP # see https://unix.stackexchange.com/a/88338/84520
   TMP=$(setSimpleOptions CLEAR -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
@@ -161,20 +164,22 @@ services-connect() {
     echoerrandexit "Connect requires specification of a single service."
   fi
 
-  local MAIN=$(cat <<'EOF'
-    if runScript $SERV_SCRIPT connect-check 2> /dev/null; then
+  local MAIN # see https://unix.stackexchange.com/a/88338/84520
+  MAIN=$(cat <<'EOF'
+    if runServiceCtrlScript --no-env $SERV_SCRIPT connect-check 2> /dev/null; then
       if [[ -n "$SERV_SCRIPTS_COOKIE" ]]; then
         echoerrandexit "Multilpe connection points found; try specifying service process."
       fi
       SERV_SCRIPTS_COOKIE='found'
       services-list -qe "${SERV_IFACE}.${SCRIPT_NAME}" \
         || echoerrandexit "Can't connect to stopped '${SERV_IFACE}.${SCRIPT_NAME}'."
-      eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT connect"
+      runServiceCtrlScript $SERV_SCRIPT connect
     fi
 EOF
 )
   # After we've tried to connect with each process, check if anything worked
-  local ALWAYS_RUN=$(cat <<'EOF'
+  local ALWAYS_RUN # see https://unix.stackexchange.com/a/88338/84520
+  ALWAYS_RUN=$(cat <<'EOF'
     if (( $SERV_SCRIPT_COUNT == ( $SERV_SCRIPT_INDEX + 1 ) )) && [[ -z "$SERV_SCRIPTS_COOKIE" ]]; then
       echoerrandexit "${PROCESS_NAME}' does not support connections."
     fi

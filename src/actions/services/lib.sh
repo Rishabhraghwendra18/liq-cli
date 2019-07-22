@@ -1,37 +1,72 @@
+# ctrlScriptEnv generates the environment settings and required parameters list
+# for control scripts.
+#
+# The method will set 'EXPORT_PARAMS', which should be declared local by the
+# caller.
+#
+# The method will normally echo an error and force an exit
+# if a required parameter is not found. If '_SKIP_CURR_ENV_FILE' is set to any
+# value, this check will be skipped and the variable will be set to blank. This
+# is in support of internal flows which may which may define a subset of the
+# required parameters in order to initiate an operation that only requires that
+# subset.
 ctrlScriptEnv() {
   check-param-err() {
     local REQ_PARAM="${1}"; shift
     local DESC="${1}"; shift
 
-    if [[ -z "${!REQ_PARAM:-}" ]]; then
+    if [[ -z "${!REQ_PARAM:-}" ]] && [[ -z "${_SKIP_CURR_ENV_FILE:-}" ]]; then
       echoerrandexit "No value for ${DESC} '$REQ_PARAM'. Try updating the environment:\ncatalyst environment update -n"
     fi
   }
 
-  local ENV_SETTINGS="PACKAGE_NAME='${PACKAGE_NAME}' BASE_DIR='${BASE_DIR}' _CATALYST_ENV_LOGS='${_CATALYST_ENV_LOGS}' SERV_NAME='${SERV_NAME}' SERV_IFACE='${SERV_IFACE}' PROCESS_NAME='${PROCESS_NAME:-}' SERV_LOG='${SERV_LOG:-}' SERV_ERR='${SERV_ERR:-}' PID_FILE='${PID_FILE:-}'"
+  EXPORT_PARAMS=PACKAGE_NAME$'\n'BASE_DIR$'\n'_CATALYST_ENV_LOGS$'\n'SERV_NAME$'\n'SERV_IFACE$'\n'PROCESS_NAME$'\n'SERV_LOG$'\n'SERV_ERR$'\n'PID_FILE
   local REQ_PARAMS=$(getRequiredParameters "$SERVICE_KEY")
   local REQ_PARAM
   for REQ_PARAM in $REQ_PARAMS; do
     check-param-err "$REQ_PARAM" "service-source parameter"
-    ENV_SETTINGS="$ENV_SETTINGS $REQ_PARAM='${!REQ_PARAM}'"
+    list-add-item EXPORT_PARAMS "${REQ_PARAM}"
   done
 
   local SERV_IFACE=`echo "$SERVICE_KEY" | cut -d: -f1`
-  local ADD_REQ_PARAMS=$((echo "$PACKAGE" | jq -e --raw-output ".\"$CAT_REQ_SERVICES_KEY\" | .[] | select(.iface==\"$SERV_IFACE\") | .\"params-req\" | @sh" 2> /dev/null || echo '') | tr -d "'")
+  local ADD_REQ_PARAMS=$((echo "$PACKAGE" | jq -e --raw-output ".catalyst.requires | .[] | select(.iface==\"$SERV_IFACE\") | .\"params-req\" | @sh" 2> /dev/null || echo '') | tr -d "'")
   for REQ_PARAM in $ADD_REQ_PARAMS; do
     check-param-err "$REQ_PARAM" "service-local parameter"
-    ENV_SETTINGS="$ENV_SETTINGS $REQ_PARAM='${!REQ_PARAM}'"
-    list-add-item REQ_PARAMS "${REQ_PARAM}"
+    list-add-item EXPORT_PARAMS "${REQ_PARAM}"
   done
 
   for REQ_PARAM in $(getConfigConstants "${SERV_IFACE}"); do
     # TODO: ideally we'd load constants from the package.json, not environment.
     check-param-err "$REQ_PARAM" "config const"
-    ENV_SETTINGS="$ENV_SETTINGS $REQ_PARAM='${!REQ_PARAM}'"
-    list-add-item REQ_PARAMS "${REQ_PARAM}"
+    list-add-item EXPORT_PARAMS "${REQ_PARAM}"
   done
+}
 
-  echo "$ENV_SETTINGS REQ_PARAMS='$REQ_PARAMS'"
+runServiceCtrlScript() {
+  local TMP # see https://unix.stackexchange.com/a/88338/84520
+  TMP=$(setSimpleOptions NO_ENV -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
+  local SERV_SCRIPT="$1"; shift
+
+  if [[ -z $NO_ENV ]]; then
+    local EXPORT_PARAMS
+    ctrlScriptEnv
+
+    # The script might be our own or an installed dependency.
+    if [[ -e "${BASE_DIR}/bin/${SERV_SCRIPT}" ]]; then
+      ( export $EXPORT_PARAMS; "${BASE_DIR}/bin/${SERV_SCRIPT}" "$@" )
+    else
+      ( export $EXPORT_PARAMS; cd "${BASE_DIR}"; npx --no-install $SERV_SCRIPT "$@" )
+    fi
+  else
+    if [[ -e "${BASE_DIR}/bin/${SERV_SCRIPT}" ]]; then
+      "${BASE_DIR}/bin/${SERV_SCRIPT}" "$@"
+    else
+      ( cd "${BASE_DIR}"; npx --no-install $SERV_SCRIPT "$@" )
+    fi
+  fi
 }
 
 testServMatch() {
@@ -74,7 +109,9 @@ runtimeServiceRunner() {
   local _MAIN="$1"; shift
   local _ALWAYS_RUN="$1"; shift
 
-  source "${CURR_ENV_FILE}"
+  if [[ -z ${_SKIP_CURR_ENV_FILE:-} ]]; then
+    source "${CURR_ENV_FILE}"
+  fi
   declare -a ENV_SERVICES
   if [[ -n "${CURR_ENV_SERVICES:-}" ]]; then
     if [[ -z "${REVERSE_ORDER:-}" ]]; then
@@ -101,20 +138,25 @@ runtimeServiceRunner() {
       local SERV_PACKAGE
       getPackageDef SERV_PACKAGE "$SERV_PACKAGE_NAME"
       local SERV_SCRIPT
-      local SERV_SCRIPTS=`echo "$SERV_PACKAGE" | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$SERV_NAME\") | .\"ctrl-scripts\" | @sh" | tr -d "'"`
+      local SERV_SCRIPTS=`echo "$SERV_PACKAGE" | jq --raw-output ".catalyst.provides | .[] | select(.name == \"$SERV_NAME\") | .\"ctrl-scripts\" | @sh" 2> /dev/null | tr -d "'"`
+      [[ -n $SERV_SCRIPTS ]] || echoerrandexit "$SERV_PACKAGE_NAME package.json does not properly define 'catalyst.provides.$SERV_NAME.ctrl-scripts'."
       local SERV_SCRIPT_ARRAY=( $SERV_SCRIPTS )
       local SERV_SCRIPT_COUNT=${#SERV_SCRIPT_ARRAY[@]}
       # give the process scripts their proper, self-declared order
       if (( $SERV_SCRIPT_COUNT > 1 )); then
         for SERV_SCRIPT in $SERV_SCRIPTS; do
-          SERV_SCRIPT_ARRAY[$(eval "$(ctrlScriptEnv) runScript $SERV_SCRIPT myorder")]="$SERV_SCRIPT"
+          local SCRIPT_ORDER # see https://unix.stackexchange.com/a/88338/84520
+          SCRIPT_ORDER=$(runServiceCtrlScript --no-env $SERV_SCRIPT myorder)
+          [[ -n $SCRIPT_ORDER ]] || echoerrandexit "Could not determine script run order."
+          SERV_SCRIPT_ARRAY[$SCRIPT_ORDER]="$SERV_SCRIPT"
         done
       fi
 
       local SERV_SCRIPT_INDEX=0
       local SERV_SCRIPTS_COOKIE=''
       for SERV_SCRIPT in ${SERV_SCRIPT_ARRAY[@]}; do
-        local SCRIPT_NAME=$(runScript $SERV_SCRIPT name)
+        local SCRIPT_NAME # see https://unix.stackexchange.com/a/88338/84520
+        SCRIPT_NAME=$(runServiceCtrlScript --no-env $SERV_SCRIPT name)
         local PROCESS_NAME="${SERV_IFACE}"
         if (( $SERV_SCRIPT_COUNT > 1 )); then
           PROCESS_NAME="${SERV_IFACE}.${SCRIPT_NAME}"

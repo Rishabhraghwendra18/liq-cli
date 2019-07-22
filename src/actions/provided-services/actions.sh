@@ -25,30 +25,30 @@ EOF
 )
 
   function selectOptions() {
-    local OPTIONS
-    local OPTION
+    local OPTION OPTIONS
     local OPTIONS_NAME="$1"; shift
     PS3="$1"; shift
     local OPTS_ONLY="$1"; shift
+    local ENUM_CHOICES="$@"
 
     if [[ -n "$OPTS_ONLY" ]]; then
-      selectDoneCancel OPTIONS "$@"
+      selectDoneCancel OPTIONS ENUM_CHOICES
     else
-      selectDoneCancelAnyOther OPTIONS "$@"
+      selectDoneCancelAnyOther OPTIONS ENUM_CHOICES
     fi
     for OPTION in $OPTIONS; do
       SERVICE_DEF=`echo "$SERVICE_DEF" | jq ". + { \"$OPTIONS_NAME\": (.\"$OPTIONS_NAME\" + [\"$OPTION\"]) }"`
     done
   }
 
-  selectOptions 'interface-classes' 'Interface class: ' '' $STD_IFACE_CLASSES
-  selectOptions 'platform-types' 'Platform type: ' '' $STD_PLATFORM_TYPES
-  selectOptions 'purposes' 'Purpose: ' '' $STD_PURPOSES
+  selectOptions 'interface-classes' 'Interface class: ' '' "$STD_IFACE_CLASSES"
+  selectOptions 'platform-types' 'Platform type: ' '' "$STD_PLATFORM_TYPES"
+  selectOptions 'purposes' 'Purpose: ' '' "$STD_ENV_PURPOSES"
   selectOptions 'ctrl-scripts' "Control script: " true `find "${BASE_DIR}/bin/" -type f -not -name '*~' -prune -execdir echo '{}' \;`
 
   defineParameters SERVICE_DEF
 
-  PACKAGE=`echo "$PACKAGE" | jq ". + { \"$CAT_PROVIDES_SERVICE\": (.\"$CAT_PROVIDES_SERVICE\" + [$SERVICE_DEF]) }"`
+  PACKAGE=`echo "$PACKAGE" | jq ".catalyst + { \"provides\": (.catalyst.provides + [$SERVICE_DEF]) }"`
   echo "$PACKAGE" | jq > "$PACKAGE_FILE"
 }
 
@@ -59,26 +59,26 @@ provided-services-delete() {
 
   local SERV_NAME
   for SERV_NAME in "$@"; do
-    if echo "$PACKAGE" | jq -e "(.\"$CAT_PROVIDES_SERVICE\" | map(select(.name == \"$SERV_NAME\")) | length) == 0" > /dev/null; then
+    if echo "$PACKAGE" | jq -e "(.catalyst.provides | map(select(.name == \"$SERV_NAME\")) | length) == 0" > /dev/null; then
       echoerr "Did not find service '$SERV_NAME' to delete."
     fi
-    PACKAGE=`echo "$PACKAGE" | jq "setpath([\"$CAT_PROVIDES_SERVICE\"]; .\"$CAT_PROVIDES_SERVICE\" | map(select(.name != \"$SERV_NAME\")))"`
+    PACKAGE=`echo "$PACKAGE" | jq "setpath([.catalyst.requires]; .catalyst.provides | map(select(.name != \"$SERV_NAME\")))"`
   done
   echo "$PACKAGE" | jq > "$PACKAGE_FILE"
 }
 
 provided-services-list() {
-  echo $PACKAGE | jq --raw-output ".\"$CAT_PROVIDES_SERVICE\" | .[] | .\"name\""
+  echo $PACKAGE | jq --raw-output ".catalyst.provides | .[] | .\"name\""
 }
 
 provided-services-show() {
   while [[ $# -gt 0 ]]; do
-    if ! echo $PACKAGE | jq -e "(.\"$CAT_PROVIDES_SERVICE\") and (.\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$1\"))" > /dev/null; then
+    if ! echo $PACKAGE | jq -e "(.catalyst) and (.catalyst.provides) and (.catalyst.provides | .[] | select(.name == \"$1\"))" > /dev/null; then
       echoerr "No such service '$1'."
     else
       echo "$1:"
       echo
-      echo $PACKAGE | jq ".\"$CAT_PROVIDES_SERVICE\" | .[] | select(.name == \"$1\")"
+      echo $PACKAGE | jq ".catalyst.provides | .[] | select(.name == \"$1\")"
       if [[ $# -gt 1 ]]; then
         echo
         read -p "Hit enter to continue to '$2'..."
