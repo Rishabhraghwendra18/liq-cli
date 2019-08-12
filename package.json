@@ -19,7 +19,9 @@
   },
   "author": "Zane Rockenbaugh <zane@liquid-labs.com>",
   "license": "ISC",
-  "dependencies": {},
+  "dependencies": {
+    "@liquid-labs/catalyst-scripts": "file:.yalc/@liquid-labs/catalyst-scripts"
+  },
   "bin": {
     "catalyst": "./dist/catalyst.sh"
   },

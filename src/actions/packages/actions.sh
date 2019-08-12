@@ -111,10 +111,24 @@ packages-lint() {
 packages-test() {
   local TMP
   # TODO https://github.com/Liquid-Labs/catalyst-cli/issues/27
-  # TODO https://github.com/Liquid-Labs/catalyst-cli/issues/28
-  TMP=$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= -- "$@") \
+  TMP=$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
+
+  if [[ -z "${TEST_TYPES:-}" ]] || echo "$TEST_TYPES" | grep -qE '(^|, *| +)int(egration)?(, *| +|$)'; then
+    requireEnvironment
+    echo -n "Checking services... "
+    if ! services-list --show-status --exit-on-stopped --quiet > /dev/null; then
+      if [[ -z "${NO_START:-}" ]]; then
+        services-start || echoerrandexit "Could not start services for testing."
+      else
+        echo "${red}necessary services not running.${reset}"
+        echoerrandexit "Some services are not running. You can either run unit tests are start services. Try one of the following:\ncatalyst packages test --types=unit\ncatalyst services start"
+      fi
+    else
+      echo "${green}looks good.${reset}"
+    fi
+  fi
 
   # note this entails 'pretest' and 'posttest' as well
   TEST_TYPES="$TYPES" NO_DATA_RESET="$NO_DATA_RESET" GO_RUN="$GO_RUN" runPackageScript test || \
