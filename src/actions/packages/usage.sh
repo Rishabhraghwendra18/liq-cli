@@ -19,6 +19,8 @@ ${PREFIX}${cyan_u}packages${reset} <action>:
       '-t=unit,int' is equivalent no type or '-t=""'.
     * '--no-start' will skip tryng to start necessary services.
     * '--no-data-reset' will cause the standard test DB reset to be skipped.
+    * '--no-service-check' will skip checking service status. This is useful when
+      re-running tests and the services are known to be running.
     * '--go-run' will only run those tests matching the provided regex (per go
       '-run' standards).
   ${underline}lint${reset} [-f|--fix] [<name>]: Lints all or the named (NPM) package in the current

@@ -111,11 +111,13 @@ packages-lint() {
 packages-test() {
   local TMP
   # TODO https://github.com/Liquid-Labs/catalyst-cli/issues/27
-  TMP=$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S -- "$@") \
+  TMP=$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S NO_SERVICE_CHECK:C -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
 
-  if [[ -z "${TEST_TYPES:-}" ]] || echo "$TEST_TYPES" | grep -qE '(^|, *| +)int(egration)?(, *| +|$)'; then
+  if [[ -z "${NO_SERVICE_CHECK}" ]] \
+     && ( [[ -z "${TEST_TYPES:-}" ]] \
+       || echo "$TEST_TYPES" | grep -qE '(^|, *| +)int(egration)?(, *| +|$)' ); then
     requireEnvironment
     echo -n "Checking services... "
     if ! services-list --show-status --exit-on-stopped --quiet > /dev/null; then
