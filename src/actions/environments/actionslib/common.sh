@@ -24,14 +24,15 @@ function environmentsGatherEnvironmentSettings() {
     CURR_ENV_SERVICES+=("$FQN_SERVICE")
 
     # define required params
-    REQ_PARAMS=$(getRequiredParameters "$FQN_SERVICE")
+    local SERV_REQ_PARAMS
+    SERV_REQ_PARAMS=$(getRequiredParameters "$FQN_SERVICE")
     local ADD_REQ_PARAMS=$((echo "$PACKAGE" | jq -e --raw-output ".catalyst.requires | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"params-req\" | @sh" 2> /dev/null || echo '') | tr -d "'")
     if [[ -n "$ADD_REQ_PARAMS" ]]; then
-      list-add-item REQ_PARAMS ADD_REQ_PARAMS
+      list-add-item SERV_REQ_PARAMS "$ADD_REQ_PARAMS"
     fi
 
     local REQ_PARAM
-    for REQ_PARAM in $REQ_PARAMS; do
+    for REQ_PARAM in $SERV_REQ_PARAMS; do
       local DEFAULT_VAL
       environmentsGetDefaultFromScripts DEFAULT_VAL "$FQN_SERVICE" "$REQ_PARAM"
       if [[ -n "$DEFAULT_VAL" ]]; then
@@ -44,6 +45,7 @@ function environmentsGatherEnvironmentSettings() {
       local CONFIG_VAL=$(echo "$PACKAGE" | jq --raw-output ".catalyst.requires | .[] | select(.iface==\"$REQ_SERV_IFACE\") | .\"config-const\".\"$REQ_PARAM\" | @sh" | tr -d "'")
       eval "$REQ_PARAM='$CONFIG_VAL'"
     done
+    list-add-item REQ_PARAMS "$SERV_REQ_PARAMS"
   done
 }
 
