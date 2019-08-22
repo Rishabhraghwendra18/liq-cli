@@ -1,6 +1,6 @@
 {
   "name": "catalyst-cli",
-  "version": "1.0.0-prototype.3",
+  "version": "1.0.0-prototype.4",
   "description": "Local development and management tool for Catalyst projects.",
   "scripts": {
     "prebuild": "mkdir -p ./dist && rm -rf ./dist/*",
