@@ -63,7 +63,7 @@ function environmentsGet-CLOUDSQL_CONNECTION_PORT() {
 
 function environmentsGet-CLOUDSQL_CONNECTION_NAME() {
   if [[ "$CURR_ENV_PURPOSE" == 'dev' ]]; then
-    CLOUDSQL_CONNECTION_NAME='127.0.0.1:3306'
+    CLOUDSQL_CONNECTION_NAME='127.0.0.1:5432'
   fi
 }
 

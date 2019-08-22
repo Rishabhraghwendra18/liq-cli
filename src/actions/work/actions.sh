@@ -59,7 +59,9 @@ work-involve() {
     while read NEW_PACKAGE_FILE; do
       local NEW_PACKAGE_NAME=$(cat "$NEW_PACKAGE_FILE" | jq --raw-output '.name | @sh' | tr -d "'")
       if echo "$PACKAGE" | jq -e ".dependencies and ((.dependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\"))) or (.devDependencies and (.devDependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\")))" > /dev/null; then
-        packages-link "${PROJECT_NAME}:${NEW_PACKAGE_NAME}"
+        :
+        # Currently disabled
+        # packages-link "${PROJECT_NAME}:${NEW_PACKAGE_NAME}"
       fi
     done < <(find "${CATALYST_PLAYGROUND}/${PROJECT_NAME}" -name "package.json" -not -path "*node_modules/*")
   fi

@@ -20,8 +20,8 @@ ctrlScriptEnv() {
     fi
   }
 
-  EXPORT_PARAMS=PACKAGE_NAME$'\n'BASE_DIR$'\n'_CATALYST_ENV_LOGS$'\n'SERV_NAME$'\n'SERV_IFACE$'\n'PROCESS_NAME$'\n'SERV_LOG$'\n'SERV_ERR$'\n'PID_FILE
-  local REQ_PARAMS=$(getRequiredParameters "$SERVICE_KEY")
+  EXPORT_PARAMS=PACKAGE_NAME$'\n'BASE_DIR$'\n'_CATALYST_ENV_LOGS$'\n'SERV_NAME$'\n'SERV_IFACE$'\n'PROCESS_NAME$'\n'SERV_LOG$'\n'SERV_ERR$'\n'PID_FILE$'\n'REQ_PARAMS
+
   local REQ_PARAM
   for REQ_PARAM in $REQ_PARAMS; do
     check-param-err "$REQ_PARAM" "service-source parameter"
@@ -52,6 +52,8 @@ runServiceCtrlScript() {
 
   if [[ -z $NO_ENV ]]; then
     local EXPORT_PARAMS
+    local REQ_PARAMS
+    REQ_PARAMS=$(getRequiredParameters "$SERVICE_KEY")
     ctrlScriptEnv
 
     # The script might be our own or an installed dependency.

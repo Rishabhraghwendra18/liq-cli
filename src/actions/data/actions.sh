@@ -94,7 +94,7 @@ dataRunner() {
       echoerrandexit "The 'data' commands work with primary interfaces. See usage above"
     else
       local SERV
-      SERV="$(echo "$SERVICE_STATUSES" | grep -E "^${IFACE}(-[^ ]*)?:")" || \
+      SERV="$(echo "$SERVICE_STATUSES" | grep -E "^${IFACE}(.[^: ]+)?:")" || \
         echoerrandexit "Could not find a service to handle interface class '${IFACE}'. Check package configuration and command typos."
       local SERV_SCRIPT NOT_RUNNING SERV_STATUS
       local SOME_RUNNING=false
