@@ -5,11 +5,7 @@ const execOpts = {
   silent: true,
 }
 
-const expectedUsage = expect.stringMatching(new RegExp(`Usage:
-
-proj <component | global action> <action> [<action args>]
-
-global actions:.+`))
+const expectedUsage = new RegExp(`Usage`)
 
 test('no argument results in usage and error', () => {
   console.error = jest.fn() // supresses err echo from shelljs
@@ -17,7 +13,7 @@ test('no argument results in usage and error', () => {
   const expectedErr = expect.stringMatching(
     new RegExp(`Invalid invocation. See usage above.\\s*`))
 
-  expect(result.stdout).toEqual(expectedUsage)
+  expect(result.stdout.replace(/\033\[\d*m/g, "")).toMatch(expectedUsage)
   expect(result.stderr).toEqual(expectedErr)
   expect(result.code).toBe(1)
 })
@@ -27,17 +23,17 @@ test('invalid global action results in usage and error', () => {
   console.error = jest.fn() // supresses err echo from shelljs
   const result = shell.exec(`catalyst ${badGlobal}`, execOpts)
   const expectedErr = expect.stringMatching(
-    new RegExp(`No such component or global action '${badGlobal}'.\\s*`))
+    new RegExp(`No such resource or group '${badGlobal}'. See usage above.\\s*`))
 
-  expect(result.stdout).toEqual(expectedUsage)
+  expect(result.stdout).toMatch(expectedUsage)
   expect(result.stderr).toEqual(expectedErr)
-  expect(result.code).toBe(1)
+  expect(result.code).toBe(10)
 })
 
 test('help should print usage', () => {
   const result = shell.exec(`catalyst help`, execOpts)
 
-  expect(result.stdout).toEqual(expectedUsage)
+  expect(result.stdout).toMatch(expectedUsage)
   expect(result.stderr).toEqual('')
   expect(result.code).toBe(0)
 })
