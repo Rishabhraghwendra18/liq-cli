@@ -11,18 +11,6 @@ export const testOriginDir = `/tmp/catalyst-test-gitorigin-${testing.randomHex}`
 export const testCheckoutDir = `${testPlayground}/test-checkout`
 const testProjectDir = `${testPlayground}/catalyst-cli`
 
-describe.only('catalyst project', () => {
-  test('no action results in error and project help', () => {
-    console.error = jest.fn() // supresses err echo from shelljs
-    const result = shell.exec(`catalyst project`, execOpts)
-    const expectedErr = new RegExp(`No action argument provided.\\s*`)
-
-    expect(result.stderr).toMatch(expectedErr)
-    expect(result.stdout.replace(/\033\[\d*m/g, "")).toMatch(testing.expectedCommandGroupUsage(`project`))
-    expect(result.code).toBe(10)
-  })
-})
-
 describe(`Command 'catalyst meta setup'`, () => {
   beforeAll(() => {
     shell.mkdir(testPlayground)
