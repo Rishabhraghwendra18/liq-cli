@@ -34,7 +34,7 @@ work-involve() {
   else
     exactUserArgs PROJECT_NAME -- "$@"
     test -d "${CATALYST_PLAYGROUND}/${PROJECT_NAME}" \
-      || echoerrandexit "Invalid project name '$PROJECT_NAME'. Perhaps it needs to be imported? Try:\ncatalyst workspace import <git URL>"
+      || echoerrandexit "Invalid project name '$PROJECT_NAME'. Perhaps it needs to be imported? Try:\ncatalyst playground import <git URL>"
   fi
 
   source "${CATALYST_WORK_DB}/curr_work"

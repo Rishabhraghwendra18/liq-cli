@@ -8,7 +8,7 @@ const execOpts = {
   silent: true,
 }
 
-export const testWorkspaceDir = `/tmp/catalyst-test-workspace-${testing.randomHex}`
+export const testWorkspaceDir = `/tmp/catalyst-test-playground-${testing.randomHex}`
 export const testOriginDir = `/tmp/catalyst-test-gitorigin-${testing.randomHex}`
 export const testCheckoutDir = `${testWorkspaceDir}/test-checkout`
 const testProjectDir = `${testWorkspaceDir}/catalyst-cli`
@@ -35,26 +35,26 @@ describe('catalyst project', () => {
     expect(result.stdout).toMatch(expectedProjectUsage)
     expect(result.code).toBe(0)
   })
+})
 
-  describe(``)
-
+describe(`Command 'catalyst meta setup'`, () => {
   beforeAll(() => {
     shell.mkdir(testWorkspaceDir)
     shell.mkdir(testOriginDir)
     shell.exec(`cd ${testOriginDir} && git clone -q --bare ${testing.selfOriginUrl} .`)
   })
 
-  test(`'setup workspace'`, () => {
-    const result = shell.exec(`cd ${testWorkspaceDir} && catalyst workspace init`)
+  test(`'setup playground'`, () => {
+    const result = shell.exec(`cd ${testWorkspaceDir} && catalyst playground init`)
     expect(result.stderr).toEqual('')
     expect(result.stdout).toEqual('')
     expect(result.code).toEqual(0)
   })
 
   const importCommand = `catalyst project import "${testing.selfOriginUrl}"`
-  test("'project import' should clone remote git into workspace", () => {
+  test("'project import' should clone remote git into playground", () => {
     const expectedOutput = expect.stringMatching(
-      new RegExp(`^'catalyst-cli' imported into workspace.[\s\n]*$`))
+      new RegExp(`^'catalyst-cli' imported into playground.[\s\n]*$`))
     const result = shell.exec(`cd ${testWorkspaceDir} && ${importCommand}`)
 
     expect(result.stderr).toEqual('')

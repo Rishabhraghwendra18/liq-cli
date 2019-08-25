@@ -1,10 +1,10 @@
-workspace-init() {
+playground-init() {
   touch "${_WORKSPACE_CONFIG}"
   WORKSPACE_DIR="$PWD"
   ensureWorkspaceDb
 }
 
-_workspace_forEach() {
+_playground_forEach() {
   for f in `find -L "${BASE_DIR}" -maxdepth 1 -mindepth 1 -type d`; do
     if [[ -f "${f}/.catalyst" ]]; then # TODO: switch '.catalyst' to '_PROJECT_CONFIG'
       (cd "$f" && eval $*)
@@ -12,18 +12,18 @@ _workspace_forEach() {
   done
 }
 
-workspace-report() {
-  _workspace_forEach 'catalyst work report'
+playground-report() {
+  _playground_forEach 'catalyst work report'
 }
 
-workspace-branch() {
+playground-branch() {
   local BRANCH_DESC="${1:-}"
   requireArgs "$BRANCH_DESC" || exit $?
 
-  _workspace_forEach 'git branch'
+  _playground_forEach 'git branch'
 }
 
-workspace-import() {
+playground-import() {
   echoerrandexit "Action 'import' is temporarily disabled in this version pending testing."
   setupMirrors() {
     local PROJECT_DIR="$1"
@@ -51,7 +51,7 @@ workspace-import() {
     # TODO: this assumes SSH style access, which we should, but need to enforce
     # the 'ssh' will be denied with 1 if successful and 255 if no key found.
     ssh -qT git@github.com 2> /dev/null || if [ $? -ne 1 ]; then echoerrandexit "Could not connect to github; add your github key with 'ssh-add'."; fi
-    git clone --quiet "${PROJECT_HOME}" && echo "'$PROJECT_URL' imported into workspace."
+    git clone --quiet "${PROJECT_HOME}" && echo "'$PROJECT_URL' imported into playground."
     setupMirrors "$PROJECT_URL" "$PROJECT_HOME" "${PROJECT_MIRRORS:-}"
   else
     local PROJECT_NAME=`basename "${PROJECT_URL}"`
@@ -60,7 +60,7 @@ workspace-import() {
     fi
 
     (cd "${CATALYST_PLAYGROUND}"
-     git clone --quiet "$PROJECT_URL" && echo "'${PROJECT_NAME}' imported into workspace.")
+     git clone --quiet "$PROJECT_URL" && echo "'${PROJECT_NAME}' imported into playground.")
     # TODO: suport a 'project fork' that resets the _PROJECT_PUB_CONFIG file?
 
     local PROJECT_DIR="$CATALYST_PLAYGROUND/$PROJECT_NAME"
@@ -80,7 +80,7 @@ workspace-import() {
   fi
 }
 
-workspace-close() {
+playground-close() {
   echoerrandexit "Action 'close' is temporarily disabled in this version pending testing."
   local PROJECT_NAME="${1:-}"
 

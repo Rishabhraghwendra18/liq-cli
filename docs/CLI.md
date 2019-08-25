@@ -33,7 +33,7 @@ Five command groups deal with runtime configuration and management:
 The final two command groups deal with workflow:
 
 * work
-* workspace
+* playground
 
 ## Basic concepts
 

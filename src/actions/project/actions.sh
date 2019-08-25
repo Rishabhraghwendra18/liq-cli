@@ -14,7 +14,7 @@ project-init() {
   else
     BASE_DIR="$PWD"
   fi
-  # TODO: verify that the parent directory is a workspace?
+  # TODO: verify that the parent directory is a playground?
 
   projectGitSetup
 }

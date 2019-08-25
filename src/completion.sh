@@ -6,7 +6,7 @@ _catalyst()
 {
     local cur prev opts
     local global_actions="help"
-    local groups="data environments packages project provided-services remotes required-services services work workspace"
+    local groups="data environments packages project provided-services remotes required-services services work playground"
     COMPREPLY=()
     # local WORD_COUNT=${#COMP_WORDS[@]}
     # TODO: instead of simple 'cur/prev', use the above to see where in the
@@ -42,7 +42,7 @@ _catalyst()
         opts="connect err-log list log restart start stop";;
       work)
         opts="diff-master edit ignore-rest involve merge qa report resume start stop";;
-      workspace)
+      playground)
         opts="init close import";;
       *)
       ;;

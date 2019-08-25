@@ -100,7 +100,7 @@ sourceFile() {
 
 requireCatalystSettings() {
   source "${CATALYST_SETTINGS}" 2> /dev/null \
-    || echoerrandexit "Could not source global Catalyst settings. Try:\ncatalyst workspace init"
+    || echoerrandexit "Could not source global Catalyst settings. Try:\ncatalyst playground init"
 }
 
 sourceCatalystfile() {

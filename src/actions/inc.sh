@@ -36,9 +36,9 @@ source ./work/actions.sh
 source ./work/lib.sh
 source ./work/usage.sh
 
-source ./workspace/actions.sh
-# source ./workspace/lib.sh
-source ./workspace/usage.sh
+source ./playground/actions.sh
+# source ./playground/lib.sh
+source ./playground/usage.sh
 
 # getActions() {
 #  for d in `find "${SOURCE_DIR}/actions" -type d -maxdepth 1 -not -path "${SOURCE_DIR}/actions"`; do
