@@ -7,7 +7,7 @@ ${PREFIX}${cyan_u}remotes${reset} <action>:
    ${underline}delete${reset}: Deletes a mirror repository.
    ${underline}set-main${reset} [<name>]: Sets the 'main' repository by name or interactively.
 
-${red_b}Deprated: These commands will migrate under 'packages'.${reset}
+${red_b}Deprated: These commands will migrate under 'project'.${reset}
 
 Remotes are synchronized across all packages in the current repository folder.
 EOF

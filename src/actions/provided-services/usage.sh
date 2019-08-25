@@ -8,7 +8,7 @@ ${PREFIX}${cyan_u}provided-services${reset} <action>:
   ${underline}add${reset} [<package name>]: Add a provided service.
   ${underline}delete${reset} [<package name>] <name>: Deletes a provided service.
 
-${red_b}Deprated: These commands will migrate under 'packages'.${reset}
+${red_b}Deprated: These commands will migrate under 'project'.${reset}
 
 The 'add' action works interactively. Non-interactive alternatives will be
 provided in future versions.

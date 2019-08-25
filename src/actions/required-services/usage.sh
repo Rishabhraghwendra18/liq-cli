@@ -8,7 +8,7 @@ ${PREFIX}${cyan_u}required-services${reset} <action>:"
   ${underline}add${reset} [<package name>]: Add a required service.
   ${underline}delete${reset} [<package name>] <name>: Deletes a required service.
 
-${red_b}Deprated: These commands will migrate under 'packages'.${reset}
+${red_b}Deprated: These commands will migrate under 'project'.${reset}
 
 The 'add' action works interactively. Non-interactive alternatives will be
 provided in future versions.
