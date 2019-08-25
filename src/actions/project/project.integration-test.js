@@ -1,6 +1,3 @@
-// These tests are designed to be run sequentially and are kicked off by
-// 'seqtests.test.js'.
-import * as testing from '../../lib/testing'
 const shell = require('shelljs')
 
 const execOpts = {
@@ -8,44 +5,33 @@ const execOpts = {
   silent: true,
 }
 
-export const testWorkspaceDir = `/tmp/catalyst-test-playground-${testing.randomHex}`
+import * as testing from '../../lib/testing'
+export const testPlayground = `/tmp/catalyst-test-playground-${testing.randomHex}`
 export const testOriginDir = `/tmp/catalyst-test-gitorigin-${testing.randomHex}`
-export const testCheckoutDir = `${testWorkspaceDir}/test-checkout`
-const testProjectDir = `${testWorkspaceDir}/catalyst-cli`
+export const testCheckoutDir = `${testPlayground}/test-checkout`
+const testProjectDir = `${testPlayground}/catalyst-cli`
 
-// the '.*' are for the color codes
-const expectedProjectUsage = new RegExp(`catalyst .*project.* <action>:`)
-
-describe('catalyst project', () => {
-
+describe.only('catalyst project', () => {
   test('no action results in error and project help', () => {
     console.error = jest.fn() // supresses err echo from shelljs
     const result = shell.exec(`catalyst project`, execOpts)
     const expectedErr = new RegExp(`No action argument provided.\\s*`)
 
     expect(result.stderr).toMatch(expectedErr)
-    expect(result.stdout.replace(/\033\[\d*m/g, "")).toMatch(expectedProjectUsage)
+    expect(result.stdout.replace(/\033\[\d*m/g, "")).toMatch(testing.expectedCommandGroupUsage(`project`))
     expect(result.code).toBe(10)
-  })
-
-  test("'help work' prints project help", () => {
-    const result = shell.exec(`catalyst help project`, execOpts)
-
-    expect(result.stderr).toEqual('')
-    expect(result.stdout).toMatch(expectedProjectUsage)
-    expect(result.code).toBe(0)
   })
 })
 
 describe(`Command 'catalyst meta setup'`, () => {
   beforeAll(() => {
-    shell.mkdir(testWorkspaceDir)
+    shell.mkdir(testPlayground)
     shell.mkdir(testOriginDir)
     shell.exec(`cd ${testOriginDir} && git clone -q --bare ${testing.selfOriginUrl} .`)
   })
 
   test(`'setup playground'`, () => {
-    const result = shell.exec(`cd ${testWorkspaceDir} && catalyst playground init`)
+    const result = shell.exec(`cd ${testPlayground} && catalyst playground init`)
     expect(result.stderr).toEqual('')
     expect(result.stdout).toEqual('')
     expect(result.code).toEqual(0)
@@ -55,7 +41,7 @@ describe(`Command 'catalyst meta setup'`, () => {
   test("'project import' should clone remote git into playground", () => {
     const expectedOutput = expect.stringMatching(
       new RegExp(`^'catalyst-cli' imported into playground.[\s\n]*$`))
-    const result = shell.exec(`cd ${testWorkspaceDir} && ${importCommand}`)
+    const result = shell.exec(`cd ${testPlayground} && ${importCommand}`)
 
     expect(result.stderr).toEqual('')
     expect(result.stdout).toEqual(expectedOutput)
@@ -91,7 +77,7 @@ describe(`Command 'catalyst meta setup'`, () => {
       expect(result.stdout).toEqual('')
       expect(result.code).toEqual(1)
 
-      result = shell.exec(`cd ${testWorkspaceDir} && catalyst project close catalyst-cli`, execOpts)
+      result = shell.exec(`cd ${testPlayground} && catalyst project close catalyst-cli`, execOpts)
       expect(result.stderr).toMatch(testConfig.errMatch)
       expect(result.stdout).toEqual('')
       expect(result.code).toEqual(1)
@@ -107,15 +93,15 @@ describe(`Command 'catalyst meta setup'`, () => {
     expect(result.stderr).toEqual('')
     expect(result.stdout).toMatch(expectedOutput)
     expect(result.code).toEqual(0)
-    expect(shell.ls(testWorkspaceDir)).toHaveLength(0)
+    expect(shell.ls(testPlayground)).toHaveLength(0)
 
-    shell.exec(`cd ${testWorkspaceDir} && ${importCommand}`)
+    shell.exec(`cd ${testPlayground} && ${importCommand}`)
 
-    result = shell.exec(`cd ${testWorkspaceDir} && catalyst project close catalyst-cli`, execOpts)
+    result = shell.exec(`cd ${testPlayground} && catalyst project close catalyst-cli`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.stdout).toMatch(expectedOutput)
     expect(result.code).toEqual(0)
-    expect(shell.ls(testWorkspaceDir)).toHaveLength(0)
+    expect(shell.ls(testPlayground)).toHaveLength(0)
   })
 
   test(`project setup in bare directory`, () => {

@@ -4,8 +4,5 @@
 // template or something, but for now, this seems the most sensible approach
 // since there is a sequential nature to much of the setup and use of a
 // playground and project.
-import { testWorkspaceDir, testOriginDir } from './actions/project/project.integration-test.js'
+import './actions/project/project.integration-test.js'
 import './actions/work/work.integration-test.js'
-import * as testing from './lib/testing'
-
-afterAll(testing.cleanupDirs(testWorkspaceDir, testOriginDir))

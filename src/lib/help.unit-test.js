@@ -1,3 +1,5 @@
+import * as testing from './testing'
+
 const shell = require('shelljs')
 
 const execOpts = {
@@ -39,6 +41,14 @@ describe(`Command 'catalyst' help`, () => {
 
     expect(result.stdout).toMatch(expectedUsage)
     expect(result.stderr).toEqual('')
+    expect(result.code).toBe(0)
+  })
+
+  test("with 'project' prints project help", () => {
+    const result = shell.exec(`catalyst help project`, execOpts)
+
+    expect(result.stderr).toEqual('')
+    expect(result.stdout).toMatch(testing.expectedCommandGroupUsage(`project`))
     expect(result.code).toBe(0)
   })
 })
