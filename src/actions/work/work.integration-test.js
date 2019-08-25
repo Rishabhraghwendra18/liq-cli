@@ -1,6 +1,6 @@
 // These tests are designed to be run sequentially and are kicked off by
 // 'seqtests.test.js'.
-import { testCheckoutDir } from '../project/project.seqtest'
+import { testCheckoutDir } from '../project/project.integration-test.js'
 const shell = require('shelljs')
 
 const execOpts = {
