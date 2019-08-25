@@ -1,4 +1,4 @@
-usage-playground() {
+help-playground() {
   local PREFIX="${1:-}"
 
   handleSummary "${PREFIX}${cyan_u}playground${reset} <action>: Manages the local playground." || cat <<EOF

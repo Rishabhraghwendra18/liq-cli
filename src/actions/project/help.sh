@@ -1,4 +1,4 @@
-usage-project() {
+help-project() {
   local PREFIX="${1:-}"
 
   handleSummary "${PREFIX}${cyan_u}project${reset} <action>: Project configuration and tools." || cat <<EOF
@@ -8,5 +8,5 @@ ${PREFIX}${cyan_u}project${reset} <action>:
   ${underline}publish${reset}: Updates the project site.
 EOF
 
-  test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" usageHelperAlphaPackagesNote
+  test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" helpHelperAlphaPackagesNote
 }

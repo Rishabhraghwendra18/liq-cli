@@ -4,9 +4,9 @@ requirements-data() {
   requireEnvironment
 }
 
-usage-data-build() {
+help-data-build() {
   cat <<EOF | indent
-$(usageActionPrefix data)${underline}build${reset} [<iface>...]: Loads the project schema into all or
+$(helpActionPrefix data)${underline}build${reset} [<iface>...]: Loads the project schema into all or
 each named data service.
 EOF
 }
@@ -90,8 +90,8 @@ dataRunner() {
   for IFACE in $IFACES; do
     # Check all the parameters are good.
     if [[ "$IFACE" == *'-'* ]]; then
-      usage-data "catalyst "
-      echoerrandexit "The 'data' commands work with primary interfaces. See usage above"
+      help-data "catalyst "
+      echoerrandexit "The 'data' commands work with primary interfaces. See help above"
     else
       local SERV
       SERV="$(echo "$SERVICE_STATUSES" | grep -E "^${IFACE}(.[^: ]+)?:")" || \

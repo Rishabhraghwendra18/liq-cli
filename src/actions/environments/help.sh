@@ -1,4 +1,4 @@
-usage-environments() {
+help-environments() {
   local PREFIX="${1:-}"
 
   handleSummary "${PREFIX}${cyan_u}environments${reset} <action>: Runtime environment configurations." || cat <<EOF

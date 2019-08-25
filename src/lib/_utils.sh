@@ -16,7 +16,7 @@ indent() {
   fold -sw $WIDTH | sed -e "1,\$s/^/${LEADING_INDENT}/" -e "2,\$s/^/${PAR_INDENT}/"
 }
 
-usageActionPrefix() {
+helpActionPrefix() {
   if [[ -z "${INDENT:-}" ]]; then
     echo -n "catalyst $1 "
   fi
@@ -50,17 +50,17 @@ ensureConfig() {
 exitUnknownGroup() {
   help --summary-only
 
-  echoerrandexit "No such resource or group '$GROUP'. See usage above."
+  echoerrandexit "No such resource or group '$GROUP'. See help above."
 }
 
 exitUnknownSubgroup() {
-  print_${GROUP}_usage # TODO: change format to usage-${group}
-  echoerrandexit "Unknown sub-group '$SUBGROUP'. See usage above."
+  print_${GROUP}_help # TODO: change format to help-${group}
+  echoerrandexit "Unknown sub-group '$SUBGROUP'. See help above."
 }
 
 exitUnknownAction() {
-  usage-${GROUP} # TODO: support per-action help.
-  echoerrandexit "Unknown action '$ACTION'. See usage above."
+  help-${GROUP} # TODO: support per-action help.
+  echoerrandexit "Unknown action '$ACTION'. See help above."
 }
 
 findFile() {
@@ -226,12 +226,12 @@ requireArgs() {
 }
 
 contextHelp() {
-  # TODO: this is a bit of a workaround until all the ACTION usages are broken
+  # TODO: this is a bit of a workaround until all the ACTION helps are broken
   # out into ther own function.
-  if type -t usage-${GROUP}-${ACTION} | grep -q 'function'; then
-    usage-${GROUP}-${ACTION}
+  if type -t help-${GROUP}-${ACTION} | grep -q 'function'; then
+    help-${GROUP}-${ACTION}
   else
-    usage-${GROUP}
+    help-${GROUP}
   fi
 }
 

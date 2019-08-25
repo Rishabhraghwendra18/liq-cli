@@ -1,4 +1,4 @@
-usage-packages() {
+help-packages() {
   local PREFIX="${1:-}"
 
   handleSummary "${PREFIX}${red_b}(deprecated)${reset} ${cyan_u}packages${reset} <action>: Package configuration and tools." || cat <<EOF
@@ -41,5 +41,5 @@ support the definition of test sets based on type (unit, integration, load,
 etc.) and name.
 EOF
 
-  test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" usageHelperAlphaPackagesNote
+  test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" helpHelperAlphaPackagesNote
 }

@@ -18,7 +18,7 @@ const expectedProjectUsage = new RegExp(`catalyst .*project.* <action>:`)
 
 describe('catalyst project', () => {
 
-  test('no action results in error and project usage', () => {
+  test('no action results in error and project help', () => {
     console.error = jest.fn() // supresses err echo from shelljs
     const result = shell.exec(`catalyst project`, execOpts)
     const expectedErr = new RegExp(`No action argument provided.\\s*`)
@@ -28,7 +28,7 @@ describe('catalyst project', () => {
     expect(result.code).toBe(10)
   })
 
-  test("'help work' prints project usage", () => {
+  test("'help work' prints project help", () => {
     const result = shell.exec(`catalyst help project`, execOpts)
 
     expect(result.stderr).toEqual('')

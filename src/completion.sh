@@ -1,7 +1,7 @@
 # After updating this file, run './install.sh' and open a new terminal for the
 # changes to take effect.
 
-# TODO: we could generate this from the usage docs... make the spec central!
+# TODO: we could generate this from the help docs... make the spec central!
 _catalyst()
 {
     local cur prev opts

@@ -1,4 +1,4 @@
-usage-remotes() {
+help-remotes() {
   local PREFIX="${1:-}"
 
   handleSummary "${PREFIX}${red_b}(deprated)${reset} ${cyan_u}remotes${reset} <action>: Manages remotes for the current repo and all included packges." || cat <<EOF

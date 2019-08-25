@@ -1,4 +1,4 @@
-usage-meta() {
+help-meta() {
   local PREFIX="${1:-}"
 
   handleSummary "${PREFIX}${cyan_u}meta${reset} <action>: Handles catalyst self-config and meta operations." \

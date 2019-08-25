@@ -1,7 +1,7 @@
 function dataSQLCheckRunning() {
   local TMP
   TMP=$(setSimpleOptions NO_CHECK -- "$@") \
-    || ( usage-project-packages; echoerrandexit "Bad options." )
+    || ( help-project-packages; echoerrandexit "Bad options." )
   eval "$TMP"
   if [[ -z "$NO_CHECK" ]] && ! services-list --exit-on-stopped -q sql; then
     services-start sql

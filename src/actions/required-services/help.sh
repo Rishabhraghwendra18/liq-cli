@@ -1,4 +1,4 @@
-usage-required-services() {
+help-required-services() {
   local PREFIX="${1:-}"
 
   handleSummary "${PREFIX}${red_b}(deprated)${reset} ${cyan_u}required-services${reset} <action>: Configures runtime service requirements." || cat <<EOF
@@ -17,5 +17,5 @@ The ${underline}package name${reset} parameter in the 'add' and 'delete' actions
 there is a single package in the current repository.
 EOF
 
-  test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" usageHelperAlphaPackagesNote
+  test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" helpHelperAlphaPackagesNote
 }

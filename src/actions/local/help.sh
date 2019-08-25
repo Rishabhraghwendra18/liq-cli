@@ -1,4 +1,4 @@
-print_local_usage() {
+print_local_help() {
   local PREFIX="${1:-}"
   if [[ -z "$PREFIX" ]]; then
     echo -e "Valid local actions are:\n"

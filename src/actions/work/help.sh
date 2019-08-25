@@ -1,4 +1,4 @@
-usage-work() {
+help-work() {
   local PREFIX="${1:-}"
 
   handleSummary "${PREFIX}${cyan_u}work${reset} <action>: Manages the current unit of work." || cat <<EOF

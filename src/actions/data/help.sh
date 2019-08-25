@@ -1,10 +1,10 @@
-usage-data() {
+help-data() {
   local PREFIX="${1:-}"
   local INDENT=1
 
   handleSummary "${PREFIX}${cyan_u}data${reset} <action>: Manges data sets and schemas." || cat <<EOF
 ${PREFIX}${cyan_u}data${reset} <action>:
-$(usage-data-build)
+$(help-data-build)
   ${underline}reset${reset} [<iface>...]: Resets all or each named data service, clearing all schema
     definitions.
   ${underline}clear${reset} [<iface>...]: Clears all data from all or each named data service.

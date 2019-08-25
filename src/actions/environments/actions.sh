@@ -138,7 +138,7 @@ environments-set() {
     updateEnvParam "$KEY" "$VALUE"
   else
     echoerrandexit "Unexpected number of arguments to 'catalyst environment set'."
-    # TODO: print action specific usage would be nice
+    # TODO: print action specific help would be nice
   fi
 
   updateEnvironment
@@ -176,7 +176,7 @@ environments-show() {
 environments-update() {
   local TMP
   TMP=$(setSimpleOptions NEW_ONLY -- "$@") \
-    || ( usage-project-packages; echoerrandexit "Bad options." )
+    || ( help-project-packages; echoerrandexit "Bad options." )
   eval "$TMP"
 
   local ENV_NAME="${1:-}"

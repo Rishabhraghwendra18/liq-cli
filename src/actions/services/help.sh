@@ -1,4 +1,4 @@
-usage-services() {
+help-services() {
   local PREFIX="${1:-}"
 
   handleSummary "${PREFIX}${cyan_u}services${reset} <action>: Manages active runtime services." || cat <<EOF

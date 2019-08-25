@@ -23,7 +23,7 @@ done
 # local SAW_ERROR=''
 if [[ $# -lt 1 ]]; then
   help --summary-only
-  echoerr "Invalid invocation. See usage above."
+  echoerr "Invalid invocation. See help above."
   exit 1
 fi
 

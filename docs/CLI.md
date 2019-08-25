@@ -87,7 +87,7 @@ helps enforce certain minimum quality standards.
 
 ## Command spec
 
--- TODO: can we push the 'usage' output into the document?
+-- TODO: can we push the 'help' output into the document?
 
 ### Global commands
 
