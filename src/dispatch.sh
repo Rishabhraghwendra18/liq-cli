@@ -12,7 +12,8 @@ case "$GROUP" in
       # TODO: build this from constant def... something...
       data|environments|meta|packages|project|remotes|required-services|provided-services|services|work|workspace)
         if (( $# == 0 )); then
-          echoerrandexit "No action argument provided."
+          help $GROUP
+          echoerrandexit "\nNo action argument provided. See valid actions above."
         fi
         ACTION="${1:-}"; shift
         if [[ $(type -t "${GROUP}-${ACTION}" || echo '') == 'function' ]]; then
