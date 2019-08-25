@@ -14,7 +14,7 @@ test('no action results in error and work usage', () => {
   console.error = jest.fn() // supresses err echo from shelljs
   const result = shell.exec(`catalyst work`, execOpts)
   const expectedErr = expect.stringMatching(
-    new RegExp(`Must specify action.\\s*`))
+    new RegExp(`No action argument provided.\\s*`))
 
   expect(result.stderr).toEqual(expectedErr)
   expect(result.stdout).toEqual(expectedWorkUsage)
