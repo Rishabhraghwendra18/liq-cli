@@ -30,7 +30,7 @@ work-involve() {
 
   local PROJECT_NAME
   if (( $# == 0 )) && [[ -n "$BASE_DIR" ]]; then
-    PROJECT_NAME=`basename $BASE_DIR`
+    PROJECT_NAME=$(cat "$NEW_PACKAGE_FILE" | jq --raw-output '.name | @sh' | tr -d "'")
   else
     exactUserArgs PROJECT_NAME -- "$@"
     test -d "${CATALYST_PLAYGROUND}/${PROJECT_NAME}" \
@@ -57,7 +57,8 @@ work-involve() {
   if [[ "$PRIMARY_PROJECT" != "$PROJECT_NAME" ]]; then
     local NEW_PACKAGE_FILE
     while read NEW_PACKAGE_FILE; do
-      local NEW_PACKAGE_NAME=$(cat "$NEW_PACKAGE_FILE" | jq --raw-output '.name | @sh' | tr -d "'")
+      local NEW_PACKAGE_NAME
+      NEW_PACKAGE_NAME=$(cat "$NEW_PACKAGE_FILE" | jq --raw-output '.name | @sh' | tr -d "'")
       if echo "$PACKAGE" | jq -e ".dependencies and ((.dependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\"))) or (.devDependencies and (.devDependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\")))" > /dev/null; then
         :
         # Currently disabled

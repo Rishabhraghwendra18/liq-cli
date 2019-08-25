@@ -192,7 +192,7 @@ updateProjectPubConfig() {
     fi
   done
 
-  local PROJECT_NAME=`basename $PROJECT_DIR`
+  local PROJECT_NAME=$(cat "${PROJECT_DIR}/package.json" | jq --raw-output '.name | @sh' | tr -d "'")
   cp "$PROJECT_DIR/$_PROJECT_PUB_CONFIG" "$BASE_DIR/$_WORKSPACE_DB/projects/$PROJECT_NAME"
   if [[ "$SUPPRESS_MSG" != 'suppress-msg' ]]; then
     echo "Updated '$PROJECT_DIR/$_PROJECT_PUB_CONFIG' and '$BASE_DIR/projects/$PROJECT_NAME'."

@@ -87,7 +87,7 @@ workspace-close() {
   # first figure out what to close
   if [[ -z "$PROJECT_NAME" ]]; then # try removing the project we're in
     cd "$BASE_DIR"
-    PROJECT_NAME=`basename $PWD`
+    PROJECT_NAME=$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name | @sh' | tr -d "'")
   fi
 
   cd "$CATALYST_PLAYGROUND"
