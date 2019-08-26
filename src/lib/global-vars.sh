@@ -5,7 +5,7 @@ _CATALYST_ENVS="${_CATALYST_DB}/environments"
 CATALYST_WORK_DB="${_CATALYST_DB}/work"
 
 # defined in $CATALYST_SETTING; set by 'requireCatalystSettings'
-CATALYST_PLAYGROUND=''
+LIQ_PLAYGROUND=''
 
 
 _CATALYST_ENV_LOGS="${_CATALYST_DB}/environments/logs"

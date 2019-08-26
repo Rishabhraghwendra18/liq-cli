@@ -33,7 +33,7 @@ work-involve() {
     PROJECT_NAME=$(cat "$NEW_PACKAGE_FILE" | jq --raw-output '.name | @sh' | tr -d "'")
   else
     exactUserArgs PROJECT_NAME -- "$@"
-    test -d "${CATALYST_PLAYGROUND}/${PROJECT_NAME}" \
+    test -d "${LIQ_PLAYGROUND}/${PROJECT_NAME}" \
       || echoerrandexit "Invalid project name '$PROJECT_NAME'. Perhaps it needs to be imported? Try:\ncatalyst playground import <git URL>"
   fi
 
@@ -41,7 +41,7 @@ work-involve() {
   local BRANCH_NAME=$(basename $(readlink "${CATALYST_WORK_DB}/curr_work"))
   requirePackage # used later if auto-linking
 
-  cd "${CATALYST_PLAYGROUND}/${PROJECT_NAME}"
+  cd "${LIQ_PLAYGROUND}/${PROJECT_NAME}"
   if git branch | grep -qE "^\*? *${BRANCH_NAME}\$"; then
     echowarn "Found existing work branch '${BRANCH_NAME}' in project ${PROJECT_NAME}. We will use it. Please fix manually if this is unexpected."
     git checkout -q "${BRANCH_NAME}" || echoerrandexit "There was a problem checking out the work branch. ($?)"
@@ -64,7 +64,7 @@ work-involve() {
         # Currently disabled
         # packages-link "${PROJECT_NAME}:${NEW_PACKAGE_NAME}"
       fi
-    done < <(find "${CATALYST_PLAYGROUND}/${PROJECT_NAME}" -name "package.json" -not -path "*node_modules/*")
+    done < <(find "${LIQ_PLAYGROUND}/${PROJECT_NAME}" -name "package.json" -not -path "*node_modules/*")
   fi
 }
 
@@ -110,7 +110,7 @@ work-merge() {
 
   for TM in $TO_MERGE; do
     convert-dot
-    cd "${CATALYST_PLAYGROUND}/${TM}"
+    cd "${LIQ_PLAYGROUND}/${TM}"
     local SHORT_STAT=`git diff --shortstat master ${WORKBRANCH}`
     local INS_COUNT=`echo "${SHORT_STAT}" | egrep -Eio -e '\d+ insertion' | awk '{print $1}' || true`
     INS_COUNT=${INS_COUNT:-0}

@@ -144,7 +144,7 @@ packagesVersionCheck() {
 #   local LINK_PROJECT=$(echo "$LINK_SPEC" | awk -F: '{print $1}')
 #   local LINK_PACKAGE=$(echo "$LINK_SPEC" | awk -F: '{print $2}')
 #
-#   if [[ ! -d "${CATALYST_PLAYGROUND}/${LINK_PROJECT}" ]]; then
+#   if [[ ! -d "${LIQ_PLAYGROUND}/${LINK_PROJECT}" ]]; then
 #     echoerrandexit "Could not find project directory '${LINK_PROJECT}' in Catalyst playground."
 #   fi
 #
@@ -167,7 +167,7 @@ packagesVersionCheck() {
 #       echoerrandexit "Project '$LINK_PROJECT' contains multiple packages. You must specify the package. Try\ncatalyst packages link $(test ! -n "$UNLINK" || echo "--unlink " )${LINK_PROJECT}:<package name>"
 #     fi
 #     CANDIDATE_COUNT=$(( $CANDIDATE_COUNT + 1 ))
-#   done < <(find -H "${CATALYST_PLAYGROUND}/${LINK_PROJECT}" -name "package.json" -not -path "*/node_modules*/*")
+#   done < <(find -H "${LIQ_PLAYGROUND}/${LINK_PROJECT}" -name "package.json" -not -path "*/node_modules*/*")
 #
 #   # If we get here without exiting, then 'CANDIDATE_PACKAGE_FILE' has the
 #   # location of the package.json we want to link.

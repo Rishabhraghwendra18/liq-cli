@@ -182,7 +182,7 @@ addLineIfNotPresentInFile() {
 
 updateProjectPubConfig() {
   PROJECT_DIR="$BASE_DIR"
-  CATALYST_PLAYGROUND="$BASE_DIR"
+  LIQ_PLAYGROUND="$BASE_DIR"
   ensureWorkspaceDb
   local SUPPRESS_MSG="${1:-}"
   echo "PROJECT_HOME='$PROJECT_HOME'" > "$PROJECT_DIR/$_PROJECT_PUB_CONFIG"
@@ -201,7 +201,7 @@ updateProjectPubConfig() {
 
 # Sets up Workspace DB directory structure.
 ensureWorkspaceDb() {
-  cd "$CATALYST_PLAYGROUND"
+  cd "$LIQ_PLAYGROUND"
   mkdir -p "${_WORKSPACE_DB}"
   mkdir -p "${_WORKSPACE_DB}"/projects
 }
@@ -434,7 +434,7 @@ requireCleanRepo() {
   local _IP="$1"
   local _WORK_BRANCH="${2:-}"
 
-  cd "${CATALYST_PLAYGROUND}/${_IP}"
+  cd "${LIQ_PLAYGROUND}/${_IP}"
   ( test -n "$_WORK_BRANCH" \
       && git branch | grep -qE "^\* ${_WORK_BRANCH}" ) \
     || git diff-index --quiet HEAD -- \

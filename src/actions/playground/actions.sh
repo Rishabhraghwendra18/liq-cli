@@ -41,13 +41,13 @@ playground-import() {
 
   local PROJECT_URL="${1:-}"
   requireArgs "$PROJECT_URL" || exit 1
-  cd "$CATALYST_PLAYGROUND"
+  cd "$LIQ_PLAYGROUND"
   if [ -d "$PROJECT_URL" ]; then
     echo "It looks like '${PROJECT_URL}' has already been imported."
     exit 0
   fi
-  if [[ -f "${CATALYST_PLAYGROUND}/${_WORKSPACE_DB}/projects/${PROJECT_URL}" ]]; then
-    source "${CATALYST_PLAYGROUND}/${_WORKSPACE_DB}/projects/${PROJECT_URL}"
+  if [[ -f "${LIQ_PLAYGROUND}/${_WORKSPACE_DB}/projects/${PROJECT_URL}" ]]; then
+    source "${LIQ_PLAYGROUND}/${_WORKSPACE_DB}/projects/${PROJECT_URL}"
     # TODO: this assumes SSH style access, which we should, but need to enforce
     # the 'ssh' will be denied with 1 if successful and 255 if no key found.
     ssh -qT git@github.com 2> /dev/null || if [ $? -ne 1 ]; then echoerrandexit "Could not connect to github; add your github key with 'ssh-add'."; fi
@@ -59,16 +59,16 @@ playground-import() {
       PROJECT_NAME=${PROJECT_NAME::${#PROJECT_NAME}-4}
     fi
 
-    (cd "${CATALYST_PLAYGROUND}"
+    (cd "${LIQ_PLAYGROUND}"
      git clone --quiet "$PROJECT_URL" && echo "'${PROJECT_NAME}' imported into playground.")
     # TODO: suport a 'project fork' that resets the _PROJECT_PUB_CONFIG file?
 
-    local PROJECT_DIR="$CATALYST_PLAYGROUND/$PROJECT_NAME"
+    local PROJECT_DIR="$LIQ_PLAYGROUND/$PROJECT_NAME"
     cd "$PROJECT_DIR"
     git remote set-url --add --push origin "${PROJECT_URL}"
     touch .catalyst # TODO: switch to _PROJECT_CONFIG
     if [[ -f "$_PROJECT_PUB_CONFIG" ]]; then
-      cp "$_PROJECT_PUB_CONFIG" "$CATALYST_PLAYGROUND/$_WORKSPACE_DB/projects/"
+      cp "$_PROJECT_PUB_CONFIG" "$LIQ_PLAYGROUND/$_WORKSPACE_DB/projects/"
       source "$_PROJECT_PUB_CONFIG"
       setupMirrors "$PROJECT_DIR" "$PROJECT_URL" "${PROJECT_MIRRORS:-}"
     else
@@ -90,7 +90,7 @@ playground-close() {
     PROJECT_NAME=$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name | @sh' | tr -d "'")
   fi
 
-  cd "$CATALYST_PLAYGROUND"
+  cd "$LIQ_PLAYGROUND"
   if [[ -d "$PROJECT_NAME" ]]; then
     cd "$PROJECT_NAME"
     # Is everything comitted?
@@ -98,7 +98,7 @@ playground-close() {
     if git diff --quiet && git diff --cached --quiet; then
       if (( $(git status --porcelain 2>/dev/null| grep "^??" || true | wc -l) == 0 )); then
         if [[ `git rev-parse --verify master` == `git rev-parse --verify origin/master` ]]; then
-          cd "$CATALYST_PLAYGROUND"
+          cd "$LIQ_PLAYGROUND"
           rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
         else
           echoerrandexit "Not all changes have been pushed to master." 1

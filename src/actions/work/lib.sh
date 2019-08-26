@@ -47,7 +47,7 @@ workSwitchBranches() {
   local IP
   for IP in $INVOLVED_PROJECTS; do
     echo "Updating project '$IP' to work branch '${_BRANCH_NAME}'"
-    cd "${CATALYST_PLAYGROUND}/${IP}"
+    cd "${LIQ_PLAYGROUND}/${IP}"
     git checkout "${_BRANCH_NAME}" \
       || echoerrandexit "Error updating '${IP}' to work branch '${_BRANCH_NAME}'. See above for details."
   done
