@@ -2,8 +2,12 @@
 COMPLETION_PATH="/usr/local/etc/bash_completion.d"
 
 requirements-meta() {
-  # TODO: really noop at this point, but need to do something or it's a syntax error
-  sourceCatalystfile
+  :
+}
+
+meta-init() {
+  require-answer "Liquid playground location: " LIQ_PLAYGROUND "${HOME}/playground"
+  metaSetupLiqDb
 }
 
 meta-bash-config() {

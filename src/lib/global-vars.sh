@@ -1,14 +1,13 @@
 # Global constants.
-_CATALYST_DB="${HOME}/.catalyst"
-CATALYST_SETTINGS="${_CATALYST_DB}/settings.sh"
-_CATALYST_ENVS="${_CATALYST_DB}/environments"
-CATALYST_WORK_DB="${_CATALYST_DB}/work"
+LIQ_DB="${HOME}/.liquid-development"
+CATALYST_SETTINGS="${LIQ_DB}/settings.sh"
+_CATALYST_ENVS="${LIQ_DB}/environments"
+CATALYST_WORK_DB="${LIQ_DB}/work"
+_CATALYST_ENV_LOGS="${LIQ_DB}/logs"
 
-# defined in $CATALYST_SETTING; set by 'requireCatalystSettings'
+# defined in $CATALYST_SETTING; during load in dispatch.sh
 LIQ_PLAYGROUND=''
 
-
-_CATALYST_ENV_LOGS="${_CATALYST_DB}/environments/logs"
 _PROJECT_CONFIG='.catalyst-project' #TODO: current file '.catalyst' and the code doesn't make reference to this constant; convert that to 'catalyst-project'
 _PROJECT_PUB_CONFIG='.catalyst-pub'
 _WORKSPACE_DB='.catalyst'

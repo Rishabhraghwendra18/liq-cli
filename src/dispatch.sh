@@ -19,8 +19,11 @@ case "$GROUP" in
         if [[ $(type -t "${GROUP}-${ACTION}" || echo '') == 'function' ]]; then
           # the only exception to requiring a playground configuration is the
           # 'playground init' command
-          if [[ "$GROUP" != 'playground' ]] || [[ "$GROUP" != 'init' ]]; then
-            requireCatalystSettings
+          if [[ "$GROUP" != 'meta' ]] || [[ "$ACTION" != 'init' ]]; then
+            # source is not like other commands (?) and the attempt to replace possible source error with friendlier
+            # message fails. The 'or' never gets evaluated, even when source erroros.
+            source "${CATALYST_SETTINGS}" \ #2> /dev/null \
+              # || echoerrandexit "Could not source global Catalyst settings. Try:\ncatalyst playground init"
           fi
           requirements-${GROUP}
           ${GROUP}-${ACTION} "$@"

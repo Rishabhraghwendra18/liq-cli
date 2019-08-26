@@ -41,12 +41,6 @@ colorerrbg() {
   (eval "$@" 2>&1>&3|sed 's/^\(.*\)$/'$'\e''[31m\1'$'\e''[m/'>&2)3>&1 &
 }
 
-ensureConfig() {
-  mkdir -p "$_CATALYST_DB"
-  mkdir -p "$_CATALYST_ENVS"
-  mkdir -p "$CATALYST_WORK_DB"
-}
-
 exitUnknownGroup() {
   help --summary-only
 
@@ -96,11 +90,6 @@ sourceFile() {
     BASE_DIR="$( cd "$( dirname "${PROJFILE}" )" && pwd )"
     return 0
   }
-}
-
-requireCatalystSettings() {
-  source "${CATALYST_SETTINGS}" 2> /dev/null \
-    || echoerrandexit "Could not source global Catalyst settings. Try:\ncatalyst playground init"
 }
 
 sourceCatalystfile() {

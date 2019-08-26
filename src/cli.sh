@@ -27,9 +27,6 @@ if [[ $# -lt 1 ]]; then
   exit 1
 fi
 
-ensureConfig
-mkdir -p "${_CATALYST_ENV_LOGS}"
-
 source ./dispatch.sh
 
 exit 0

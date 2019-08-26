@@ -12,18 +12,12 @@ export const testCheckoutDir = `${testPlayground}/test-checkout`
 const testProjectDir = `${testPlayground}/catalyst-cli`
 
 describe(`Command 'catalyst meta setup'`, () => {
+  /*
   beforeAll(() => {
     shell.mkdir(testPlayground)
     shell.mkdir(testOriginDir)
     shell.exec(`cd ${testOriginDir} && git clone -q --bare ${testing.selfOriginUrl} .`)
-  })
-
-  test(`'setup playground'`, () => {
-    const result = shell.exec(`cd ${testPlayground} && catalyst playground init`)
-    expect(result.stderr).toEqual('')
-    expect(result.stdout).toEqual('')
-    expect(result.code).toEqual(0)
-  })
+  })*/
 
   const importCommand = `catalyst project import "${testing.selfOriginUrl}"`
   test("'project import' should clone remote git into playground", () => {
