@@ -4,7 +4,7 @@ metaSetupLiqDb() {
     local DIR="${1}"
     echo -n "Creating Liquid Dev DB ('${DIR}')... "
     mkdir -p "$DIR" \
-      || (echo "${red}failed${reset}"; echoerrandexit "Error creating Liquid Development DB at: ${LIQ_DB}")
+      || (echo "${red}failed${reset}"; echoerrandexit "Error creating Liquid Development DB (${DIR})\nSee above for further details.")
     echo "${green}success${reset}"
   }
   createDir "$LIQ_DB"
