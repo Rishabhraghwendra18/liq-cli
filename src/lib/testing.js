@@ -13,16 +13,16 @@ export const setup = () => {
   // const tmpDir = shell.tempdir()
   const tmpDir = `/tmp`
   const home = `${tmpDir}/liq-cli-test-${randomHex}`
-  const testPlayground = `${home}/playground`
+  const playground = `${home}/playground`
   const testOriginDir = `${home}/git-origin`
-  const testCheckoutDir = `${testPlayground}/test-checkout`
-  const testProjectDir = `${testPlayground}/catalyst-cli`
+  const testCheckoutDir = `${playground}/test-checkout`
+  const testProjectDir = `${playground}/catalyst-cli`
 
   shell.mkdir('-p', home)
 
   return {
     home,
-    testPlayground,
+    playground,
     testOriginDir,
     testCheckoutDir,
     testProjectDir,

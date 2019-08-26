@@ -6,15 +6,15 @@ const execOpts = {
 }
 
 import * as testing from '../../lib/testing'
-export const testPlayground = `/tmp/catalyst-test-playground-${testing.randomHex}`
+export const playground = `/tmp/catalyst-test-playground-${testing.randomHex}`
 export const testOriginDir = `/tmp/catalyst-test-gitorigin-${testing.randomHex}`
-export const testCheckoutDir = `${testPlayground}/test-checkout`
-const testProjectDir = `${testPlayground}/catalyst-cli`
+export const testCheckoutDir = `${playground}/test-checkout`
+const testProjectDir = `${playground}/catalyst-cli`
 
 describe(`Command 'catalyst meta setup'`, () => {
   /*
   beforeAll(() => {
-    shell.mkdir(testPlayground)
+    shell.mkdir(playground)
     shell.mkdir(testOriginDir)
     shell.exec(`cd ${testOriginDir} && git clone -q --bare ${testing.selfOriginUrl} .`)
   })*/
@@ -23,7 +23,7 @@ describe(`Command 'catalyst meta setup'`, () => {
   test("'project import' should clone remote git into playground", () => {
     const expectedOutput = expect.stringMatching(
       new RegExp(`^'catalyst-cli' imported into playground.[\s\n]*$`))
-    const result = shell.exec(`cd ${testPlayground} && ${importCommand}`)
+    const result = shell.exec(`cd ${playground} && ${importCommand}`)
 
     expect(result.stderr).toEqual('')
     expect(result.stdout).toEqual(expectedOutput)
@@ -59,7 +59,7 @@ describe(`Command 'catalyst meta setup'`, () => {
       expect(result.stdout).toEqual('')
       expect(result.code).toEqual(1)
 
-      result = shell.exec(`cd ${testPlayground} && catalyst project close catalyst-cli`, execOpts)
+      result = shell.exec(`cd ${playground} && catalyst project close catalyst-cli`, execOpts)
       expect(result.stderr).toMatch(testConfig.errMatch)
       expect(result.stdout).toEqual('')
       expect(result.code).toEqual(1)
@@ -75,15 +75,15 @@ describe(`Command 'catalyst meta setup'`, () => {
     expect(result.stderr).toEqual('')
     expect(result.stdout).toMatch(expectedOutput)
     expect(result.code).toEqual(0)
-    expect(shell.ls(testPlayground)).toHaveLength(0)
+    expect(shell.ls(playground)).toHaveLength(0)
 
-    shell.exec(`cd ${testPlayground} && ${importCommand}`)
+    shell.exec(`cd ${playground} && ${importCommand}`)
 
-    result = shell.exec(`cd ${testPlayground} && catalyst project close catalyst-cli`, execOpts)
+    result = shell.exec(`cd ${playground} && catalyst project close catalyst-cli`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.stdout).toMatch(expectedOutput)
     expect(result.code).toEqual(0)
-    expect(shell.ls(testPlayground)).toHaveLength(0)
+    expect(shell.ls(playground)).toHaveLength(0)
   })
 
   test(`project setup in bare directory`, () => {
