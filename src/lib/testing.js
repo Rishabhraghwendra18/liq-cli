@@ -12,21 +12,21 @@ export const setup = () => {
   // I'd likue to do this, but it gives weird results on Mac Mojave
   // const tmpDir = shell.tempdir()
   const tmpDir = `/tmp`
-  const testHome = `${tmpDir}/liq-cli-test-${randomHex}`
-  const testPlayground = `${testHome}/playground`
-  const testOriginDir = `${testHome}/git-origin`
+  const home = `${tmpDir}/liq-cli-test-${randomHex}`
+  const testPlayground = `${home}/playground`
+  const testOriginDir = `${home}/git-origin`
   const testCheckoutDir = `${testPlayground}/test-checkout`
   const testProjectDir = `${testPlayground}/catalyst-cli`
 
-  shell.mkdir('-p', testHome)
+  shell.mkdir('-p', home)
 
   return {
-    testHome,
+    home,
     testPlayground,
     testOriginDir,
     testCheckoutDir,
     testProjectDir,
     // TODO: don't cleanup if errors? (and mention the fact)
-    cleanup: () => { [testHome].forEach(dir => shell.rm('-rf', dir)) }
+    cleanup: () => { [home].forEach(dir => shell.rm('-rf', dir)) }
   }
 }
