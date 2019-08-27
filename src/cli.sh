@@ -11,8 +11,8 @@ import lists
 import prompt
 import real_path
 import select
-source ./actions/inc.sh
 source ./lib/inc.sh
+source ./actions/inc.sh
 # process global overrides of the form 'key="value"'
 while (( $# > 0 )) && [[ $1 == *"="* ]]; do
   eval ${1%=*}="'${1#*=}'"
