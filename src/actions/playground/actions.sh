@@ -23,63 +23,6 @@ playground-branch() {
   _playground_forEach 'git branch'
 }
 
-playground-import() {
-  echoerrandexit "Action 'import' is temporarily disabled in this version pending testing."
-  setupMirrors() {
-    local PROJECT_DIR="$1"
-    local PROJECT_HOME="$2"
-    local PROJECT_MIRRORS="$3"
-
-    if [[ -n "$PROJECT_MIRRORS" ]]; then
-      cd "$PROJECT_DIR"
-      git remote set-url --add --push origin "${PROJECT_HOME}"
-      for MIRROR in $PROJECT_MIRRORS; do
-        git remote set-url --add --push origin "$MIRROR"
-      done
-    fi
-  }
-
-  local PROJECT_URL="${1:-}"
-  requireArgs "$PROJECT_URL" || exit 1
-  cd "$LIQ_PLAYGROUND"
-  if [ -d "$PROJECT_URL" ]; then
-    echo "It looks like '${PROJECT_URL}' has already been imported."
-    exit 0
-  fi
-  if [[ -f "${LIQ_PLAYGROUND}/${_WORKSPACE_DB}/projects/${PROJECT_URL}" ]]; then
-    source "${LIQ_PLAYGROUND}/${_WORKSPACE_DB}/projects/${PROJECT_URL}"
-    # TODO: this assumes SSH style access, which we should, but need to enforce
-    # the 'ssh' will be denied with 1 if successful and 255 if no key found.
-    ssh -qT git@github.com 2> /dev/null || if [ $? -ne 1 ]; then echoerrandexit "Could not connect to github; add your github key with 'ssh-add'."; fi
-    git clone --quiet "${PROJECT_HOME}" && echo "'$PROJECT_URL' imported into playground."
-    setupMirrors "$PROJECT_URL" "$PROJECT_HOME" "${PROJECT_MIRRORS:-}"
-  else
-    local PROJECT_NAME=`basename "${PROJECT_URL}"`
-    if [[ -n `expr "$PROJECT_NAME" : '.*\(\.git\)'` ]]; then
-      PROJECT_NAME=${PROJECT_NAME::${#PROJECT_NAME}-4}
-    fi
-
-    (cd "${LIQ_PLAYGROUND}"
-     git clone --quiet "$PROJECT_URL" && echo "'${PROJECT_NAME}' imported into playground.")
-    # TODO: suport a 'project fork' that resets the _PROJECT_PUB_CONFIG file?
-
-    local PROJECT_DIR="$LIQ_PLAYGROUND/$PROJECT_NAME"
-    cd "$PROJECT_DIR"
-    git remote set-url --add --push origin "${PROJECT_URL}"
-    touch .catalyst # TODO: switch to _PROJECT_CONFIG
-    if [[ -f "$_PROJECT_PUB_CONFIG" ]]; then
-      cp "$_PROJECT_PUB_CONFIG" "$LIQ_PLAYGROUND/$_WORKSPACE_DB/projects/"
-      source "$_PROJECT_PUB_CONFIG"
-      setupMirrors "$PROJECT_DIR" "$PROJECT_URL" "${PROJECT_MIRRORS:-}"
-    else
-      requireCatalystfile
-      PROJECT_HOME="$PROJECT_URL"
-      updateProjectPubConfig
-      echoerr "Please add the '${_PROJECT_PUB_CONFIG}' file to the git repo."
-    fi
-  fi
-}
-
 playground-close() {
   echoerrandexit "Action 'close' is temporarily disabled in this version pending testing."
   local PROJECT_NAME="${1:-}"

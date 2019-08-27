@@ -1,3 +1,5 @@
+import * as testing from '../../lib/testing'
+
 const shell = require('shelljs')
 
 const execOpts = {
@@ -5,34 +7,30 @@ const execOpts = {
   silent: true,
 }
 
-import * as testing from '../../lib/testing'
-export const playground = `/tmp/catalyst-test-playground-${testing.randomHex}`
-export const testOriginDir = `/tmp/catalyst-test-gitorigin-${testing.randomHex}`
-export const testCheckoutDir = `${playground}/test-checkout`
-const testProjectDir = `${playground}/catalyst-cli`
+describe(`Command 'catalyst project import'`, () => {
+  let testConfig
+  let playground
+  beforeEach(() => {
+    testConfig = testing.setup()
+    playground = `${testConfig.home}/playground`
+    const result = shell.exec(`HOME=${testConfig.home} catalyst meta init -s -p ${playground}`)
+    expect(result.stderr).toEqual('')
+    expect(result.code).toEqual(0)
+  })
+  afterEach(() => testConfig.cleanup())
 
-describe(`Command 'catalyst meta setup'`, () => {
-  /*
-  beforeAll(() => {
-    shell.mkdir(playground)
-    shell.mkdir(testOriginDir)
-    shell.exec(`cd ${testOriginDir} && git clone -q --bare ${testing.selfOriginUrl} .`)
-  })*/
-
-  const importCommand = `catalyst project import "${testing.selfOriginUrl}"`
-  test("'project import' should clone remote git into playground", () => {
+  test.each(['catalyst-cli', '@liquid-labs/lc-entities-model'])
+      ("with '%s' successfully clone project.", (project) => {
+    const result = shell.exec(`HOME=${testConfig.home} catalyst project import ${project}`, execOpts)
     const expectedOutput = expect.stringMatching(
-      new RegExp(`^'catalyst-cli' imported into playground.[\s\n]*$`))
-    const result = shell.exec(`cd ${playground} && ${importCommand}`)
+      new RegExp(`^'${project}' imported into playground.[\s\n]*$`))
 
     expect(result.stderr).toEqual('')
     expect(result.stdout).toEqual(expectedOutput)
-    expect(result.code).toEqual(0)
-    const checkFiles = ['README.md', 'dev_notes.md', '.git', '.catalyst-pub'].map((i) =>
-      `${testProjectDir}/${i}`)
-    expect(shell.ls('-d', checkFiles)).toHaveLength(4)
+    expect(result.code).toEqual(0);
+    ['README.md', '.git'].forEach((i) => expect(shell.test('-e', `${playground}/${project}/${i}`)).toBe(true))
   })
-
+/*
   closeFailureTests = [
     { desc: `'project close' should do nothing and emit warning if there are untracked files.`,
       setup: () => shell.exec(`cd ${testProjectDir} && touch foobar`, execOpts),
@@ -98,4 +96,5 @@ describe(`Command 'catalyst meta setup'`, () => {
     expect(shell.test('-f', `${testCheckoutDir}/.catalyst-pub`)).toEqual(true)
     shell.exec(`cd ${testCheckoutDir} && git add .catalyst-pub && git commit -qm "added .catalyst-pub"`)
   })
+  */
 })

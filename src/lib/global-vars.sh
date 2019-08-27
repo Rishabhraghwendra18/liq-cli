@@ -10,7 +10,6 @@ LIQ_PLAYGROUND=''
 
 _PROJECT_CONFIG='.catalyst-project' #TODO: current file '.catalyst' and the code doesn't make reference to this constant; convert that to 'catalyst-project'
 _PROJECT_PUB_CONFIG='.catalyst-pub'
-_WORKSPACE_DB='.catalyst'
 _ORG_ID_URL='https://console.cloud.google.com/iam-admin/settings'
 _BILLING_ACCT_URL='https://console.cloud.google.com/billing?folder=&organizationId='
 
