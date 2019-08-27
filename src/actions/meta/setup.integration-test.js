@@ -22,9 +22,7 @@ const checkDbFiles = (testConfig, playground) => {
 
 describe(`'catalyst meta init'`, () =>{
   let testConfig
-  beforeEach(() => {
-    testConfig = testing.setup()
-  })
+  beforeEach(() => { testConfig = testing.setup() })
   afterEach(() => testConfig.cleanup())
 
   test(`with no argument should ask for playground and initialize the liq DB and playground`, () => {
@@ -58,7 +56,16 @@ describe(`'catalyst meta init'`, () =>{
     checkDbFiles(testConfig, 'sandbox')
   })
 
-  test(`using invalid HOME ('/') will result in an error message.`, () => {
+  test(`non-absolute playgound ('-p playground') will result in an error message.`, () => {
+    // TODO: this assumes the user cannot write to '/', which should be valid in the test env, but maybe better to create a dir with specific perms just to be clear.
+    const result = shell.exec(`HOME=${testConfig.home} catalyst meta init -s -p playground <<< $(echo)`, execOpts)
+
+    expect(result.stderr).toMatch(new RegExp(`.*Playground path must be absolute.*`, 'ms'))
+    expect(result.stdout).toEqual('')
+    expect(result.code).toEqual(10)
+  })
+
+  test(`using unwriteable HOME ('/') will result in an error message.`, () => {
     // TODO: this assumes the user cannot write to '/', which should be valid in the test env, but maybe better to create a dir with specific perms just to be clear.
     const result = shell.exec(`HOME='/.' catalyst meta init -s <<< $(echo)`, execOpts)
 

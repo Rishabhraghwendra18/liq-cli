@@ -12,10 +12,15 @@ meta-init() {
   eval "$TMP"
 
   if [[ -z "$PLAYGROUND" ]]; then
+    # TODO: require-answer-matching (or something) to force absolute path here
     require-answer "Liquid playground location: " LIQ_PLAYGROUND "${HOME}/playground"
   else
     LIQ_PLAYGROUND="$PLAYGROUND"
   fi
+  if [[ "$LIQ_PLAYGROUND" != /* ]]; then
+    echoerrandexit "Playground path must be absolute."
+  fi
+
   if [[ -n "$SILENT" ]]; then
     metaSetupLiqDb > /dev/null
   else
