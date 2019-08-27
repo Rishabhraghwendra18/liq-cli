@@ -14,18 +14,18 @@ export const setup = () => {
   const tmpDir = `/tmp`
   const home = `${tmpDir}/liq-cli-test-${randomHex}`
   const playground = `${home}/playground`
-  const testOriginDir = `${home}/git-origin`
-  const testCheckoutDir = `${playground}/test-checkout`
-  const testProjectDir = `${playground}/catalyst-cli`
+  // const testOriginDir = `${home}/git-origin`
+  // const testCheckoutDir = `${playground}/test-checkout`
+  // const testProjectDir = `${playground}/catalyst-cli`
 
-  shell.mkdir('-p', home)
+  shell.mkdir('-p', home);
 
   return {
     home,
     playground,
-    testOriginDir,
-    testCheckoutDir,
-    testProjectDir,
+    // testOriginDir,
+    // testCheckoutDir,
+    // testProjectDir,
     // TODO: don't cleanup if errors? (and mention the fact)
     cleanup: () => { [home].forEach(dir => shell.rm('-rf', dir)) }
   }
