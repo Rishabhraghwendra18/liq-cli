@@ -20,7 +20,7 @@ ctrlScriptEnv() {
     fi
   }
 
-  EXPORT_PARAMS=PACKAGE_NAME$'\n'BASE_DIR$'\n'_CATALYST_ENV_LOGS$'\n'SERV_NAME$'\n'SERV_IFACE$'\n'PROCESS_NAME$'\n'SERV_LOG$'\n'SERV_ERR$'\n'PID_FILE$'\n'REQ_PARAMS
+  EXPORT_PARAMS=PACKAGE_NAME$'\n'BASE_DIR$'\n'LIQ_ENV_LOGS$'\n'SERV_NAME$'\n'SERV_IFACE$'\n'PROCESS_NAME$'\n'SERV_LOG$'\n'SERV_ERR$'\n'PID_FILE$'\n'REQ_PARAMS
 
   local REQ_PARAM
   for REQ_PARAM in $REQ_PARAMS; do
@@ -172,7 +172,7 @@ runtimeServiceRunner() {
           # else it's a spec for another service interface
         done
         if testScriptMatch "$SCRIPT_NAME" "$CURR_SERV_SPECS"; then
-          local SERV_OUT_BASE="${_CATALYST_ENV_LOGS}/${SERV_IFACE}.${SCRIPT_NAME}"
+          local SERV_OUT_BASE="${LIQ_ENV_LOGS}/${SERV_IFACE}.${SCRIPT_NAME}"
           local SERV_LOG="${SERV_OUT_BASE}.log"
           local SERV_ERR="${SERV_OUT_BASE}.err"
           local PID_FILE="${SERV_OUT_BASE}.pid"

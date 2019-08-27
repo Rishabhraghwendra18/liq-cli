@@ -22,7 +22,7 @@ case "$GROUP" in
           if [[ "$GROUP" != 'meta' ]] || [[ "$ACTION" != 'init' ]]; then
             # source is not like other commands (?) and the attempt to replace possible source error with friendlier
             # message fails. The 'or' never gets evaluated, even when source erroros.
-            source "${CATALYST_SETTINGS}" \ #2> /dev/null \
+            source "${LIQ_SETTINGS}" \ #2> /dev/null \
               # || echoerrandexit "Could not source global Catalyst settings. Try:\ncatalyst playground init"
           fi
           requirements-${GROUP}

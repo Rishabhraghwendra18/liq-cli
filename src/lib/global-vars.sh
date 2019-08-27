@@ -1,9 +1,9 @@
 # Global constants.
 LIQ_DB="${HOME}/.liquid-development"
-CATALYST_SETTINGS="${LIQ_DB}/settings.sh"
-_CATALYST_ENVS="${LIQ_DB}/environments"
-CATALYST_WORK_DB="${LIQ_DB}/work"
-_CATALYST_ENV_LOGS="${LIQ_DB}/logs"
+LIQ_SETTINGS="${LIQ_DB}/settings.sh"
+LIQ_ENV_DB="${LIQ_DB}/environments"
+LIQ_WORK_DB="${LIQ_DB}/work"
+LIQ_ENV_LOGS="${LIQ_DB}/logs"
 
 # defined in $CATALYST_SETTING; during load in dispatch.sh
 LIQ_PLAYGROUND=''
@@ -29,7 +29,7 @@ WORKSPACE_DIR=''
 COMPONENT=''
 ACTION=''
 
-INVOLVED_PROJECTS='' # defined in the $CATALYST_WORK_DB files
+INVOLVED_PROJECTS='' # defined in the $LIQ_WORK_DB files
 
 # Configurable globals.
 ORIGIN_URL='' # can be set externally to avoid interactive questions on 'project init'

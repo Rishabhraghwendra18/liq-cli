@@ -8,9 +8,9 @@ metaSetupLiqDb() {
     echo "${green}success${reset}"
   }
   createDir "$LIQ_DB"
-  createDir "$_CATALYST_ENVS"
-  createDir "$CATALYST_WORK_DB"
-  createDir "$_CATALYST_ENV_LOGS"
+  createDir "$LIQ_ENV_DB"
+  createDir "$LIQ_WORK_DB"
+  createDir "$LIQ_ENV_LOGS"
   createDir "$LIQ_PLAYGROUND"
   echo -n "Initializing Liquid Dev settings... "
   cat <<EOF > "${LIQ_DB}/settings.sh" || (echo "${red}failed${reset}"; echoerrandexit "Error creating Liquid Development settings.")

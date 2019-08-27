@@ -120,7 +120,7 @@ requirePackage() {
 requireEnvironment() {
   requireCatalystfile
   requirePackage
-  CURR_ENV_FILE="${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env"
+  CURR_ENV_FILE="${LIQ_ENV_DB}/${PACKAGE_NAME}/curr_env"
   if [[ ! -L "$CURR_ENV_FILE" ]]; then
     contextHelp
     echoerrandexit "No environment currently selected."
@@ -282,7 +282,7 @@ loadCurrEnv() {
   }
 
   local PACKAGE_NAME=`cat $BASE_DIR/package.json | jq --raw-output ".name"`
-  local CURR_ENV_FILE="${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env"
+  local CURR_ENV_FILE="${LIQ_ENV_DB}/${PACKAGE_NAME}/curr_env"
 
   if [[ -f "${CURR_ENV_FILE}" ]]; then
     source "$CURR_ENV_FILE"
@@ -434,7 +434,7 @@ requireCleanRepos() {
   local _WORK_NAME="${1:-curr_work}"
 
   # we expect existence already ensured
-  source "${CATALYST_WORK_DB}/${_WORK_NAME}"
+  source "${LIQ_WORK_DB}/${_WORK_NAME}"
 
   local IP
   for IP in $INVOLVED_PROJECTS; do
