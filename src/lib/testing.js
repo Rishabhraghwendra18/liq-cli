@@ -15,7 +15,7 @@ const tmpDir = `/tmp`
 const allSuffix = Math.floor((1 + Math.random()) * 0x1000000000000)
   .toString(16)
   .substring(1)
-export const localReposDir = `${tmpDir}/local-repos-${allSuffix}`
+export const localReposDir = `${tmpDir}/liq-local-repos-${allSuffix}`
 export const localRepo = `${localReposDir}/lc-entities-model`
 export const localRepoUrl = `file://${localRepo}`
 
@@ -37,12 +37,19 @@ export const setup = () => {
 
   const home = `${tmpDir}/liq-cli-test-${setupSuffix}`
   const playground = `${home}/playground`
+  // only valid if 'localCheckout' is called
+  const localRepoCheckout = `${playground}/@liquid-labs/lc-entities-model`
   // const testOriginDir = `${home}/git-origin`
   // const testCheckoutDir = `${playground}/test-checkout`
-  // const testProjectDir = `${playground}/catalyst-cli`
 
   const metaInit = () => {
-    const result = shell.exec(`HOME=${home} catalyst meta init -s -p ${playground}`)
+    const result = shell.exec(`HOME=${home} catalyst meta init -s -p ${playground}`, execOpts)
+    expect(result.stderr).toEqual('')
+    expect(result.code).toEqual(0)
+  }
+
+  const localCheckout = () => {
+    const result = shell.exec(`HOME=${home} catalyst project import ${localRepoUrl}`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.code).toEqual(0)
   }
@@ -52,10 +59,11 @@ export const setup = () => {
   return {
     home,
     playground,
+    localRepoCheckout,
     // testOriginDir,
     // testCheckoutDir,
-    // testProjectDir,
     metaInit,
+    localCheckout,
     // TODO: don't cleanup if errors? (and mention the fact)
     cleanup: () => shell.rm('-rf', home)
   }
