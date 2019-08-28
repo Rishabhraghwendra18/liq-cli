@@ -12,60 +12,27 @@ describe(`Command 'catalyst project import'`, () => {
   let playground
   beforeEach(() => {
     testConfig = testing.setup()
+    testConfig.metaInit()
     playground = `${testConfig.home}/playground`
-    const result = shell.exec(`HOME=${testConfig.home} catalyst meta init -s -p ${playground}`)
-    expect(result.stderr).toEqual('')
-    expect(result.code).toEqual(0)
   })
-  afterEach(() => testConfig.cleanup())
+  // afterEach(() => testConfig.cleanup())
 
-  test.each(['catalyst-cli', '@liquid-labs/lc-entities-model'])
-      ("with '%s' successfully clone project.", (project) => {
-    const result = shell.exec(`HOME=${testConfig.home} catalyst project import ${project}`, execOpts)
-    const expectedOutput = expect.stringMatching(
-      new RegExp(`^'${project}' imported into playground.[\s\n]*$`))
+  test.each([
+        ['catalyst-cli', 'catalyst-cli'],
+        ['@liquid-labs/lc-entities-model', '@liquid-labs/lc-entities-model'],
+        ['https://github.com/Liquid-Labs/lc-entities-model', '@liquid-labs/lc-entities-model'],
+        [testing.localRepoUrl, '@liquid-labs/lc-entities-model']])
+      ("with '%s' successfully clone project.", (importSpec, projectName) => {
+    const result = shell.exec(`HOME=${testConfig.home} catalyst project import ${importSpec}`, execOpts)
+    const expectedOutput = new RegExp(`^'${projectName}' imported into playground.[\s\n]*$`)
 
     expect(result.stderr).toEqual('')
-    expect(result.stdout).toEqual(expectedOutput)
+    expect(result.stdout).toMatch(expectedOutput)
     expect(result.code).toEqual(0);
-    ['README.md', '.git'].forEach((i) => expect(shell.test('-e', `${playground}/${project}/${i}`)).toBe(true))
+    ['README.md', '.git'].forEach((i) => expect(shell.test('-e', `${playground}/${projectName}/${i}`)).toBe(true))
   })
+
 /*
-  closeFailureTests = [
-    { desc: `'project close' should do nothing and emit warning if there are untracked files.`,
-      setup: () => shell.exec(`cd ${testProjectDir} && touch foobar`, execOpts),
-      // TODO: having trouble matching end to end because of the non-printing coloration characters.
-      errMatch: /Found untracked files./,
-      cleanup: () => shell.exec(`cd ${testProjectDir} && rm foobar`, execOpts) },
-    { desc: `'project close' should do nothing and emit warning if there are uncommitted changes.`,
-      setup: () => shell.exec(`cd ${testProjectDir} && echo 'hey' >> README.md`, execOpts),
-      errMatch: /Found uncommitted changes./,
-      cleanup: () => shell.exec(`cd ${testProjectDir} && git checkout README.md`, execOpts) },
-    { desc: `'project close' should do nothing and emit warning if there are un-pushed changes.`,
-      setup: () => shell.exec(`cd ${testProjectDir} && echo 'hey' >> README.md && git commit --quiet -am "test commit"`, execOpts),
-      errMatch: /Not all changes have been pushed to master./,
-      cleanup: () => shell.exec(`cd ${testProjectDir} && git reset --hard HEAD^`, execOpts) },
-  ]
-
-  closeFailureTests.forEach(testConfig => {
-    test(testConfig.desc, () => {
-      console.error = jest.fn() // supresses err echo from shelljs
-      testConfig.setup()
-
-      let result = shell.exec(`cd ${testProjectDir} && catalyst project close`, execOpts)
-      expect(result.stderr).toMatch(testConfig.errMatch)
-      expect(result.stdout).toEqual('')
-      expect(result.code).toEqual(1)
-
-      result = shell.exec(`cd ${playground} && catalyst project close catalyst-cli`, execOpts)
-      expect(result.stderr).toMatch(testConfig.errMatch)
-      expect(result.stdout).toEqual('')
-      expect(result.code).toEqual(1)
-
-      testConfig.cleanup()
-    })
-  })
-
   test(`project directory is removed on 'project closed' when no changes present`, () => {
     console.error = jest.fn() // supresses err echo from shelljs
     const expectedOutput = /^Removed project 'catalyst-cli'/
