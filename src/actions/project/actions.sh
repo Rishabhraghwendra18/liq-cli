@@ -35,6 +35,7 @@ project-close() {
   else
     echoerrandexit "Did not find project '$PROJECT_NAME'" 1
   fi
+  # TODO: need to check whether the project is linked to other projects
 }
 
 project-import() {
