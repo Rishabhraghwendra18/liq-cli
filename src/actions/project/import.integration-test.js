@@ -15,7 +15,7 @@ describe(`Command 'catalyst project import'`, () => {
     testConfig.metaInit()
     playground = `${testConfig.home}/playground`
   })
-  // afterEach(() => testConfig.cleanup())
+  afterEach(() => testConfig.cleanup())
 
   test.each([
         ['catalyst-cli', 'catalyst-cli'],
