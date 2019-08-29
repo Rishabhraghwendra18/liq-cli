@@ -23,6 +23,12 @@ project-close() {
         if [[ `git rev-parse --verify master` == `git rev-parse --verify origin/master` ]]; then
           cd "$LIQ_PLAYGROUND"
           rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
+          # now check to see if we have an empty "org" dir
+          local ORG_NAME
+          ORG_NAME=$(dirname "${PROJECT_NAME}")
+          if [[ "$ORG_NAME" != "." ]] && (( 0 == $(ls "$ORG_NAME" | wc -l) )); then
+            rmdir "$ORG_NAME"
+          fi
         else
           echoerrandexit "Not all changes have been pushed to master." 1
         fi

@@ -33,24 +33,6 @@ describe(`Command 'catalyst project import'`, () => {
   })
 
 /*
-  test(`project directory is removed on 'project closed' when no changes present`, () => {
-    console.error = jest.fn() // supresses err echo from shelljs
-    const expectedOutput = /^Removed project 'catalyst-cli'/
-    let result = shell.exec(`cd ${testProjectDir} && catalyst project close`, execOpts)
-    expect(result.stderr).toEqual('')
-    expect(result.stdout).toMatch(expectedOutput)
-    expect(result.code).toEqual(0)
-    expect(shell.ls(playground)).toHaveLength(0)
-
-    shell.exec(`cd ${playground} && ${importCommand}`)
-
-    result = shell.exec(`cd ${playground} && catalyst project close catalyst-cli`, execOpts)
-    expect(result.stderr).toEqual('')
-    expect(result.stdout).toMatch(expectedOutput)
-    expect(result.code).toEqual(0)
-    expect(shell.ls(playground)).toHaveLength(0)
-  })
-
   test(`project setup in bare directory`, () => {
     shell.mkdir(testCheckoutDir)
     const initCommand =
