@@ -44,6 +44,38 @@ project-close() {
   # TODO: need to check whether the project is linked to other projects
 }
 
+project-create() {
+  echoerrandexit "'project create not yet implemented'"
+  # re-orient the origin from the template to the ORIGIN URL
+  local TMP
+  TMP=$(setSimpleOptions TYPE= TEMPLATE:T= ORIGIN= -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options."; )
+  eval "$TMP"
+
+  local PROJECT_NAME="${1}"
+  local TEMPLATE_URL
+  if [[ -n "$TYPE" ]] && [[ -n "$TEMPLATE" ]]; then
+    echoerrandexit "You specify either project 'type' or 'template, but not both.'"
+  elif [[ -z "$TYPE" ]] && [[ -z "$TEMPLATE" ]]; then
+    echoerrandexit "You must specify one of 'type' or 'template'."
+  elif [[ -n "$TEMPLATE" ]]; then
+    # determine if package or URL
+    : # TODO: we do this in import too; abstract?
+  else # it's a type
+    : # TODO: use the default type URLs
+  fi
+  cd "$LIQ_STAGING"
+  git clone "$TEMPLATE_URL"
+  # TODO: determine dir by same method used in import
+  # cd IMPORT_DIR
+  git remote set-url origin "${ORIGIN}"
+  git remote set-url origin --push "${ORIGIN}"
+  # cd "$LIQ_STAGING"
+  local ORG_NAME=$(dirname "$PROJECT_NAME")
+  # stuff
+  # update package.json
+}
+
 project-import() {
   local PROJ_SPEC PROJ_NAME PROJ_URL PROJ_STAGE
 
@@ -108,6 +140,10 @@ project-init() {
   projectGitSetup
 }
 
-project-publish() {
-  echoerrandexit "The 'publish' action is not yet implemented."
+project-release() {
+  echoerrandexit "The 'release' action is not yet implemented."
+}
+
+project-save() {
+  echoerrandexit "The 'save' action is not yet implemented."
 }

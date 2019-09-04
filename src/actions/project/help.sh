@@ -11,9 +11,15 @@ ${PREFIX}${cyan_u}project${reset} <action>:
     will be retrieved via 'npm view'. If the '--url' option is specified, then the arguments are
     understood to be git repo URLs, which should contain a 'package.json' file in the repository
     root.
-  ${underline}init${reset}: Configures all packages in the current repository folders as Catalyst
-    packages.
-  ${underline}publish${reset}: Updates the project site.
+  ${underline}create${reset} [--type|-t <lib|model|api|webapp>|| --template|-T <package name|git URL>] [--origin|-o <url>]
+      [--no-origin|-O] <project name>:
+    Creates a new Catalyst project from one of the standard types or the given template URL. The
+    user will be queried for the URL to use at the git origin unless either the '--origin' or
+    '--no-origin' option are specified. The project is initially cloned from the template, and then
+    re-oriented to the project origin, if provided. Use 'catalyst project import' to import a
+    project from a URL.
+  ${underline}release${reset}: Performs verification tests, updates package version ,and publishes updates.
+  ${underline}save${reset}: Pushes local changes to the project remotes.
 EOF
 
   test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" helpHelperAlphaPackagesNote
