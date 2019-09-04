@@ -1,7 +1,7 @@
 {
-  "name": "catalyst-cli",
+  "name": "@liquid-labs/ld-cli",
   "version": "1.0.0-prototype.4",
-  "description": "Local development and management tool for Catalyst projects.",
+  "description": "Local development and management tool for Liquid Development projects.",
   "scripts": {
     "prebuild": "mkdir -p ./dist && rm -rf ./dist/*",
     "build": "rollup-bash ./src/cli.sh ./dist/catalyst.sh",
@@ -15,10 +15,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/Liquid-Labs/catalyst-cli.git"
+    "url": "git+ssh://git@github.com/Liquid-Labs/ld-cli.git"
   },
   "author": "Zane Rockenbaugh <zane@liquid-labs.com>",
   "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Liquid-Labs/ld-cli/issues"
+  },
+  "homepage": "https://github.com/Liquid-Labs/ld-cli#readme",
   "dependencies": {
     "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.24"
   },
