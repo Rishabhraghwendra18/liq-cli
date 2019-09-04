@@ -33,7 +33,7 @@ Five command groups deal with runtime configuration and management:
 The final two command groups deal with workflow:
 
 * work
-* workspace
+* playground
 
 ## Basic concepts
 
@@ -87,7 +87,7 @@ helps enforce certain minimum quality standards.
 
 ## Command spec
 
--- TODO: can we push the 'usage' output into the document?
+-- TODO: can we push the 'help' output into the document?
 
 ### Global commands
 

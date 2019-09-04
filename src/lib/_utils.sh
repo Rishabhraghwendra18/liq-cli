@@ -16,7 +16,7 @@ indent() {
   fold -sw $WIDTH | sed -e "1,\$s/^/${LEADING_INDENT}/" -e "2,\$s/^/${PAR_INDENT}/"
 }
 
-usageActionPrefix() {
+helpActionPrefix() {
   if [[ -z "${INDENT:-}" ]]; then
     echo -n "catalyst $1 "
   fi
@@ -41,26 +41,20 @@ colorerrbg() {
   (eval "$@" 2>&1>&3|sed 's/^\(.*\)$/'$'\e''[31m\1'$'\e''[m/'>&2)3>&1 &
 }
 
-ensureConfig() {
-  mkdir -p "$_CATALYST_DB"
-  mkdir -p "$_CATALYST_ENVS"
-  mkdir -p "$CATALYST_WORK_DB"
-}
-
 exitUnknownGroup() {
   help --summary-only
 
-  echoerrandexit "No such resource or group '$GROUP'. See usage above."
+  echoerrandexit "No such resource or group '$GROUP'. See help above."
 }
 
 exitUnknownSubgroup() {
-  print_${GROUP}_usage # TODO: change format to usage-${group}
-  echoerrandexit "Unknown sub-group '$SUBGROUP'. See usage above."
+  print_${GROUP}_help # TODO: change format to help-${group}
+  echoerrandexit "Unknown sub-group '$SUBGROUP'. See help above."
 }
 
 exitUnknownAction() {
-  usage-${GROUP} # TODO: support per-action help.
-  echoerrandexit "Unknown action '$ACTION'. See usage above."
+  help-${GROUP} # TODO: support per-action help.
+  echoerrandexit "Unknown action '$ACTION'. See help above."
 }
 
 findFile() {
@@ -98,11 +92,6 @@ sourceFile() {
   }
 }
 
-requireCatalystSettings() {
-  source "${CATALYST_SETTINGS}" 2> /dev/null \
-    || echoerrandexit "Could not source global Catalyst settings. Try:\ncatalyst workspace init"
-}
-
 sourceCatalystfile() {
   sourceFile "${PWD}" '.catalyst'
   return $? # TODO: is this how this works in bash?
@@ -131,7 +120,7 @@ requirePackage() {
 requireEnvironment() {
   requireCatalystfile
   requirePackage
-  CURR_ENV_FILE="${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env"
+  CURR_ENV_FILE="${LIQ_ENV_DB}/${PACKAGE_NAME}/curr_env"
   if [[ ! -L "$CURR_ENV_FILE" ]]; then
     contextHelp
     echoerrandexit "No environment currently selected."
@@ -182,7 +171,7 @@ addLineIfNotPresentInFile() {
 
 updateProjectPubConfig() {
   PROJECT_DIR="$BASE_DIR"
-  CATALYST_PLAYGROUND="$BASE_DIR"
+  LIQ_PLAYGROUND="$BASE_DIR"
   ensureWorkspaceDb
   local SUPPRESS_MSG="${1:-}"
   echo "PROJECT_HOME='$PROJECT_HOME'" > "$PROJECT_DIR/$_PROJECT_PUB_CONFIG"
@@ -192,7 +181,7 @@ updateProjectPubConfig() {
     fi
   done
 
-  local PROJECT_NAME=`basename $PROJECT_DIR`
+  local PROJECT_NAME=$(cat "${PROJECT_DIR}/package.json" | jq --raw-output '.name | @sh' | tr -d "'")
   cp "$PROJECT_DIR/$_PROJECT_PUB_CONFIG" "$BASE_DIR/$_WORKSPACE_DB/projects/$PROJECT_NAME"
   if [[ "$SUPPRESS_MSG" != 'suppress-msg' ]]; then
     echo "Updated '$PROJECT_DIR/$_PROJECT_PUB_CONFIG' and '$BASE_DIR/projects/$PROJECT_NAME'."
@@ -201,7 +190,7 @@ updateProjectPubConfig() {
 
 # Sets up Workspace DB directory structure.
 ensureWorkspaceDb() {
-  cd "$CATALYST_PLAYGROUND"
+  cd "$LIQ_PLAYGROUND"
   mkdir -p "${_WORKSPACE_DB}"
   mkdir -p "${_WORKSPACE_DB}"/projects
 }
@@ -226,12 +215,12 @@ requireArgs() {
 }
 
 contextHelp() {
-  # TODO: this is a bit of a workaround until all the ACTION usages are broken
+  # TODO: this is a bit of a workaround until all the ACTION helps are broken
   # out into ther own function.
-  if type -t usage-${GROUP}-${ACTION} | grep -q 'function'; then
-    usage-${GROUP}-${ACTION}
+  if type -t help-${GROUP}-${ACTION} | grep -q 'function'; then
+    help-${GROUP}-${ACTION}
   else
-    usage-${GROUP}
+    help-${GROUP}
   fi
 }
 
@@ -293,7 +282,7 @@ loadCurrEnv() {
   }
 
   local PACKAGE_NAME=`cat $BASE_DIR/package.json | jq --raw-output ".name"`
-  local CURR_ENV_FILE="${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env"
+  local CURR_ENV_FILE="${LIQ_ENV_DB}/${PACKAGE_NAME}/curr_env"
 
   if [[ -f "${CURR_ENV_FILE}" ]]; then
     source "$CURR_ENV_FILE"
@@ -434,7 +423,7 @@ requireCleanRepo() {
   local _IP="$1"
   local _WORK_BRANCH="${2:-}"
 
-  cd "${CATALYST_PLAYGROUND}/${_IP}"
+  cd "${LIQ_PLAYGROUND}/${_IP}"
   ( test -n "$_WORK_BRANCH" \
       && git branch | grep -qE "^\* ${_WORK_BRANCH}" ) \
     || git diff-index --quiet HEAD -- \
@@ -445,7 +434,7 @@ requireCleanRepos() {
   local _WORK_NAME="${1:-curr_work}"
 
   # we expect existence already ensured
-  source "${CATALYST_WORK_DB}/${_WORK_NAME}"
+  source "${LIQ_WORK_DB}/${_WORK_NAME}"
 
   local IP
   for IP in $INVOLVED_PROJECTS; do

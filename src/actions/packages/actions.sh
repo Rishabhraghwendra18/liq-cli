@@ -73,7 +73,7 @@ packages-version-check() {
 
   local TMP
   TMP=$(setSimpleOptions IGNORE UNIGNORE:I SHOW_CONFIG:c UPDATE OPTIONS= -- "$@") \
-    || ( usage-packages; echoerrandexit "Bad options." )
+    || ( help-packages; echoerrandexit "Bad options." )
   eval "$TMP"
 
   local IGNORED_PACKAGES IPACKAGE

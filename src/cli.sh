@@ -11,8 +11,8 @@ import lists
 import prompt
 import real_path
 import select
-source ./actions/inc.sh
 source ./lib/inc.sh
+source ./actions/inc.sh
 # process global overrides of the form 'key="value"'
 while (( $# > 0 )) && [[ $1 == *"="* ]]; do
   eval ${1%=*}="'${1#*=}'"
@@ -22,13 +22,10 @@ done
 # see note in lib/utils.sh:colorerr re. SAW_ERROR
 # local SAW_ERROR=''
 if [[ $# -lt 1 ]]; then
-  usage
-  echoerr "Invalid invocation. See usage above."
+  help --summary-only
+  echoerr "Invalid invocation. See help above."
   exit 1
 fi
-
-ensureConfig
-mkdir -p "${_CATALYST_ENV_LOGS}"
 
 source ./dispatch.sh
 

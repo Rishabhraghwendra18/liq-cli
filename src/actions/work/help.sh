@@ -1,4 +1,4 @@
-usage-work() {
+help-work() {
   local PREFIX="${1:-}"
 
   handleSummary "${PREFIX}${cyan_u}work${reset} <action>: Manages the current unit of work." || cat <<EOF
@@ -21,7 +21,7 @@ ${PREFIX}${cyan_u}work${reset} <action>:
     involved repositories.
   ${underline}ignore-rest${reset}: Adds any currently untracked files to '.gitignore'.
   ${underline}merge${reset}: Merges current work unit to master branches and updates mirrors.
-  ${underline}qa${reset}: Checks the workspace status and runs package audit, version check, and
+  ${underline}qa${reset}: Checks the playground status and runs package audit, version check, and
     tests.
 
 A 'unit of work' is essentially a set of work branches across all involved projects. The first project involved in a unit of work is considered the primary project, which will effect automated linking when involving other projects.

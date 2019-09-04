@@ -44,12 +44,12 @@ environments-delete() {
   local ENV_NAME="${1:-}"
   test -n "$ENV_NAME" || echoerrandexit "Must specify enviromnent for deletion."
 
-  if [[ ! -f "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
+  if [[ ! -f "${LIQ_ENV_DB}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
     echoerrandexit "No such environment '$ENV_NAME'."
   fi
 
   onDeleteConfirm() {
-    rm "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}" && echo "Local '${ENV_NAME}' entry deleted."
+    rm "${LIQ_ENV_DB}/${PACKAGE_NAME}/${ENV_NAME}" && echo "Local '${ENV_NAME}' entry deleted."
   }
 
   onDeleteCurrent() {
@@ -67,7 +67,7 @@ environments-delete() {
       N \
       onDeleteCurrent \
       onDeleteCancel
-  elif [[ -f "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
+  elif [[ -f "${LIQ_ENV_DB}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
     yesno \
       "Confirm deletion of environment '${ENV_NAME}': (y/N) " \
       N \
@@ -79,8 +79,8 @@ environments-delete() {
 }
 
 environments-deselect() {
-  ( test -L "${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env" \
-    && rm "${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env" ) \
+  ( test -L "${LIQ_ENV_DB}/${PACKAGE_NAME}/curr_env" \
+    && rm "${LIQ_ENV_DB}/${PACKAGE_NAME}/curr_env" ) \
     || echoerrandexit "No environment currently selected."
   loadCurrEnv
 }
@@ -103,10 +103,10 @@ environments-select() {
     echo "Select environment:"
     select ENV_NAME in `doEnvironmentList`; do break; done
   fi
-  local CURR_ENV_FILE="${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env"
-  if [[ -f "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
+  local CURR_ENV_FILE="${LIQ_ENV_DB}/${PACKAGE_NAME}/curr_env"
+  if [[ -f "${LIQ_ENV_DB}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
     test -L $CURR_ENV_FILE && rm $CURR_ENV_FILE
-    cd "${_CATALYST_ENVS}/${PACKAGE_NAME}/" && ln -s "./${ENV_NAME}" curr_env
+    cd "${LIQ_ENV_DB}/${PACKAGE_NAME}/" && ln -s "./${ENV_NAME}" curr_env
   else
     echoerrandexit "No such environment '$ENV_NAME' defined."
   fi
@@ -138,7 +138,7 @@ environments-set() {
     updateEnvParam "$KEY" "$VALUE"
   else
     echoerrandexit "Unexpected number of arguments to 'catalyst environment set'."
-    # TODO: print action specific usage would be nice
+    # TODO: print action specific help would be nice
   fi
 
   updateEnvironment
@@ -148,23 +148,23 @@ environments-show() {
   local ENV_NAME="${1:-}"
 
   if [[ -n "$ENV_NAME" ]]; then
-    if [[ ! -f "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
+    if [[ ! -f "${LIQ_ENV_DB}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
       echoerrandexit "No such environment '$ENV_NAME' found for '$PACKAGE_NAME'."
     fi
   else
-    if [[ ! -f "${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env" ]]; then
+    if [[ ! -f "${LIQ_ENV_DB}/${PACKAGE_NAME}/curr_env" ]]; then
       echoerrandexit "No environment selected for '$PACKAGE_NAME'. Try 'catalyst environment select' or 'catalyst environment show <name>'."
     fi
     ENV_NAME='curr_env'
   fi
-  cat "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}"
+  cat "${LIQ_ENV_DB}/${PACKAGE_NAME}/${ENV_NAME}"
 
   # if [[ -n "$CURR_ENV" ]] && [[ "$CURR_ENV" == "$ENV_NAME" ]]; then
   #  echo "Current environment:"
   #  echo "$CURR_ENV"
   #  echo
   #fi
-  #local ENV_DB="${_CATALYST_ENVS}/${ENV_NAME}"
+  #local ENV_DB="${LIQ_ENV_DB}/${ENV_NAME}"
   #if [[ -f "$ENV_DB" ]]; then
   #  cat "$ENV_DB"
   #else
@@ -176,13 +176,13 @@ environments-show() {
 environments-update() {
   local TMP
   TMP=$(setSimpleOptions NEW_ONLY -- "$@") \
-    || ( usage-project-packages; echoerrandexit "Bad options." )
+    || ( help-project-packages; echoerrandexit "Bad options." )
   eval "$TMP"
 
   local ENV_NAME="${1:-}"
 
   if [[ -z "${ENV_NAME}" ]]; then
-    if [[ -L "${_CATALYST_ENVS}/${PACKAGE_NAME}/curr_env" ]]; then
+    if [[ -L "${LIQ_ENV_DB}/${PACKAGE_NAME}/curr_env" ]]; then
       requireEnvironment
       ENV_NAME="$CURR_ENV"
     else
@@ -192,11 +192,11 @@ environments-update() {
     fi
   fi
 
-  if [[ ! -f "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
+  if [[ ! -f "${LIQ_ENV_DB}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
     contextHelp
     echoerrandexit "Unknown environment name '${ENV_NAME}'."
   else
-    source "${_CATALYST_ENVS}/${PACKAGE_NAME}/${ENV_NAME}"
+    source "${LIQ_ENV_DB}/${PACKAGE_NAME}/${ENV_NAME}"
   fi
 
   # Handle the purpose

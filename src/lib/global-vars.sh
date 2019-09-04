@@ -1,17 +1,15 @@
 # Global constants.
-_CATALYST_DB="${HOME}/.catalyst"
-CATALYST_SETTINGS="${_CATALYST_DB}/settings.sh"
-_CATALYST_ENVS="${_CATALYST_DB}/environments"
-CATALYST_WORK_DB="${_CATALYST_DB}/work"
+LIQ_DB="${HOME}/.liquid-development"
+LIQ_SETTINGS="${LIQ_DB}/settings.sh"
+LIQ_ENV_DB="${LIQ_DB}/environments"
+LIQ_WORK_DB="${LIQ_DB}/work"
+LIQ_ENV_LOGS="${LIQ_DB}/logs"
 
-# defined in $CATALYST_SETTING; set by 'requireCatalystSettings'
-CATALYST_PLAYGROUND=''
+# defined in $CATALYST_SETTING; during load in dispatch.sh
+LIQ_PLAYGROUND=''
 
-
-_CATALYST_ENV_LOGS="${_CATALYST_DB}/environments/logs"
 _PROJECT_CONFIG='.catalyst-project' #TODO: current file '.catalyst' and the code doesn't make reference to this constant; convert that to 'catalyst-project'
 _PROJECT_PUB_CONFIG='.catalyst-pub'
-_WORKSPACE_DB='.catalyst'
 _ORG_ID_URL='https://console.cloud.google.com/iam-admin/settings'
 _BILLING_ACCT_URL='https://console.cloud.google.com/billing?folder=&organizationId='
 
@@ -31,7 +29,7 @@ WORKSPACE_DIR=''
 COMPONENT=''
 ACTION=''
 
-INVOLVED_PROJECTS='' # defined in the $CATALYST_WORK_DB files
+INVOLVED_PROJECTS='' # defined in the $LIQ_WORK_DB files
 
 # Configurable globals.
 ORIGIN_URL='' # can be set externally to avoid interactive questions on 'project init'

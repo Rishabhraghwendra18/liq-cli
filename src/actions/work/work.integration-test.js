@@ -1,6 +1,6 @@
 // These tests are designed to be run sequentially and are kicked off by
 // 'seqtests.test.js'.
-import { testCheckoutDir } from '../project/project.seqtest'
+import { testCheckoutDir } from '../project/project.integration-test.js'
 const shell = require('shelljs')
 
 const execOpts = {
@@ -10,18 +10,18 @@ const execOpts = {
 
 const expectedWorkUsage = expect.stringMatching(new RegExp(`Valid work actions are:\\s+`))
 
-test('no action results in error and work usage', () => {
+test('no action results in error and work help', () => {
   console.error = jest.fn() // supresses err echo from shelljs
   const result = shell.exec(`catalyst work`, execOpts)
   const expectedErr = expect.stringMatching(
-    new RegExp(`Must specify action.\\s*`))
+    new RegExp(`No action argument provided.\\s*`))
 
   expect(result.stderr).toEqual(expectedErr)
   expect(result.stdout).toEqual(expectedWorkUsage)
   expect(result.code).toBe(1)
 })
 
-test("'help work' prints work usage", () => {
+test("'help work' prints work help", () => {
   const result = shell.exec(`catalyst help work`, execOpts)
 
   expect(result.stderr).toEqual('')

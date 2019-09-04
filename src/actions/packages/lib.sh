@@ -135,43 +135,44 @@ packagesVersionCheck() {
   npm-check ${CMD_OPTS} || true
 }
 
-packages-find-package() {
-  local FILE_VAR="${1}"; shift
-  local NAME_VAR="${1}"; shift
-  local LINK_SPEC="${1}"; shift
-
-  local LINK_PROJECT=$(echo "$LINK_SPEC" | awk -F: '{print $1}')
-  local LINK_PACKAGE=$(echo "$LINK_SPEC" | awk -F: '{print $2}')
-
-  if [[ ! -d "${CATALYST_PLAYGROUND}/${LINK_PROJECT}" ]]; then
-    echoerrandexit "Could not find project directory '${LINK_PROJECT}' in Catalyst playground."
-  fi
-
-  local CANDIDATE_PACKAGE_FILE=''
-  local CANDIDATE_PACKAGE_NAME=''
-  local CANDIDATE_PACKAGE_FILE=''
-  local CANDIDATE_PACKAGE_FILE_IT=''
-  local CANDIDATE_COUNT=0
-  while read CANDIDATE_PACKAGE_FILE_IT; do
-    # Not sure why, but the _IT is necessary because setting
-    # CANDIDATE_PACKAGE_FILE directly in the read causes the value to reset
-    # after the loop.
-    CANDIDATE_PACKAGE_FILE="${CANDIDATE_PACKAGE_FILE_IT}"
-    CANDIDATE_PACKAGE_NAME=$(cat "$CANDIDATE_PACKAGE_FILE" | jq --raw-output '.name | @sh' | tr -d "'")
-    if [[ -n "$LINK_PACKAGE" ]]; then
-      if [[ "$LINK_PACKAGE" == "$CANDIDATE_PACKAGE_NAME" ]]; then
-        break;
-      fi
-    elif (( $CANDIDATE_COUNT > 0 )); then
-      echoerrandexit "Project '$LINK_PROJECT' contains multiple packages. You must specify the package. Try\ncatalyst packages link $(test ! -n "$UNLINK" || echo "--unlink " )${LINK_PROJECT}:<package name>"
-    fi
-    CANDIDATE_COUNT=$(( $CANDIDATE_COUNT + 1 ))
-  done < <(find -H "${CATALYST_PLAYGROUND}/${LINK_PROJECT}" -name "package.json" -not -path "*/node_modules*/*")
-
-  # If we get here without exiting, then 'CANDIDATE_PACKAGE_FILE' has the
-  # location of the package.json we want to link.
-  eval "${FILE_VAR}='${CANDIDATE_PACKAGE_FILE}'; ${NAME_VAR}='${CANDIDATE_PACKAGE_NAME}'"
-}
+# TODO: Deprecated? This was used in an older version of the package-linking implementation. It may no longer be usesful, but we keep it for reference until package linking is re-enabled.
+# packages-find-package() {
+#   local FILE_VAR="${1}"; shift
+#   local NAME_VAR="${1}"; shift
+#   local LINK_SPEC="${1}"; shift
+#
+#   local LINK_PROJECT=$(echo "$LINK_SPEC" | awk -F: '{print $1}')
+#   local LINK_PACKAGE=$(echo "$LINK_SPEC" | awk -F: '{print $2}')
+#
+#   if [[ ! -d "${LIQ_PLAYGROUND}/${LINK_PROJECT}" ]]; then
+#     echoerrandexit "Could not find project directory '${LINK_PROJECT}' in Catalyst playground."
+#   fi
+#
+#   local CANDIDATE_PACKAGE_FILE=''
+#   local CANDIDATE_PACKAGE_NAME=''
+#   local CANDIDATE_PACKAGE_FILE=''
+#   local CANDIDATE_PACKAGE_FILE_IT=''
+#   local CANDIDATE_COUNT=0
+#   while read CANDIDATE_PACKAGE_FILE_IT; do
+#     # Not sure why, but the _IT is necessary because setting
+#     # CANDIDATE_PACKAGE_FILE directly in the read causes the value to reset
+#     # after the loop.
+#     CANDIDATE_PACKAGE_FILE="${CANDIDATE_PACKAGE_FILE_IT}"
+#     CANDIDATE_PACKAGE_NAME=$(cat "$CANDIDATE_PACKAGE_FILE" | jq --raw-output '.name | @sh' | tr -d "'")
+#     if [[ -n "$LINK_PACKAGE" ]]; then
+#       if [[ "$LINK_PACKAGE" == "$CANDIDATE_PACKAGE_NAME" ]]; then
+#         break;
+#       fi
+#     elif (( $CANDIDATE_COUNT > 0 )); then
+#       echoerrandexit "Project '$LINK_PROJECT' contains multiple packages. You must specify the package. Try\ncatalyst packages link $(test ! -n "$UNLINK" || echo "--unlink " )${LINK_PROJECT}:<package name>"
+#     fi
+#     CANDIDATE_COUNT=$(( $CANDIDATE_COUNT + 1 ))
+#   done < <(find -H "${LIQ_PLAYGROUND}/${LINK_PROJECT}" -name "package.json" -not -path "*/node_modules*/*")
+#
+#   # If we get here without exiting, then 'CANDIDATE_PACKAGE_FILE' has the
+#   # location of the package.json we want to link.
+#   eval "${FILE_VAR}='${CANDIDATE_PACKAGE_FILE}'; ${NAME_VAR}='${CANDIDATE_PACKAGE_NAME}'"
+# }
 
 packages-link-list() {
   echoerrandexit 'Package link functions currently disabled.'

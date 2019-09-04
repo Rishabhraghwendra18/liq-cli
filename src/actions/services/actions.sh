@@ -118,7 +118,7 @@ logMain() {
   local DESC="$1"
   local SUFFIX="$2"
   local FILE_NAME # see https://unix.stackexchange.com/a/88338/84520
-  FILE_NAME='${_CATALYST_ENV_LOGS}/${SERV_IFACE}.${SCRIPT_NAME}.'${SUFFIX}
+  FILE_NAME='${LIQ_ENV_LOGS}/${SERV_IFACE}.${SCRIPT_NAME}.'${SUFFIX}
 
   cat <<EOF
     echo "${FILE_NAME}"
@@ -148,7 +148,7 @@ services-log() {
   eval "$TMP"
 
   if [[ -n "$CLEAR" ]]; then
-    runtimeServiceRunner 'rm -f "${_CATALYST_ENV_LOGS}/${SERV_IFACE}.${SCRIPT_NAME}.log"' '' "$@"
+    runtimeServiceRunner 'rm -f "${LIQ_ENV_LOGS}/${SERV_IFACE}.${SCRIPT_NAME}.log"' '' "$@"
   else
     runtimeServiceRunner "$(logMain log log)" '' "$@"
   fi

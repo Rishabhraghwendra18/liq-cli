@@ -1,3 +1,5 @@
+TODO: I think this can be cleaned up; the only thing we really need is to set the push origin, which we should do when creating work branches, so that can move to a global lib function; the rest of this can go as, I believe, it's based on an out-dated view of how this interacats with gcloud that's now been supersceded by environments.
+
 projectGitSetup() {
   local HAS_FILES=`ls -a "${BASE_DIR}" | (grep -ve '^\.$' || true) | (grep -ve '^\.\.$' || true) | wc -w`
   local IS_GIT_REPO

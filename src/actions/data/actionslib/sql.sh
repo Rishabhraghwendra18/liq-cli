@@ -1,7 +1,7 @@
 function dataSQLCheckRunning() {
   local TMP
   TMP=$(setSimpleOptions NO_CHECK -- "$@") \
-    || ( usage-project-packages; echoerrandexit "Bad options." )
+    || ( help-project-packages; echoerrandexit "Bad options." )
   eval "$TMP"
   if [[ -z "$NO_CHECK" ]] && ! services-list --exit-on-stopped -q sql; then
     services-start sql
@@ -31,8 +31,10 @@ data-build-sql() {
   for PACKAGE_ROOT in $SCHEMA_FILES; do
     # TODO: this breaks if 'data' appears twice in the path. We want a reluctant match, but sed doesn't support it. I guess flip to Perl?
     PACKAGE_ROOT=$(echo "$PACKAGE_ROOT" | sed -Ee 's|/data/.+||')
-    local PACK_DEF=$(cat "${PACKAGE_ROOT}/package.json")
-    local PACK_NAME=$(echo "$PACK_DEF" | jq --raw-output '.name' | tr -d "'")
+    local PACK_DEF=
+    PACK_DEF=$(cat "${PACKAGE_ROOT}/package.json")
+    local PACK_NAME=
+    PACK_NAME=$(echo "$PACK_DEF" | jq --raw-output '.name' | tr -d "'")
     if ! echo "${SCHEMA_VER_SPEC[@]:-}" | grep -q "$PACK_NAME"; then
       local PACK_VER=$(echo "$PACK_DEF" | jq --raw-output '.version' | tr -d "'")
       SCHEMA_VER_SPEC+=("${PACK_NAME}:${PACK_VER}")

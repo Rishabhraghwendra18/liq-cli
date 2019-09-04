@@ -1,7 +1,7 @@
 updateEnvironment() {
   # expects caller to define globals, either initilized or read from env file.
   # CURR_ENV_SERVICES CURR_ENV_PURPOSE
-  local ENV_PATH="$_CATALYST_ENVS/${PACKAGE_NAME}/${ENV_NAME}"
+  local ENV_PATH="$LIQ_ENV_DB/${PACKAGE_NAME}/${ENV_NAME}"
   mkdir -p "`dirname "$ENV_PATH"`"
 
   # TODO: use '${CURR_ENV_SERVICES[@]@Q}' once upgraded to bash 4.4

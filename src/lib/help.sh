@@ -1,9 +1,9 @@
-CATALYST_COMMAND_GROUPS=(data environments meta packages project provided-services remotes required-services services work workspace)
+CATALYST_COMMAND_GROUPS=(data environments meta packages playground project provided-services remotes required-services services work)
 
 help() {
   local TMP
   TMP=$(setSimpleOptions SUMMARY_ONLY -- "$@") \
-    || ( usage-runtime-services; echoerrandexit "Bad options." )
+    || ( help-runtime-services; echoerrandexit "Bad options." )
   eval "$TMP"
 
   local GROUP="${1:-}"
@@ -19,22 +19,22 @@ EOF
     local GROUP
     for GROUP in ${CATALYST_COMMAND_GROUPS[@]}; do
       echo
-      usage-${GROUP}
+      help-${GROUP}
     done
 
     if [[ -z "$SUMMARY_ONLY" ]]; then
       echo
-      usageHelperAlphaPackagesNote
+      helpHelperAlphaPackagesNote
     fi
   elif (( $# == 1 )); then
-    if type -t usage-${GROUP} | grep -q 'function'; then
-      usage-${GROUP} "catalyst "
+    if type -t help-${GROUP} | grep -q 'function'; then
+      help-${GROUP} "catalyst "
     else
       exitUnknownGroup
     fi
   elif (( $# == 2 )); then
-    if type -t usage-${GROUP}-${ACTION} | grep -q 'function'; then
-      usage-${GROUP}-${ACTION} "catalyst ${GROUP} "
+    if type -t help-${GROUP}-${ACTION} | grep -q 'function'; then
+      help-${GROUP}-${ACTION} "catalyst ${GROUP} "
     else
       exitUnknownAction
     fi
@@ -56,7 +56,7 @@ helperHandler() {
   fi
 }
 
-usageHelperAlphaPackagesNote() {
+helpHelperAlphaPackagesNote() {
 cat <<EOF
 ${red_b}Alpha note:${reset} There is currently no support for multiple packages in a single
 repository and the 'package.json' file is assumed to be in the project root.
