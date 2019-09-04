@@ -1,5 +1,5 @@
 if (( $# == 0 )); then
-  echoerrandexit "No arguments provided. Try:\ncatalyst help"
+  echoerrandexit "No arguments provided. Try:\nliq help"
 fi
 GROUP="${1:-}"; shift # or global command
 case "$GROUP" in
@@ -23,7 +23,7 @@ case "$GROUP" in
             # source is not like other commands (?) and the attempt to replace possible source error with friendlier
             # message fails. The 'or' never gets evaluated, even when source erroros.
             source "${LIQ_SETTINGS}" \ #2> /dev/null \
-              # || echoerrandexit "Could not source global Catalyst settings. Try:\ncatalyst playground init"
+              # || echoerrandexit "Could not source global Catalyst settings. Try:\nliq playground init"
           fi
           requirements-${GROUP}
           ${GROUP}-${ACTION} "$@"

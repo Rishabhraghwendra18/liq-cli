@@ -1,4 +1,4 @@
-TODO: I think this can be cleaned up; the only thing we really need is to set the push origin, which we should do when creating work branches, so that can move to a global lib function; the rest of this can go as, I believe, it's based on an out-dated view of how this interacats with gcloud that's now been supersceded by environments.
+# TODO: I think this can be cleaned up; the only thing we really need is to set the push origin, which we should do when creating work branches, so that can move to a global lib function; the rest of this can go as, I believe, it's based on an out-dated view of how this interacats with gcloud that's now been supersceded by environments.
 
 projectGitSetup() {
   local HAS_FILES=`ls -a "${BASE_DIR}" | (grep -ve '^\.$' || true) | (grep -ve '^\.\.$' || true) | wc -w`
@@ -39,7 +39,7 @@ projectGitSetup() {
     PROJECT_HOME="$ORIGIN_URL"
     PROJECT_DIR="${BASE_DIR}"
     updateProjectPubConfig
-    # TODO: the above overwrites the project BASE_DIR, which we rely on later. See https://github.com/Liquid-Labs/catalyst-cli/issues/2
+    # TODO: the above overwrites the project BASE_DIR, which we rely on later. See https://github.com/Liquid-Labs/ld-cli/issues/2
     BASE_DIR="$PROJECT_DIR"
   fi
 }

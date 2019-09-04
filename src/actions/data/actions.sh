@@ -90,7 +90,7 @@ dataRunner() {
   for IFACE in $IFACES; do
     # Check all the parameters are good.
     if [[ "$IFACE" == *'-'* ]]; then
-      help-data "catalyst "
+      help-data "liq "
       echoerrandexit "The 'data' commands work with primary interfaces. See help above"
     else
       local SERV
@@ -105,9 +105,9 @@ dataRunner() {
       done <<< "${SERV}"
       if [[ -n "${NOT_RUNNING}" ]]; then
         if [[ "$SOME_RUNNING" == true ]]; then
-          echoerrandexit "Some necessary processes providing the '${IFACE}' service are not running. Try:\ncatalyst services start${NOT_RUNNING}"
+          echoerrandexit "Some necessary processes providing the '${IFACE}' service are not running. Try:\nliq services start${NOT_RUNNING}"
         else
-          echoerrandexit "The '${IFACE}' service is not available. Try:\ncatalyst services start ${IFACE}"
+          echoerrandexit "The '${IFACE}' service is not available. Try:\nliq services start ${IFACE}"
         fi
       fi
     fi

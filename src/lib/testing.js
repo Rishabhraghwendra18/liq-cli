@@ -5,9 +5,9 @@ const execOpts = {
   silent: true,
 }
 
-export const selfOriginUrl = 'https://github.com/Liquid-Labs/catalyst-cli.git'
+export const selfOriginUrl = 'https://github.com/Liquid-Labs/ld-cli.git'
 
-export const expectedCommandGroupUsage = (group) => new RegExp(`catalyst .*${group}.* <action>:`)
+export const expectedCommandGroupUsage = (group) => new RegExp(`liq .*${group}.* <action>:`)
 
 // I'd likue to do this, but it gives weird results on Mac Mojave const tmpDir = shell.tempdir(). Maybe it's OK, but let's be conservative till we confirm.
 const tmpDir = `/tmp`
@@ -35,7 +35,7 @@ export const setup = () => {
     .toString(16)
     .substring(1)
 
-  const home = `${tmpDir}/liq-cli-test-${setupSuffix}`
+  const home = `${tmpDir}/ld-cli-test-${setupSuffix}`
   const playground = `${home}/playground`
   // only valid if 'localCheckout' is called
   const localRepoCheckout = `${playground}/@liquid-labs/lc-entities-model`
@@ -43,13 +43,13 @@ export const setup = () => {
   // const testCheckoutDir = `${playground}/test-checkout`
 
   const metaInit = () => {
-    const result = shell.exec(`HOME=${home} catalyst meta init -s -p ${playground}`, execOpts)
+    const result = shell.exec(`HOME=${home} liq meta init -s -p ${playground}`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.code).toEqual(0)
   }
 
   const localCheckout = () => {
-    const result = shell.exec(`HOME=${home} catalyst project import ${localRepoUrl}`, execOpts)
+    const result = shell.exec(`HOME=${home} liq project import ${localRepoUrl}`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.code).toEqual(0)
   }

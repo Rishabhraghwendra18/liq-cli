@@ -25,7 +25,7 @@ work-ignore-rest() {
 
 work-involve() {
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
-    echoerrandexit "There is no active unit of work to involve. Try:\ncatalyst work resume"
+    echoerrandexit "There is no active unit of work to involve. Try:\nliq work resume"
   fi
 
   local PROJECT_NAME
@@ -34,7 +34,7 @@ work-involve() {
   else
     exactUserArgs PROJECT_NAME -- "$@"
     test -d "${LIQ_PLAYGROUND}/${PROJECT_NAME}" \
-      || echoerrandexit "Invalid project name '$PROJECT_NAME'. Perhaps it needs to be imported? Try:\ncatalyst playground import <git URL>"
+      || echoerrandexit "Invalid project name '$PROJECT_NAME'. Perhaps it needs to be imported? Try:\nliq playground import <git URL>"
   fi
 
   source "${LIQ_WORK_DB}/curr_work"
@@ -70,7 +70,7 @@ work-involve() {
 
 work-merge() {
   if [[ ! -f "${LIQ_WORK_DB}/curr_work" ]]; then
-    echoerrandexit "You can only merge work in the current unit of work. Try:\ncatalyst work select"
+    echoerrandexit "You can only merge work in the current unit of work. Try:\nliq work select"
   fi
 
   source "${LIQ_WORK_DB}/curr_work"
@@ -263,7 +263,7 @@ work-start() {
   fi
 
   # TODO: check that current work branch is clean before switching away from it
-  # https://github.com/Liquid-Labs/catalyst-cli/issues/14
+  # https://github.com/Liquid-Labs/ld-cli/issues/14
 
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     rm "${LIQ_WORK_DB}/curr_work"

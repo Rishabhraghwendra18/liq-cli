@@ -16,7 +16,7 @@ ctrlScriptEnv() {
     local DESC="${1}"; shift
 
     if [[ -z "${!REQ_PARAM:-}" ]] && [[ -z "${_SKIP_CURR_ENV_FILE:-}" ]]; then
-      echoerrandexit "No value for ${DESC} '$REQ_PARAM'. Try updating the environment:\ncatalyst environment update -n"
+      echoerrandexit "No value for ${DESC} '$REQ_PARAM'. Try updating the environment:\nliq environment update -n"
     fi
   }
 

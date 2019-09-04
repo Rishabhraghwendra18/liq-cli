@@ -16,7 +16,7 @@ ${PREFIX}${cyan_u}project${reset} <action>:
     Creates a new Catalyst project from one of the standard types or the given template URL. The
     user will be queried for the URL to use at the git origin unless either the '--origin' or
     '--no-origin' option are specified. The project is initially cloned from the template, and then
-    re-oriented to the project origin, if provided. Use 'catalyst project import' to import a
+    re-oriented to the project origin, if provided. Use 'liq project import' to import a
     project from a URL.
   ${underline}public${reset}: Performs verification tests, updates package version, and publishes package.
   ${underline}save${reset}: Pushes local changes to the project remotes.

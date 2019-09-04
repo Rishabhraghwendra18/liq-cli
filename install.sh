@@ -45,8 +45,8 @@ brewInstall gnu-getopt \
   "eval test -f '$(brew --prefix gnu-getopt)/bin/getopt'" \
   "addLineIfNotPresentInFile ~/.bash_profile 'alias gnu-getopt=\"\$(brew --prefix gnu-getopt)/bin/getopt\"'"
 
-cp ./src/completion.sh "${COMPLETION_PATH}/catalyst"
-addLineIfNotPresentInFile ~/.bash_profile "[ -d '$COMPLETION_PATH' ] && . '${COMPLETION_PATH}/catalyst'"
+cp ./src/completion.sh "${COMPLETION_PATH}/liq"
+addLineIfNotPresentInFile ~/.bash_profile "[ -d '$COMPLETION_PATH' ] && . '${COMPLETION_PATH}/liq'"
 # TODO: accept '-e' option which exchos the source command so user can do 'eval ./install.sh -e'
 # TODO: only echo if lines added (here or in POST_INSTALL)
 echo "You must open a new shell or 'source ~/.bash_profile' to enable completion updates."

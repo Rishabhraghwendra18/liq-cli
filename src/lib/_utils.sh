@@ -18,7 +18,7 @@ indent() {
 
 helpActionPrefix() {
   if [[ -z "${INDENT:-}" ]]; then
-    echo -n "catalyst $1 "
+    echo -n "liq $1 "
   fi
 }
 
@@ -99,7 +99,7 @@ sourceCatalystfile() {
 
 requireCatalystfile() {
   sourceCatalystfile \
-    || echoerrandexit "Run 'catalyst project init' from project root." 1
+    || echoerrandexit "Run 'liq project init' from project root." 1
 }
 
 requireNpmPackage() {
@@ -259,7 +259,7 @@ requireGlobals() {
   while (( $I <= $COUNT )); do
     local GLOBAL_NAME=${!I}
     if [[ -z ${!GLOBAL_NAME:-} ]]; then
-      echoerr "'${GLOBAL_NAME}' not set. Try: 'catalyst ${COMPONENT} configure'."
+      echoerr "'${GLOBAL_NAME}' not set. Try:\nliq ${COMPONENT} configure"
       exit 1
     fi
     I=$(( I + 1 ))

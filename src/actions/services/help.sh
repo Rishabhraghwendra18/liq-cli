@@ -21,7 +21,7 @@ ${PREFIX}${cyan_u}services${reset} :
 Where '${cyan}service spec${reset}' is either a service interface class or
 <service iface>.<service name>. A service may be selected by it's major type, so
 'sql' woud select environment services 'sql' and 'sql-mysql' (etc.). Thus,
-'catalyst services connect sql' may be used to connect to both MySQL,
+'liq services connect sql' may be used to connect to both MySQL,
 Postgres, etc. DBs.
 EOF
 }

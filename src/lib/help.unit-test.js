@@ -9,10 +9,10 @@ const execOpts = {
 
 const expectedUsage = new RegExp(`Usage`)
 
-describe(`Command 'catalyst'`, () => {
+describe(`Command 'liq'`, () => {
   test('with no arguments results in help and error.', () => {
     console.error = jest.fn() // supresses err echo from shelljs
-    const result = shell.exec(`catalyst`, execOpts)
+    const result = shell.exec(`liq`, execOpts)
     const expectedErr = expect.stringMatching(
       new RegExp(`Invalid invocation. See help above.\\s*`))
 
@@ -24,7 +24,7 @@ describe(`Command 'catalyst'`, () => {
   test('with invalid global action results in help and error', () => {
     const badGlobal = 'no-such-global-action'
     console.error = jest.fn() // supresses err echo from shelljs
-    const result = shell.exec(`catalyst ${badGlobal}`, execOpts)
+    const result = shell.exec(`liq ${badGlobal}`, execOpts)
     const expectedErr = expect.stringMatching(
       new RegExp(`No such resource or group '${badGlobal}'. See help above.\\s*`))
 
@@ -34,10 +34,10 @@ describe(`Command 'catalyst'`, () => {
   })
 })
 
-describe(`Command 'catalyst' help`, () => {
+describe(`Command 'liq' help`, () => {
   // TODO: let's make summary the default and '--full' the option
   test('with no args or opts should print help', () => {
-    const result = shell.exec(`catalyst help`, execOpts)
+    const result = shell.exec(`liq help`, execOpts)
 
     expect(result.stdout).toMatch(expectedUsage)
     expect(result.stderr).toEqual('')
@@ -45,7 +45,7 @@ describe(`Command 'catalyst' help`, () => {
   })
 
   test("with 'project' prints project help", () => {
-    const result = shell.exec(`catalyst help project`, execOpts)
+    const result = shell.exec(`liq help project`, execOpts)
 
     expect(result.stderr).toEqual('')
     expect(result.stdout).toMatch(testing.expectedCommandGroupUsage(`project`))
