@@ -18,7 +18,7 @@ ${PREFIX}${cyan_u}project${reset} <action>:
     '--no-origin' option are specified. The project is initially cloned from the template, and then
     re-oriented to the project origin, if provided. Use 'catalyst project import' to import a
     project from a URL.
-  ${underline}release${reset}: Performs verification tests, updates package version ,and publishes updates.
+  ${underline}public${reset}: Performs verification tests, updates package version, and publishes package.
   ${underline}save${reset}: Pushes local changes to the project remotes.
 EOF
 

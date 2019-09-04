@@ -140,8 +140,8 @@ project-init() {
   projectGitSetup
 }
 
-project-release() {
-  echoerrandexit "The 'release' action is not yet implemented."
+project-publish() {
+  echoerrandexit "The 'publish' action is not yet implemented."
 }
 
 project-save() {
