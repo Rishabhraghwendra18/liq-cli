@@ -2,7 +2,7 @@
 # changes to take effect.
 
 # TODO: we could generate this from the help docs... make the spec central!
-_catalyst()
+_liq()
 {
     local cur prev opts
     local global_actions="help"
@@ -16,7 +16,7 @@ _catalyst()
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
     case "${prev}" in
-      catalyst)
+      liq)
         opts="${global_actions} ${groups}";;
       # globals
       help)
@@ -52,4 +52,4 @@ _catalyst()
     return 0
 }
 
-complete -F _catalyst catalyst
+complete -F _liq liq

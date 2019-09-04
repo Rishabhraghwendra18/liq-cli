@@ -15,7 +15,7 @@ workUserSelectOne() {
   if (( $# > 0 )); then
     exactUserArgs _WORK_NAME -- "$@"
     if [[ ! -f "${LIQ_WORK_DB}/${_WORK_NAME}" ]]; then
-      echoerrandexit "No such unit of work '$_WORK_NAME'. Try selecting in interactive mode:\ncatalyst ${GROUP} ${ACTION}"
+      echoerrandexit "No such unit of work '$_WORK_NAME'. Try selecting in interactive mode:\nliq ${GROUP} ${ACTION}"
     fi
   elif [[ -n "$_DEFAULT_TO_CURRENT" ]] && [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     _WORK_NAME=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))

@@ -74,7 +74,7 @@ environments-delete() {
       onDeleteConfirm \
       onDeleteCancel
   else
-    echoerrandexit "No such environment '${ENV_NAME}' found. Try 'catalyst environment list'."
+    echoerrandexit "No such environment '${ENV_NAME}' found. Try:\nliq environment list"
   fi
 }
 
@@ -90,7 +90,7 @@ environments-list() {
   if test -n "$RESULT"; then
     echo "$RESULT"
   else
-    echo "No environments defined for '${PACKAGE_NAME}'. Use 'catalyst environment add'."
+    echo "No environments defined for '${PACKAGE_NAME}'. Try:\nliq environment add"
   fi
 }
 
@@ -98,7 +98,7 @@ environments-select() {
   local ENV_NAME="${1:-}"
   if [[ -z "$ENV_NAME" ]]; then
     if test -z "$(doEnvironmentList)"; then
-      echoerrandexit "No environments defined. Try 'catalyst environment add'."
+      echoerrandexit "No environments defined. Try:\nliq environment add"
     fi
     echo "Select environment:"
     select ENV_NAME in `doEnvironmentList`; do break; done
@@ -137,7 +137,7 @@ environments-set() {
     require-answer 'Parameter value: ' VALUE
     updateEnvParam "$KEY" "$VALUE"
   else
-    echoerrandexit "Unexpected number of arguments to 'catalyst environment set'."
+    echoerrandexit "Unexpected number of arguments to 'liq environment set'."
     # TODO: print action specific help would be nice
   fi
 
@@ -153,7 +153,7 @@ environments-show() {
     fi
   else
     if [[ ! -f "${LIQ_ENV_DB}/${PACKAGE_NAME}/curr_env" ]]; then
-      echoerrandexit "No environment selected for '$PACKAGE_NAME'. Try 'catalyst environment select' or 'catalyst environment show <name>'."
+      echoerrandexit "No environment selected for '$PACKAGE_NAME'. Try:\nliq environments select\n  or\nliq environments add"
     fi
     ENV_NAME='curr_env'
   fi

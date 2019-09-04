@@ -164,7 +164,7 @@ packagesVersionCheck() {
 #         break;
 #       fi
 #     elif (( $CANDIDATE_COUNT > 0 )); then
-#       echoerrandexit "Project '$LINK_PROJECT' contains multiple packages. You must specify the package. Try\ncatalyst packages link $(test ! -n "$UNLINK" || echo "--unlink " )${LINK_PROJECT}:<package name>"
+#       echoerrandexit "Project '$LINK_PROJECT' contains multiple packages. You must specify the package. Try\nliq packages link $(test ! -n "$UNLINK" || echo "--unlink " )${LINK_PROJECT}:<package name>"
 #     fi
 #     CANDIDATE_COUNT=$(( $CANDIDATE_COUNT + 1 ))
 #   done < <(find -H "${LIQ_PLAYGROUND}/${LINK_PROJECT}" -name "package.json" -not -path "*/node_modules*/*")

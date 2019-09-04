@@ -16,7 +16,7 @@ packages-build() {
 
 packages-deploy() {
   if [[ -z "${GOPATH:-}" ]]; then
-    echoerr "'GOPATH' is not defined. Run 'catalyst go configure'."
+    echoerr "'GOPATH' is not defined. Run 'liq go configure'."
     exit 1
   fi
   colorerr "GOPATH=$GOPATH bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; gcloud app deploy'"
@@ -41,7 +41,7 @@ packages-lint() {
 
 packages-test() {
   local TMP
-  # TODO https://github.com/Liquid-Labs/catalyst-cli/issues/27
+  # TODO https://github.com/Liquid-Labs/ld-cli/issues/27
   TMP=$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S NO_SERVICE_CHECK:C -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
@@ -56,7 +56,7 @@ packages-test() {
         services-start || echoerrandexit "Could not start services for testing."
       else
         echo "${red}necessary services not running.${reset}"
-        echoerrandexit "Some services are not running. You can either run unit tests are start services. Try one of the following:\ncatalyst packages test --types=unit\ncatalyst services start"
+        echoerrandexit "Some services are not running. You can either run unit tests are start services. Try one of the following:\nliq packages test --types=unit\nliq services start"
       fi
     else
       echo "${green}looks good.${reset}"
@@ -65,7 +65,7 @@ packages-test() {
 
   # note this entails 'pretest' and 'posttest' as well
   TEST_TYPES="$TYPES" NO_DATA_RESET="$NO_DATA_RESET" GO_RUN="$GO_RUN" runPackageScript test || \
-    echoerrandexit "If failure due to non-running services, you can also run only the unit tests with:\ncatalyst packages test --type=unit" $?
+    echoerrandexit "If failure due to non-running services, you can also run only the unit tests with:\nliq packages test --type=unit" $?
 }
 
 packages-version-check() {

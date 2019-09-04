@@ -1,11 +1,11 @@
-# Catalyst CLI
+# Liquid Development CLI - liq
 
-Catalyst CLI provides comprehensive development and operational support for
+liq provides comprehensive development and operational support for
 managing, testing, and deploying Catalyst projects.
 
 ## Audience & scope
 
-This document describes the Catalyst Command Line Interface (CLI) tool. The
+This document describes the Liquid Development Command Line Interface (CLI) tool. The
 primary audience is developers and system operations personnel.
 
 ## Command organization
@@ -13,7 +13,7 @@ primary audience is developers and system operations personnel.
 Commands are specified by selecting a resource (or group) and an action. The
 general form is:
 
-  catalyst <resource/group> <action> [<option>...] [<target>...]
+  liq <resource/group> <action> [<option>...] [<target>...]
 
 There are ten command groups in all. Three of these deal primarily with
 [project configuration and management](#project-configuration-and-management):
@@ -37,9 +37,9 @@ The final two command groups deal with workflow:
 
 ## Basic concepts
 
-"Plain" NPM packages are turned into catalyst packages with:
+"Plain" NPM packages are turned into liq packages with:
 
-`catalyst packages init`
+`liq packages init`
 
 ### Static components
 

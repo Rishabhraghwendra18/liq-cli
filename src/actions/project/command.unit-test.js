@@ -7,10 +7,10 @@ const execOpts = {
   silent: true,
 }
 
-describe('catalyst project', () => {
+describe('liq project', () => {
   test('no action results in error and project help', () => {
     console.error = jest.fn() // supresses err echo from shelljs
-    const result = shell.exec(`catalyst project`, execOpts)
+    const result = shell.exec(`liq project`, execOpts)
     const expectedErr = new RegExp(`No action argument provided.\\s*`)
 
     expect(result.stderr).toMatch(expectedErr)

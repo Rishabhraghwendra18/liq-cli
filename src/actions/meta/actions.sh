@@ -29,5 +29,5 @@ meta-init() {
 }
 
 meta-bash-config() {
-  echo "[ -d '$COMPLETION_PATH' ] && . '${COMPLETION_PATH}/catalyst'"
+  echo "[ -d '$COMPLETION_PATH' ] && . '${COMPLETION_PATH}/liq'"
 }

@@ -13,7 +13,7 @@ _playground_forEach() {
 }
 
 playground-report() {
-  _playground_forEach 'catalyst work report'
+  _playground_forEach 'liq work report'
 }
 
 playground-branch() {

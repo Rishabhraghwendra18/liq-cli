@@ -12,8 +12,8 @@ help() {
   if (( $# == 0 )); then
     cat <<EOF
 Usage:
-  catalyst <resource/group> <action> [...options...] [...selectors...]
-  catalyst ${cyan_u}help${reset} [<group or resource> [<action>]
+  liq <resource/group> <action> [...options...] [...selectors...]
+  liq ${cyan_u}help${reset} [<group or resource> [<action>]
 EOF
 
     local GROUP
@@ -28,19 +28,19 @@ EOF
     fi
   elif (( $# == 1 )); then
     if type -t help-${GROUP} | grep -q 'function'; then
-      help-${GROUP} "catalyst "
+      help-${GROUP} "liq "
     else
       exitUnknownGroup
     fi
   elif (( $# == 2 )); then
     if type -t help-${GROUP}-${ACTION} | grep -q 'function'; then
-      help-${GROUP}-${ACTION} "catalyst ${GROUP} "
+      help-${GROUP}-${ACTION} "liq ${GROUP} "
     else
       exitUnknownAction
     fi
   else
     echo "Usage:"
-    echo "catalyst ${cyan_u}help${reset} [<group or resource> [<action>]"
+    echo "liq ${cyan_u}help${reset} [<group or resource> [<action>]"
     echoerrandexit "To many arguments in help."
   fi
 }
