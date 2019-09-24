@@ -1,6 +1,6 @@
 {
   "name": "@liquid-labs/ld-cli",
-  "version": "1.0.0-prototype.5",
+  "version": "1.0.0-prototype.6",
   "description": "Local development and management tool for Liquid Development projects.",
   "scripts": {
     "prebuild": "mkdir -p ./dist && rm -rf ./dist/*",
