@@ -43,3 +43,38 @@ projectGitSetup() {
     BASE_DIR="$PROJECT_DIR"
   fi
 }
+
+projectCheckInPlayground() {
+  local PROJ_NAME="${1}"
+  if [[ -d "${LIQ_PLAYGROUND}/${PROJ_NAME}" ]]; then
+    echo "'$PROJ_NAME' is already in the playground."
+    exit 0
+  fi
+}
+
+# Expects 'PROJ_STAGE' to be declared local by the caller.
+projectCheckGitAndClone() {
+  local URL="${1}"
+  ssh -qT git@github.com 2> /dev/null || if [ $? -ne 1 ]; then
+    echoerrandexit "Could not connect to github; add your github key with 'ssh-add'."
+  fi
+  local STAGING="${LIQ_PLAYGROUND}/.staging"
+  mkdir -p "$STAGING"
+  cd "$STAGING"
+  git clone --quiet "${URL}" || echoerrandexit "Failed to clone "
+  PROJ_STAGE=$(basename "$URL")
+  PROJ_STAGE="${PROJ_STAGE%.*}"
+  PROJ_STAGE="${STAGING}/${PROJ_STAGE}"
+  if [[ ! -d "$PROJ_STAGE" ]]; then
+    echoerrandexit "Did not find expected project direcotry '$PROJ_STAGE' in staging."
+  fi
+}
+
+# Expects caller to have defined PROJ_NAME and PROJ_STAGE
+projectMoveStaged() {
+  local TRUNC_NAME
+  TRUNC_NAME="$(dirname "$PROJ_NAME")"
+  mkdir -p "${LIQ_PLAYGROUND}/${TRUNC_NAME}"
+  mv "$PROJ_STAGE" "$LIQ_PLAYGROUND/${TRUNC_NAME}" \
+    || echoerrandexit "Could not moved staged '$PROJ_NAME' to playground. See above for details."
+}

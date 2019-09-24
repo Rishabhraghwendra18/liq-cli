@@ -1,5 +1,5 @@
 requirements-project() {
-  if [[ "${ACTION}" != "init" ]]; then
+  if [[ "${ACTION}" != "create" ]] && [[ "${ACTION}" != "import" ]]; then
     sourceCatalystfile
   fi
 }
@@ -45,15 +45,14 @@ project-close() {
 }
 
 project-create() {
-  echoerrandexit "'project create not yet implemented'"
-  # re-orient the origin from the template to the ORIGIN URL
-  local TMP
+  local TMP PROJ_STAGE PROJ_NAME TEMPLATE_URL
+
   TMP=$(setSimpleOptions TYPE= TEMPLATE:T= ORIGIN= -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options."; )
   eval "$TMP"
 
-  local PROJECT_NAME="${1}"
-  local TEMPLATE_URL
+  PROJ_NAME="${1}"
+
   if [[ -n "$TYPE" ]] && [[ -n "$TEMPLATE" ]]; then
     echoerrandexit "You specify either project 'type' or 'template, but not both.'"
   elif [[ -z "$TYPE" ]] && [[ -z "$TEMPLATE" ]]; then
@@ -62,82 +61,57 @@ project-create() {
     # determine if package or URL
     : # TODO: we do this in import too; abstract?
   else # it's a type
-    : # TODO: use the default type URLs
+    case "$TYPE" in
+      bare)
+        if [[ -z "$ORIGIN" ]]; then
+          echoerrandexit "Creating a 'raw' project, '--origin' must be specified."
+        fi
+        TEMPLATE_URL="$ORIGIN";;
+      *)
+        echoerrandexit "Unknown 'type'. Try one of: bare"
+    esac
   fi
-  cd "$LIQ_STAGING"
-  git clone "$TEMPLATE_URL"
-  # TODO: determine dir by same method used in import
-  # cd IMPORT_DIR
+  projectCheckGitAndClone "$TEMPLATE_URL"
+  cd "$PROJ_STAGE"
+  # re-orient the origin from the template to the ORIGIN URL
   git remote set-url origin "${ORIGIN}"
   git remote set-url origin --push "${ORIGIN}"
-  # cd "$LIQ_STAGING"
-  local ORG_NAME=$(dirname "$PROJECT_NAME")
-  # stuff
-  # update package.json
+  if [[ -f "package.json" ]]; then
+    echoerr "This project already has a 'project.json' file. Will continue as import.\nIn future, try:\nliq import $PROJ_NAME"
+  else
+    local SCOPE
+    SCOPE=$(dirname "$PROJ_NAME")
+    if [[ -n "$SCOPE" ]]; then
+      npm init --scope "${SCOPE}"
+    else
+      npm init
+    fi
+    git add package.json
+  fi
+  cd
+  projectMoveStaged
 }
 
 project-import() {
   local PROJ_SPEC PROJ_NAME PROJ_URL PROJ_STAGE
 
-  checkInPlayground() {
-    if [[ -d "${LIQ_PLAYGROUND}/${PROJ_NAME}" ]]; then
-      echo "'$PROJ_NAME' is already in the playground."
-      exit 0
-    fi
-  }
-
-  checkGitAndClone() {
-    local URL="${1}"
-    ssh -qT git@github.com 2> /dev/null || if [ $? -ne 1 ]; then echoerrandexit "Could not connect to github; add your github key with 'ssh-add'."; fi
-    local STAGING="${LIQ_PLAYGROUND}/.staging"
-    mkdir -p "$STAGING"
-    cd "$STAGING"
-    git clone --quiet "${URL}" || echoerrandexit "Failed to clone "
-    PROJ_STAGE=$(basename "$PROJ_URL")
-    PROJ_STAGE="${PROJ_STAGE%.*}"
-    PROJ_STAGE="${STAGING}/${PROJ_STAGE}"
-    if [[ ! -d "$PROJ_STAGE" ]]; then
-      echoerrandexit "Did not find expected project direcotry '$PROJ_STAGE' in staging."
-    fi
-  }
-
-  local PROJ_SPEC PROJ_NAME PROJ_URL PROJ_STAGE
-  if [[ "$1" == *://* ]]; then # it's a URL
+  if [[ "$1" == *:* ]]; then # it's a URL
     PROJ_URL="${1}"
-    checkGitAndClone "$PROJ_URL"
+    projectCheckGitAndClone "$PROJ_URL"
     PROJ_NAME=$(cat "$PROJ_STAGE/package.json" | jq --raw-output '.name' | tr -d "'")
-    checkInPlayground
+    projectCheckInPlayground "$PROJ_NAME"
   else # it's an NPM package
     PROJ_NAME="${1}"
-    checkInPlayground
+    projectCheckInPlayground "$PROJ_NAME"
     # Note: NPM will accept git URLs, but this saves us a step, let's us check if in playground earlier, and simplifes branching
     PROJ_URL=$(npm view "$PROJ_NAME" repository.url) \
       || echoerrandexit "Did not find expected NPM package '${PROJ_NAME}'. Did you forget the '--url' option?"
     PROJ_URL=${PROJ_URL##git+}
-    checkGitAndClone "$PROJ_URL"
+    projectCheckGitAndClone "$PROJ_URL"
   fi
-  local TRUNC_NAME
-  TRUNC_NAME="$(dirname "$PROJ_NAME")"
-  mkdir -p "${LIQ_PLAYGROUND}/${TRUNC_NAME}"
-  mv "$PROJ_STAGE" "$LIQ_PLAYGROUND/${TRUNC_NAME}" \
-    || echoerrandexit "Could not moved staged '$PROJ_NAME' to playground. See above for details."
+  projectMoveStaged
 
   echo "'$PROJ_NAME' imported into playground."
-}
-
-project-init() {
-  echoerrandexit "The 'init' action is disabled in this version pending further testing."
-  local FOUND_PROJECT=Y
-  sourceCatalystfile 2> /dev/null || FOUND_PROJECT=N
-  if [[ $FOUND_PROJECT == Y ]]; then
-    echoerr "It looks like there's already a '.catalyst' file in place. Bailing out..."
-    exit 1
-  else
-    BASE_DIR="$PWD"
-  fi
-  # TODO: verify that the parent directory is a playground?
-
-  projectGitSetup
 }
 
 project-publish() {
