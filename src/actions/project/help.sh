@@ -11,13 +11,11 @@ ${PREFIX}${cyan_u}project${reset} <action>:
     will be retrieved via 'npm view'. If the '--url' option is specified, then the arguments are
     understood to be git repo URLs, which should contain a 'package.json' file in the repository
     root.
-  ${underline}create${reset} [--type|-t <lib|model|api|webapp>|| --template|-T <package name|git URL>] [--origin|-o <url>]
-      [--no-origin|-O] <project name>:
-    Creates a new Catalyst project from one of the standard types or the given template URL. The
-    user will be queried for the URL to use at the git origin unless either the '--origin' or
-    '--no-origin' option are specified. The project is initially cloned from the template, and then
-    re-oriented to the project origin, if provided. Use 'liq project import' to import a
-    project from a URL.
+  ${underline}create${reset} [--type|-t <bare|lib|model|api|webapp>|| --template|-T <package name|git URL>] [--origin|-o <url>] <project name>:
+    Creates a new Liquid project from one of the standard types or the given template URL. When the 'bare'
+    type is specified, 'origin' must be specified. The project is initially cloned from the template, and then
+    re-oriented to the project origin, unless the type is 'bare' in which case the project is cloned directly
+    from the origin URL. Use 'liq project import' to import an existing project from a URL.
   ${underline}public${reset}: Performs verification tests, updates package version, and publishes package.
   ${underline}save${reset}: Pushes local changes to the project remotes.
 EOF
