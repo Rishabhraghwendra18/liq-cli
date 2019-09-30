@@ -268,12 +268,6 @@ requireGlobals() {
   return 0
 }
 
-branchName() {
-  local BRANCH_DESC="${1:-}"
-  requireArgs "$BRANCH_DESC" || exit $?
-  echo `date +%Y-%m-%d`-`whoami`-"${BRANCH_DESC}"
-}
-
 loadCurrEnv() {
   resetEnv() {
     CURR_ENV=''

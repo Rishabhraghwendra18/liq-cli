@@ -1,8 +1,26 @@
-updateWorkDb() {
+workBranchName() {
+  local WORK_DESC="${1:-}"
+  requireArgs "$WORK_DESC" || exit $?
+  requireArgs "$WORK_STARTED" || exit $?
+  requireArgs "$WORK_INITIATOR" || exit $?
+  echo "${WORK_STARTED}-${WORK_INITIATOR}-$(workSafeDesc "$WORK_DESC")"
+}
+
+workSafeDesc() {
+  local WORK_DESC="${1:-}"
+  requireArgs "$WORK_DESC" || exit $?
+  echo "$WORK_DESC" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
+}
+
+workUpdateWorkDb() {
+  cat <"EOF" > "${LIQ_WORK_DB}/curr_work"
+WORK_DESC="$WORK_DESC"
+WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS
+EOF
   if [[ -z "$INVOLVED_PROJECTS" ]]; then
-    echo "INVOLVED_PROJECTS=''" > "${LIQ_WORK_DB}/curr_work"
+    echo "INVOLVED_PROJECTS=''" >> "${LIQ_WORK_DB}/curr_work"
   else
-    echo "INVOLVED_PROJECTS='$( echo "$INVOLVED_PROJECTS" | sed -Ee 's/^ +//' )'" > "${LIQ_WORK_DB}/curr_work"
+    echo "INVOLVED_PROJECTS='$( echo "$INVOLVED_PROJECTS" | sed -Ee 's/^ +//' )'" >> "${LIQ_WORK_DB}/curr_work"
   fi
 }
 

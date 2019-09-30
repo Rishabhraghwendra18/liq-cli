@@ -24,11 +24,12 @@ work-ignore-rest() {
 }
 
 work-involve() {
+  local PROJECT_NAME WORK_DESC WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "There is no active unit of work to involve. Try:\nliq work resume"
   fi
 
-  local PROJECT_NAME
+
   if (( $# == 0 )) && [[ -n "$BASE_DIR" ]]; then
     PROJECT_NAME=$(cat "$NEW_PACKAGE_FILE" | jq --raw-output '.name | @sh' | tr -d "'")
   else
@@ -51,7 +52,7 @@ work-involve() {
   fi
 
   list-add-item INVOLVED_PROJECTS "${PROJECT_NAME}"
-  updateWorkDb
+  workUpdateWorkDb
 
   local PRIMARY_PROJECT=$INVOLVED_PROJECTS
   if [[ "$PRIMARY_PROJECT" != "$PROJECT_NAME" ]]; then
@@ -68,7 +69,19 @@ work-involve() {
   fi
 }
 
+work-list() {
+  local WORK_DESC WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS
+  for i in $(find "${LIQ_WORK_DB}" -maxdepth 1 -not -name "*~" -type f -exec basename '{}' \;); do
+    source "${LIQ_WORK_DB}/${i}"
+    cat <"EOF"
+* ${green_b}${WORK_DESC}${reset}: started ${b}${WORK_STARTED}${reset}by ${b}${WORK_INITIATOR}${reset}
+EOF
+  done
+}
+
 work-merge() {
+  local WORK_DESC WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS
+  
   if [[ ! -f "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "You can only merge work in the current unit of work. Try:\nliq work select"
   fi
@@ -135,7 +148,7 @@ work-merge() {
 
     # TODO: create and use 'lists-remove-item' in bash-tools
     INVOLVED_PROJECTS=$(echo "$INVOLVED_PROJECTS" | sed -Ee 's/(^| +)'$TM'( +|$)/\2/' -e 's/^ (.*)/\1/')
-    updateWorkDb
+    workUpdateWorkDb
   done
 
   if (( $# == 0 )) && [[ -n "$INVOLVED_PROJECTS" ]]; then
@@ -250,16 +263,19 @@ work-show() {
 }
 
 work-start() {
-  local WORK_DESC
+  local WORK_DESC WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS
   exactUserArgs WORK_DESC -- "$@"
-  local WORK_DESC_SPEC='^[a-z0-9][a-z0-9-]+$'
-  # TODO: require a minimum length of 5 non-dash characters.
+  local WORK_DESC_SPEC='^[a-zA-Z0-9][a-zA-Z0-9- ]+$'
+  # TODO: require a minimum length of 5 alphanumeric characters.
   echo "$WORK_DESC" | grep -qE $WORK_DESC_SPEC \
-    || echoerrandexit "Work description must begin with a lowercase letter or number and contain only lowercase letters and numbers separated by a single dash (/$WORK_DESC_SPEC/)."
-  local BRANCH_NAME=`branchName "${WORK_DESC}"`
+    || echoerrandexit "Work description must begin with a lowercase letter or number and contain only letters, numbers, dashes and spaces (/$WORK_DESC_SPEC/)."
 
-  if [[ -f "${LIQ_WORK_DB}/${BRANCH_NAME}" ]]; then
-    echoerrandexit "Unit of work '${BRANCH_NAME}' aready exists. Bailing out."
+  WORK_STARTED=$(date %Y-%m-%d)
+  WORK_INITIATOR=$(whoami)
+  WORK_BRANCH=`workBranchName "${WORK_DESC}"`
+
+  if [[ -f "${LIQ_WORK_DB}/${WORK_BRANCH}" ]]; then
+    echoerrandexit "Unit of work '${WORK_BRANCH}' aready exists. Bailing out."
   fi
 
   # TODO: check that current work branch is clean before switching away from it
@@ -268,9 +284,9 @@ work-start() {
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     rm "${LIQ_WORK_DB}/curr_work"
   fi
-  touch "${LIQ_WORK_DB}/${BRANCH_NAME}"
-  cd ${LIQ_WORK_DB} && ln -s "${BRANCH_NAME}" curr_work
-  updateWorkDb
+  touch "${LIQ_WORK_DB}/${WORK_BRANCH}"
+  cd ${LIQ_WORK_DB} && ln -s "${WORK_BRANCH}" curr_work
+  workUpdateWorkDb
 
   if [[ -n "$BASE_DIR" ]]; then
     local CURR_PROJECT=`basename $BASE_DIR`
