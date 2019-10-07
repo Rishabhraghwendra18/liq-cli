@@ -52,6 +52,9 @@ project-create() {
   eval "$TMP"
 
   PROJ_NAME="${1}"
+  if [[ -z "$PROJ_NAME" ]]; then
+    echoerrandexit "Must specify project name (1st argument)."
+  fi
 
   if [[ -n "$TYPE" ]] && [[ -n "$TEMPLATE" ]]; then
     echoerrandexit "You specify either project 'type' or 'template, but not both.'"
@@ -77,7 +80,7 @@ project-create() {
   git remote set-url origin "${ORIGIN}"
   git remote set-url origin --push "${ORIGIN}"
   if [[ -f "package.json" ]]; then
-    echoerr "This project already has a 'project.json' file. Will continue as import.\nIn future, try:\nliq import $PROJ_NAME"
+    echowarn --no-fold "This project already has a 'project.json' file. Will continue as import.\nIn future, try:\nliq import $PROJ_NAME"
   else
     local SCOPE
     SCOPE=$(dirname "$PROJ_NAME")
@@ -98,11 +101,15 @@ project-import() {
   if [[ "$1" == *:* ]]; then # it's a URL
     PROJ_URL="${1}"
     projectCheckGitAndClone "$PROJ_URL"
-    PROJ_NAME=$(cat "$PROJ_STAGE/package.json" | jq --raw-output '.name' | tr -d "'")
-    projectCheckInPlayground "$PROJ_NAME"
+    if PROJ_NAME=$(cat "$PROJ_STAGE/package.json" | jq --raw-output '.name' | tr -d "'"); then
+      projectCheckIfInPlayground "$PROJ_NAME"
+    else
+      rm -rf "$PROJ_STAGE"
+      echoerrandexit -F "The specified source is not a valid Liquid Dev package (no 'package.json'). Try:\nliq project create --type=bare --origin='$PROJ_URL' <project name>"
+    fi
   else # it's an NPM package
     PROJ_NAME="${1}"
-    projectCheckInPlayground "$PROJ_NAME"
+    projectCheckIfInPlayground "$PROJ_NAME"
     # Note: NPM will accept git URLs, but this saves us a step, let's us check if in playground earlier, and simplifes branching
     PROJ_URL=$(npm view "$PROJ_NAME" repository.url) \
       || echoerrandexit "Did not find expected NPM package '${PROJ_NAME}'. Did you forget the '--url' option?"

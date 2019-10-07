@@ -8,6 +8,7 @@ set -o pipefail
 import colors
 import echoerr
 import lists
+import options
 import prompt
 import real_path
 import select

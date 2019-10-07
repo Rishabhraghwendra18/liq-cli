@@ -1,6 +1,6 @@
 {
   "name": "@liquid-labs/ld-cli",
-  "version": "1.0.0-prototype.6",
+  "version": "1.0.0-prototype.7",
   "description": "Local development and management tool for Liquid Development projects.",
   "scripts": {
     "prebuild": "mkdir -p ./dist && rm -rf ./dist/*",
@@ -33,7 +33,7 @@
     "@babel/cli": "^7.2.3",
     "@babel/core": "^7.2.2",
     "@babel/preset-env": "^7.3.1",
-    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.12",
+    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.13",
     "jest": "^23.6.0",
     "shelljs": "^0.8.3",
     "watch": "^1.0.2"
