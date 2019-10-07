@@ -44,7 +44,7 @@ projectGitSetup() {
   fi
 }
 
-projectCheckInPlayground() {
+projectCheckIfInPlayground() {
   local PROJ_NAME="${1}"
   if [[ -d "${LIQ_PLAYGROUND}/${PROJ_NAME}" ]]; then
     echo "'$PROJ_NAME' is already in the playground."
@@ -59,7 +59,8 @@ projectCheckGitAndClone() {
     echoerrandexit "Could not connect to github; add your github key with 'ssh-add'."
   fi
   local STAGING="${LIQ_PLAYGROUND}/.staging"
-  mkdir -p "$STAGING"
+  rm -rf "${STAGING}"
+  mkdir -p "${STAGING}"
   cd "$STAGING"
   git clone --quiet "${URL}" || echoerrandexit "Failed to clone "
   PROJ_STAGE=$(basename "$URL")
