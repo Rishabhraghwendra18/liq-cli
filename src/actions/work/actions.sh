@@ -271,7 +271,7 @@ work-start() {
   echo "$WORK_DESC" | grep -qE "$WORK_DESC_SPEC" \
     || echoerrandexit "Work description must begin with a letter or number, contain only letters, numbers, dashes and spaces, and have at least 2 characters (/$WORK_DESC_SPEC/)."
 
-  WORK_STARTED=$(date "+%Y-%m-%d")
+  WORK_STARTED=$(date "+%Y.%m.%d")
   WORK_INITIATOR=$(whoami)
   WORK_BRANCH=`workBranchName "${WORK_DESC}"`
 
