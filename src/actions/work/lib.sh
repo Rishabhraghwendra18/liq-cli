@@ -9,7 +9,7 @@ workBranchName() {
 workSafeDesc() {
   local WORK_DESC="${1:-}"
   requireArgs "$WORK_DESC" || exit $?
-  echo "$WORK_DESC" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
+  echo "$WORK_DESC" | tr ' -' '_' | tr '[:upper:]' '[:lower:]'
 }
 
 workUpdateWorkDb() {
