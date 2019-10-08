@@ -71,17 +71,17 @@ work-involve() {
 
 work-list() {
   local WORK_DESC WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS
+  # find "${LIQ_WORK_DB}" -maxdepth 1 -not -name "*~" -type f -exec basename '{}' \;
   for i in $(find "${LIQ_WORK_DB}" -maxdepth 1 -not -name "*~" -type f -exec basename '{}' \;); do
+    echo "${LIQ_WORK_DB}/${i}"
     source "${LIQ_WORK_DB}/${i}"
-    cat <"EOF"
-* ${green_b}${WORK_DESC}${reset}: started ${b}${WORK_STARTED}${reset}by ${b}${WORK_INITIATOR}${reset}
-EOF
+    echo -e "* ${yellow_b}${WORK_DESC}${reset}: started ${bold}${WORK_STARTED}${reset} by ${bold}${WORK_INITIATOR}${reset}"
   done
 }
 
 work-merge() {
   local WORK_DESC WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS
-  
+
   if [[ ! -f "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "You can only merge work in the current unit of work. Try:\nliq work select"
   fi
