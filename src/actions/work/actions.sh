@@ -265,12 +265,13 @@ work-show() {
 work-start() {
   local WORK_DESC WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS
   exactUserArgs WORK_DESC -- "$@"
-  local WORK_DESC_SPEC='^[a-zA-Z0-9][a-zA-Z0-9- ]+$'
+  local WORK_DESC_SPEC='^[[:alnum:]][[:alnum:] -]+$'
   # TODO: require a minimum length of 5 alphanumeric characters.
-  echo "$WORK_DESC" | grep -qE $WORK_DESC_SPEC \
-    || echoerrandexit "Work description must begin with a lowercase letter or number and contain only letters, numbers, dashes and spaces (/$WORK_DESC_SPEC/)."
+  echo "WORK_DESC: $WORK_DESC"
+  echo "$WORK_DESC" | grep -qE "$WORK_DESC_SPEC" \
+    || echoerrandexit "Work description must begin with a letter or number, contain only letters, numbers, dashes and spaces, and have at least 2 characters (/$WORK_DESC_SPEC/)."
 
-  WORK_STARTED=$(date %Y-%m-%d)
+  WORK_STARTED=$(date "+%Y-%m-%d")
   WORK_INITIATOR=$(whoami)
   WORK_BRANCH=`workBranchName "${WORK_DESC}"`
 
@@ -289,7 +290,7 @@ work-start() {
   workUpdateWorkDb
 
   if [[ -n "$BASE_DIR" ]]; then
-    local CURR_PROJECT=`basename $BASE_DIR`
+    local CURR_PROJECT=$(cat "$BASE_DIR/package.json" | jq --raw-output '.name' | tr -d "'")
     echo "Adding current project '$CURR_PROJECT' to unit of work..."
     work-involve "$CURR_PROJECT"
   fi

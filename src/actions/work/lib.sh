@@ -13,11 +13,13 @@ workSafeDesc() {
 }
 
 workUpdateWorkDb() {
-  cat <"EOF" > "${LIQ_WORK_DB}/curr_work"
+  cat <<EOF > "${LIQ_WORK_DB}/curr_work"
 WORK_DESC="$WORK_DESC"
-WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS
+WORK_STARTED="$WORK_STARTED"
+WORK_INITIATOR="$WORK_INITIATOR"
+WORK_BRANCH="$WORK_BRANCH"
 EOF
-  if [[ -z "$INVOLVED_PROJECTS" ]]; then
+  if [[ -z "${INVOLVED_PROJECTS:-}" ]]; then
     echo "INVOLVED_PROJECTS=''" >> "${LIQ_WORK_DB}/curr_work"
   else
     echo "INVOLVED_PROJECTS='$( echo "$INVOLVED_PROJECTS" | sed -Ee 's/^ +//' )'" >> "${LIQ_WORK_DB}/curr_work"
