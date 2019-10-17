@@ -126,5 +126,5 @@ project-publish() {
 }
 
 project-save() {
-  echoerrandexit "The 'save' action is not yet implemented."
+  git push origin HEAD
 }
