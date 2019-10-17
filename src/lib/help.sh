@@ -1,4 +1,4 @@
-CATALYST_COMMAND_GROUPS=(data environments meta packages playground project provided-services remotes required-services services work)
+CATALYST_COMMAND_GROUPS=(data environments meta packages playground project provided-services required-services services work)
 
 help() {
   local TMP
