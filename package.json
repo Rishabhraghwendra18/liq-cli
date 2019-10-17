@@ -10,7 +10,8 @@
     "test": "jest -i ./test-staging",
     "posttest": "rm -rf test-tmp/",
     "prepare": "npm run build",
-    "install": "./install.sh",
+    "preinstall": "rollup-bash src/install.sh ./dist/install.sh",
+    "install": "./dist/install.sh",
     "install-clean": "rm -rf package-lock.json node_modules/ && npm install"
   },
   "repository": {

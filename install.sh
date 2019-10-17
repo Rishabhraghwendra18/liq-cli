@@ -2,12 +2,9 @@
 
 source ./src/lib/_utils.sh
 
-echo -e "\n-----------------\nHEY!\nPWD:$PWD\n-------------------\n"
-ls -l ./*
+echo -e "\n-----------------\nHEY2!\nPWD:$PWD\n-------------------\n"
+ls -l ./dist
 echo '---------------------'
-ls -l
-echo '---------------------'
-ls "$PWD"/*
 
 COMPLETION_PATH="/usr/local/etc/bash_completion.d"
 
