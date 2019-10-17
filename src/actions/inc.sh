@@ -21,10 +21,6 @@ source ./provided-services/actions.sh
 source ./provided-services/help.sh
 # source ./provided-services/lib.sh
 
-source ./remotes/actions.sh
-source ./remotes/help.sh
-# source ./remotes/lib.sh
-
 source ./required-services/actions.sh
 source ./required-services/help.sh
 source ./required-services/lib.sh
