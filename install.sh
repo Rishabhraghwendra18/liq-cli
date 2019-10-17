@@ -2,6 +2,8 @@
 
 source ./src/lib/_utils.sh
 
+echo -e "\n-----------------\nHEY!\n-------------------\n"
+
 COMPLETION_PATH="/usr/local/etc/bash_completion.d"
 
 BREW_UPDATED=''
