@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-source ./src/lib/_utils.sh
+source ./lib/_utils.sh
 
 echo -e "\n-----------------\nHEY2!\nPWD:$PWD\n-------------------\n"
 ls -l ./dist
