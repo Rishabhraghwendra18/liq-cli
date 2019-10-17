@@ -10,7 +10,7 @@
     "test": "jest -i ./test-staging",
     "posttest": "rm -rf test-tmp/",
     "prepare": "npm run build",
-    "install": "TERM=xterm npx rollup-bash src/install.sh ./dist/install.sh && ./dist/install.sh",
+    "install": "TERM=vt100 npx rollup-bash ./src/install.sh ./dist/install.sh && ls ./dist && ./dist/install.sh",
     "install-clean": "rm -rf package-lock.json node_modules/ && npm install"
   },
   "repository": {
