@@ -52,8 +52,8 @@ if [[ $(uname) == 'Darwin' ]]; then
     "eval test -f '$(brew --prefix gnu-getopt)/bin/getopt'" \
     "addLineIfNotPresentInFile ~/.bash_profile 'alias gnu-getopt=\"\$(brew --prefix gnu-getopt)/bin/getopt\"'"
 else
-  sudo apt-get -q update
-  sudo apt-get install -qqy jq
+  apt-get -q update
+  apt-get install -qqy jq
   echo "which jq: $(which jq)"
 fi
 
