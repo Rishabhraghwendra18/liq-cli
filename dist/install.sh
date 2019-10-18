@@ -143,9 +143,7 @@ echoerrandexit() {
   exit $EXIT_CODE
 }
 
-echo -e "\n-----------------\nHEY2!\nPWD:$PWD\n-------------------\n"
-ls -l ./dist
-echo '---------------------'
+echo "uname: $(uname)"
 
 COMPLETION_PATH="/usr/local/etc/bash_completion.d"
 
@@ -183,12 +181,14 @@ brewInstall() {
   fi
 }
 
-brewInstall jq 'which -s jq'
-# Without the 'eval', the tick quotes are treated as part of the filename.
-# Without the tickquotes we're vulnerable to spaces in the path.
-brewInstall gnu-getopt \
-  "eval test -f '$(brew --prefix gnu-getopt)/bin/getopt'" \
-  "addLineIfNotPresentInFile ~/.bash_profile 'alias gnu-getopt=\"\$(brew --prefix gnu-getopt)/bin/getopt\"'"
+if [[ $(uname) == 'Darwin' ]]; then
+  brewInstall jq 'which -s jq'
+  # Without the 'eval', the tick quotes are treated as part of the filename.
+  # Without the tickquotes we're vulnerable to spaces in the path.
+  brewInstall gnu-getopt \
+    "eval test -f '$(brew --prefix gnu-getopt)/bin/getopt'" \
+    "addLineIfNotPresentInFile ~/.bash_profile 'alias gnu-getopt=\"\$(brew --prefix gnu-getopt)/bin/getopt\"'"
+fi
 
 cp ./src/completion.sh "${COMPLETION_PATH}/liq"
 addLineIfNotPresentInFile ~/.bash_profile "[ -d '$COMPLETION_PATH' ] && . '${COMPLETION_PATH}/liq'"
