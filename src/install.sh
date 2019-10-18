@@ -2,7 +2,9 @@
 
 import echoerr
 
-echo "uname: $(uname)"
+source ./lib/_utils.sh
+
+echo "uname: $(uname -a)"
 
 COMPLETION_PATH="/usr/local/etc/bash_completion.d"
 
