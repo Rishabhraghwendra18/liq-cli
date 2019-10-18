@@ -4,13 +4,13 @@
   "description": "Local development and management tool for Liquid Development projects.",
   "scripts": {
     "prebuild": "mkdir -p ./dist && rm -rf ./dist/*",
-    "build": "rollup-bash ./src/cli.sh ./dist/liq.sh",
+    "build": "rollup-bash ./src/cli.sh ./dist/liq.sh && rollup-bash ./src/install.sh ./dist/install.sh",
     "watch": "watch 'npm run build' ./src",
     "pretest": "rm -rf test-staging/* && babel --source-maps inline src -d test-staging",
     "test": "jest -i ./test-staging",
     "posttest": "rm -rf test-tmp/",
     "prepare": "npm run build",
-    "install": "TERM=vt100 npx rollup-bash ./src/install.sh ./dist/install.sh && ls ./dist && ./dist/install.sh",
+    "install": "TERM=vt100 ./dist/install.sh",
     "install-clean": "rm -rf package-lock.json node_modules/ && npm install"
   },
   "repository": {
