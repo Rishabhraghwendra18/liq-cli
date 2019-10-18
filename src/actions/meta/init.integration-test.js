@@ -65,7 +65,7 @@ describe(`'liq meta init'`, () =>{
     expect(result.code).toEqual(10)
   })
 
-  if (shell.env['USER'] == 'root') {
+  if (shell.exec('whoami').toString() == 'root') {
     // TODO: tried to use 'shell.touch()', but it freaked out if the target was unwritable.
     test.skip(`using unwriteable HOME ('/') will result in an error message.`, () => {})
   }

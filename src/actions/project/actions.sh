@@ -19,7 +19,7 @@ project-close() {
     # Is everything comitted?
     # credit: https://stackoverflow.com/a/8830922/929494
     if git diff --quiet && git diff --cached --quiet; then
-      if (( $(git status --porcelain 2>/dev/null| grep "^??" || true | wc -l) == 0 )); then
+      if (( $(git status --porcelain 2>/dev/null| grep '^??' || true | wc -l) == 0 )); then
         if [[ `git rev-parse --verify master` == `git rev-parse --verify origin/master` ]]; then
           cd "$LIQ_PLAYGROUND"
           rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
