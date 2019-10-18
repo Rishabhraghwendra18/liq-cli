@@ -33,7 +33,9 @@ describe(`Command 'liq project close'`, () => {
   closeFailureTests.forEach(testConfig => {
     test(testConfig.desc, () => {
       console.error = jest.fn() // supresses err echo from shelljs
-      testConfig.setup(setupConfig)
+      const setupResult = testConfig.setup(setupConfig)
+      expect(setupResult.stderr).toEqual('')
+      expect(setupResult.code).toEqual(0)
 
       let result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} project close`, execOpts)
       expect(result.stderr).toMatch(testConfig.errMatch, "Bash output\n" + result.stderr)
