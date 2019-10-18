@@ -24,7 +24,7 @@ describe(`Command 'liq project import'`, () => {
         ['https://github.com/Liquid-Labs/lc-entities-model', '@liquid-labs/lc-entities-model'],
         [testing.localRepoUrl, '@liquid-labs/lc-entities-model']])
       ("with '%s' successfully clone project.", (importSpec, projectName) => {
-    const result = shell.exec(`HOME=${testConfig.home} liq project import ${importSpec}`, execOpts)
+    const result = shell.exec(`HOME=${testConfig.home} ${testing.LIQ} project import ${importSpec}`, execOpts)
     const expectedOutput = new RegExp(`^'${projectName}' imported into playground.[\s\n]*$`)
 
     expect(result.stderr).toEqual('')

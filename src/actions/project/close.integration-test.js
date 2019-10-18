@@ -35,12 +35,12 @@ describe(`Command 'liq project close'`, () => {
       console.error = jest.fn() // supresses err echo from shelljs
       testConfig.setup(setupConfig)
 
-      let result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} liq project close`, execOpts)
+      let result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} project close`, execOpts)
       expect(result.stderr).toMatch(testConfig.errMatch, "Bash output\n" + result.stderr)
       expect(result.stdout).toEqual('')
       expect(result.code).toEqual(10)
 
-      result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} liq project close @liquid-labs/lc-entities-model`, execOpts)
+      result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} project close @liquid-labs/lc-entities-model`, execOpts)
       expect(result.stderr).toMatch(testConfig.errMatch)
       expect(result.stdout).toEqual('')
       expect(result.code).toEqual(10)
@@ -50,7 +50,7 @@ describe(`Command 'liq project close'`, () => {
   test(`should remove current project when no changes present`, () => {
     console.error = jest.fn() // supresses err echo from shelljs
     const expectedOutput = /^Removed project '@liquid-labs\/lc-entities-model'/
-    const result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} liq project close`, execOpts)
+    const result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} project close`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.stdout).toMatch(expectedOutput)
     expect(result.code).toEqual(0)
@@ -60,7 +60,7 @@ describe(`Command 'liq project close'`, () => {
   test(`should remove specified project when no changes present`, () => {
     console.error = jest.fn() // supresses err echo from shelljs
     const expectedOutput = /^Removed project '@liquid-labs\/lc-entities-model'/
-    const result = shell.exec(`HOME=${setupConfig.home} liq project close @liquid-labs/lc-entities-model`, execOpts)
+    const result = shell.exec(`HOME=${setupConfig.home} ${testing.LIQ} project close @liquid-labs/lc-entities-model`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.stdout).toMatch(expectedOutput)
     expect(result.code).toEqual(0)
