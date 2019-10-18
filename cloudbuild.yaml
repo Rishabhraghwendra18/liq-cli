@@ -1,8 +1,5 @@
 # decrypt the 'deploy key'
 steps:
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['pull', 'gcr.io/liquid-cli/ubuntu-jq']
-
 - name: 'gcr.io/cloud-builders/gcloud'
   args:
   - kms
@@ -34,12 +31,12 @@ steps:
   - name: 'ssh'
     path: /root/.ssh
 
-- name: 'gcr.io/cloud-builders/npm'
+- name: 'gcr.io/liquid-cli/ubuntu-jq' # 'gcr.io/cloud-builders/npm'
   args: ['install', '--unsafe-perm']
   env:
     - 'TERM=xterm'
 
-- name: 'gcr.io/cloud-builders/npm'
+- name: 'gcr.io/liquid-cli/ubuntu-jq' # 'gcr.io/cloud-builders/npm'
   args: ['run', 'test']
   env:
     - 'TERM=xterm'
