@@ -1,6 +1,7 @@
 # decrypt the 'deploy key'
 steps:
-- name: 'gcr.io/liquid-cli/ubuntu-jq'
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['pull', 'gcr.io/liquid-cli/ubuntu-jq']
 
 - name: 'gcr.io/cloud-builders/gcloud'
   args:
