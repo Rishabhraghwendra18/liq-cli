@@ -1,6 +1,6 @@
 steps:
   - name: 'gcr.io/cloud-builders/npm'
-    args: ['run', '--unsafe-perm', 'install:dev']
+    args: ['install']
     env:
       - 'TERM=vt100'
   - name: 'gcr.io/cloud-builders/npm'
