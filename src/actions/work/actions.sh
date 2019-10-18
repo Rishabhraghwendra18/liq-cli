@@ -48,6 +48,7 @@ work-involve() {
     git checkout -q "${BRANCH_NAME}" || echoerrandexit "There was a problem checking out the work branch. ($?)"
   else
     git checkout -qb "${BRANCH_NAME}" || echoerrandexit "There was a problem creating the work branch. ($?)"
+    git push --set-upstream origin ${BRANCH_NAME}
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
 
