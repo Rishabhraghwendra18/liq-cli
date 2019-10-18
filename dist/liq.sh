@@ -2656,7 +2656,7 @@ project-close() {
         echoerrandexit "Found untracked files." 1
       fi
     else
-      echoerrandexit "Found uncommitted changes." 1
+      echoerrandexit "Found uncommitted changes.\n$(git status --porcelain)" 1
     fi
   else
     echoerrandexit "Did not find project '$PROJECT_NAME'" 1

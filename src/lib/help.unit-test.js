@@ -12,7 +12,7 @@ const expectedUsage = new RegExp(`Usage`)
 describe(`Command 'liq'`, () => {
   test('with no arguments results in help and error.', () => {
     console.error = jest.fn() // supresses err echo from shelljs
-    const result = shell.exec(`liq`, execOpts)
+    const result = shell.exec(`${testing.LIQ}`, execOpts)
     const expectedErr = expect.stringMatching(
       new RegExp(`Invalid invocation. See help above.\\s*`))
 
