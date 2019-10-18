@@ -2829,8 +2829,8 @@ projectCheckIfInPlayground() {
 # Expects 'PROJ_STAGE' to be declared local by the caller.
 projectCheckGitAndClone() {
   local URL="${1}"
-  ssh -qT git@github.com 2> /dev/null || if [ $? -ne 1 ]; then
-    echoerrandexit "Could not connect to github; add your github key with 'ssh-add'.\nwhoami: $(whoami)\n$(ssh -qT git@github.com 2>&1)"
+  ssh -qT git@github.com || if [ $? -ne 1 ]; then
+    echoerrandexit "Could not connect to github; add your github key with 'ssh-add'."
   fi
   local STAGING="${LIQ_PLAYGROUND}/.staging"
   rm -rf "${STAGING}"

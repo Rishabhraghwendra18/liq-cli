@@ -21,9 +21,11 @@ steps:
   - |
     chmod 600 /root/.ssh/id_rsa
     cat <<EOF >/root/.ssh/config
-    Hostname github.com
-    IdentityFile /root/.ssh/id_rsa
+    Host github.com
+        Hostname github.com
+        IdentityFile /root/.ssh/id_rsa
     EOF
+    chmod 600 /root/.ssh/config
     mv known_hosts /root/.ssh/known_hosts
   volumes:
   - name: 'ssh'
