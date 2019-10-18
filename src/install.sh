@@ -4,11 +4,7 @@ import echoerr
 
 source ./lib/_utils.sh
 
-echo "uname: $(uname -a)"
-echo "which jq: $(which jq)"
-echo "users: "
-cat /etc/passwd
-echo "PATH: $PATH"
+echo "whoami: $(whoami)"
 
 COMPLETION_PATH="/usr/local/etc/bash_completion.d"
 
