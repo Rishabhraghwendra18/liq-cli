@@ -1,5 +1,5 @@
 steps:
   - name: 'gcr.io/cloud-builders/npm'
-    args: ['install:dev', '--unsafe-perm']
+    args: ['run', '--unsafe-perm', 'install:dev']
   - name: 'gcr.io/cloud-builders/npm'
     args: ['run', 'test']
