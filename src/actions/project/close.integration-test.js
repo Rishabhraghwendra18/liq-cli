@@ -26,7 +26,7 @@ describe(`Command 'liq project close'`, () => {
       setup: (setupConfig) => shell.exec(`cd ${setupConfig.localRepoCheckout} && echo 'hey' >> README.md`, execOpts),
       errMatch: /Found uncommitted changes./ },
     { desc: `should do nothing and emit warning if there are un-pushed changes.`,
-      setup: (setupConfig) => shell.exec(`cd ${setupConfig.localRepoCheckout} && echo 'hey' >> README.md && git add --quiet README.md && git commit --quiet -m "test commit"`, execOpts),
+      setup: (setupConfig) => shell.exec(`cd ${setupConfig.localRepoCheckout} && ( echo 'hey' >> README.md && git add --quiet README.md && git commit --quiet -m "test commit" )`, execOpts),
       errMatch: /Not all changes have been pushed to master./ },
   ]
 
