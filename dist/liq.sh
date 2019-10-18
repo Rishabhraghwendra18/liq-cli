@@ -66,7 +66,7 @@ EOF
     LOWER_NAME=`echo "$VAR_NAME" | tr '[:upper:]' '[:lower:]'`
     LONG_OPT="$(echo "${LOWER_NAME}" | tr '_' '-')"
 
-    SHORT_OPTS="${SHORT_OPTS}${SHORT_OPT}${OPT_REQ}"
+    SHORT_OPTS="${SHORT_OPTS:-}${SHORT_OPT}${OPT_REQ}"
     LONG_OPTS=$( ( test ${#LONG_OPTS} -gt 0 && echo -n "${LONG_OPTS}${OPT_REQ},") || true && echo -n "${LONG_OPT}${OPT_REQ}")
     # set on declaration so nested calles get reset
     LOCAL_DECLS="${LOCAL_DECLS}local ${VAR_NAME}='';"
