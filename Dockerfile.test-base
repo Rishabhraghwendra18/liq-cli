@@ -1,2 +1,2 @@
 FROM gcr.io/cloud-builders/npm
-RUN apt-get -q update && apt-get install -qqy jq
+RUN apt-get -q update && apt-get install -qqy jq git
