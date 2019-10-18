@@ -552,8 +552,6 @@ defineParameters() {
   done
 }
 
-echo "whoami: $(whoami)"
-
 COMPLETION_PATH="/usr/local/etc/bash_completion.d"
 
 BREW_UPDATED=''
