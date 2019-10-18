@@ -25,6 +25,7 @@ steps:
     IdentityFile /root/.ssh/id_rsa
     EOF
     mv known_hosts /root/.ssh/known_hosts
+    ssh-add /root/.ssh/id_rsa
   volumes:
   - name: 'ssh'
     path: /root/.ssh
