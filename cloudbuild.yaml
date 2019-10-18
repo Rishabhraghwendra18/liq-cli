@@ -4,4 +4,4 @@ steps:
   - name: 'gcr.io/cloud-builders/npm'
     args: ['run', 'test']
     env:
-      - 'TERM=vt100'
+      - 'TERM=xterm'
