@@ -65,12 +65,19 @@ describe(`'liq meta init'`, () =>{
     expect(result.code).toEqual(10)
   })
 
-  test(`using unwriteable HOME ('/') will result in an error message.`, () => {
-    // TODO: this assumes the user cannot write to '/', which should be valid in the test env, but maybe better to create a dir with specific perms just to be clear.
-    const result = shell.exec(`HOME='/.' ${testing.LIQ} meta init -s <<< $(echo)`, execOpts)
+  if (shell.env['USER'] == 'root') {
+    // TODO: tried to use 'shell.touch()', but it freaked out if the target was unwritable.
+    test.skip(`using unwriteable HOME ('/') will result in an error message.`, () => {})
+  }
+  else {
+    test(`using unwriteable HOME ('/') will result in an error message.`, () => {
+      // TODO: this assumes the user cannot write to '/', which should be valid in the test env, but maybe better to create a dir with specific perms just to be clear.
 
-    expect(result.stderr).toMatch(new RegExp(`.*Error creating .*`, 'ms'))
-    expect(result.stdout).toEqual('')
-    expect(result.code).toEqual(10)
-  })
+      const result = shell.exec(`HOME='/.' ${testing.LIQ} meta init -s <<< $(echo)`, execOpts)
+
+      expect(result.stderr).toMatch(new RegExp(`.*Error creating .*`, 'ms'))
+      expect(result.stdout).toEqual('')
+      expect(result.code).toEqual(10)
+    })
+  }
 })
