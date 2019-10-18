@@ -13,7 +13,11 @@ _PROJECT_PUB_CONFIG='.catalyst-pub'
 _ORG_ID_URL='https://console.cloud.google.com/iam-admin/settings'
 _BILLING_ACCT_URL='https://console.cloud.google.com/billing?folder=&organizationId='
 
-GNU_GETOPT="$(brew --prefix gnu-getopt)/bin/getopt"
+if [[ $(uname) == 'Darwin' ]]; then
+  GNU_GETOPT="$(brew --prefix gnu-getopt)/bin/getopt"
+else
+  GNU_GETOPT="$(which getopt)"
+fi
 
 # Global variables.
 CURR_ENV_FILE='' # set by 'requireEnvironment'
