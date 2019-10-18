@@ -37,3 +37,6 @@ steps:
   args: ['run', 'test']
   env:
     - 'TERM=xterm'
+  volumes:
+  - name: 'ssh'
+    path: /root/.ssh
