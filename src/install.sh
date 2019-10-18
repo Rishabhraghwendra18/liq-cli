@@ -50,7 +50,6 @@ if [[ $(uname) == 'Darwin' ]]; then
 else
   apt-get -q update
   apt-get install -qqy jq
-  echo "which jq: $(which jq)"
 fi
 
 cp ./src/completion.sh "${COMPLETION_PATH}/liq"

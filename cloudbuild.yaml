@@ -27,6 +27,8 @@ steps:
     EOF
     chmod 600 /root/.ssh/config
     mv known_hosts /root/.ssh/known_hosts
+    git config user.email "test@foo.com"
+    git config user.name "Testy Test"
   volumes:
   - name: 'ssh'
     path: /root/.ssh
