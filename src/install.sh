@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-source ./lib/_utils.sh
+import echoerr
 
 echo -e "\n-----------------\nHEY2!\nPWD:$PWD\n-------------------\n"
 ls -l ./dist
