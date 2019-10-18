@@ -598,6 +598,10 @@ if [[ $(uname) == 'Darwin' ]]; then
   brewInstall gnu-getopt \
     "eval test -f '$(brew --prefix gnu-getopt)/bin/getopt'" \
     "addLineIfNotPresentInFile ~/.bash_profile 'alias gnu-getopt=\"\$(brew --prefix gnu-getopt)/bin/getopt\"'"
+else
+  sudo apt-get -q update
+  sudo apt-get install -qqy jq
+  echo "which jq: $(which jq)"
 fi
 
 cp ./src/completion.sh "${COMPLETION_PATH}/liq"
