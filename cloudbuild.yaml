@@ -31,12 +31,12 @@ steps:
   - name: 'ssh'
     path: /root/.ssh
 
-- name: 'gcr.io/liquid-cli/test-base' # 'gcr.io/cloud-builders/npm'
+- name: 'gcr.io/liquid-cli/test-base'
   args: ['install', '--unsafe-perm']
   env:
     - 'TERM=xterm'
 
-- name: 'gcr.io/liquid-cli/test-base' # 'gcr.io/cloud-builders/npm'
+- name: 'gcr.io/liquid-cli/test-base'
   args: ['run', 'test']
   env:
     - 'TERM=xterm'
