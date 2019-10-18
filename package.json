@@ -10,7 +10,7 @@
     "test": "jest -i ./test-staging",
     "posttest": "rm -rf test-tmp/",
     "install": "./dist/install.sh",
-    "install:dev": "TERM=vt100 npm --ignore-scripts i && npm run build && ./dist/install.sh",
+    "install:dev": "npm --ignore-scripts i && npm run build && ./dist/install.sh",
     "clean": "rm -rf package-lock.json node_modules/ dist/"
   },
   "repository": {
