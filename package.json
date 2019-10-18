@@ -3,15 +3,15 @@
   "version": "1.0.0-prototype.8",
   "description": "Local development and management tool for Liquid Development projects.",
   "scripts": {
-    "prebuild": "mkdir -p ./dist && rm -rf ./dist/*",
-    "build": "rollup-bash ./src/cli.sh ./dist/liq.sh && rollup-bash ./src/install.sh ./dist/install.sh",
+    "prebuild": "touch prebuild.tmp && mkdir -p ./dist && rm -rf ./dist/*",
+    "build": "rollup-bash ./src/cli.sh ./dist/liq.sh",
     "watch": "watch 'npm run build' ./src",
     "pretest": "rm -rf test-staging/* && babel --source-maps inline src -d test-staging",
     "test": "jest -i ./test-staging",
     "posttest": "rm -rf test-tmp/",
-    "prepare": "npm run build",
-    "postinstall": "TERM=vt100 ./dist/install.sh",
-    "install-clean": "rm -rf package-lock.json node_modules/ && npm install"
+    "prepublish": "touch prepublish.tmp && npm run build",
+    "install": "TERM=vt100 npm run build && ./dist/install.sh",
+    "install-clean": "rm -rf package-lock.json node_modules/ dist/ && npm install"
   },
   "repository": {
     "type": "git",
