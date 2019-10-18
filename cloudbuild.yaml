@@ -32,7 +32,8 @@ steps:
     path: /root/.ssh
 
 - name: 'gcr.io/cloud-builders/npm'
-  args: ['install', '--ignore-scripts']
+  args: ['install', '--unsafe-perm']
+
 - name: 'gcr.io/cloud-builders/npm'
   args: ['run', 'test']
   env:
