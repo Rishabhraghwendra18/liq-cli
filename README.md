@@ -2,7 +2,7 @@
 
 This is a pre-alpha project.
 
-The user interface is unstable, but firming up. The [target CLI](./docs/CLI.md) discusses where we're headed.
+The user interface is working towards conformance with the [target 1.0 ontology](./docs/ontology.md).
 
 ## Installation
 
