@@ -4,7 +4,7 @@ steps:
   args:
   - kms
   - decrypt
-  - --ciphertext-file=github_cloud_build_rsa.gcloud-enc
+  - --ciphertext-file=cicd/github_cloud_build_rsa.gcloud-enc
   - --plaintext-file=/root/.ssh/id_rsa
   - --location=global
   - --keyring=my-keyring
@@ -26,7 +26,7 @@ steps:
         IdentityFile /root/.ssh/id_rsa
     EOF
     chmod 600 /root/.ssh/config
-    mv known_hosts /root/.ssh/known_hosts
+    mv cicd/known_hosts /root/.ssh/known_hosts
     git config --global user.email "test@foo.com"
     git config --global user.name "Testy Test"
   volumes:
