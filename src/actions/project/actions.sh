@@ -46,7 +46,6 @@ project-close() {
 
 project-create() {
   local TMP PROJ_STAGE PROJ_NAME TEMPLATE_URL
-
   TMP=$(setSimpleOptions TYPE= TEMPLATE:T= ORIGIN= -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options."; )
   eval "$TMP"
@@ -126,5 +125,14 @@ project-publish() {
 }
 
 project-save() {
+  local TMP
+  TMP=$(setSimpleOptions TEST -- "$@")
+  eval "$TMP"
+
+  if [[ "$TEST" != true ]]; then
+    local OLD_MSG
+    OLD_MSG="$(git log -1 --pretty=%B)"
+    git commit --amend -m "${OLD_MSG} [no ci]"
+  fi
   git push origin HEAD
 }
