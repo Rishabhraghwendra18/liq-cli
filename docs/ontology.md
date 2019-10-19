@@ -19,7 +19,7 @@ There are three core Liquid Development resources (Core Resources). Core Resourc
 
 * _meta_
 * _projects_
-* _work_: the stuff a developer is working on; "development workflow".
+* _work_
 
 ### Meta ~= self-control.
 
@@ -43,8 +43,8 @@ There are three core Liquid Development resources (Core Resources). Core Resourc
 There are three DevOps Resources:
 
 * _environments_
-* _services_
 * _data_
+* _services_
 
 ### Environments ~= where stuff lives.
 
@@ -55,8 +55,8 @@ There are three DevOps Resources:
      * 'Performance' test environments are fully automated, but simulate large scale over a short-period of time.
   * `production` environments are where regular users live.
 
+### Data ~= data in an environment.
+
 ### Services ~= runtime management.
 
 * Services, running in an Environment, create a runtime.
-
-### Data ~= data in an environment.

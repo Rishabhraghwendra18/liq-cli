@@ -1,6 +1,6 @@
-# Catalist CLI
+# Liquid CLI
 
-This is a pre-alpha project.
+This is a alpha project spiraling towards beta.
 
 The user interface is working towards conformance with the [target 1.0 ontology](./docs/ontology.md).
 
@@ -8,31 +8,26 @@ The user interface is working towards conformance with the [target 1.0 ontology]
 
 ## Usage
 
-To use Catalyst CLI, you must:
-
-1. Initialize your Workspace.
-2. Import at least one Project into the Workspace.
-3. Define your current development entry-point project.
-4. Define your current target Environment.
-
-You're now ready to start developing.
+* **Create a workspace**: `liq meta init-workspace`
+* **Identify projects to work on**: `liq projects import @liquid-labs/liquid-cli`
+* **Do some work**: `liq work start @liquid-labs/liquid-cli`
+* **Dev workflow**:
+  * `liq work edit`
+  * `liq work review`
+  * `liq work stage`
+  * `liq work test`
+  * `liq work commit`
+  * `liq work push`
+  * `liq work publish`
+* **Environment management**: `liq environments create`
+* **Data management**: `liq data rebuild`
+* **Straightforward runtime management**: `liq services start`
 
 ## CI/CD flow
 
+Liquid Projects offer greatly simplified and entirely optional integration with a full CI/CD process supporting:
 
-
-## TODO notes
-
-The current interface is highly idiomatic. The ontological model has developed
-as we added features, while we were also actively using the tool in daily
-development.
-
-The following changes need to be made:
-* individual service controls should be unified under a 'services' component
-  * a project may define multiple services
-  * each service defines:
-    * build <env, def: local>: transpile and check syntax
-    * deploy <env, def: local> : deploy and start service for indicated
-      environment
-    * stop <env, def: local> : stop running service for indicated environment
-  * a library is just another service
+* **Workflow and process best-practices come built in.**
+* **Fully automated static analysis and CI/CD pipelines; free QA!** (For "most" projects.)
+* **Built in change control management, complete with badges and trend reports.**
+* **Plug-in, largely automated compliance conformance (currently supporting PCI DSS and SOC 2 standards).
