@@ -1,120 +1,62 @@
-# Liquid Development CLI - liq
+# Liquid CLI Ontology
 
 liq provides comprehensive development and operational support for
 managing, testing, and deploying Catalyst projects.
 
 ## Audience & scope
 
-This document describes the Liquid Development Command Line Interface (CLI) tool. The
-primary audience is developers and system operations personnel.
+This document describes the key concepts and high level features embodied in Liquid CLI.
 
-## Command organization
+## CLI conformance
 
-Commands are specified by selecting a resource (or group) and an action. The
-general form is:
+Commands are organized by 'resources', which correspond to the ontology discussed here. The general command form is:
 
-  liq <resource/group> <action> [<option>...] [<target>...]
+  liq <resource> <action> [<target>...]
 
-There are ten command groups in all. Three of these deal primarily with
-[project configuration and management](#project-configuration-and-management):
+## Core resources
 
-* project
-* packages
-* remotes
+There are three core Liquid Development resources (Core Resources). Core Resources are:
 
-Five command groups deal with runtime configuration and management:
+* _meta_
+* _projects_
+* _work_: the stuff a developer is working on; "development workflow".
 
-* provided-services
-* required-services
-* environments
-* services
-* data
+### Meta ~= self-control.
 
-The final two command groups deal with workflow:
+### Projects ~= stuff we're working on and could work on.
 
-* work
-* playground
+* A 'Liquid Project' is an NPM package blessed with: `liq packages init`.
+* The current implementation does not do much in the way of checking for conformance to requirements.
+* The behavior of non-conforming packages blessed as Liquid Projects is generally undefined.
+* The Liquid Project is uniquely identified with a Github repository.
+* A package is identified as conforming by the presence of `catalyst` and later `liquidDev` field in `package.json`. (`catalyst` was the projects original name.)
+* Projects define both build and runtime dependencies.
 
-## Basic concepts
+### Work ~= outstanding changes.
 
-"Plain" NPM packages are turned into liq packages with:
+* Work represents units of outstanding change.
+* Work is managed through logical, git-based workflows.
+* The workflow ensures a basic (and configurable) level of quality control and security.
 
-`liq packages init`
+## DevOps resources
 
-### Static components
+There are three DevOps Resources:
 
-A Catalyst _project_ is a regular NPM package that can also conforms to Catalyst
-standards and can be managed by the Catalyst tools. A number of bootstrap
-projects are maintained as part of the Catalyst core for the express purpose
-of kickstarting new projects.
+* _environments_
+* _services_
+* _data_
 
-Each project is identified with a primary repository. The project may
-be mirrored to any number of 'mirror repositories'. Primary and mirror
-repositories are managed through the [`remotes` commands](#remotes-commands)
+### Environments ~= where stuff lives.
 
-A project may  contain multiple _packages_. **ALPHA NOTE**: The current alpha
-version only supports a single package per-repository.
+* Environments serve one of three basic "purposes":
+  * `dev` environments are used to test speculative changes. They use small datasets, minimally scaled, and ephemeral.
+  * `test` environments simulate the 'real environment'.
+     * 'User' test environments are generally moderately scaled, but otherwise fully implement a production environment right down to user involvement (a dress rehearsal).
+     * 'Performance' test environments are fully automated, but simulate large scale over a short-period of time.
+  * `production` environments are where regular users live.
 
-### Runtime components
+### Services ~= runtime management.
 
-A _service_ is a runtime process. Services are classified by their _interface
-class_. A _primary interface class_ is a general category which is usually
-defined as a broad industry standard, like `sql`. A _secondary interface class_
-denotes a sub-class which varies somewhat but is largely compatible with the
-primary class. E.g., `sql-mysql`. Secondary classes are always written in the
-form of '<primary class>-<secondary designation>'.
+* Services, running in an Environment, create a runtime.
 
-A _required service_ is simply a declaration that a package requires a service
-of a particular interface class at runtime. A _provided service_ declares that
-a package provides a service of a particular interface class. When creating a
-runtime environment, Catalyst will inspect a packages dependencies to find
-suitable providers for all required services.
-
-A _service_ is an actual runtime process or processes. Services may be either
-remote or local.
-
-An _environment_ is essentially a collection of services along with a particular
-configuration. A user may create any number of environments for many purposes.
-A developer for example will commonly create a developer environment, which is
-isolated to their own work, and configure a shared test environment which will
-be used for final verification.
-
-### Workflow components
-
-The Catalyst workflow provides a thin abstraction over standard git and QA
-flows to ensure consistent branching, merging, logging, etc. The workflow also
-helps enforce certain minimum quality standards.
-
-## Command spec
-
--- TODO: can we push the 'help' output into the document?
-
-### Global commands
-
-#### `help` command
-
-### Static configuration command groups
-
-#### `project` commands
-
-#### `packages` commands
-
-#### `remotes` commands
-
-### Runtime command groups
-
-#### `required-sevices` commands
-
-#### `provided-sevices` commands
-
-#### `environments` commands
-
-#### `required-sevices` commands
-
-#### `data` commands
-
-### Workflow command groups
-
-#### `work` commands
-
-#### `workflow` commands
+### Data ~= data in an environment.

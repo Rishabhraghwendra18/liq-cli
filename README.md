@@ -2,11 +2,11 @@
 
 This is a pre-alpha project.
 
-[Target CLI](./docs/cli.md)
+The user interface is unstable, but firming up. The [target CLI](./docs/CLI.md) discusses where we're headed.
 
-# Installation
+## Installation
 
-# Usage
+## Usage
 
 To use Catalyst CLI, you must:
 
@@ -17,7 +17,11 @@ To use Catalyst CLI, you must:
 
 You're now ready to start developing.
 
-# TODO Notes
+## CI/CD flow
+
+
+
+## TODO notes
 
 The current interface is highly idiomatic. The ontological model has developed
 as we added features, while we were also actively using the tool in daily
