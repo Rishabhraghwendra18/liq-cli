@@ -1,0 +1,47 @@
+# decrypt the 'deploy key'
+steps:
+- name: 'gcr.io/cloud-builders/gcloud'
+  args:
+  - kms
+  - decrypt
+  - --ciphertext-file=cicd/github_cloud_build_rsa.gcloud-enc
+  - --plaintext-file=/root/.ssh/id_rsa
+  - --location=global
+  - --keyring=my-keyring
+  - --key=github-key
+  volumes:
+  - name: 'ssh'
+    path: /root/.ssh
+
+# Set up git with key and domain
+- name: 'gcr.io/cloud-builders/git'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    chmod 600 /root/.ssh/id_rsa
+    cat <<EOF >/root/.ssh/config
+    Host github.com
+        Hostname github.com
+        IdentityFile /root/.ssh/id_rsa
+    EOF
+    chmod 600 /root/.ssh/config
+    mv cicd/known_hosts /root/.ssh/known_hosts
+    git config --global user.email "test@foo.com"
+    git config --global user.name "Testy Test"
+  volumes:
+  - name: 'ssh'
+    path: /root/.ssh
+
+- name: 'gcr.io/liquid-cli/test-base'
+  args: ['install', '--unsafe-perm']
+  env:
+    - 'TERM=xterm'
+
+- name: 'gcr.io/liquid-cli/test-base'
+  args: ['run', 'test']
+  env:
+    - 'TERM=xterm'
+  volumes:
+  - name: 'ssh'
+    path: /root/.ssh

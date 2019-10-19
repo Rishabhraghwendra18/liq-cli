@@ -19,7 +19,7 @@ project-close() {
     # Is everything comitted?
     # credit: https://stackoverflow.com/a/8830922/929494
     if git diff --quiet && git diff --cached --quiet; then
-      if (( $(git status --porcelain 2>/dev/null| grep "^??" || true | wc -l) == 0 )); then
+      if (( $(git status --porcelain 2>/dev/null| grep '^??' || true | wc -l) == 0 )); then
         if [[ `git rev-parse --verify master` == `git rev-parse --verify origin/master` ]]; then
           cd "$LIQ_PLAYGROUND"
           rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
@@ -36,7 +36,7 @@ project-close() {
         echoerrandexit "Found untracked files." 1
       fi
     else
-      echoerrandexit "Found uncommitted changes." 1
+      echoerrandexit "Found uncommitted changes.\n$(git status --porcelain)" 1
     fi
   else
     echoerrandexit "Did not find project '$PROJECT_NAME'" 1
@@ -46,7 +46,6 @@ project-close() {
 
 project-create() {
   local TMP PROJ_STAGE PROJ_NAME TEMPLATE_URL
-
   TMP=$(setSimpleOptions TYPE= TEMPLATE:T= ORIGIN= -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options."; )
   eval "$TMP"
@@ -126,5 +125,14 @@ project-publish() {
 }
 
 project-save() {
-  echoerrandexit "The 'save' action is not yet implemented."
+  local TMP
+  TMP=$(setSimpleOptions TEST -- "$@")
+  eval "$TMP"
+
+  if [[ "$TEST" != true ]]; then
+    local OLD_MSG
+    OLD_MSG="$(git log -1 --pretty=%B)"
+    git commit --amend -m "${OLD_MSG} [no ci]"
+  fi
+  git push origin HEAD
 }

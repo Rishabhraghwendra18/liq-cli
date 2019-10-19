@@ -5,6 +5,8 @@ const execOpts = {
   silent: true,
 }
 
+export const LIQ = `${shell.pwd()}/dist/liq.sh`
+
 export const selfOriginUrl = 'https://github.com/Liquid-Labs/ld-cli.git'
 
 export const expectedCommandGroupUsage = (group) => new RegExp(`liq .*${group}.* <action>:`)
@@ -43,13 +45,13 @@ export const setup = () => {
   // const testCheckoutDir = `${playground}/test-checkout`
 
   const metaInit = () => {
-    const result = shell.exec(`HOME=${home} liq meta init -s -p ${playground}`, execOpts)
+    const result = shell.exec(`HOME=${home} ${LIQ} meta init -s -p ${playground}`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.code).toEqual(0)
   }
 
   const localCheckout = () => {
-    const result = shell.exec(`HOME=${home} liq project import ${localRepoUrl}`, execOpts)
+    const result = shell.exec(`HOME=${home} ${LIQ} project import ${localRepoUrl}`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.code).toEqual(0)
   }
