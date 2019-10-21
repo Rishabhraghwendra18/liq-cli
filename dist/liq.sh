@@ -168,7 +168,7 @@ list-add-item() {
   while (( $# > 0 )); do
     local ITEM
     ITEM="${1}"; shift
-    # TODO: test that the ITEM does not contain newlines; error or replace
+    # TODO: enforce no newlines in item
 
     if [[ -n "$ITEM" ]]; then
       if [[ -z "${!LIST_VAR:-}" ]]; then
@@ -178,6 +178,20 @@ list-add-item() {
         eval $LIST_VAR='"${!LIST_VAR}"$'"'"'\n'"'"'"${ITEM}"'
       fi
     fi
+  done
+}
+
+list-rm-item() {
+  local LIST_VAR="${1}"; shift
+  while (( $# > 0 )); do
+    local ITEM NEW_ITEMS
+    ITEM="${1}"; shift
+    # echo "LIST: ${!LIST_VAR}" >&2
+    # echo "ITEM: $ITEM" >&2
+    NEW_ITEMS="$(echo "${!LIST_VAR}" | sed -Ee "/^$ITEM\$/d")"
+    # echo eval "$LIST_VAR=\"$NEW_ITEMS\""
+    # echo eval $LIST_VAR="$NEW_ITEMS"
+    eval $LIST_VAR='"'"$NEW_ITEMS"'"'
   done
 }
 
@@ -3661,7 +3675,7 @@ work-merge() {
     echo "$TM linecount change: $DIFF_COUNT"
 
     # TODO: create and use 'lists-remove-item' in bash-tools
-    INVOLVED_PROJECTS=$(echo "$INVOLVED_PROJECTS" | sed -Ee 's/(^| +)'$TM'( +|$)/\2/' -e 's/^ (.*)/\1/')
+    list-rm-item INVOLVED_PROJECTS "$TM"
     workUpdateWorkDb
   done
 
