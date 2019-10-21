@@ -7,7 +7,7 @@ const execOpts = {
 
 export const LIQ = `${shell.pwd()}/dist/liq.sh`
 
-export const selfOriginUrl = 'https://github.com/Liquid-Labs/ld-cli.git'
+export const selfOriginUrl = 'https://github.com/Liquid-Labs/liq-cli.git'
 
 export const expectedCommandGroupUsage = (group) => new RegExp(`liq .*${group}.* <action>:`)
 
@@ -37,7 +37,7 @@ export const setup = () => {
     .toString(16)
     .substring(1)
 
-  const home = `${tmpDir}/ld-cli-test-${setupSuffix}`
+  const home = `${tmpDir}/liq-cli-test-${setupSuffix}`
   const playground = `${home}/playground`
   // only valid if 'localCheckout' is called
   const localRepoCheckout = `${playground}/@liquid-labs/lc-entities-model`

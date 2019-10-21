@@ -1683,7 +1683,7 @@ function environmentsActivateAPI() {
     gcloud services enable $SERVICE_NAME --project="${GCP_PROJECT_ID}"
   fi
 }
-# https://github.com/Liquid-Labs/ld-cli/issues/37
+# https://github.com/Liquid-Labs/liq-cli/issues/37
 function environmentsReducePurpose() {
   case "$CURR_ENV_PURPOSE" in
     *dev*)
@@ -2355,7 +2355,7 @@ packages-lint() {
 
 packages-test() {
   local TMP
-  # TODO https://github.com/Liquid-Labs/ld-cli/issues/27
+  # TODO https://github.com/Liquid-Labs/liq-cli/issues/27
   TMP=$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S NO_SERVICE_CHECK:C -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
@@ -2845,7 +2845,7 @@ projectGitSetup() {
     PROJECT_HOME="$ORIGIN_URL"
     PROJECT_DIR="${BASE_DIR}"
     updateProjectPubConfig
-    # TODO: the above overwrites the project BASE_DIR, which we rely on later. See https://github.com/Liquid-Labs/ld-cli/issues/2
+    # TODO: the above overwrites the project BASE_DIR, which we rely on later. See https://github.com/Liquid-Labs/liq-cli/issues/2
     BASE_DIR="$PROJECT_DIR"
   fi
 }
@@ -3809,7 +3809,7 @@ work-start() {
   fi
 
   # TODO: check that current work branch is clean before switching away from it
-  # https://github.com/Liquid-Labs/ld-cli/issues/14
+  # https://github.com/Liquid-Labs/liq-cli/issues/14
 
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     rm "${LIQ_WORK_DB}/curr_work"
