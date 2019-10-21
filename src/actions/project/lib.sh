@@ -39,7 +39,7 @@ projectGitSetup() {
     PROJECT_HOME="$ORIGIN_URL"
     PROJECT_DIR="${BASE_DIR}"
     updateProjectPubConfig
-    # TODO: the above overwrites the project BASE_DIR, which we rely on later. See https://github.com/Liquid-Labs/ld-cli/issues/2
+    # TODO: the above overwrites the project BASE_DIR, which we rely on later. See https://github.com/Liquid-Labs/liq-cli/issues/2
     BASE_DIR="$PROJECT_DIR"
   fi
 }

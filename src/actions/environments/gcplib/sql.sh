@@ -1,4 +1,4 @@
-# https://github.com/Liquid-Labs/ld-cli/issues/37
+# https://github.com/Liquid-Labs/liq-cli/issues/37
 function environmentsReducePurpose() {
   case "$CURR_ENV_PURPOSE" in
     *dev*)

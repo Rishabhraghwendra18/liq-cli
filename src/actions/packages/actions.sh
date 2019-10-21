@@ -41,7 +41,7 @@ packages-lint() {
 
 packages-test() {
   local TMP
-  # TODO https://github.com/Liquid-Labs/ld-cli/issues/27
+  # TODO https://github.com/Liquid-Labs/liq-cli/issues/27
   TMP=$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S NO_SERVICE_CHECK:C -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"

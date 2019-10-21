@@ -19,7 +19,7 @@ describe(`Command 'liq project import'`, () => {
 
   test.each([
         // TODO: provide a case that's not part of an org
-        // ['ld-cli', 'ld-cli'],
+        // ['liq-cli', 'liq-cli'],
         ['@liquid-labs/lc-entities-model', '@liquid-labs/lc-entities-model'],
         ['https://github.com/Liquid-Labs/lc-entities-model', '@liquid-labs/lc-entities-model'],
         [testing.localRepoUrl, '@liquid-labs/lc-entities-model']])

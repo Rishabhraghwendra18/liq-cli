@@ -1,5 +1,5 @@
 {
-  "name": "@liquid-labs/ld-cli",
+  "name": "@liquid-labs/liq-cli",
   "version": "1.0.0-prototype.8",
   "description": "Local development and management tool for Liquid Development projects.",
   "scripts": {
@@ -14,14 +14,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/Liquid-Labs/ld-cli.git"
+    "url": "git+ssh://git@github.com/Liquid-Labs/liq-cli.git"
   },
   "author": "Zane Rockenbaugh <zane@liquid-labs.com>",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Liquid-Labs/ld-cli/issues"
+    "url": "https://github.com/Liquid-Labs/liq-cli/issues"
   },
-  "homepage": "https://github.com/Liquid-Labs/ld-cli#readme",
+  "homepage": "https://github.com/Liquid-Labs/liq-cli#readme",
   "dependencies": {
     "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.24"
   },

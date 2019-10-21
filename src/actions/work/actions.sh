@@ -281,7 +281,7 @@ work-start() {
   fi
 
   # TODO: check that current work branch is clean before switching away from it
-  # https://github.com/Liquid-Labs/ld-cli/issues/14
+  # https://github.com/Liquid-Labs/liq-cli/issues/14
 
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     rm "${LIQ_WORK_DB}/curr_work"
