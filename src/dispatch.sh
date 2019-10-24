@@ -21,7 +21,7 @@ case "$GROUP" in
           # 'playground init' command
           if [[ "$GROUP" != 'meta' ]] || [[ "$ACTION" != 'init' ]]; then
             # source is not like other commands (?) and the attempt to replace possible source error with friendlier
-            # message fails. The 'or' never gets evaluated, even when source erroros.
+            # message fails. The 'or' never gets evaluated, even when source fails.
             source "${LIQ_SETTINGS}" \ #2> /dev/null \
               # || echoerrandexit "Could not source global Catalyst settings. Try:\nliq playground init"
           fi

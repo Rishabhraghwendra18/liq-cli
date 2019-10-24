@@ -65,6 +65,9 @@ setSimpleOptions() {
 EOF
 )
   while true; do
+    if (( $# == 0 )); then
+      echoerrandexit "setSimpleOptions: No argument to process; did you forget to include the '--' marker?"
+    fi
     VAR_SPEC="$1"; shift
     local VAR_NAME LOWER_NAME SHORT_OPT LONG_OPT
     if [[ "$VAR_SPEC" == '--' ]]; then
@@ -83,7 +86,7 @@ EOF
 
     SHORT_OPTS="${SHORT_OPTS:-}${SHORT_OPT}${OPT_REQ}"
 
-    LONG_OPTS=$( ( test ${#LONG_OPTS} -gt 0 && echo -n "${LONG_OPTS}${OPT_REQ},") || true && echo -n "${LONG_OPT}${OPT_REQ}")
+    LONG_OPTS=$( ( test ${#LONG_OPTS} -gt 0 && echo -n "${LONG_OPTS},") || true && echo -n "${LONG_OPT}${OPT_REQ}")
 
     LOCAL_DECLS="${LOCAL_DECLS:-}local ${VAR_NAME}='';"
     local VAR_SETTER="echo \"${VAR_NAME}=true;\""
@@ -98,7 +101,7 @@ EOF
         OPTS_COUNT=\$(( \$OPTS_COUNT + 1));;
 EOF
 )
-  done
+  done # main while loop
   CASE_HANDLER=$(cat <<EOF
     case "\$1" in
       $CASE_HANDLER
@@ -224,6 +227,35 @@ list-get-item() {
     fi
     CURR_INDEX=$(($CURR_INDEX + 1))
   done <<< "${!LIST_VAR}"
+}
+
+list-replace-by-string() {
+  local LIST_VAR="${1}"
+  local TEST_ITEM="${2}"
+  local NEW_ITEM="${3}"
+
+  local ITEM INDEX NEW_LIST
+  INDEX=0
+  for ITEM in ${!LIST_VAR}; do
+    if [[ "$(list-get-item $LIST_VAR $INDEX)" == "$TEST_ITEM" ]]; then
+      list-add-item NEW_LIST "$NEW_ITEM"
+    else
+      list-add-item NEW_LIST "$ITEM"
+    fi
+    INDEX=$(($INDEX + 1))
+  done
+  eval $LIST_VAR='"'"$NEW_LIST"'"'
+}
+
+list-from-csv() {
+  local LIST_VAR="${1}"
+  local CSV="${2}"
+
+  while IFS=',' read -ra ADDR; do
+    for i in "${ADDR[@]}"; do
+      list-add-item "$LIST_VAR" "$i"
+    done
+  done <<< "$CSV"
 }
 require-answer() {
   local PROMPT="$1"
@@ -3559,7 +3591,8 @@ work-involve() {
 
 
   if (( $# == 0 )) && [[ -n "$BASE_DIR" ]]; then
-    PROJECT_NAME=$(cat "$NEW_PACKAGE_FILE" | jq --raw-output '.name | @sh' | tr -d "'")
+    requirePackage
+    PROJECT_NAME=$(echo "$PACKAGE" | jq --raw-output '.name | @sh' | tr -d "'")
   else
     exactUserArgs PROJECT_NAME -- "$@"
     test -d "${LIQ_PLAYGROUND}/${PROJECT_NAME}" \
@@ -3570,6 +3603,7 @@ work-involve() {
   local BRANCH_NAME=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
   requirePackage # used later if auto-linking
 
+  echo "${LIQ_PLAYGROUND}/${PROJECT_NAME}"
   cd "${LIQ_PLAYGROUND}/${PROJECT_NAME}"
   if git branch | grep -qE "^\*? *${BRANCH_NAME}\$"; then
     echowarn "Found existing work branch '${BRANCH_NAME}' in project ${PROJECT_NAME}. We will use it. Please fix manually if this is unexpected."
@@ -3595,6 +3629,41 @@ work-involve() {
         # packages-link "${PROJECT_NAME}:${NEW_PACKAGE_NAME}"
       fi
     done < <(find "${LIQ_PLAYGROUND}/${PROJECT_NAME}" -name "package.json" -not -path "*node_modules/*")
+  fi
+}
+
+work-issues() {
+  local TMP
+  TMP=$(setSimpleOptions LIST ADD= REMOVE= -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
+  if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
+    echoerrandexit "No current work selected; cannot list issues."
+  fi
+  source "${LIQ_WORK_DB}/curr_work"
+
+  BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
+
+  if [[ -n "$ADD" ]]; then
+    local NEW_ISSUE NEW_ISSUES
+    NEW_ISSUES="$(workProcessIssues "$ADD" "$BUGS_URL")"
+    for NEW_ISSUE in $NEW_ISSUES; do
+      list-add-item WORK_ISSUES "$NEW_ISSUE"
+    done
+  fi
+  if [[ -n "$REMOVE" ]]; then
+    local RM_ISSUE RM_ISSUES
+    RM_ISSUES="$(workProcessIssues "$REMOVE" "$BUGS_URL")"
+    for RM_ISSUE in $RM_ISSUES; do
+      list-rm-item WORK_ISSUES "$RM_ISSUE"
+    done
+  fi
+  if [[ -n "$LIST" ]] || [[ -z "$LIST" ]] && [[ -z "$ADD" ]] && [[ -z "$REMOVE" ]]; then
+    echo "$WORK_ISSUES"
+  fi
+  if [[ -n "$ADD" ]] || [[ -n "$REMOVE" ]]; then
+    workUpdateWorkDb
   fi
 }
 
@@ -3632,7 +3701,7 @@ work-merge() {
 
   convert-dot() {
     if [[ . == "$TM" ]]; then
-      TM=$(basename "$BASE_DIR")
+      TM=$(cat "$BASE_DIR/package.json" | jq --raw-output '.name' | tr -d "'")
     fi
   }
 
@@ -3660,11 +3729,29 @@ work-merge() {
     DEL_COUNT=${DEL_COUNT:-0}
     local DIFF_COUNT=$(( $INS_COUNT - $DEL_COUNT ))
 
+    local CLOSE_MSG BUGS_URL
+    BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
+    if [[ -z "$WORK_ISSUES" ]]; then
+      echowarn "No issues associated with this unit of work."
+    elif [[ -n "$BUGS_URL" ]]; then
+      local ISSUE
+      for ISSUE in $WORK_ISSUES; do
+        if [[ $ISSUE == $BUGS_URL* ]]; then
+          local NUMBER=${ISSUE/$BUGS_URL/}
+          NUMBER=${NUMBER/\//}
+          list-add-item CLOSE_MSG "closes #${NUMBER}"
+          list-rm-item WORK_ISSUES "$ISSUE"
+        fi
+      done
+    else
+      echowarn "No issues URL associated with this project."
+    fi
+
     local PUSH_FAILED=N
     # in case the current working dir does not exist in master
     (git checkout -q master \
         || echoerrandexit "Could not switch to master branch in project '$TM'.") \
-    && (git merge --no-ff -qm "merge branch $WORKBRANCH" "$WORKBRANCH" \
+    && (git merge --no-ff -qm "merge branch $WORKBRANCH" "$WORKBRANCH" -m "$CLOSE_MSG" \
         || echoerrandexit "Problem merging work branch with master for project '$TM'. ($?)") \
     && ( (git push -q && echo "Work merged and pushed to origin.") \
         || (PUSH_FAILED=Y && echoerr "Local merge successful, but there was a problem pushing work to master."))
@@ -3789,14 +3876,37 @@ work-show() {
       echo "  $IP"
     done
   fi
+
+  if [[ -z "$WORK_ISSUES" ]]; then
+    "Issues: <none>"
+  else
+    echo "Issues:"
+    local ISSUE
+    for ISSUE in $WORK_ISSUES; do
+      echo "  $ISSUE"
+    done
+  fi
 }
 
 work-start() {
-  local WORK_DESC WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS
+  local WORK_DESC WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS WORK_ISSUES ISSUE TMP
+  TMP=$(setSimpleOptions ISSUES=)
+  eval "$TMP"
+
+  local CURR_PROJECT ISSUES_URL
+  if [[ -n "$BASE_DIR" ]]; then
+    CURR_PROJECT=$(cat "$BASE_DIR/package.json" | jq --raw-output '.name' | tr -d "'")
+    BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
+  fi
+
+  WORK_ISSUES="$(workProcessIssues "$ISSUES" "$BUGS_URL")"
+
+  if [[ -z "$WORK_ISSUES" ]]; then
+    echoerrandexit "Must specify at least 1 issue when starting a new unit of work."
+  fi
   exactUserArgs WORK_DESC -- "$@"
   local WORK_DESC_SPEC='^[[:alnum:]][[:alnum:] -]+$'
   # TODO: require a minimum length of 5 alphanumeric characters.
-  echo "WORK_DESC: $WORK_DESC"
   echo "$WORK_DESC" | grep -qE "$WORK_DESC_SPEC" \
     || echoerrandexit "Work description must begin with a letter or number, contain only letters, numbers, dashes and spaces, and have at least 2 characters (/$WORK_DESC_SPEC/)."
 
@@ -3818,8 +3928,7 @@ work-start() {
   cd ${LIQ_WORK_DB} && ln -s "${WORK_BRANCH}" curr_work
   workUpdateWorkDb
 
-  if [[ -n "$BASE_DIR" ]]; then
-    local CURR_PROJECT=$(cat "$BASE_DIR/package.json" | jq --raw-output '.name' | tr -d "'")
+  if [[ -n "$CURR_PROJECT" ]]; then
     echo "Adding current project '$CURR_PROJECT' to unit of work..."
     work-involve "$CURR_PROJECT"
   fi
@@ -3898,11 +4007,8 @@ WORK_STARTED="$WORK_STARTED"
 WORK_INITIATOR="$WORK_INITIATOR"
 WORK_BRANCH="$WORK_BRANCH"
 EOF
-  if [[ -z "${INVOLVED_PROJECTS:-}" ]]; then
-    echo "INVOLVED_PROJECTS=''" >> "${LIQ_WORK_DB}/curr_work"
-  else
-    echo "INVOLVED_PROJECTS='$( echo "$INVOLVED_PROJECTS" | sed -Ee 's/^ +//' )'" >> "${LIQ_WORK_DB}/curr_work"
-  fi
+  echo "INVOLVED_PROJECTS='${INVOLVED_PROJECTS:-}'" >> "${LIQ_WORK_DB}/curr_work"
+  echo "WORK_ISSUES='${WORK_ISSUES:-}'" >> "${LIQ_WORK_DB}/curr_work"
 }
 
 workUserSelectOne() {
@@ -3950,6 +4056,23 @@ workSwitchBranches() {
     git checkout "${_BRANCH_NAME}" \
       || echoerrandexit "Error updating '${IP}' to work branch '${_BRANCH_NAME}'. See above for details."
   done
+}
+
+workProcessIssues() {
+  local CSV_ISSUES="${1}"
+  local BUGS_URL="${2}"
+  local ISSUES ISSUE
+  list-from-csv ISSUES "$CSV_ISSUES"
+  for ISSUE in $ISSUES; do
+    if [[ "$ISSUE" =~ ^[0-9]+$ ]]; then
+      if [[ -z "$BUGS_URL" ]]; then
+        echoerrandexit "Cannot ref issue number outside project context. Either issue in context or use full URL."
+      fi
+      list-replace-by-string ISSUES $ISSUE "$BUGS_URL/$ISSUE"
+    fi
+  done
+
+  echo "$ISSUES"
 }
 
 playground-init() {
@@ -4031,7 +4154,7 @@ case "$GROUP" in
           # 'playground init' command
           if [[ "$GROUP" != 'meta' ]] || [[ "$ACTION" != 'init' ]]; then
             # source is not like other commands (?) and the attempt to replace possible source error with friendlier
-            # message fails. The 'or' never gets evaluated, even when source erroros.
+            # message fails. The 'or' never gets evaluated, even when source fails.
             source "${LIQ_SETTINGS}" \ #2> /dev/null \
               # || echoerrandexit "Could not source global Catalyst settings. Try:\nliq playground init"
           fi
