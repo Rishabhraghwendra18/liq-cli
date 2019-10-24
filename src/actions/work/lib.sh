@@ -19,11 +19,8 @@ WORK_STARTED="$WORK_STARTED"
 WORK_INITIATOR="$WORK_INITIATOR"
 WORK_BRANCH="$WORK_BRANCH"
 EOF
-  if [[ -z "${INVOLVED_PROJECTS:-}" ]]; then
-    echo "INVOLVED_PROJECTS=''" >> "${LIQ_WORK_DB}/curr_work"
-  else
-    echo "INVOLVED_PROJECTS='$( echo "$INVOLVED_PROJECTS" | sed -Ee 's/^ +//' )'" >> "${LIQ_WORK_DB}/curr_work"
-  fi
+  echo "INVOLVED_PROJECTS='${INVOLVED_PROJECTS:-}'" >> "${LIQ_WORK_DB}/curr_work"
+  echo "WORK_ISSUES='${WORK_ISSUES:-}'" >> "${LIQ_WORK_DB}/curr_work"
 }
 
 workUserSelectOne() {
@@ -71,4 +68,21 @@ workSwitchBranches() {
     git checkout "${_BRANCH_NAME}" \
       || echoerrandexit "Error updating '${IP}' to work branch '${_BRANCH_NAME}'. See above for details."
   done
+}
+
+workProcessIssues() {
+  local CSV_ISSUES="${1}"
+  local BUGS_URL="${2}"
+  local ISSUES ISSUE
+  list-from-csv ISSUES "$CSV_ISSUES"
+  for ISSUE in $ISSUES; do
+    if [[ "$ISSUE" =~ ^[0-9]+$ ]]; then
+      if [[ -z "$BUGS_URL" ]]; then
+        echoerrandexit "Cannot ref issue number outside project context. Either issue in context or use full URL."
+      fi
+      list-replace-by-string ISSUES $ISSUE "$BUGS_URL/$ISSUE"
+    fi
+  done
+
+  echo "$ISSUES"
 }
