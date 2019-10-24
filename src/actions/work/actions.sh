@@ -317,6 +317,7 @@ work-show() {
     done
   fi
 
+  echo
   if [[ -z "$WORK_ISSUES" ]]; then
     "Issues: <none>"
   else
