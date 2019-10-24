@@ -330,7 +330,7 @@ work-show() {
 
 work-start() {
   local WORK_DESC WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS WORK_ISSUES ISSUE TMP
-  TMP=$(setSimpleOptions ISSUES=)
+  TMP=$(setSimpleOptions ISSUES= -- "$@")
   eval "$TMP"
 
   local CURR_PROJECT ISSUES_URL
