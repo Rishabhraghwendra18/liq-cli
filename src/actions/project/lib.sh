@@ -62,7 +62,7 @@ projectForkClone() {
   local PROJ_NAME ORG_URL GITHUB_NAME
   PROJ_NAME=$(basename "$URL")
   ORG_URL=$(dirname "$URL")
-  projectHubWhoami GIHUB_NAME
+  projectHubWhoami GITHUB_NAME
   FORK_URL="$(echo "$ORG_URL" | sed 's|[a-zA-Z0-9-]*$||')/${GITHUB_NAME}/${PROJ_NAME}"
 
   local STAGING
