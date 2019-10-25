@@ -3,7 +3,7 @@ help-work() {
 
   handleSummary "${PREFIX}${cyan_u}work${reset} <action>: Manages the current unit of work." || cat <<EOF
 ${PREFIX}${cyan_u}work${reset} <action>:
-  ${underline}show${reset} [-s|--select] [<name>]: Shows details for the current or named unit of work.
+  ${underline}status${reset} [-s|--select] [<name>]: Shows details for the current or named unit of work.
     Will enter interactive selection if no option and no current work or the
     '--select' option is given.
   ${underline}involve${reset} [-L|--no-link] [<repository name>]: Involves the current or named
