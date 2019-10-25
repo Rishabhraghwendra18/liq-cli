@@ -135,16 +135,3 @@ project-import() {
 project-publish() {
   echoerrandexit "The 'publish' action is not yet implemented."
 }
-
-project-save() {
-  local TMP
-  TMP=$(setSimpleOptions TEST -- "$@")
-  eval "$TMP"
-
-  if [[ "$TEST" != true ]]; then
-    local OLD_MSG
-    OLD_MSG="$(git log -1 --pretty=%B)"
-    git commit --amend -m "${OLD_MSG} [no ci]"
-  fi
-  git push origin HEAD
-}

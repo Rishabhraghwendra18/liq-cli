@@ -2816,19 +2816,6 @@ project-import() {
 project-publish() {
   echoerrandexit "The 'publish' action is not yet implemented."
 }
-
-project-save() {
-  local TMP
-  TMP=$(setSimpleOptions TEST -- "$@")
-  eval "$TMP"
-
-  if [[ "$TEST" != true ]]; then
-    local OLD_MSG
-    OLD_MSG="$(git log -1 --pretty=%B)"
-    git commit --amend -m "${OLD_MSG} [no ci]"
-  fi
-  git push origin HEAD
-}
 help-project() {
   local PREFIX="${1:-}"
 
@@ -2848,7 +2835,6 @@ ${PREFIX}${cyan_u}project${reset} <action>:
     re-oriented to the project origin, unless the type is 'bare' in which case the project is cloned directly
     from the origin URL. Use 'liq project import' to import an existing project from a URL.
   ${underline}public${reset}: Performs verification tests, updates package version, and publishes package.
-  ${underline}save${reset}: Pushes local changes to the project remotes.
 EOF
 
   test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" helpHelperAlphaPackagesNote
@@ -2925,24 +2911,23 @@ projectForkClone() {
   cd "$STAGING"
 
   echo -n "Checking for existing fork at '${FORK_URL}'... "
-  git clone --quiet "${FORK_URL}" \
+  git clone --quiet --origin workspace "${FORK_URL}" \
   && ( \
     # Be sure and exit on errors to avoid a failure here and then executing the || branch
     echo "found existing fork."
     cd $PROJ_STAGE || echoerrandexit "Did not find expected staging dir: $PROJ_STAGE"
     echo "Updating remotes..."
     git remote add upstream "$URL" || echoerrandexit "Problem setting upstream URL."
+    git branch -u upstream/master master
   ) \
   || ( \
     echo "none found; cloning source."
     local GITHUB_NAME
-    git clone --quiet "${URL}" || echoerrandexit "Could not clone source."
+    git clone --quiet --origin upstream "${URL}" || echoerrandexit "Could not clone source."
     cd $PROJ_STAGE
     echo "Creating fork..."
-    hub fork --remote-name origin-real
-    echo "Updating remotes..."
-    git remote rename origin upstream
-    git remote rename origin-real origin
+    hub fork --remote-name workspace
+    git branch -u upstream/master master
   )
 }
 
@@ -3595,7 +3580,7 @@ runtimeServiceRunner() {
 }
 
 requirements-work() {
-  sourceCatalystfile
+  findBase
 }
 
 work-diff-master() {
@@ -3625,7 +3610,6 @@ work-involve() {
     echoerrandexit "There is no active unit of work to involve. Try:\nliq work resume"
   fi
 
-
   if (( $# == 0 )) && [[ -n "$BASE_DIR" ]]; then
     requirePackage
     PROJECT_NAME=$(echo "$PACKAGE" | jq --raw-output '.name | @sh' | tr -d "'")
@@ -3646,10 +3630,7 @@ work-involve() {
     git checkout -q "${BRANCH_NAME}" || echoerrandexit "There was a problem checking out the work branch. ($?)"
   else
     git checkout -qb "${BRANCH_NAME}" || echoerrandexit "There was a problem creating the work branch. ($?)"
-    local REMOTE
-    for REMOTE in $(git remote); do
-      git push --set-upstream ${REMOTE} ${BRANCH_NAME}
-    done
+    git push --set-upstream workspace ${BRANCH_NAME}
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
 
@@ -3894,7 +3875,21 @@ work-resume() {
   fi
 }
 
-work-show() {
+work-save() {
+  local TMP
+  TMP=$(setSimpleOptions TEST -- "$@")
+  eval "$TMP"
+
+  if [[ "$TEST" != true ]]; then
+    local OLD_MSG
+    OLD_MSG="$(git log -1 --pretty=%B)"
+    git commit --amend -m "${OLD_MSG} [no ci]"
+  fi
+  # TODO: retrive and use workbranch name instead
+  git push workspace HEAD
+}
+
+work-status() {
   local TMP
   TMP=$(setSimpleOptions SELECT -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
@@ -3926,6 +3921,54 @@ work-show() {
       echo "  $ISSUE"
     done
   fi
+
+  for IP in $INVOLVED_PROJECTS; do
+    echo
+    echo "Repo status for $IP:"
+    cd "${LIQ_PLAYGROUND}/$IP"
+    TMP="$(git rev-list --left-right --count master...upstream/master)"
+    local LOCAL_COMMITS REMOTE_COMMITS MASTER_UP_TO_DATE
+    MASTER_UP_TO_DATE=false
+    LOCAL_COMMITS=$(echo $TMP | cut -d' ' -f1)
+    REMOTE_COMMITS=$(echo $TMP | cut -d' ' -f2)
+    if (( $LOCAL_COMMITS > 0 )); then
+      echo "  ${red_b}Local master corrupted.${reset} Found $LOCAL_COMMITS local commits not on upstream." | fold -sw 82
+    fi
+    case $REMOTE_COMMITS in
+      0)
+        MASTER_UP_TO_DATE=true
+        echo "  Local master up to date.";;
+      *)
+        echo "  ${yellow}Local master behind $REMOTE_COMMITS commits.${reset}";;
+    esac
+
+    TMP="$(git rev-list --left-right --count $WORK_NAME...workspace/$WORK_NAME)"
+    LOCAL_COMMITS=$(echo $TMP | cut -d' ' -f1)
+    REMOTE_COMMITS=$(echo $TMP | cut -d' ' -f2)
+    if (( $REMOTE_COMMITS == 0 )) && (( $LOCAL_COMMITS == 0 )); then
+      echo "  Local workbranch up to date."
+      TMP="$(git rev-list --left-right --count master...$WORK_NAME)"
+      local MASTER_COMMITS WORKBRANCH_COMMITS
+      MASTER_COMMITS=$(echo $TMP | cut -d' ' -f1)
+      WORKBRANCH_COMMITS=$(echo $TMP | cut -d' ' -f2)
+      if (( $MASTER_COMMITS == 0 )) && (( $WORKBRANCH_COMMITS == 0 )); then
+        echo "  Workbranch and master up to date."
+      elif (( $MASTER_COMMITS > 0 )); then
+        echo "  Workbranch behind master $MASTER_COMMITS commits."
+      elif (( $WORKBRANCH_COMMITS > 0 )); then
+        echo "  Workbranch ahead of master $WORKBRANCH_COMMITS commits."
+      fi
+    elif (( $REMOTE_COMMITS > 0 )); then
+      echo "  ${yellow}Local workbranch behind $REMOTE_COMMITS commits.${reset}"
+    elif (( $LOCAL_COMMITS > 0 )); then
+      echo "  ${yellow}Local workranch ahead $LOCAL_COMMITS commits.${reset}"
+    fi
+    if (( $REMOTE_COMMITS != 0 )) && (( $LOCAL_COMMITS != 0 )); then
+      echo "  ${yellow}Unable to analyze master-workbranch drift due to above issues.${reset}" | fold -sw 82
+    fi
+    echo "  Local changes:"
+    git status --short
+  done
 }
 
 work-start() {
@@ -4000,7 +4043,7 @@ help-work() {
 
   handleSummary "${PREFIX}${cyan_u}work${reset} <action>: Manages the current unit of work." || cat <<EOF
 ${PREFIX}${cyan_u}work${reset} <action>:
-  ${underline}show${reset} [-s|--select] [<name>]: Shows details for the current or named unit of work.
+  ${underline}status${reset} [-s|--select] [<name>]: Shows details for the current or named unit of work.
     Will enter interactive selection if no option and no current work or the
     '--select' option is given.
   ${underline}involve${reset} [-L|--no-link] [<repository name>]: Involves the current or named
@@ -4020,6 +4063,7 @@ ${PREFIX}${cyan_u}work${reset} <action>:
   ${underline}merge${reset}: Merges current work unit to master branches and updates mirrors.
   ${underline}qa${reset}: Checks the playground status and runs package audit, version check, and
     tests.
+  ${underline}save${reset}: Pushes local changes to the workspace remote.
 
 A 'unit of work' is essentially a set of work branches across all involved projects. The first project involved in a unit of work is considered the primary project, which will effect automated linking when involving other projects.
 

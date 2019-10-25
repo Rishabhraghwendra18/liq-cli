@@ -41,7 +41,7 @@ _liq()
       services)
         opts="connect err-log list log restart start stop";;
       work)
-        opts="diff-master edit ignore-rest involve merge qa report resume start stop";;
+        opts="diff-master edit ignore-rest involve merge qa report resume save start status stop";;
       playground)
         opts="init close import";;
       *)

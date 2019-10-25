@@ -17,7 +17,6 @@ ${PREFIX}${cyan_u}project${reset} <action>:
     re-oriented to the project origin, unless the type is 'bare' in which case the project is cloned directly
     from the origin URL. Use 'liq project import' to import an existing project from a URL.
   ${underline}public${reset}: Performs verification tests, updates package version, and publishes package.
-  ${underline}save${reset}: Pushes local changes to the project remotes.
 EOF
 
   test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" helpHelperAlphaPackagesNote

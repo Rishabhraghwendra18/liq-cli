@@ -70,24 +70,23 @@ projectForkClone() {
   cd "$STAGING"
 
   echo -n "Checking for existing fork at '${FORK_URL}'... "
-  git clone --quiet "${FORK_URL}" \
+  git clone --quiet --origin workspace "${FORK_URL}" \
   && ( \
     # Be sure and exit on errors to avoid a failure here and then executing the || branch
     echo "found existing fork."
     cd $PROJ_STAGE || echoerrandexit "Did not find expected staging dir: $PROJ_STAGE"
     echo "Updating remotes..."
     git remote add upstream "$URL" || echoerrandexit "Problem setting upstream URL."
+    git branch -u upstream/master master
   ) \
   || ( \
     echo "none found; cloning source."
     local GITHUB_NAME
-    git clone --quiet "${URL}" || echoerrandexit "Could not clone source."
+    git clone --quiet --origin upstream "${URL}" || echoerrandexit "Could not clone source."
     cd $PROJ_STAGE
     echo "Creating fork..."
-    hub fork --remote-name origin-real
-    echo "Updating remotes..."
-    git remote rename origin upstream
-    git remote rename origin-real origin
+    hub fork --remote-name workspace
+    git branch -u upstream/master master
   )
 }
 

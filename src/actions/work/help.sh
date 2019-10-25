@@ -3,7 +3,7 @@ help-work() {
 
   handleSummary "${PREFIX}${cyan_u}work${reset} <action>: Manages the current unit of work." || cat <<EOF
 ${PREFIX}${cyan_u}work${reset} <action>:
-  ${underline}show${reset} [-s|--select] [<name>]: Shows details for the current or named unit of work.
+  ${underline}status${reset} [-s|--select] [<name>]: Shows details for the current or named unit of work.
     Will enter interactive selection if no option and no current work or the
     '--select' option is given.
   ${underline}involve${reset} [-L|--no-link] [<repository name>]: Involves the current or named
@@ -23,6 +23,7 @@ ${PREFIX}${cyan_u}work${reset} <action>:
   ${underline}merge${reset}: Merges current work unit to master branches and updates mirrors.
   ${underline}qa${reset}: Checks the playground status and runs package audit, version check, and
     tests.
+  ${underline}save${reset}: Pushes local changes to the workspace remote.
 
 A 'unit of work' is essentially a set of work branches across all involved projects. The first project involved in a unit of work is considered the primary project, which will effect automated linking when involving other projects.
 
