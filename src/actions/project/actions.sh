@@ -1,7 +1,5 @@
 requirements-project() {
-  if [[ "${ACTION}" != "create" ]] && [[ "${ACTION}" != "import" ]]; then
-    sourceCatalystfile
-  fi
+  :
 }
 
 project-close() {
@@ -9,6 +7,7 @@ project-close() {
 
   # first figure out what to close
   if [[ -z "$PROJECT_NAME" ]]; then # try removing the project we're in
+    findBase
     cd "$BASE_DIR"
     PROJECT_NAME=$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name | @sh' | tr -d "'")
   fi
@@ -20,7 +19,7 @@ project-close() {
     # credit: https://stackoverflow.com/a/8830922/929494
     if git diff --quiet && git diff --cached --quiet; then
       if (( $(git status --porcelain 2>/dev/null| grep '^??' || true | wc -l) == 0 )); then
-        if [[ `git rev-parse --verify master` == `git rev-parse --verify origin/master` ]]; then
+        if [[ $(git rev-parse --verify master) == $(git rev-parse --verify origin/master) ]]; then
           cd "$LIQ_PLAYGROUND"
           rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
           # now check to see if we have an empty "org" dir
@@ -45,6 +44,7 @@ project-close() {
 }
 
 project-create() {
+  echoerrandexit "'create' needs to be reworked for forks."
   local TMP PROJ_STAGE PROJ_NAME TEMPLATE_URL
   TMP=$(setSimpleOptions TYPE= TEMPLATE:T= ORIGIN= -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options."; )
@@ -73,7 +73,7 @@ project-create() {
         echoerrandexit "Unknown 'type'. Try one of: bare"
     esac
   fi
-  projectCheckGitAndClone "$TEMPLATE_URL"
+  projectClone "$TEMPLATE_URL"
   cd "$PROJ_STAGE"
   # re-orient the origin from the template to the ORIGIN URL
   git remote set-url origin "${ORIGIN}"
@@ -96,10 +96,17 @@ project-create() {
 
 project-import() {
   local PROJ_SPEC PROJ_NAME PROJ_URL PROJ_STAGE
+  local TMP
+  TMP=$(setSimpleOptions NO_FORK:F -- "$@")
+  eval "$TMP"
 
   if [[ "$1" == *:* ]]; then # it's a URL
     PROJ_URL="${1}"
-    projectCheckGitAndClone "$PROJ_URL"
+    if [[ -n "$NO_FORK" ]]; then
+      projectClone "$PROJ_URL"
+    else
+      projectForkClone "$PROJ_URL"
+    fi
     if PROJ_NAME=$(cat "$PROJ_STAGE/package.json" | jq --raw-output '.name' | tr -d "'"); then
       projectCheckIfInPlayground "$PROJ_NAME"
     else
@@ -113,8 +120,13 @@ project-import() {
     PROJ_URL=$(npm view "$PROJ_NAME" repository.url) \
       || echoerrandexit "Did not find expected NPM package '${PROJ_NAME}'. Did you forget the '--url' option?"
     PROJ_URL=${PROJ_URL##git+}
-    projectCheckGitAndClone "$PROJ_URL"
+    if [[ -n "$NO_FORK" ]]; then
+      projectClone "$PROJ_URL"
+    else
+      projectForkClone "$PROJ_URL"
+    fi
   fi
+
   projectMoveStaged
 
   echo "'$PROJ_NAME' imported into playground."

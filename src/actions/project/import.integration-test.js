@@ -23,8 +23,8 @@ describe(`Command 'liq project import'`, () => {
         ['@liquid-labs/lc-entities-model', '@liquid-labs/lc-entities-model'],
         ['https://github.com/Liquid-Labs/lc-entities-model', '@liquid-labs/lc-entities-model'],
         [testing.localRepoUrl, '@liquid-labs/lc-entities-model']])
-      ("with '%s' successfully clone project.", (importSpec, projectName) => {
-    const result = shell.exec(`HOME=${testConfig.home} ${testing.LIQ} project import ${importSpec}`, execOpts)
+      ("with '--no-fork %s' successfully clone project.", (importSpec, projectName) => {
+    const result = shell.exec(`HOME=${testConfig.home} ${testing.LIQ} project import --no-fork ${importSpec}`, execOpts)
     const expectedOutput = new RegExp(`^'${projectName}' imported into playground.[\s\n]*$`)
 
     expect(result.stderr).toEqual('')

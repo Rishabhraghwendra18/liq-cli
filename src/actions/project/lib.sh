@@ -1,49 +1,3 @@
-# TODO: I think this can be cleaned up; the only thing we really need is to set the push origin, which we should do when creating work branches, so that can move to a global lib function; the rest of this can go as, I believe, it's based on an out-dated view of how this interacats with gcloud that's now been supersceded by environments.
-
-projectGitSetup() {
-  local HAS_FILES=`ls -a "${BASE_DIR}" | (grep -ve '^\.$' || true) | (grep -ve '^\.\.$' || true) | wc -w`
-  local IS_GIT_REPO
-  if [[ -d "${BASE_DIR}"/.git ]]; then
-    IS_GIT_REPO='true'
-  else
-    IS_GIT_REPO='false'
-  fi
-  # first we test if set externally as environment variable (used in testing).
-  if [[ -z "${ORIGIN_URL}" ]]; then
-    ORIGIN_URL=`git config --get remote.origin.url || true`
-    if [[ -z "${ORIGIN_URL:-}" ]]; then
-      if [[ -z "${ORIGIN_URL:-}" ]]; then
-        if (( $HAS_FILES == 0 )) && [[ $IS_GIT_REPO == 'false' ]]; then
-          echo "The origin will be cloned, if provided."
-        elif [[ -n "$ORIGIN_URL" ]] && [[ $IS_GIT_REPO == 'false' ]]; then
-          echo "The current directory will be initialized as a git repo with the provided origin."
-        else
-          echo "The origin of this existing git repo will be set, if provided."
-        fi
-        read -p 'git origin URL: ' ORIGIN_URL
-      fi
-    fi # -z "$ORIGIN_URL" - git test
-  fi # -z "$ORIGIN_URL" - external / global
-
-  if [[ -n "$ORIGIN_URL" ]] && (( $HAS_FILES == 0 )) && [[ $IS_GIT_REPO == 'false' ]]; then
-    git clone -q "$ORIGIN_URL" "${BASE_DIR}" && echo "Cloned '$ORIGIN_URL' into '${BASE_DIR}'."
-  elif [[ -n "$ORIGIN_URL" ]] && [[ $IS_GIT_REPO == 'false' ]]; then
-    git init "${BASE_DIR}"
-    git remote add origin "$ORIGIN_URL"
-  fi
-
-  if [[ -d "${BASE_DIR}/.git" ]]; then
-    git remote set-url --add --push origin "${ORIGIN_URL}"
-  fi
-  if [[ -n "$ORIGIN_URL" ]]; then
-    PROJECT_HOME="$ORIGIN_URL"
-    PROJECT_DIR="${BASE_DIR}"
-    updateProjectPubConfig
-    # TODO: the above overwrites the project BASE_DIR, which we rely on later. See https://github.com/Liquid-Labs/liq-cli/issues/2
-    BASE_DIR="$PROJECT_DIR"
-  fi
-}
-
 projectCheckIfInPlayground() {
   local PROJ_NAME="${1}"
   if [[ -d "${LIQ_PLAYGROUND}/${PROJ_NAME}" ]]; then
@@ -52,24 +6,89 @@ projectCheckIfInPlayground() {
   fi
 }
 
-# Expects 'PROJ_STAGE' to be declared local by the caller.
-projectCheckGitAndClone() {
-  local URL="${1}"
+projectCheckGitAuth() {
   # if we don't supress the output, then we get noise even when successful
   ssh -qT git@github.com 2> /dev/null || if [ $? -ne 1 ]; then
     echoerrandexit "Could not connect to github; add your github key with 'ssh-add'."
   fi
-  local STAGING="${LIQ_PLAYGROUND}/.staging"
+}
+
+# expects STAGING and PROJ_STAGE to be set declared by caller(s)
+projectResetStaging() {
+  local PROJ_NAME="${1}"
+  STAGING="${LIQ_PLAYGROUND}/.staging"
   rm -rf "${STAGING}"
   mkdir -p "${STAGING}"
-  cd "$STAGING"
-  git clone --quiet "${URL}" || echoerrandexit "Failed to clone "
-  PROJ_STAGE=$(basename "$URL")
-  PROJ_STAGE="${PROJ_STAGE%.*}"
+
+  PROJ_STAGE="$PROJ_NAME"
+  PROJ_STAGE="${PROJ_STAGE%.*}" # remove '.git' if present
   PROJ_STAGE="${STAGING}/${PROJ_STAGE}"
+}
+
+# Expects 'PROJ_STAGE' to be declared local by the caller.
+projectClone() {
+  local URL="${1}"
+
+  projectCheckGitAuth
+
+  local STAGING
+  projectResetStaging $(basename "$URL")
+  cd "$STAGING"
+
+  git clone --quiet "${URL}" || echoerrandexit "Failed to clone."
+
   if [[ ! -d "$PROJ_STAGE" ]]; then
     echoerrandexit "Did not find expected project direcotry '$PROJ_STAGE' in staging."
   fi
+}
+
+projectHubWhoami() {
+  local VAR_NAME="${1}"
+
+  if [[ ! -f ~/.config/hub ]]; then
+    echo "Need to establish GitHub connection..."
+    hub api https://api.github.com/user > /dev/null
+  fi
+  local WHOAMI
+  WHOAMI=$(cat ~/.config/hub | grep 'user:' | sed 's/^[[:space:]]*-[[:space:]]*user:[[:space:]]*//')
+  eval $VAR_NAME=$WHOAMI
+}
+
+projectForkClone() {
+  local URL="${1}"
+
+  projectCheckGitAuth
+
+  local PROJ_NAME ORG_URL GITHUB_NAME
+  PROJ_NAME=$(basename "$URL")
+  ORG_URL=$(dirname "$URL")
+  projectHubWhoami GIHUB_NAME
+  FORK_URL="$(echo "$ORG_URL" | sed 's|[a-zA-Z0-9-]*$||')/${GITHUB_NAME}/${PROJ_NAME}"
+
+  local STAGING
+  projectResetStaging $PROJ_NAME
+  cd "$STAGING"
+
+  echo -n "Checking for existing fork at '${FORK_URL}'... "
+  git clone --quiet "${FORK_URL}" \
+  && ( \
+    # Be sure and exit on errors to avoid a failure here and then executing the || branch
+    echo "found existing fork."
+    cd $PROJ_STAGE || echoerrandexit "Did not find expected staging dir: $PROJ_STAGE"
+    echo "Updating remotes..."
+    git remote add upstream "$URL" || echoerrandexit "Problem setting upstream URL."
+  ) \
+  || ( \
+    echo "none found; cloning source."
+    local GITHUB_NAME
+    git clone --quiet "${URL}" || echoerrandexit "Could not clone source."
+    cd $PROJ_STAGE
+    echo "Creating fork..."
+    hub fork --remote-name origin-real
+    echo "Updating remotes..."
+    git remote rename origin upstream
+    git remote rename origin-real origin
+  )
 }
 
 # Expects caller to have defined PROJ_NAME and PROJ_STAGE

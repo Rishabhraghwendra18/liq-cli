@@ -58,7 +58,7 @@ test("'work merge' results merge, push, and deleting branch", () => {
   shell.exec(`cd ${testCheckoutDir} && git add foo.txt && git commit -m 'test file'`)
   const result = shell.exec(`cd ${testCheckoutDir} && ${testing.LIQ} work merge`)
   // TODO: test the linecount
-  const expectedOutput = expect.stringMatching(new RegExp(`^Work merged and pushed to origin.`))
+  const expectedOutput = expect.stringMatching(new RegExp(`^Work merged and pushed to remotes.`))
 
   expect(result.stderr).toEqual('')
   expect(result.stdout).toEqual(expectedOutput)

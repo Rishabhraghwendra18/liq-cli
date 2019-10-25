@@ -50,7 +50,10 @@ work-involve() {
     git checkout -q "${BRANCH_NAME}" || echoerrandexit "There was a problem checking out the work branch. ($?)"
   else
     git checkout -qb "${BRANCH_NAME}" || echoerrandexit "There was a problem creating the work branch. ($?)"
-    git push --set-upstream origin ${BRANCH_NAME}
+    local REMOTE
+    for REMOTE in $(git remote); do
+      git push --set-upstream ${REMOTE} ${BRANCH_NAME}
+    done
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
 
@@ -193,7 +196,7 @@ work-merge() {
         || echoerrandexit "Could not switch to master branch in project '$TM'.") \
     && (git merge --no-ff -qm "merge branch $WORKBRANCH" "$WORKBRANCH" -m "$CLOSE_MSG" \
         || echoerrandexit "Problem merging work branch with master for project '$TM'. ($?)") \
-    && ( (git push -q && echo "Work merged and pushed to origin.") \
+    && ( (git push -q && echo "Work merged and pushed to remotes.") \
         || (PUSH_FAILED=Y && echoerr "Local merge successful, but there was a problem pushing work to master."))
     # if we have not exited, then the merge was made and we'll attempt to clean up
     # local work branch (even if the push fails)

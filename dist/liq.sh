@@ -579,6 +579,11 @@ findFile() {
   fi
 }
 
+findBase() {
+  findFile "${PWD}" package.json PACKAGE_FILE
+  BASE_DIR="$( cd "$( dirname "${PACKAGE_FILE}" )" && pwd )"
+}
+
 sourceFile() {
   local SEARCH_DIR="${1}"
   local FILE_NAME="${2}"
@@ -2675,9 +2680,7 @@ packages-link-list() {
 }
 
 requirements-project() {
-  if [[ "${ACTION}" != "create" ]] && [[ "${ACTION}" != "import" ]]; then
-    sourceCatalystfile
-  fi
+  :
 }
 
 project-close() {
@@ -2685,6 +2688,7 @@ project-close() {
 
   # first figure out what to close
   if [[ -z "$PROJECT_NAME" ]]; then # try removing the project we're in
+    findBase
     cd "$BASE_DIR"
     PROJECT_NAME=$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name | @sh' | tr -d "'")
   fi
@@ -2696,7 +2700,7 @@ project-close() {
     # credit: https://stackoverflow.com/a/8830922/929494
     if git diff --quiet && git diff --cached --quiet; then
       if (( $(git status --porcelain 2>/dev/null| grep '^??' || true | wc -l) == 0 )); then
-        if [[ `git rev-parse --verify master` == `git rev-parse --verify origin/master` ]]; then
+        if [[ $(git rev-parse --verify master) == $(git rev-parse --verify origin/master) ]]; then
           cd "$LIQ_PLAYGROUND"
           rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
           # now check to see if we have an empty "org" dir
@@ -2721,6 +2725,7 @@ project-close() {
 }
 
 project-create() {
+  echoerrandexit "'create' needs to be reworked for forks."
   local TMP PROJ_STAGE PROJ_NAME TEMPLATE_URL
   TMP=$(setSimpleOptions TYPE= TEMPLATE:T= ORIGIN= -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options."; )
@@ -2749,7 +2754,7 @@ project-create() {
         echoerrandexit "Unknown 'type'. Try one of: bare"
     esac
   fi
-  projectCheckGitAndClone "$TEMPLATE_URL"
+  projectClone "$TEMPLATE_URL"
   cd "$PROJ_STAGE"
   # re-orient the origin from the template to the ORIGIN URL
   git remote set-url origin "${ORIGIN}"
@@ -2772,10 +2777,17 @@ project-create() {
 
 project-import() {
   local PROJ_SPEC PROJ_NAME PROJ_URL PROJ_STAGE
+  local TMP
+  TMP=$(setSimpleOptions NO_FORK:F -- "$@")
+  eval "$TMP"
 
   if [[ "$1" == *:* ]]; then # it's a URL
     PROJ_URL="${1}"
-    projectCheckGitAndClone "$PROJ_URL"
+    if [[ -n "$NO_FORK" ]]; then
+      projectClone "$PROJ_URL"
+    else
+      projectForkClone "$PROJ_URL"
+    fi
     if PROJ_NAME=$(cat "$PROJ_STAGE/package.json" | jq --raw-output '.name' | tr -d "'"); then
       projectCheckIfInPlayground "$PROJ_NAME"
     else
@@ -2789,8 +2801,13 @@ project-import() {
     PROJ_URL=$(npm view "$PROJ_NAME" repository.url) \
       || echoerrandexit "Did not find expected NPM package '${PROJ_NAME}'. Did you forget the '--url' option?"
     PROJ_URL=${PROJ_URL##git+}
-    projectCheckGitAndClone "$PROJ_URL"
+    if [[ -n "$NO_FORK" ]]; then
+      projectClone "$PROJ_URL"
+    else
+      projectForkClone "$PROJ_URL"
+    fi
   fi
+
   projectMoveStaged
 
   echo "'$PROJ_NAME' imported into playground."
@@ -2836,52 +2853,6 @@ EOF
 
   test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" helpHelperAlphaPackagesNote
 }
-# TODO: I think this can be cleaned up; the only thing we really need is to set the push origin, which we should do when creating work branches, so that can move to a global lib function; the rest of this can go as, I believe, it's based on an out-dated view of how this interacats with gcloud that's now been supersceded by environments.
-
-projectGitSetup() {
-  local HAS_FILES=`ls -a "${BASE_DIR}" | (grep -ve '^\.$' || true) | (grep -ve '^\.\.$' || true) | wc -w`
-  local IS_GIT_REPO
-  if [[ -d "${BASE_DIR}"/.git ]]; then
-    IS_GIT_REPO='true'
-  else
-    IS_GIT_REPO='false'
-  fi
-  # first we test if set externally as environment variable (used in testing).
-  if [[ -z "${ORIGIN_URL}" ]]; then
-    ORIGIN_URL=`git config --get remote.origin.url || true`
-    if [[ -z "${ORIGIN_URL:-}" ]]; then
-      if [[ -z "${ORIGIN_URL:-}" ]]; then
-        if (( $HAS_FILES == 0 )) && [[ $IS_GIT_REPO == 'false' ]]; then
-          echo "The origin will be cloned, if provided."
-        elif [[ -n "$ORIGIN_URL" ]] && [[ $IS_GIT_REPO == 'false' ]]; then
-          echo "The current directory will be initialized as a git repo with the provided origin."
-        else
-          echo "The origin of this existing git repo will be set, if provided."
-        fi
-        read -p 'git origin URL: ' ORIGIN_URL
-      fi
-    fi # -z "$ORIGIN_URL" - git test
-  fi # -z "$ORIGIN_URL" - external / global
-
-  if [[ -n "$ORIGIN_URL" ]] && (( $HAS_FILES == 0 )) && [[ $IS_GIT_REPO == 'false' ]]; then
-    git clone -q "$ORIGIN_URL" "${BASE_DIR}" && echo "Cloned '$ORIGIN_URL' into '${BASE_DIR}'."
-  elif [[ -n "$ORIGIN_URL" ]] && [[ $IS_GIT_REPO == 'false' ]]; then
-    git init "${BASE_DIR}"
-    git remote add origin "$ORIGIN_URL"
-  fi
-
-  if [[ -d "${BASE_DIR}/.git" ]]; then
-    git remote set-url --add --push origin "${ORIGIN_URL}"
-  fi
-  if [[ -n "$ORIGIN_URL" ]]; then
-    PROJECT_HOME="$ORIGIN_URL"
-    PROJECT_DIR="${BASE_DIR}"
-    updateProjectPubConfig
-    # TODO: the above overwrites the project BASE_DIR, which we rely on later. See https://github.com/Liquid-Labs/liq-cli/issues/2
-    BASE_DIR="$PROJECT_DIR"
-  fi
-}
-
 projectCheckIfInPlayground() {
   local PROJ_NAME="${1}"
   if [[ -d "${LIQ_PLAYGROUND}/${PROJ_NAME}" ]]; then
@@ -2890,24 +2861,89 @@ projectCheckIfInPlayground() {
   fi
 }
 
-# Expects 'PROJ_STAGE' to be declared local by the caller.
-projectCheckGitAndClone() {
-  local URL="${1}"
+projectCheckGitAuth() {
   # if we don't supress the output, then we get noise even when successful
   ssh -qT git@github.com 2> /dev/null || if [ $? -ne 1 ]; then
     echoerrandexit "Could not connect to github; add your github key with 'ssh-add'."
   fi
-  local STAGING="${LIQ_PLAYGROUND}/.staging"
+}
+
+# expects STAGING and PROJ_STAGE to be set declared by caller(s)
+projectResetStaging() {
+  local PROJ_NAME="${1}"
+  STAGING="${LIQ_PLAYGROUND}/.staging"
   rm -rf "${STAGING}"
   mkdir -p "${STAGING}"
-  cd "$STAGING"
-  git clone --quiet "${URL}" || echoerrandexit "Failed to clone "
-  PROJ_STAGE=$(basename "$URL")
-  PROJ_STAGE="${PROJ_STAGE%.*}"
+
+  PROJ_STAGE="$PROJ_NAME"
+  PROJ_STAGE="${PROJ_STAGE%.*}" # remove '.git' if present
   PROJ_STAGE="${STAGING}/${PROJ_STAGE}"
+}
+
+# Expects 'PROJ_STAGE' to be declared local by the caller.
+projectClone() {
+  local URL="${1}"
+
+  projectCheckGitAuth
+
+  local STAGING
+  projectResetStaging $(basename "$URL")
+  cd "$STAGING"
+
+  git clone --quiet "${URL}" || echoerrandexit "Failed to clone."
+
   if [[ ! -d "$PROJ_STAGE" ]]; then
     echoerrandexit "Did not find expected project direcotry '$PROJ_STAGE' in staging."
   fi
+}
+
+projectHubWhoami() {
+  local VAR_NAME="${1}"
+
+  if [[ ! -f ~/.config/hub ]]; then
+    echo "Need to establish GitHub connection..."
+    hub api https://api.github.com/user > /dev/null
+  fi
+  local WHOAMI
+  WHOAMI=$(cat ~/.config/hub | grep 'user:' | sed 's/^[[:space:]]*-[[:space:]]*user:[[:space:]]*//')
+  eval $VAR_NAME=$WHOAMI
+}
+
+projectForkClone() {
+  local URL="${1}"
+
+  projectCheckGitAuth
+
+  local PROJ_NAME ORG_URL GITHUB_NAME
+  PROJ_NAME=$(basename "$URL")
+  ORG_URL=$(dirname "$URL")
+  projectHubWhoami GIHUB_NAME
+  FORK_URL="$(echo "$ORG_URL" | sed 's|[a-zA-Z0-9-]*$||')/${GITHUB_NAME}/${PROJ_NAME}"
+
+  local STAGING
+  projectResetStaging $PROJ_NAME
+  cd "$STAGING"
+
+  echo -n "Checking for existing fork at '${FORK_URL}'... "
+  git clone --quiet "${FORK_URL}" \
+  && ( \
+    # Be sure and exit on errors to avoid a failure here and then executing the || branch
+    echo "found existing fork."
+    cd $PROJ_STAGE || echoerrandexit "Did not find expected staging dir: $PROJ_STAGE"
+    echo "Updating remotes..."
+    git remote add upstream "$URL" || echoerrandexit "Problem setting upstream URL."
+  ) \
+  || ( \
+    echo "none found; cloning source."
+    local GITHUB_NAME
+    git clone --quiet "${URL}" || echoerrandexit "Could not clone source."
+    cd $PROJ_STAGE
+    echo "Creating fork..."
+    hub fork --remote-name origin-real
+    echo "Updating remotes..."
+    git remote rename origin upstream
+    git remote rename origin-real origin
+  )
 }
 
 # Expects caller to have defined PROJ_NAME and PROJ_STAGE
@@ -3610,7 +3646,10 @@ work-involve() {
     git checkout -q "${BRANCH_NAME}" || echoerrandexit "There was a problem checking out the work branch. ($?)"
   else
     git checkout -qb "${BRANCH_NAME}" || echoerrandexit "There was a problem creating the work branch. ($?)"
-    git push --set-upstream origin ${BRANCH_NAME}
+    local REMOTE
+    for REMOTE in $(git remote); do
+      git push --set-upstream ${REMOTE} ${BRANCH_NAME}
+    done
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
 
@@ -3753,7 +3792,7 @@ work-merge() {
         || echoerrandexit "Could not switch to master branch in project '$TM'.") \
     && (git merge --no-ff -qm "merge branch $WORKBRANCH" "$WORKBRANCH" -m "$CLOSE_MSG" \
         || echoerrandexit "Problem merging work branch with master for project '$TM'. ($?)") \
-    && ( (git push -q && echo "Work merged and pushed to origin.") \
+    && ( (git push -q && echo "Work merged and pushed to remotes.") \
         || (PUSH_FAILED=Y && echoerr "Local merge successful, but there was a problem pushing work to master."))
     # if we have not exited, then the merge was made and we'll attempt to clean up
     # local work branch (even if the push fails)
@@ -3877,6 +3916,7 @@ work-show() {
     done
   fi
 
+  echo
   if [[ -z "$WORK_ISSUES" ]]; then
     "Issues: <none>"
   else
@@ -3890,7 +3930,7 @@ work-show() {
 
 work-start() {
   local WORK_DESC WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS WORK_ISSUES ISSUE TMP
-  TMP=$(setSimpleOptions ISSUES=)
+  TMP=$(setSimpleOptions ISSUES= -- "$@")
   eval "$TMP"
 
   local CURR_PROJECT ISSUES_URL
