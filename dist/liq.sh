@@ -2816,19 +2816,6 @@ project-import() {
 project-publish() {
   echoerrandexit "The 'publish' action is not yet implemented."
 }
-
-project-save() {
-  local TMP
-  TMP=$(setSimpleOptions TEST -- "$@")
-  eval "$TMP"
-
-  if [[ "$TEST" != true ]]; then
-    local OLD_MSG
-    OLD_MSG="$(git log -1 --pretty=%B)"
-    git commit --amend -m "${OLD_MSG} [no ci]"
-  fi
-  git push origin HEAD
-}
 help-project() {
   local PREFIX="${1:-}"
 
@@ -2848,7 +2835,6 @@ ${PREFIX}${cyan_u}project${reset} <action>:
     re-oriented to the project origin, unless the type is 'bare' in which case the project is cloned directly
     from the origin URL. Use 'liq project import' to import an existing project from a URL.
   ${underline}public${reset}: Performs verification tests, updates package version, and publishes package.
-  ${underline}save${reset}: Pushes local changes to the project remotes.
 EOF
 
   test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" helpHelperAlphaPackagesNote
@@ -2925,24 +2911,23 @@ projectForkClone() {
   cd "$STAGING"
 
   echo -n "Checking for existing fork at '${FORK_URL}'... "
-  git clone --quiet "${FORK_URL}" \
+  git clone --quiet --origin workspace "${FORK_URL}" \
   && ( \
     # Be sure and exit on errors to avoid a failure here and then executing the || branch
     echo "found existing fork."
     cd $PROJ_STAGE || echoerrandexit "Did not find expected staging dir: $PROJ_STAGE"
     echo "Updating remotes..."
     git remote add upstream "$URL" || echoerrandexit "Problem setting upstream URL."
+    git branch -u master upstream/master
   ) \
   || ( \
     echo "none found; cloning source."
     local GITHUB_NAME
-    git clone --quiet "${URL}" || echoerrandexit "Could not clone source."
+    git clone --quiet --origin upstream "${URL}" || echoerrandexit "Could not clone source."
     cd $PROJ_STAGE
     echo "Creating fork..."
-    hub fork --remote-name origin-real
-    echo "Updating remotes..."
-    git remote rename origin upstream
-    git remote rename origin-real origin
+    hub fork --remote-name workspace
+    git branch -u master upstream/master
   )
 }
 
@@ -3646,10 +3631,7 @@ work-involve() {
     git checkout -q "${BRANCH_NAME}" || echoerrandexit "There was a problem checking out the work branch. ($?)"
   else
     git checkout -qb "${BRANCH_NAME}" || echoerrandexit "There was a problem creating the work branch. ($?)"
-    local REMOTE
-    for REMOTE in $(git remote); do
-      git push --set-upstream ${REMOTE} ${BRANCH_NAME}
-    done
+    git push --set-upstream workspace ${BRANCH_NAME}
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
 
@@ -3894,6 +3876,20 @@ work-resume() {
   fi
 }
 
+work-save() {
+  local TMP
+  TMP=$(setSimpleOptions TEST -- "$@")
+  eval "$TMP"
+
+  if [[ "$TEST" != true ]]; then
+    local OLD_MSG
+    OLD_MSG="$(git log -1 --pretty=%B)"
+    git commit --amend -m "${OLD_MSG} [no ci]"
+  fi
+  # TODO: retrive and use workbranch name instead
+  git push workspace HEAD
+}
+
 work-show() {
   local TMP
   TMP=$(setSimpleOptions SELECT -- "$@") \
@@ -4020,6 +4016,7 @@ ${PREFIX}${cyan_u}work${reset} <action>:
   ${underline}merge${reset}: Merges current work unit to master branches and updates mirrors.
   ${underline}qa${reset}: Checks the playground status and runs package audit, version check, and
     tests.
+  ${underline}save${reset}: Pushes local changes to the workspace remote.
 
 A 'unit of work' is essentially a set of work branches across all involved projects. The first project involved in a unit of work is considered the primary project, which will effect automated linking when involving other projects.
 

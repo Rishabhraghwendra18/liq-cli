@@ -50,10 +50,7 @@ work-involve() {
     git checkout -q "${BRANCH_NAME}" || echoerrandexit "There was a problem checking out the work branch. ($?)"
   else
     git checkout -qb "${BRANCH_NAME}" || echoerrandexit "There was a problem creating the work branch. ($?)"
-    local REMOTE
-    for REMOTE in $(git remote); do
-      git push --set-upstream ${REMOTE} ${BRANCH_NAME}
-    done
+    git push --set-upstream workspace ${BRANCH_NAME}
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
 
@@ -296,6 +293,20 @@ work-resume() {
   else
     echo "Resumed '$WORK_NAME'."
   fi
+}
+
+work-save() {
+  local TMP
+  TMP=$(setSimpleOptions TEST -- "$@")
+  eval "$TMP"
+
+  if [[ "$TEST" != true ]]; then
+    local OLD_MSG
+    OLD_MSG="$(git log -1 --pretty=%B)"
+    git commit --amend -m "${OLD_MSG} [no ci]"
+  fi
+  # TODO: retrive and use workbranch name instead
+  git push workspace HEAD
 }
 
 work-show() {
