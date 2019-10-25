@@ -244,6 +244,11 @@ findFile() {
   fi
 }
 
+findBase() {
+  findFile "${PWD}" package.json PACKAGE_FILE
+  BASE_DIR="$( cd "$( dirname "${PACKAGE_FILE}" )" && pwd )"
+}
+
 sourceFile() {
   local SEARCH_DIR="${1}"
   local FILE_NAME="${2}"

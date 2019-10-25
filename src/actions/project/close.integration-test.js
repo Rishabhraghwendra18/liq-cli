@@ -15,7 +15,7 @@ describe(`Command 'liq project close'`, () => {
     setupConfig.metaInit()
     setupConfig.localCheckout()
   })
-  // afterEach(() => setupConfig.cleanup())
+  afterEach(() => setupConfig.cleanup())
 
   const closeFailureTests = [
     { desc: `should do nothing and emit warning if there are untracked files.`,
