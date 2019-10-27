@@ -3583,6 +3583,20 @@ requirements-work() {
   findBase
 }
 
+work-backup() {
+  local TMP
+  TMP=$(setSimpleOptions TEST -- "$@")
+  eval "$TMP"
+
+  if [[ "$TEST" != true ]]; then
+    local OLD_MSG
+    OLD_MSG="$(git log -1 --pretty=%B)"
+    git commit --amend -m "${OLD_MSG} [no ci]"
+  fi
+  # TODO: retrive and use workbranch name instead
+  git push workspace HEAD
+}
+
 work-diff-master() {
   git diff $(git merge-base master HEAD)..HEAD "$@"
 }
@@ -3777,6 +3791,7 @@ work-merge() {
         || (PUSH_FAILED=Y && echoerr "Local merge successful, but there was a problem pushing work to master."))
     # if we have not exited, then the merge was made and we'll attempt to clean up
     # local work branch (even if the push fails)
+    git push workspace --delete $WORKBRANCH
     git branch -qd "$WORKBRANCH" \
       || echoerr "Could not delete '${WORKBRANCH}'. This can happen if the branch was renamed."
     # TODO: provide a reference for checking the merge is present and if safe to delete.
@@ -3877,16 +3892,31 @@ work-resume() {
 
 work-save() {
   local TMP
-  TMP=$(setSimpleOptions TEST -- "$@")
+  TMP=$(setSimpleOptions ALL MESSAGE= DESCRIPTION= -- "$@")
   eval "$TMP"
 
-  if [[ "$TEST" != true ]]; then
-    local OLD_MSG
-    OLD_MSG="$(git log -1 --pretty=%B)"
-    git commit --amend -m "${OLD_MSG} [no ci]"
+  if [[ -z "$MESSAGE" ]]; then
+    echoerrandexit "Must specify '--message|-m' (summary) for save."
   fi
-  # TODO: retrive and use workbranch name instead
-  git push workspace HEAD
+
+  local OPTIONS="-m '${MESSAGE/'//\'/\'}' "
+  if [[ $ALL == true ]]; then OPTIONS="${OPTIONS}--all "; fi
+  if [[ $DESCRIPTION == true ]]; then OPTIONS="${OPTIONS}-m '${MESSAGE/'//\'/\'}' "; fi
+  git commit ${OPTIONS}commit
+}
+
+work-stage() {
+  local TMP
+  TMP=$(setSimpleOptions ALL INTERACTIVE REVIEW DRY_RUN -- "$@")
+  eval "$TMP"
+
+  local OPTIONS
+  if [[ $ALL == true ]]; then OPTIONS="--all "; fi
+  if [[ $INTERACTIVE == true ]]; then OPTIONS="${OPTIONS}--interactive "; fi
+  if [[ $REVIEW == true ]]; then OPTIONS="${OPTIONS}--patch "; fi
+  if [[ $DRY_RUN == true ]]; then OPTIONS="${OPTIONS}--dry-run "; fi
+
+  git add ${OPTIONS}"$@"
 }
 
 work-status() {
@@ -4043,6 +4073,11 @@ help-work() {
 
   handleSummary "${PREFIX}${cyan_u}work${reset} <action>: Manages the current unit of work." || cat <<EOF
 ${PREFIX}${cyan_u}work${reset} <action>:
+  ${underline}save${reset} [-a|--all] [<path spec>...]:
+    Save staged files to the local working branch. '--all' auto stages all known files (does not
+    include new files) and saves them to the local working branch.
+  ${underline}stage${reset} [-a|--all] [-i|--interactive] [-r|--review] [-d|--dry-run] [<path spec>...]:
+    Stages files for save.
   ${underline}status${reset} [-s|--select] [<name>]: Shows details for the current or named unit of work.
     Will enter interactive selection if no option and no current work or the
     '--select' option is given.
@@ -4063,7 +4098,7 @@ ${PREFIX}${cyan_u}work${reset} <action>:
   ${underline}merge${reset}: Merges current work unit to master branches and updates mirrors.
   ${underline}qa${reset}: Checks the playground status and runs package audit, version check, and
     tests.
-  ${underline}save${reset}: Pushes local changes to the workspace remote.
+  ${underline}backup${reset}: Pushes local changes to the workspace remote.
 
 A 'unit of work' is essentially a set of work branches across all involved projects. The first project involved in a unit of work is considered the primary project, which will effect automated linking when involving other projects.
 
