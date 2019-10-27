@@ -13,17 +13,6 @@ ${PREFIX}${cyan_u}packages${reset} <action>:
         ignored during update checks.
       [-o|--options <option string>]: Sets options to use with 'npm-check'.
       [-c|--show-config]: Shows the current configuration used with 'npm-check'.
-  ${underline}test${reset} [-t|--types <types>][-D|--no-data-reset][-g|--go-run <testregex>][--no-start|-S] [<name>]:
-    Runs unit tests for all or the named packages in the current project.
-    * 'types' may be 'unit' or 'integration' (=='int') or 'all', which is default.
-      Multiple tests may be specified in a comma delimited list. E.g.,
-      '-t=unit,int' is equivalent no type or '-t=""'.
-    * '--no-start' will skip tryng to start necessary services.
-    * '--no-data-reset' will cause the standard test DB reset to be skipped.
-    * '--no-service-check' will skip checking service status. This is useful when
-      re-running tests and the services are known to be running.
-    * '--go-run' will only run those tests matching the provided regex (per go
-      '-run' standards).
   ${underline}lint${reset} [-f|--fix] [<name>]: Lints all or the named (NPM) package in the current
     project.
   ${underline}deploy${reset} [<name>...]: Deploys all or named packages to the current environment.

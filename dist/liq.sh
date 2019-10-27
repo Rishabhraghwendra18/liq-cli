@@ -2391,35 +2391,6 @@ packages-lint() {
   fi
 }
 
-packages-test() {
-  local TMP
-  # TODO https://github.com/Liquid-Labs/liq-cli/issues/27
-  TMP=$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S NO_SERVICE_CHECK:C -- "$@") \
-    || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
-
-  if [[ -z "${NO_SERVICE_CHECK}" ]] \
-     && ( [[ -z "${TEST_TYPES:-}" ]] \
-       || echo "$TEST_TYPES" | grep -qE '(^|, *| +)int(egration)?(, *| +|$)' ); then
-    requireEnvironment
-    echo -n "Checking services... "
-    if ! services-list --show-status --exit-on-stopped --quiet > /dev/null; then
-      if [[ -z "${NO_START:-}" ]]; then
-        services-start || echoerrandexit "Could not start services for testing."
-      else
-        echo "${red}necessary services not running.${reset}"
-        echoerrandexit "Some services are not running. You can either run unit tests are start services. Try one of the following:\nliq packages test --types=unit\nliq services start"
-      fi
-    else
-      echo "${green}looks good.${reset}"
-    fi
-  fi
-
-  # note this entails 'pretest' and 'posttest' as well
-  TEST_TYPES="$TYPES" NO_DATA_RESET="$NO_DATA_RESET" GO_RUN="$GO_RUN" runPackageScript test || \
-    echoerrandexit "If failure due to non-running services, you can also run only the unit tests with:\nliq packages test --type=unit" $?
-}
-
 packages-version-check() {
   requireNpmCheck
 
@@ -2470,17 +2441,6 @@ ${PREFIX}${cyan_u}packages${reset} <action>:
         ignored during update checks.
       [-o|--options <option string>]: Sets options to use with 'npm-check'.
       [-c|--show-config]: Shows the current configuration used with 'npm-check'.
-  ${underline}test${reset} [-t|--types <types>][-D|--no-data-reset][-g|--go-run <testregex>][--no-start|-S] [<name>]:
-    Runs unit tests for all or the named packages in the current project.
-    * 'types' may be 'unit' or 'integration' (=='int') or 'all', which is default.
-      Multiple tests may be specified in a comma delimited list. E.g.,
-      '-t=unit,int' is equivalent no type or '-t=""'.
-    * '--no-start' will skip tryng to start necessary services.
-    * '--no-data-reset' will cause the standard test DB reset to be skipped.
-    * '--no-service-check' will skip checking service status. This is useful when
-      re-running tests and the services are known to be running.
-    * '--go-run' will only run those tests matching the provided regex (per go
-      '-run' standards).
   ${underline}lint${reset} [-f|--fix] [<name>]: Lints all or the named (NPM) package in the current
     project.
   ${underline}deploy${reset} [<name>...]: Deploys all or named packages to the current environment.
@@ -2817,6 +2777,35 @@ project-import() {
 project-publish() {
   echoerrandexit "The 'publish' action is not yet implemented."
 }
+
+project-test() {
+  local TMP
+  # TODO https://github.com/Liquid-Labs/liq-cli/issues/27
+  TMP=$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S NO_SERVICE_CHECK:C -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
+  if [[ -z "${NO_SERVICE_CHECK}" ]] \
+     && ( [[ -z "${TEST_TYPES:-}" ]] \
+       || echo "$TEST_TYPES" | grep -qE '(^|, *| +)int(egration)?(, *| +|$)' ); then
+    requireEnvironment
+    echo -n "Checking services... "
+    if ! services-list --show-status --exit-on-stopped --quiet > /dev/null; then
+      if [[ -z "${NO_START:-}" ]]; then
+        services-start || echoerrandexit "Could not start services for testing."
+      else
+        echo "${red}necessary services not running.${reset}"
+        echoerrandexit "Some services are not running. You can either run unit tests are start services. Try one of the following:\nliq packages test --types=unit\nliq services start"
+      fi
+    else
+      echo "${green}looks good.${reset}"
+    fi
+  fi
+
+  # note this entails 'pretest' and 'posttest' as well
+  TEST_TYPES="$TYPES" NO_DATA_RESET="$NO_DATA_RESET" GO_RUN="$GO_RUN" runPackageScript test || \
+    echoerrandexit "If failure due to non-running services, you can also run only the unit tests with:\nliq packages test --type=unit" $?
+}
 help-project() {
   local PREFIX="${1:-}"
 
@@ -2835,7 +2824,18 @@ ${PREFIX}${cyan_u}project${reset} <action>:
     type is specified, 'origin' must be specified. The project is initially cloned from the template, and then
     re-oriented to the project origin, unless the type is 'bare' in which case the project is cloned directly
     from the origin URL. Use 'liq project import' to import an existing project from a URL.
-  ${underline}public${reset}: Performs verification tests, updates package version, and publishes package.
+  ${underline}publish${reset}: Performs verification tests, updates package version, and publishes package.
+  ${underline}test${reset} [-t|--types <types>][-D|--no-data-reset][-g|--go-run <testregex>][--no-start|-S] [<name>]:
+    Runs unit tests for all or the named packages in the current project.
+    * 'types' may be 'unit' or 'integration' (=='int') or 'all', which is default.
+      Multiple tests may be specified in a comma delimited list. E.g.,
+      '-t=unit,int' is equivalent no type or '-t=""'.
+    * '--no-start' will skip tryng to start necessary services.
+    * '--no-data-reset' will cause the standard test DB reset to be skipped.
+    * '--no-service-check' will skip checking service status. This is useful when
+      re-running tests and the services are known to be running.
+    * '--go-run' will only run those tests matching the provided regex (per go
+      '-run' standards).
 EOF
 
   test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" helpHelperAlphaPackagesNote

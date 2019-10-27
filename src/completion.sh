@@ -29,9 +29,9 @@ _liq()
       meta)
         opts="bash-config";;
       packages)
-        opts="audit build deploy lint link test version-check";;
+        opts="audit build deploy lint link version-check";;
       project)
-        opts="init publish";;
+        opts="init publish test";;
       provided-services)
         opts="list add delete";;
       remotes)
