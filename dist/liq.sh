@@ -56,9 +56,9 @@ setSimpleOptions() {
   local LONG_OPTS=""
   local SHORT_OPTS=""
   local OPTS_COUNT=0
-  # This looks like a straight up bug in bash, but the left-paren in '--)' was
-  # matching the '$(' and causing a syntax error. So we use ']' and replace it
-  # later.
+  # Bash Bug? This looks like a straight up bug in bash, but the left-paren in
+  # '--)' was matching the '$(' and causing a syntax error. So we use ']' and
+  # replace it later.
   local CASE_HANDLER=$(cat <<EOF
     --]
       break;;
@@ -92,7 +92,7 @@ EOF
     local VAR_SETTER="echo \"${VAR_NAME}=true;\""
     if [[ -n "$OPT_REQ" ]]; then
       LOCAL_DECLS="${LOCAL_DECLS}local ${VAR_NAME}_SET='';"
-      VAR_SETTER="echo \"${VAR_NAME}='\$2'; ${VAR_NAME}_SET=true;\"; shift;"
+      VAR_SETTER="echo \"${VAR_NAME}='\"\${2//\\'/\\'\\\"\\'\\\"\\'}\"'; ${VAR_NAME}_SET=true;\"; shift;"
     fi
     CASE_HANDLER=$(cat <<EOF
     ${CASE_HANDLER}
@@ -108,7 +108,8 @@ EOF
     esac
 EOF
 )
-  CASE_HANDLER=`echo "$CASE_HANDLER" | tr ']' ')'`
+  # replace the ']'; see 'Bash Bug?' above
+  CASE_HANDLER=$(echo "$CASE_HANDLER" | perl -pe 's/\]$/)/')
 
   echo "$LOCAL_DECLS"
 
@@ -3899,10 +3900,12 @@ work-save() {
     echoerrandexit "Must specify '--message|-m' (summary) for save."
   fi
 
-  local OPTIONS="-m '${MESSAGE/'//\'/\'}' "
+  local OPTIONS="-m '"${MESSAGE//\'/\'\"\'\"\'}"' "
   if [[ $ALL == true ]]; then OPTIONS="${OPTIONS}--all "; fi
-  if [[ $DESCRIPTION == true ]]; then OPTIONS="${OPTIONS}-m '${MESSAGE/'//\'/\'}' "; fi
-  git commit ${OPTIONS}commit
+  if [[ $DESCRIPTION == true ]]; then OPTIONS="${OPTIONS}-m '"${DESCRIPTION/'//\'/\'\"\'\"\'}"' "; fi
+  # I have no idea why, but without the eval (even when "$@" dropped), this
+  # produced 'fatal: Paths with -a does not make sense.' What' path?
+  eval git commit ${OPTIONS} "$@"
 }
 
 work-stage() {

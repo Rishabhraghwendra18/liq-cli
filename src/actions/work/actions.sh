@@ -318,10 +318,12 @@ work-save() {
     echoerrandexit "Must specify '--message|-m' (summary) for save."
   fi
 
-  local OPTIONS="-m '${MESSAGE/'//\'/\'}' "
+  local OPTIONS="-m '"${MESSAGE//\'/\'\"\'\"\'}"' "
   if [[ $ALL == true ]]; then OPTIONS="${OPTIONS}--all "; fi
-  if [[ $DESCRIPTION == true ]]; then OPTIONS="${OPTIONS}-m '${MESSAGE/'//\'/\'}' "; fi
-  git commit ${OPTIONS}commit
+  if [[ $DESCRIPTION == true ]]; then OPTIONS="${OPTIONS}-m '"${DESCRIPTION/'//\'/\'\"\'\"\'}"' "; fi
+  # I have no idea why, but without the eval (even when "$@" dropped), this
+  # produced 'fatal: Paths with -a does not make sense.' What' path?
+  eval git commit ${OPTIONS} "$@"
 }
 
 work-stage() {
