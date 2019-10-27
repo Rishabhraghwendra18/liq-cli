@@ -2,6 +2,20 @@ requirements-work() {
   findBase
 }
 
+work-backup() {
+  local TMP
+  TMP=$(setSimpleOptions TEST -- "$@")
+  eval "$TMP"
+
+  if [[ "$TEST" != true ]]; then
+    local OLD_MSG
+    OLD_MSG="$(git log -1 --pretty=%B)"
+    git commit --amend -m "${OLD_MSG} [no ci]"
+  fi
+  # TODO: retrive and use workbranch name instead
+  git push workspace HEAD
+}
+
 work-diff-master() {
   git diff $(git merge-base master HEAD)..HEAD "$@"
 }
@@ -196,6 +210,7 @@ work-merge() {
         || (PUSH_FAILED=Y && echoerr "Local merge successful, but there was a problem pushing work to master."))
     # if we have not exited, then the merge was made and we'll attempt to clean up
     # local work branch (even if the push fails)
+    git push workspace --delete $WORKBRANCH
     git branch -qd "$WORKBRANCH" \
       || echoerr "Could not delete '${WORKBRANCH}'. This can happen if the branch was renamed."
     # TODO: provide a reference for checking the merge is present and if safe to delete.
@@ -296,16 +311,33 @@ work-resume() {
 
 work-save() {
   local TMP
-  TMP=$(setSimpleOptions TEST -- "$@")
+  TMP=$(setSimpleOptions ALL MESSAGE= DESCRIPTION= -- "$@")
   eval "$TMP"
 
-  if [[ "$TEST" != true ]]; then
-    local OLD_MSG
-    OLD_MSG="$(git log -1 --pretty=%B)"
-    git commit --amend -m "${OLD_MSG} [no ci]"
+  if [[ -z "$MESSAGE" ]]; then
+    echoerrandexit "Must specify '--message|-m' (summary) for save."
   fi
-  # TODO: retrive and use workbranch name instead
-  git push workspace HEAD
+
+  local OPTIONS="-m '"${MESSAGE//\'/\'\"\'\"\'}"' "
+  if [[ $ALL == true ]]; then OPTIONS="${OPTIONS}--all "; fi
+  if [[ $DESCRIPTION == true ]]; then OPTIONS="${OPTIONS}-m '"${DESCRIPTION/'//\'/\'\"\'\"\'}"' "; fi
+  # I have no idea why, but without the eval (even when "$@" dropped), this
+  # produced 'fatal: Paths with -a does not make sense.' What' path?
+  eval git commit ${OPTIONS} "$@"
+}
+
+work-stage() {
+  local TMP
+  TMP=$(setSimpleOptions ALL INTERACTIVE REVIEW DRY_RUN -- "$@")
+  eval "$TMP"
+
+  local OPTIONS
+  if [[ $ALL == true ]]; then OPTIONS="--all "; fi
+  if [[ $INTERACTIVE == true ]]; then OPTIONS="${OPTIONS}--interactive "; fi
+  if [[ $REVIEW == true ]]; then OPTIONS="${OPTIONS}--patch "; fi
+  if [[ $DRY_RUN == true ]]; then OPTIONS="${OPTIONS}--dry-run "; fi
+
+  git add ${OPTIONS}"$@"
 }
 
 work-status() {
