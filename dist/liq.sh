@@ -3893,7 +3893,7 @@ work-resume() {
 
 work-save() {
   local TMP
-  TMP=$(setSimpleOptions ALL MESSAGE= DESCRIPTION= -- "$@")
+  TMP=$(setSimpleOptions ALL MESSAGE= DESCRIPTION= BACKUP -- "$@")
   eval "$TMP"
 
   if [[ -z "$MESSAGE" ]]; then
@@ -3906,6 +3906,9 @@ work-save() {
   # I have no idea why, but without the eval (even when "$@" dropped), this
   # produced 'fatal: Paths with -a does not make sense.' What' path?
   eval git commit ${OPTIONS} "$@"
+  if [[ "$BACKUP" == true ]]; then
+    work-backup
+  fi
 }
 
 work-stage() {
@@ -4140,6 +4143,7 @@ $(( test -z "${PROJ_ISSUES:-}" && test -z "${OTHER_ISSUES:-}" \
        for ISSUE in ${OTHER_ISSUES:-}; do echo "* $ISSUE"; done; ))
 
 EOF)
+    echo hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
     hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
   done
 }
