@@ -4071,6 +4071,24 @@ work-stop() {
     echoerrandexit "No current unit of work to stop."
   fi
 }
+
+work-test() {
+  local TMP
+  TMP=$(setSimpleOptions SELECT -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
+  local WORK_NAME
+  workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
+  source "${LIQ_WORK_DB}/${WORK_NAME}"
+
+  local IP
+  for IP in $INVOLVED_PROJECTS; do
+    echo "Testing ${IP}..."
+    cd "${LIQ_PLAYGROUND}/$IP"
+    project-test "$@"
+  done
+}
 help-work() {
   local PREFIX="${1:-}"
 
