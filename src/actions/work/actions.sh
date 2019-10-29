@@ -491,6 +491,11 @@ work-stop() {
 }
 
 work-test() {
+  local TMP
+  TMP=$(setSimpleOptions SELECT -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
   local WORK_NAME
   workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
   source "${LIQ_WORK_DB}/${WORK_NAME}"
@@ -500,5 +505,55 @@ work-test() {
     echo "Testing ${IP}..."
     cd "${LIQ_PLAYGROUND}/$IP"
     project-test "$@"
+  done
+}
+
+work-submit() {
+  local TMP
+  TMP=$(setSimpleOptions SELECT MESSAGE= -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
+  local WORK_NAME
+  workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
+  source "${LIQ_WORK_DB}/${WORK_NAME}"
+
+  if [[ -z "$MESSAGE" ]]; then
+    MESSAGE="$WORK_DESC"
+  fi
+
+  local IP
+  for IP in $INVOLVED_PROJECTS; do
+    echo "Creating PR for ${IP}..."
+    cd "${LIQ_PLAYGROUND}/$IP"
+
+    local BUGS_URL
+    BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
+
+    local ISSUE PROJ_ISSUES OTHER_ISSUES
+    for ISSUE in $WORK_ISSUES; do
+      if [[ $ISSUE == $BUGS_URL* ]]; then
+        local NUMBER=${ISSUE/$BUGS_URL/}
+        NUMBER=${NUMBER/\//}
+        list-add-item PROJ_ISSUES "#${NUMBER}"
+      else
+        list-add-item OTHER_ISSUES "${ISSUE}"
+      fi
+    done
+
+    local DESC
+    DESC=$(cat <<EOF
+Merge ${WORK_BRANCH} to master
+
+$MESSAGE
+
+## Issues
+$(( test -z "${PROJ_ISSUES:-}" && test -z "${OTHER_ISSUES:-}" \
+    && echo 'none' ) \
+  || ( for ISSUE in ${PROJ_ISSUES:-}; do echo "* $ISSUE"; done; \
+       for ISSUE in ${OTHER_ISSUES:-}; do echo "* $ISSUE"; done; ))
+
+EOF)
+    # hub pull-request --push --base=upstream:master -m "${DESC}"
   done
 }

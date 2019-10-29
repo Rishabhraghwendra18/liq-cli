@@ -4089,6 +4089,59 @@ work-test() {
     project-test "$@"
   done
 }
+
+work-submit() {
+  local TMP
+  TMP=$(setSimpleOptions SELECT MESSAGE= -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
+  local WORK_NAME
+  workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
+  source "${LIQ_WORK_DB}/${WORK_NAME}"
+
+  if [[ -z "$MESSAGE" ]]; then
+    MESSAGE="$WORK_DESC"
+  fi
+
+  local IP
+  for IP in $INVOLVED_PROJECTS; do
+    echo "Creating PR for ${IP}..."
+    cd "${LIQ_PLAYGROUND}/$IP"
+
+    local BUGS_URL
+    BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
+
+    local ISSUE PROJ_ISSUES OTHER_ISSUES
+    for ISSUE in $WORK_ISSUES; do
+      if [[ $ISSUE == $BUGS_URL* ]]; then
+        local NUMBER=${ISSUE/$BUGS_URL/}
+        NUMBER=${NUMBER/\//}
+        list-add-item PROJ_ISSUES "#${NUMBER}"
+      else
+        list-add-item OTHER_ISSUES "${ISSUE}"
+      fi
+    done
+
+    local DESC
+    echo "$PROJ_ISSUES"
+    echo "$OTHER_ISSUES"
+    DESC=$(cat <<EOF
+Merge ${WORK_BRANCH} to master
+
+$MESSAGE
+
+## Issues
+$(( test -z "${PROJ_ISSUES:-}" && test -z "${OTHER_ISSUES:-}" \
+    && echo 'none' ) \
+  || ( for ISSUE in ${PROJ_ISSUES:-}; do echo "* $ISSUE"; done; \
+       for ISSUE in ${OTHER_ISSUES:-}; do echo "* $ISSUE"; done; ))
+
+EOF)
+  echo "$DESC"
+    # hub pull-request --push --base=upstream:master -m "${DESC}"
+  done
+}
 help-work() {
   local PREFIX="${1:-}"
 
@@ -4120,6 +4173,8 @@ ${PREFIX}${cyan_u}work${reset} <action>:
   ${underline}qa${reset}: Checks the playground status and runs package audit, version check, and
     tests.
   ${underline}backup${reset}: Pushes local changes to the workspace remote.
+  ${underline}test${reset}: Runs tests for each involved project in the current unit of work. See
+    'project test' for details on options for the 'test' action.
 
 A 'unit of work' is essentially a set of work branches across all involved projects. The first project involved in a unit of work is considered the primary project, which will effect automated linking when involving other projects.
 
