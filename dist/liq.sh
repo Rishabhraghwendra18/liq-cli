@@ -4106,6 +4106,7 @@ work-submit() {
 
   local IP
   for IP in $INVOLVED_PROJECTS; do
+    requireCleanRepo "${IP}"
     echo "Creating PR for ${IP}..."
     cd "${LIQ_PLAYGROUND}/$IP"
 
@@ -4123,9 +4124,10 @@ work-submit() {
       fi
     done
 
+    local BASE_TARGET # this is the 'org' of the upsteram branch
+    BASE_TARGET=$(git remote -v | grep '^upstream' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
+
     local DESC
-    echo "$PROJ_ISSUES"
-    echo "$OTHER_ISSUES"
     DESC=$(cat <<EOF
 Merge ${WORK_BRANCH} to master
 
@@ -4138,8 +4140,7 @@ $(( test -z "${PROJ_ISSUES:-}" && test -z "${OTHER_ISSUES:-}" \
        for ISSUE in ${OTHER_ISSUES:-}; do echo "* $ISSUE"; done; ))
 
 EOF)
-  echo "$DESC"
-    # hub pull-request --push --base=upstream:master -m "${DESC}"
+    hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
   done
 }
 help-work() {
