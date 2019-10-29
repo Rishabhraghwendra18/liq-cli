@@ -546,7 +546,7 @@ work-submit() {
     done
 
     local BASE_TARGET # this is the 'org' of the upsteram branch
-    BASE_TARGET=$(git remote -v | grep '^upstream' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
+    BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
 
     local DESC
     DESC=$(cat <<EOF
@@ -561,7 +561,6 @@ $(( test -z "${PROJ_ISSUES:-}" && test -z "${OTHER_ISSUES:-}" \
        for ISSUE in ${OTHER_ISSUES:-}; do echo "* $ISSUE"; done; ))
 
 EOF)
-    echo hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
     hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
   done
 }
