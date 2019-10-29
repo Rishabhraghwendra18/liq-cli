@@ -131,6 +131,15 @@ work-list() {
 }
 
 work-merge() {
+  # TODO: https://github.com/Liquid-Labs/liq-cli/issues/57 support org-level config to default allow unforced merge
+  local TMP
+  TMP=$(setSimpleOptions FORCE -- "$@")
+  eval "$TMP"
+
+  if [[ "$FORCE" != true ]]; then
+    echoerrandexit "'work merge' is not allowed by default. You can use '--force' to force the merge, but generally you will either want to configure the project to enable non-forced merges or try:\nliq work submit"
+  fi
+
   local WORK_DESC WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS
 
   if [[ ! -f "${LIQ_WORK_DB}/curr_work" ]]; then
