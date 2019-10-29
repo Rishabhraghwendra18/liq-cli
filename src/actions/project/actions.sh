@@ -135,3 +135,32 @@ project-import() {
 project-publish() {
   echoerrandexit "The 'publish' action is not yet implemented."
 }
+
+project-test() {
+  local TMP
+  # TODO https://github.com/Liquid-Labs/liq-cli/issues/27
+  TMP=$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S NO_SERVICE_CHECK:C -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
+  if [[ -z "${NO_SERVICE_CHECK}" ]] \
+     && ( [[ -z "${TEST_TYPES:-}" ]] \
+       || echo "$TEST_TYPES" | grep -qE '(^|, *| +)int(egration)?(, *| +|$)' ); then
+    requireEnvironment
+    echo -n "Checking services... "
+    if ! services-list --show-status --exit-on-stopped --quiet > /dev/null; then
+      if [[ -z "${NO_START:-}" ]]; then
+        services-start || echoerrandexit "Could not start services for testing."
+      else
+        echo "${red}necessary services not running.${reset}"
+        echoerrandexit "Some services are not running. You can either run unit tests are start services. Try one of the following:\nliq packages test --types=unit\nliq services start"
+      fi
+    else
+      echo "${green}looks good.${reset}"
+    fi
+  fi
+
+  # note this entails 'pretest' and 'posttest' as well
+  TEST_TYPES="$TYPES" NO_DATA_RESET="$NO_DATA_RESET" GO_RUN="$GO_RUN" runPackageScript test || \
+    echoerrandexit "If failure due to non-running services, you can also run only the unit tests with:\nliq packages test --type=unit" $?
+}

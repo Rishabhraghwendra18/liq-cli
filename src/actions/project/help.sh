@@ -16,7 +16,18 @@ ${PREFIX}${cyan_u}project${reset} <action>:
     type is specified, 'origin' must be specified. The project is initially cloned from the template, and then
     re-oriented to the project origin, unless the type is 'bare' in which case the project is cloned directly
     from the origin URL. Use 'liq project import' to import an existing project from a URL.
-  ${underline}public${reset}: Performs verification tests, updates package version, and publishes package.
+  ${underline}publish${reset}: Performs verification tests, updates package version, and publishes package.
+  ${underline}test${reset} [-t|--types <types>][-D|--no-data-reset][-g|--go-run <testregex>][--no-start|-S] [<name>]:
+    Runs unit tests for all or the named packages in the current project.
+    * 'types' may be 'unit' or 'integration' (=='int') or 'all', which is default.
+      Multiple tests may be specified in a comma delimited list. E.g.,
+      '-t=unit,int' is equivalent no type or '-t=""'.
+    * '--no-start' will skip tryng to start necessary services.
+    * '--no-data-reset' will cause the standard test DB reset to be skipped.
+    * '--no-service-check' will skip checking service status. This is useful when
+      re-running tests and the services are known to be running.
+    * '--go-run' will only run those tests matching the provided regex (per go
+      '-run' standards).
 EOF
 
   test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" helpHelperAlphaPackagesNote

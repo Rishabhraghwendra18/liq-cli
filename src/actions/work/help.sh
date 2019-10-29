@@ -29,6 +29,8 @@ ${PREFIX}${cyan_u}work${reset} <action>:
   ${underline}qa${reset}: Checks the playground status and runs package audit, version check, and
     tests.
   ${underline}backup${reset}: Pushes local changes to the workspace remote.
+  ${underline}test${reset}: Runs tests for each involved project in the current unit of work. See
+    'project test' for details on options for the 'test' action.
 
 A 'unit of work' is essentially a set of work branches across all involved projects. The first project involved in a unit of work is considered the primary project, which will effect automated linking when involving other projects.
 

@@ -25,12 +25,24 @@ There are three core Liquid Development resources (Core Resources). Core Resourc
 
 ### Projects ~= stuff we're working on and could work on.
 
-* A 'Liquid Project' is an NPM package blessed with: `liq packages init`.
+TODO: break out and reference 'liq-npm package spec'
+
+* Note, "liq" was originally called "catalyst".
+* A 'Liquid Project' is manifest as a NPM package associated to a Github project.
+* `liq project create` will configure each of either a new or existing NPM package and Github project.
+  * Future versions may encode to multiple package formats.
+  * Future versions may integrate with other version control protocols and issues/project management platforms.
+* A liq-npm `package.json`:
+  * must include a `catalyst` (and later `liq`) entry.
+  * must specify a GitHub hosted `repository`.
+  * defines build and other file-type dependencies via the standard NPM mechanisms.
+  * defines run time through the `liq.runtime` block.
 * The current implementation does not do much in the way of checking for conformance to requirements.
 * The behavior of non-conforming packages blessed as Liquid Projects is generally undefined.
-* The Liquid Project is uniquely identified with a Github repository.
-* A package is identified as conforming by the presence of `catalyst` and later `liquidDev` field in `package.json`. (`catalyst` was the projects original name.)
 * Projects define both build and runtime dependencies.
+* In the liq ontology, the concept of "packages" is subsumed into the "project" concept.
+  * Packages are the typical method by which projects are distributed. I.e., a "package" is a "packaged project version".
+  * Packages are used/manipulated by the `liq project import`, `create`, `audit`, and other commands
 
 ### Work ~= outstanding changes.
 
