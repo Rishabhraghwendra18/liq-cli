@@ -311,7 +311,7 @@ work-resume() {
 
 work-save() {
   local TMP
-  TMP=$(setSimpleOptions ALL MESSAGE= DESCRIPTION= -- "$@")
+  TMP=$(setSimpleOptions ALL MESSAGE= DESCRIPTION= NO_BACKUP:B -- "$@")
   eval "$TMP"
 
   if [[ -z "$MESSAGE" ]]; then
@@ -324,6 +324,9 @@ work-save() {
   # I have no idea why, but without the eval (even when "$@" dropped), this
   # produced 'fatal: Paths with -a does not make sense.' What' path?
   eval git commit ${OPTIONS} "$@"
+  if [[ "$NO_BACKUP" != true ]]; then
+    work-backup
+  fi
 }
 
 work-stage() {
@@ -491,6 +494,11 @@ work-stop() {
 }
 
 work-test() {
+  local TMP
+  TMP=$(setSimpleOptions SELECT -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
   local WORK_NAME
   workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
   source "${LIQ_WORK_DB}/${WORK_NAME}"
@@ -500,5 +508,59 @@ work-test() {
     echo "Testing ${IP}..."
     cd "${LIQ_PLAYGROUND}/$IP"
     project-test "$@"
+  done
+}
+
+work-submit() {
+  local TMP
+  TMP=$(setSimpleOptions SELECT MESSAGE= -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
+  local WORK_NAME
+  workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
+  source "${LIQ_WORK_DB}/${WORK_NAME}"
+
+  if [[ -z "$MESSAGE" ]]; then
+    MESSAGE="$WORK_DESC"
+  fi
+
+  local IP
+  for IP in $INVOLVED_PROJECTS; do
+    requireCleanRepo "${IP}"
+    echo "Creating PR for ${IP}..."
+    cd "${LIQ_PLAYGROUND}/$IP"
+
+    local BUGS_URL
+    BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
+
+    local ISSUE PROJ_ISSUES OTHER_ISSUES
+    for ISSUE in $WORK_ISSUES; do
+      if [[ $ISSUE == $BUGS_URL* ]]; then
+        local NUMBER=${ISSUE/$BUGS_URL/}
+        NUMBER=${NUMBER/\//}
+        list-add-item PROJ_ISSUES "#${NUMBER}"
+      else
+        list-add-item OTHER_ISSUES "${ISSUE}"
+      fi
+    done
+
+    local BASE_TARGET # this is the 'org' of the upsteram branch
+    BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
+
+    local DESC
+    DESC=$(cat <<EOF
+Merge ${WORK_BRANCH} to master
+
+$MESSAGE
+
+## Issues
+$(( test -z "${PROJ_ISSUES:-}" && test -z "${OTHER_ISSUES:-}" \
+    && echo 'none' ) \
+  || ( for ISSUE in ${PROJ_ISSUES:-}; do echo "* $ISSUE"; done; \
+       for ISSUE in ${OTHER_ISSUES:-}; do echo "* $ISSUE"; done; ))
+
+EOF)
+    hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
   done
 }
