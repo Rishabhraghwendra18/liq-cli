@@ -534,12 +534,13 @@ work-submit() {
     local BUGS_URL
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
 
-    local ISSUE PROJ_ISSUES OTHER_ISSUES
+    local ISSUE PROJ_ISSUES OTHER_ISSUES CLOSES_MSG
     for ISSUE in $WORK_ISSUES; do
       if [[ $ISSUE == $BUGS_URL* ]]; then
         local NUMBER=${ISSUE/$BUGS_URL/}
         NUMBER=${NUMBER/\//}
         list-add-item PROJ_ISSUES "#${NUMBER}"
+        list-add-item CLOSES_MSG "closes #${NUMBER}"
       else
         list-add-item OTHER_ISSUES "${ISSUE}"
       fi
@@ -553,6 +554,8 @@ work-submit() {
 Merge ${WORK_BRANCH} to master
 
 $MESSAGE
+
+$CLOSES_MSG
 
 ## Issues
 $(( test -z "${PROJ_ISSUES:-}" && test -z "${OTHER_ISSUES:-}" \
