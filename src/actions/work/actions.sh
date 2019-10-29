@@ -311,7 +311,7 @@ work-resume() {
 
 work-save() {
   local TMP
-  TMP=$(setSimpleOptions ALL MESSAGE= DESCRIPTION= BACKUP -- "$@")
+  TMP=$(setSimpleOptions ALL MESSAGE= DESCRIPTION= NO_BACKUP:B -- "$@")
   eval "$TMP"
 
   if [[ -z "$MESSAGE" ]]; then
@@ -324,7 +324,7 @@ work-save() {
   # I have no idea why, but without the eval (even when "$@" dropped), this
   # produced 'fatal: Paths with -a does not make sense.' What' path?
   eval git commit ${OPTIONS} "$@"
-  if [[ "$BACKUP" == true ]]; then
+  if [[ "$NO_BACKUP" != true ]]; then
     work-backup
   fi
 }
