@@ -213,7 +213,7 @@ work-merge() {
 
   local TM
   for TM in $TO_MERGE; do
-    workConvertDot "$TM"
+    TM=$(workConvertDot "$TM")
     if ! echo "$INVOLVED_PROJECTS" | grep -qE '(^| +)'$TM'( +|$)'; then
       echoerrandexit "Project '$TM' not in the current unit of work."
     fi
@@ -226,7 +226,7 @@ work-merge() {
   done
 
   for TM in $TO_MERGE; do
-    workConvertDot "$TM"
+    TM=$(workConvertDot "$TM")
     cd "${LIQ_PLAYGROUND}/${TM}"
     local SHORT_STAT=`git diff --shortstat master ${CURR_WORK}`
     local INS_COUNT=`echo "${SHORT_STAT}" | egrep -Eio -e '\d+ insertion' | awk '{print $1}' || true`
