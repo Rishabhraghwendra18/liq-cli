@@ -20,6 +20,60 @@ work-diff-master() {
   git diff $(git merge-base master HEAD)..HEAD "$@"
 }
 
+work-close() {
+  local TMP
+  TMP=$(setSimpleOptions WORK_BRANCH= -- "$@")
+  eval "$TMP"
+
+  # rename option 'WORK_BRANCH' so the work source doesn't override the value
+  local TARGET_BRANCH="${WORK_BRANCH}"
+  source "${LIQ_WORK_DB}/curr_work"
+  if [[ -z "$TARGET_BRANCH" ]]; then
+    TARGET_BRANCH="$WORK_BRANCH"
+  fi
+
+  local PROJECTS
+  if (( $# > 0 )); then
+    PROJECTS="$@"
+  else
+    PROJECTS="$INVOLVED_PROJECTS"
+  fi
+
+  local PROJECT
+  # first, do the checks
+  for PROJECT in $PROJECTS; do
+    local CURR_BRANCH
+    cd "${LIQ_PLAYGROUND}/${PROJECT}"
+    CURR_BRANCH=$(git branch | (grep '*' || true) | awk '{print $2}')
+
+    if [[ "$CURR_BRANCH" == "$TARGET_BRANCH" ]]; then
+      echoerrandexit "Local project '$PROJECT' repo currently on work branch '$TARGET_BRANCH' and cannot be closed."
+    fi
+  done
+
+  # now actually do the closures
+  for PROJECT in $PROJECTS; do
+    local CURR_BRANCH
+    cd "${LIQ_PLAYGROUND}/${PROJECT}"
+    CURR_BRANCH=$(git branch | (grep '*' || true) | awk '{print $2}')
+
+    git push workspace "${TARGET_BRANCH}:${TARGET_BRANCH}" \
+      || echoerrandexit "Could not push '${TARGET_BRANCH}' to workspace; refusing to close without backing up."
+    git branch -qd "$TARGET_BRANCH" \
+      || ( echoerr "Could not delete local '${TARGET_BRANCH}'. This can happen if the branch was renamed." \
+          && false) \
+      && ( list-rm-item INVOLVED_PROJECTS "$TM"; workUpdateWorkDb )
+    # Notice we don't close the workspace branch. It may be involved in a PR and, generally, we don't care if the
+    # workspace gets a little messy. TODO: reference workspace cleanup method here when we have one.
+  done
+
+  # If all involved projects are closed, then our work is done.
+  if [[ -z "${INVOLVED_PROJECTS}" ]]; then
+    rm "${LIQ_WORK_DB}/curr_work"
+    rm "${LIQ_WORK_DB}/${WORK_BRANCH}"
+  fi
+}
+
 work-edit() {
   # TODO: make editor configurable
   local EDITOR_CMD='atom'
@@ -38,7 +92,7 @@ work-ignore-rest() {
 }
 
 work-involve() {
-  local PROJECT_NAME WORK_DESC WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS
+  local PROJECT_NAME WORK_DESC WORK_STARTED WORK_INITIATOR INVOLVED_PROJECTS
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "There is no active unit of work to involve. Try:\nliq work resume"
   fi
@@ -121,7 +175,7 @@ work-issues() {
 }
 
 work-list() {
-  local WORK_DESC WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS
+  local WORK_DESC WORK_STARTED WORK_INITIATOR INVOLVED_PROJECTS
   # find "${LIQ_WORK_DB}" -maxdepth 1 -not -name "*~" -type f -exec basename '{}' \;
   for i in $(find "${LIQ_WORK_DB}" -maxdepth 1 -not -name "*~" -type f -exec basename '{}' \;); do
     echo "${LIQ_WORK_DB}/${i}"
@@ -133,24 +187,22 @@ work-list() {
 work-merge() {
   # TODO: https://github.com/Liquid-Labs/liq-cli/issues/57 support org-level config to default allow unforced merge
   local TMP
-  TMP=$(setSimpleOptions FORCE -- "$@")
+  TMP=$(setSimpleOptions FORCE CLOSE PUSH_UPSTREAM -- "$@")
   eval "$TMP"
 
-  if [[ "$FORCE" != true ]]; then
-    echoerrandexit "'work merge' is not allowed by default. You can use '--force' to force the merge, but generally you will either want to configure the project to enable non-forced merges or try:\nliq work submit"
+  if [[ "${PUSH_UPSTREAM}" == true ]] && [[ "$FORCE" != true ]]; then
+    echoerrandexit "'work merge --push-upstream' is not allowed by default. You can use '--force', but generally you will either want to configure the project to enable non-forced upstream merges or try:\nliq work submit"
   fi
 
-  local WORK_DESC WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS
-
-  if [[ ! -f "${LIQ_WORK_DB}/curr_work" ]]; then
-    echoerrandexit "You can only merge work in the current unit of work. Try:\nliq work select"
+  if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
+    echoerrandexit "'merge' can only be perfomred on the current unit of work. Try:\nliq work select"
   fi
 
+  local WORK_DESC WORK_STARTED WORK_INITIATOR INVOLVED_PROJECTS
   source "${LIQ_WORK_DB}/curr_work"
-  local CURR_WORK=$(basename $(readlink "${LIQ_WORK_DB}/curr_work" ))
 
   if [[ -z "$INVOLVED_PROJECTS" ]]; then
-    echoerrandexit "No projects involved in the current unit of work '$CURR_WORK'."
+    echoerrandexit "No projects involved in the current unit of work '${WORK_BRANCH}'."
   fi
   if (( $# == 0 )) && ! yesno "Are you sure want to merge the entire unit of work? (y/N)" 'N'; then
     return
@@ -161,30 +213,24 @@ work-merge() {
     TO_MERGE="$INVOLVED_PROJECTS"
   fi
 
-  convert-dot() {
-    if [[ . == "$TM" ]]; then
-      TM=$(cat "$BASE_DIR/package.json" | jq --raw-output '.name' | tr -d "'")
-    fi
-  }
-
   local TM
   for TM in $TO_MERGE; do
-    convert-dot
+    TM=$(workConvertDot "$TM")
     if ! echo "$INVOLVED_PROJECTS" | grep -qE '(^| +)'$TM'( +|$)'; then
       echoerrandexit "Project '$TM' not in the current unit of work."
     fi
-    requireCleanRepo "$TM"
-
-    local WORKBRANCH=`git branch | (grep '*' || true) | awk '{print $2}'`
-    if [[ "$WORKBRANCH" != "$CURR_WORK" ]]; then
-      echoerrandexit "Project '$TM' is not currently on the expected workbranch '$CURR_WORK'. Please fix and re-run."
+    local CURR_BRANCH
+    CURR_BRANCH=$(git branch | (grep '*' || true) | awk '{print $2}')
+    if [[ "$CURR_BRANCH" != master ]] && [[ "$CURR_BRANCH" != "$WORK_BRANCH" ]]; then
+      echoerrandexit "Project '$TM' is not currently on the expected workbranch '$WORK_BRANCH'. Please fix and re-run."
     fi
+    requireCleanRepo "$TM"
   done
 
   for TM in $TO_MERGE; do
-    convert-dot
+    TM=$(workConvertDot "$TM")
     cd "${LIQ_PLAYGROUND}/${TM}"
-    local SHORT_STAT=`git diff --shortstat master ${WORKBRANCH}`
+    local SHORT_STAT=`git diff --shortstat master ${WORK_BRANCH}`
     local INS_COUNT=`echo "${SHORT_STAT}" | egrep -Eio -e '\d+ insertion' | awk '{print $1}' || true`
     INS_COUNT=${INS_COUNT:-0}
     local DEL_COUNT=`echo "${SHORT_STAT}" | egrep -Eio -e '\d+ deletion' | awk '{print $1}' || true`
@@ -202,41 +248,43 @@ work-merge() {
           local NUMBER=${ISSUE/$BUGS_URL/}
           NUMBER=${NUMBER/\//}
           list-add-item CLOSE_MSG "closes #${NUMBER}"
-          list-rm-item WORK_ISSUES "$ISSUE"
         fi
       done
     else
       echowarn "No issues URL associated with this project."
     fi
 
-    local PUSH_FAILED=N
-    # in case the current working dir does not exist in master
-    (git checkout -q master \
-        || echoerrandexit "Could not switch to master branch in project '$TM'.") \
-    && (git merge --no-ff -qm "merge branch $WORKBRANCH" "$WORKBRANCH" -m "$CLOSE_MSG" \
-        || echoerrandexit "Problem merging work branch with master for project '$TM'. ($?)") \
-    && ( (git push -q && echo "Work merged and pushed to remotes.") \
-        || (PUSH_FAILED=Y && echoerr "Local merge successful, but there was a problem pushing work to master."))
-    # if we have not exited, then the merge was made and we'll attempt to clean up
-    # local work branch (even if the push fails)
-    git push workspace --delete $WORKBRANCH
-    git branch -qd "$WORKBRANCH" \
-      || echoerr "Could not delete '${WORKBRANCH}'. This can happen if the branch was renamed."
-    # TODO: provide a reference for checking the merge is present and if safe to delete.
+    cleanupMaster() {
+      git worktree remove _master
+    }
+
+    cd ${BASE_DIR}
+    # if [[ "${WORK_BRANCH}" != master ]]; then
+    #  git checkout -q master \
+    #    || echoerrandexit "Could not switch to master branch in project '$TM'."
+    # fi
+    (git worktree add _master master \
+      || echoerrandexit "Could not create 'master' worktree.") \
+    && (cd _master; git pull upstream master:master \
+        || (cleanupMaster; echoerrandexit $echoerrandexit "Could not update local master from upstream for '$TM'.")) \
+    && (cd _master; git merge --no-ff -qm "merge branch $WORK_BRANCH" "$WORK_BRANCH" -m "$CLOSE_MSG" \
+        || (cleanupMaster; echoerrandexit "Problem merging '${WORK_BRANCH}' with 'master' for project '$TM'. ($?)")) \
+    && (cleanupMaster || echoerr "There was a problem removing '_master' worktree.") \
+    && ( (git push -q workspace master:master && echo "Work merged to 'master' and pushed to workspace/master.") \
+        || echoerr "Local merge successful, but there was a problem pushing work to workspace/master; bailing out.")
+
+    if [[ "$PUSH_UPSTREAM" == true ]]; then
+      git push -q upstream master:master \
+        || echoerrandexit "Failed to push local master to upstream master. Bailing out."
+    fi
+
+    if [[ "$CLOSE" == true ]]; then
+      git checkout master
+      work-close --work-branch="$WORK_BRANCH" "$TM"
+    fi
+
     echo "$TM linecount change: $DIFF_COUNT"
-
-    # TODO: create and use 'lists-remove-item' in bash-tools
-    list-rm-item INVOLVED_PROJECTS "$TM"
-    workUpdateWorkDb
   done
-
-  if (( $# == 0 )) && [[ -n "$INVOLVED_PROJECTS" ]]; then
-    echoerrandexit "It may be that not all involved projects were committed. Leaving possibly uncomitted projects as part of the current unit of work."
-  fi
-  if [[ -z "${INVOLVED_PROJECTS}" ]]; then
-    rm "${LIQ_WORK_DB}/curr_work"
-    rm "${LIQ_WORK_DB}/${CURR_WORK}"
-  fi
 }
 
 work-qa() {

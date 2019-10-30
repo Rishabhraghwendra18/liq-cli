@@ -4,51 +4,67 @@
 # TODO: we could generate this from the help docs... make the spec central!
 _liq()
 {
-    local cur prev opts
-    local global_actions="help"
-    local groups="data environments packages project provided-services remotes required-services services work playground"
+    local CUR # the current token; this may be blank and used to expand partials; provided my complete routine
+    local PREV # the last completed token; provided by complete routine
+    local OPTS # the options, set by this func, for completion
+    local GLOBAL_ACTIONS="help"
+    # Using 'GROUPS' was causing errors; set by some magic.
+    local ACTION_GROUPS="data environments packages project provided-services remotes required-services services work playground"
     COMPREPLY=()
     # local WORD_COUNT=${#COMP_WORDS[@]}
-    # TODO: instead of simple 'cur/prev', use the above to see where in the
+    # TODO: instead of simple 'CUR/PREV', use the above to see where in the
     # command we are. This will allow us to implement 'exhaustive' completion.
-    # Switch on what we need: group, action, action opts, or action args.
-    cur="${COMP_WORDS[COMP_CWORD]}"
-    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    # Switch on what we need: group, action, action OPTS, or action args.
+    CUR="${COMP_WORDS[COMP_CWORD]}"
+    PREV="${COMP_WORDS[COMP_CWORD-1]}"
+    GROUP="${COMP_WORDS[1]}"
+    ACTION="${COMP_WORDS[2]}"
 
-    case "${prev}" in
-      liq)
-        opts="${global_actions} ${groups}";;
-      # globals
-      help)
-        opts="${groups}";;
-      # command groups
-      data)
-        opts="build clear load rebuild reset";;
-      environments)
-        opts="add delete deselect list select set show update";;
-      meta)
-        opts="bash-config";;
-      packages)
-        opts="audit build deploy lint link version-check";;
-      project)
-        opts="init publish test";;
-      provided-services)
-        opts="list add delete";;
-      remotes)
-        opts="add delete set-main";;
-      required-services)
-        opts="list add delete";;
-      services)
-        opts="connect err-log list log restart start stop";;
-      work)
-        opts="diff-master edit ignore-rest involve merge qa report resume save stage start status stop";;
-      playground)
-        opts="init close import";;
-      *)
-      ;;
-    esac
+    if (( ${#COMP_WORDS[@]} <= 3 )); then
+      case "${PREV}" in
+        liq)
+          OPTS="${GLOBAL_ACTIONS} ${ACTION_GROUPS}";;
+        # globals
+        help)
+          OPTS="${ACTION_GROUPS}";;
+        # groups
+        data)
+          OPTS="build clear load rebuild reset";;
+        environments)
+          OPTS="add delete deselect list select set show update";;
+        meta)
+          OPTS="bash-config";;
+        packages)
+          OPTS="audit build deploy lint link version-check";;
+        project)
+          OPTS="init publish test";;
+        provided-services)
+          OPTS="list add delete";;
+        remotes)
+          OPTS="add delete set-main";;
+        required-services)
+          OPTS="list add delete";;
+        services)
+          OPTS="connect err-log list log restart start stop";;
+        work)
+          OPTS="diff-master edit ignore-rest involve merge qa report resume save stage start status stop";;
+        playground)
+          OPTS="init close import";;
+      esac
 
-    COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+      COMPREPLY=( $(compgen -W "${OPTS}" -- ${CUR}) )
+    else
+      case "${GROUP}" in
+        work)
+          case "${ACTION}" in
+            stage)
+              COMPREPLY=( $(compgen -o nospace -W "$(for d in ${CUR}*; do [[ -d "$d" ]] && echo $d/ || echo $d; done)" -- ${CUR}) )
+            ;;
+          esac # work-actions
+        ;;
+      esac
+    fi
+
     return 0
 }
 
