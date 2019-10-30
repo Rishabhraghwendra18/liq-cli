@@ -6,6 +6,14 @@ workBranchName() {
   echo "${WORK_STARTED}-${WORK_INITIATOR}-$(workSafeDesc "$WORK_DESC")"
 }
 
+workConvertDot() {
+  local PROJ="${1}"
+  if [[ "${PROJ}" == "." ]]; then
+    PROJ=$(cat "$BASE_DIR/package.json" | jq --raw-output '.name' | tr -d "'")
+  fi
+  echo "$PROJ"
+}
+
 workSafeDesc() {
   local WORK_DESC="${1:-}"
   requireArgs "$WORK_DESC" || exit $?
