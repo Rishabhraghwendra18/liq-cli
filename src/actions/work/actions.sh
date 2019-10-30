@@ -185,8 +185,12 @@ work-list() {
 work-merge() {
   # TODO: https://github.com/Liquid-Labs/liq-cli/issues/57 support org-level config to default allow unforced merge
   local TMP
-  TMP=$(setSimpleOptions FORCE CLOSE PUSH_UPSTREAM -- "$@")
+  TMP=$(setSimpleOptions FORCE CLOSE PUSH_UPSTREAM NO_SWITCH:S -- "$@")
   eval "$TMP"
+
+  if [[ "${NO_SWITCH}" == true ]] && [[ "${CLOSE}" == true ]]; then
+    echoerrandexit "The '--no-switch' and '--close' options are incompatible."
+  fi
 
   if [[ "$FORCE" != true ]]; then
     echoerrandexit "'work merge' is not allowed by default. You can use '--force' to force the merge, but generally you will either want to configure the project to enable non-forced merges or try:\nliq work submit"
@@ -281,6 +285,8 @@ work-merge() {
 
     if [[ "$CLOSE" == true ]]; then
       work-close --work-branch="$CURR_BRANCH" "$IP"
+    elif [[ "${NO_SWITCH}" == true ]]; then # really, switch back
+      git checkout "${WORK_BRANCH}"
     fi
 
     echo "$TM linecount change: $DIFF_COUNT"
