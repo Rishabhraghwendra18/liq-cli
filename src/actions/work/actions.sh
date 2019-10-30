@@ -228,7 +228,7 @@ work-merge() {
   for TM in $TO_MERGE; do
     TM=$(workConvertDot "$TM")
     cd "${LIQ_PLAYGROUND}/${TM}"
-    local SHORT_STAT=`git diff --shortstat master ${CURR_WORK}`
+    local SHORT_STAT=`git diff --shortstat master ${WORK_BRANCH}`
     local INS_COUNT=`echo "${SHORT_STAT}" | egrep -Eio -e '\d+ insertion' | awk '{print $1}' || true`
     INS_COUNT=${INS_COUNT:-0}
     local DEL_COUNT=`echo "${SHORT_STAT}" | egrep -Eio -e '\d+ deletion' | awk '{print $1}' || true`
@@ -253,7 +253,6 @@ work-merge() {
     fi
 
     cleanupMaster() {
-      cd ..
       git worktree remove _master
     }
 
@@ -266,10 +265,10 @@ work-merge() {
       || echoerrandexit "Could not create 'master' worktree.") \
     && (cd _master; git pull upstream master:master \
         || (cleanupMaster; echoerrandexit $echoerrandexit "Could not update local master from upstream for '$TM'.")) \
-    && (git merge --no-ff -qm "merge branch $WORK_BRANCH" "$WORK_BRANCH" -m "$CLOSE_MSG" \
+    && (cd _master; git merge --no-ff -qm "merge branch $WORK_BRANCH" "$WORK_BRANCH" -m "$CLOSE_MSG" \
         || (cleanupMaster; echoerrandexit "Problem merging '${WORK_BRANCH}' with 'master' for project '$TM'. ($?)")) \
     && (cleanupMaster || echoerr "There was a problem removing '_master' worktree.") \
-    && ( (git push -q workspace && echo "Work merged and pushed to workspace remote.") \
+    && ( (git push -q workspace master:master && echo "Work merged to 'master' and pushed to workspace/master.") \
         || echoerr "Local merge successful, but there was a problem pushing work to workspace/master; bailing out.")
 
     if [[ "$PUSH_UPSTREAM" == true ]]; then
@@ -279,7 +278,7 @@ work-merge() {
 
     if [[ "$CLOSE" == true ]]; then
       git checkout master
-      work-close --work-branch="$WORK_BRANCH" "$IP"
+      work-close --work-branch="$WORK_BRANCH" "$TM"
     fi
 
     echo "$TM linecount change: $DIFF_COUNT"
