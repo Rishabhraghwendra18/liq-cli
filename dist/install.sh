@@ -516,6 +516,7 @@ getCatPackagePaths() {
 
 requireCleanRepo() {
   local _IP="$1"
+  # TODO: the '_WORK_BRANCH' here seem to be more of a check than a command to check that branch.
   local _WORK_BRANCH="${2:-}"
 
   cd "${LIQ_PLAYGROUND}/${_IP}"
