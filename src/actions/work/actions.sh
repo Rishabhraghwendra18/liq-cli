@@ -192,8 +192,8 @@ work-merge() {
     echoerrandexit "The '--no-switch' and '--close' options are incompatible."
   fi
 
-  if [[ "$FORCE" != true ]]; then
-    echoerrandexit "'work merge' is not allowed by default. You can use '--force' to force the merge, but generally you will either want to configure the project to enable non-forced merges or try:\nliq work submit"
+  if [[ "${PUSH_UPSTREAM}" == true ]] && [[ "$FORCE" != true ]]; then
+    echoerrandexit "'work merge --push-upstream' is not allowed by default. You can use '--force', but generally you will either want to configure the project to enable non-forced upstream merges or try:\nliq work submit"
   fi
 
   local WORK_NAME
