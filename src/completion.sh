@@ -44,6 +44,14 @@ _liq()
         opts="diff-master edit ignore-rest involve merge qa report resume save stage start status stop";;
       playground)
         opts="init close import";;
+      # revert to file completion after 'liq work stage'
+      stage)
+        # COMPREPLY=( $(compgen -o default -- ${cur}) )
+        # COMPREPLY=( $(compgen -o default -f -d -- ${cur}) )
+        # COMPREPLY=( $(compgen -o bashdefault -- ${cur}) )
+        # TODO: nospace seems to be ineffective
+        COMPREPLY=( $(compgen -o nospace -W "$(for d in ${cur}*; do [[ -d "$d" ]] && echo $d/ || echo $d; done)" -- ${cur}) )
+        return 0;;
       *)
       ;;
     esac
