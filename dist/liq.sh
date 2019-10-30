@@ -3640,10 +3640,12 @@ work-close() {
     cd "${LIQ_PLAYGROUND}/${PROJECT}"
     CURR_BRANCH=$(git branch | (grep '*' || true) | awk '{print $2}')
 
+    git push workspace "${TARGET_BRANCH}:${TARGET_BRANCH}" \
+      || echoerrandexit "Could not push '${TARGET_BRANCH}' to workspace; refusing to close without backing up."
     git branch -qd "$TARGET_BRANCH" \
       || ( echoerr "Could not delete local '${TARGET_BRANCH}'. This can happen if the branch was renamed." \
           && false) \
-    && ( list-rm-item INVOLVED_PROJECTS "$TM"; workUpdateWorkDb )
+      && ( list-rm-item INVOLVED_PROJECTS "$TM"; workUpdateWorkDb )
     # Notice we don't close the workspace branch. It may be involved in a PR and, generally, we don't care if the
     # workspace gets a little messy. TODO: reference workspace cleanup method here when we have one.
   done
@@ -3836,7 +3838,6 @@ work-merge() {
     fi
 
     cleanupMaster() {
-      cd ${BASE_DIR}
       git worktree remove _master
     }
 
@@ -3849,7 +3850,7 @@ work-merge() {
       || echoerrandexit "Could not create 'master' worktree.") \
     && (cd _master; git pull upstream master:master \
         || (cleanupMaster; echoerrandexit $echoerrandexit "Could not update local master from upstream for '$TM'.")) \
-    && (echo "$PWD"; git merge --no-ff -qm "merge branch $WORK_BRANCH" "$WORK_BRANCH" -m "$CLOSE_MSG" \
+    && (cd _master; git merge --no-ff -qm "merge branch $WORK_BRANCH" "$WORK_BRANCH" -m "$CLOSE_MSG" \
         || (cleanupMaster; echoerrandexit "Problem merging '${WORK_BRANCH}' with 'master' for project '$TM'. ($?)")) \
     && (cleanupMaster || echoerr "There was a problem removing '_master' worktree.") \
     && ( (git push -q workspace master:master && echo "Work merged to 'master' and pushed to workspace/master.") \
@@ -3862,7 +3863,7 @@ work-merge() {
 
     if [[ "$CLOSE" == true ]]; then
       git checkout master
-      work-close --work-branch="$WORK_BRANCH" "$IP"
+      work-close --work-branch="$WORK_BRANCH" "$TM"
     fi
 
     echo "$TM linecount change: $DIFF_COUNT"
