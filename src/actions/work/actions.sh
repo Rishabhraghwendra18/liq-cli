@@ -61,8 +61,9 @@ work-close() {
       || echoerrandexit "Could not push '${TARGET_BRANCH}' to workspace; refusing to close without backing up."
     git branch -qd "$TARGET_BRANCH" \
       || ( echoerr "Could not delete local '${TARGET_BRANCH}'. This can happen if the branch was renamed." \
-          && false) \
-      && ( list-rm-item INVOLVED_PROJECTS "$TM"; workUpdateWorkDb )
+          && false)
+    list-rm-item INVOLVED_PROJECTS "$TM" # this cannot be done in a subshell
+    workUpdateWorkDb
     # Notice we don't close the workspace branch. It may be involved in a PR and, generally, we don't care if the
     # workspace gets a little messy. TODO: reference workspace cleanup method here when we have one.
   done
