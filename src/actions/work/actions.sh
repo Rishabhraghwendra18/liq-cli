@@ -276,8 +276,7 @@ work-merge() {
     fi
 
     if [[ "$CLOSE" == true ]]; then
-      git checkout master
-      work-close --work-branch="$WORK_BRANCH" "$TM"
+      work-close "$TM"
     fi
 
     echo "$TM linecount change: $DIFF_COUNT"
