@@ -358,7 +358,7 @@ requireCleanRepo() {
   ( test -n "$_WORK_BRANCH" \
       && git branch | grep -qE "^\* ${_WORK_BRANCH}" ) \
     || git diff-index --quiet HEAD -- \
-    || echoerrandexit "Cannot perform action '${ACTION}'. '${_IP}' has uncommitted changes. Please resolve." 1
+    || echoerrandexit "Cannot perform action '${ACTION}'. '${_IP}' has uncommitted changes. Try:\nliq work save"
 }
 
 requireCleanRepos() {
