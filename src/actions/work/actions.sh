@@ -364,19 +364,25 @@ work-resume() {
 
 work-save() {
   local TMP
-  TMP=$(setSimpleOptions ALL MESSAGE= DESCRIPTION= NO_BACKUP:B -- "$@")
+  TMP=$(setSimpleOptions ALL MESSAGE= DESCRIPTION= NO_BACKUP:B BACKUP_ONLY -- "$@")
   eval "$TMP"
 
-  if [[ -z "$MESSAGE" ]]; then
+  if [[ "$BACKUP_ONLY" == true ]] && [[ "$NO_BACKUP" == true ]]; then
+    echoerrandexit "Incompatible options: '--backup-only' and '--no-backup'."
+  fi
+
+  if [[ "$BACKUP_ONLY" != true ]] && [[ -z "$MESSAGE" ]]; then
     echoerrandexit "Must specify '--message|-m' (summary) for save."
   fi
 
-  local OPTIONS="-m '"${MESSAGE//\'/\'\"\'\"\'}"' "
-  if [[ $ALL == true ]]; then OPTIONS="${OPTIONS}--all "; fi
-  if [[ $DESCRIPTION == true ]]; then OPTIONS="${OPTIONS}-m '"${DESCRIPTION/'//\'/\'\"\'\"\'}"' "; fi
-  # I have no idea why, but without the eval (even when "$@" dropped), this
-  # produced 'fatal: Paths with -a does not make sense.' What' path?
-  eval git commit ${OPTIONS} "$@"
+  if [[ "$BACKUP_ONLY" != true ]]; then
+    local OPTIONS="-m '"${MESSAGE//\'/\'\"\'\"\'}"' "
+    if [[ $ALL == true ]]; then OPTIONS="${OPTIONS}--all "; fi
+    if [[ $DESCRIPTION == true ]]; then OPTIONS="${OPTIONS}-m '"${DESCRIPTION/'//\'/\'\"\'\"\'}"' "; fi
+    # I have no idea why, but without the eval (even when "$@" dropped), this
+    # produced 'fatal: Paths with -a does not make sense.' What' path?
+    eval git commit ${OPTIONS} "$@"
+  fi
   if [[ "$NO_BACKUP" != true ]]; then
     work-backup
   fi
