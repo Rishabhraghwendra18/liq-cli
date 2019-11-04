@@ -40,12 +40,12 @@ describe(`Command 'liq project close'`, () => {
       let result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} project close`, execOpts)
       expect(result.stderr).toMatch(testConfig.errMatch, "Bash output\n" + result.stderr)
       expect(result.stdout).toEqual('')
-      expect(result.code).toEqual(10)
+      expect(result.code).toEqual(1)
 
       result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} project close @liquid-labs/lc-entities-model`, execOpts)
       expect(result.stderr).toMatch(testConfig.errMatch)
       expect(result.stdout).toEqual('')
-      expect(result.code).toEqual(10)
+      expect(result.code).toEqual(1)
     })
   })
 
