@@ -55,7 +55,6 @@ setSimpleOptions() {
   local VAR_SPEC LOCAL_DECLS
   local LONG_OPTS=""
   local SHORT_OPTS=""
-  local OPTS_COUNT=0
   # Bash Bug? This looks like a straight up bug in bash, but the left-paren in
   # '--)' was matching the '$(' and causing a syntax error. So we use ']' and
   # replace it later.
@@ -89,16 +88,16 @@ EOF
     LONG_OPTS=$( ( test ${#LONG_OPTS} -gt 0 && echo -n "${LONG_OPTS},") || true && echo -n "${LONG_OPT}${OPT_REQ}")
 
     LOCAL_DECLS="${LOCAL_DECLS:-}local ${VAR_NAME}='';"
-    local VAR_SETTER="echo \"${VAR_NAME}=true;\""
+    local VAR_SETTER="${VAR_NAME}=true;"
     if [[ -n "$OPT_REQ" ]]; then
       LOCAL_DECLS="${LOCAL_DECLS}local ${VAR_NAME}_SET='';"
-      VAR_SETTER="echo \"${VAR_NAME}='\"\${2//\\'/\\'\\\"\\'\\\"\\'}\"'; ${VAR_NAME}_SET=true;\"; shift;"
+      VAR_SETTER=${VAR_NAME}'="${2}"; '${VAR_NAME}'_SET=true; shift;'
     fi
     CASE_HANDLER=$(cat <<EOF
     ${CASE_HANDLER}
       -${SHORT_OPT}|--${LONG_OPT}]
         $VAR_SETTER
-        OPTS_COUNT=\$(( \$OPTS_COUNT + 1));;
+        _OPTS_COUNT=\$(( \$_OPTS_COUNT + 1));;
 EOF
 )
   done # main while loop
@@ -113,19 +112,19 @@ EOF
 
   echo "$LOCAL_DECLS"
 
-  local TMP # see https://unix.stackexchange.com/a/88338/84520
-  TMP=$(${GNU_GETOPT} -o "${SHORT_OPTS}" -l "${LONG_OPTS}" -- "$@") \
-    || return $?
-  eval set -- "$TMP"
-  while true; do
-    eval "$CASE_HANDLER"
-    shift
-  done
+  cat <<EOF
+local TMP # see https://unix.stackexchange.com/a/88338/84520
+TMP=\$(${GNU_GETOPT} -o "${SHORT_OPTS}" -l "${LONG_OPTS}" -- "\$@") \
+  || exit \$?
+eval set -- "\$TMP"
+local _OPTS_COUNT=0
+while true; do
+  $CASE_HANDLER
   shift
-
-  echo "local _OPTS_COUNT=${OPTS_COUNT};"
-  echo "set -- \"$@\""
-  echo 'if [[ -z "$1" ]]; then shift; fi' # TODO: explain this
+done
+shift
+EOF
+#  echo 'if [[ -z "$1" ]]; then shift; fi' # TODO: explain this
 }
 
 echoerr() {
@@ -181,6 +180,18 @@ list-add-item() {
         # echo $LIST_VAR='"${!LIST_VAR}"$'"'"'\n'"'"'"${ITEM}"'
         eval $LIST_VAR='"${!LIST_VAR}"$'"'"'\n'"'"'"${ITEM}"'
       fi
+    fi
+  done
+}
+
+list-add-uniq() {
+  local LIST_VAR="${1}"; shift
+  while (( $# > 0 )); do
+    local ITEM
+    ITEM="${1}"; shift
+    # TODO: enforce no newlines in item
+    if [[ -z $(list-get-index $LIST_VAR "$ITEM") ]]; then
+      list-add-item $LIST_VAR "$ITEM"
     fi
   done
 }
@@ -858,7 +869,7 @@ requireCleanRepo() {
   ( test -n "$_WORK_BRANCH" \
       && git branch | grep -qE "^\* ${_WORK_BRANCH}" ) \
     || git diff-index --quiet HEAD -- \
-    || echoerrandexit "Cannot perform action '${ACTION}'. '${_IP}' has uncommitted changes. Please resolve." 1
+    || echoerrandexit "Cannot perform action '${ACTION}'. '${_IP}' has uncommitted changes. Try:\nliq work save"
 }
 
 requireCleanRepos() {
@@ -3604,16 +3615,7 @@ work-diff-master() {
 }
 
 work-close() {
-  local TMP
-  TMP=$(setSimpleOptions WORK_BRANCH= -- "$@")
-  eval "$TMP"
-
-  # rename option 'WORK_BRANCH' so the work source doesn't override the value
-  local TARGET_BRANCH="${WORK_BRANCH}"
   source "${LIQ_WORK_DB}/curr_work"
-  if [[ -z "$TARGET_BRANCH" ]]; then
-    TARGET_BRANCH="$WORK_BRANCH"
-  fi
 
   local PROJECTS
   if (( $# > 0 )); then
@@ -3629,23 +3631,27 @@ work-close() {
     cd "${LIQ_PLAYGROUND}/${PROJECT}"
     CURR_BRANCH=$(git branch | (grep '*' || true) | awk '{print $2}')
 
-    if [[ "$CURR_BRANCH" == "$TARGET_BRANCH" ]]; then
-      echoerrandexit "Local project '$PROJECT' repo currently on work branch '$TARGET_BRANCH' and cannot be closed."
+    if [[ "$CURR_BRANCH" != "$WORK_BRANCH" ]]; then
+      echoerrandexit "Local project '$PROJECT' repo branch does not match expected work branch."
     fi
+
+    requireCleanRepo "$PROJECT"
   done
 
   # now actually do the closures
   for PROJECT in $PROJECTS; do
-    local CURR_BRANCH
     cd "${LIQ_PLAYGROUND}/${PROJECT}"
+    local CURR_BRANCH
     CURR_BRANCH=$(git branch | (grep '*' || true) | awk '{print $2}')
 
-    git push workspace "${TARGET_BRANCH}:${TARGET_BRANCH}" \
-      || echoerrandexit "Could not push '${TARGET_BRANCH}' to workspace; refusing to close without backing up."
-    git branch -qd "$TARGET_BRANCH" \
-      || ( echoerr "Could not delete local '${TARGET_BRANCH}'. This can happen if the branch was renamed." \
-          && false) \
-      && ( list-rm-item INVOLVED_PROJECTS "$TM"; workUpdateWorkDb )
+    git checkout master
+    git push workspace "${WORK_BRANCH}:${WORK_BRANCH}" \
+      || echoerrandexit "Could not push '${WORK_BRANCH}' to workspace; refusing to close without backing up."
+    git branch -qd "$WORK_BRANCH" \
+      || ( echoerr "Could not delete local '${WORK_BRANCH}'. This can happen if the branch was renamed." \
+          && false)
+    list-rm-item INVOLVED_PROJECTS "$PROJECT" # this cannot be done in a subshell
+    workUpdateWorkDb
     # Notice we don't close the workspace branch. It may be involved in a PR and, generally, we don't care if the
     # workspace gets a little messy. TODO: reference workspace cleanup method here when we have one.
   done
@@ -3654,6 +3660,8 @@ work-close() {
   if [[ -z "${INVOLVED_PROJECTS}" ]]; then
     rm "${LIQ_WORK_DB}/curr_work"
     rm "${LIQ_WORK_DB}/${WORK_BRANCH}"
+  else
+    rm "${LIQ_WORK_DB}/curr_work"
   fi
 }
 
@@ -3862,8 +3870,7 @@ work-merge() {
     fi
 
     if [[ "$CLOSE" == true ]]; then
-      git checkout master
-      work-close --work-branch="$WORK_BRANCH" "$TM"
+      work-close "$TM"
     fi
 
     echo "$TM linecount change: $DIFF_COUNT"
@@ -3951,19 +3958,25 @@ work-resume() {
 
 work-save() {
   local TMP
-  TMP=$(setSimpleOptions ALL MESSAGE= DESCRIPTION= NO_BACKUP:B -- "$@")
+  TMP=$(setSimpleOptions ALL MESSAGE= DESCRIPTION= NO_BACKUP:B BACKUP_ONLY -- "$@")
   eval "$TMP"
 
-  if [[ -z "$MESSAGE" ]]; then
+  if [[ "$BACKUP_ONLY" == true ]] && [[ "$NO_BACKUP" == true ]]; then
+    echoerrandexit "Incompatible options: '--backup-only' and '--no-backup'."
+  fi
+
+  if [[ "$BACKUP_ONLY" != true ]] && [[ -z "$MESSAGE" ]]; then
     echoerrandexit "Must specify '--message|-m' (summary) for save."
   fi
 
-  local OPTIONS="-m '"${MESSAGE//\'/\'\"\'\"\'}"' "
-  if [[ $ALL == true ]]; then OPTIONS="${OPTIONS}--all "; fi
-  if [[ $DESCRIPTION == true ]]; then OPTIONS="${OPTIONS}-m '"${DESCRIPTION/'//\'/\'\"\'\"\'}"' "; fi
-  # I have no idea why, but without the eval (even when "$@" dropped), this
-  # produced 'fatal: Paths with -a does not make sense.' What' path?
-  eval git commit ${OPTIONS} "$@"
+  if [[ "$BACKUP_ONLY" != true ]]; then
+    local OPTIONS="-m '"${MESSAGE//\'/\'\"\'\"\'}"' "
+    if [[ $ALL == true ]]; then OPTIONS="${OPTIONS}--all "; fi
+    if [[ $DESCRIPTION == true ]]; then OPTIONS="${OPTIONS}-m '"${DESCRIPTION/'//\'/\'\"\'\"\'}"' "; fi
+    # I have no idea why, but without the eval (even when "$@" dropped), this
+    # produced 'fatal: Paths with -a does not make sense.' What' path?
+    eval git commit ${OPTIONS} "$@"
+  fi
   if [[ "$NO_BACKUP" != true ]]; then
     work-backup
   fi
@@ -3980,17 +3993,29 @@ work-stage() {
   if [[ $REVIEW == true ]]; then OPTIONS="${OPTIONS}--patch "; fi
   if [[ $DRY_RUN == true ]]; then OPTIONS="${OPTIONS}--dry-run "; fi
 
-  git add ${OPTIONS}"$@"
+  git add ${OPTIONS} "$@"
 }
 
 work-status() {
   local TMP
-  TMP=$(setSimpleOptions SELECT -- "$@") \
+  TMP=$(setSimpleOptions SELECT PR_READY NO_FETCH:F -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
 
-  local WORK_NAME
+  local WORK_NAME LOCAL_COMMITS REMOTE_COMMITS
   workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
+
+  if [[ -z "$NO_FETCH" ]]; then
+    work-sync --fetch-only
+  fi
+
+  if [[ "$PR_READY" == true ]]; then
+    TMP="$(git rev-list --left-right --count $WORK_NAME...workspace/$WORK_NAME)"
+    LOCAL_COMMITS=$(echo $TMP | cut -d' ' -f1)
+    REMOTE_COMMITS=$(echo $TMP | cut -d' ' -f2)
+    (( $LOCAL_COMMITS == 0 )) && (( $REMOTE_COMMITS == 0 ))
+    return $?
+  fi
 
   echo "Branch name: $WORK_NAME"
   echo
@@ -4021,45 +4046,54 @@ work-status() {
     echo "Repo status for $IP:"
     cd "${LIQ_PLAYGROUND}/$IP"
     TMP="$(git rev-list --left-right --count master...upstream/master)"
-    local LOCAL_COMMITS REMOTE_COMMITS MASTER_UP_TO_DATE
-    MASTER_UP_TO_DATE=false
     LOCAL_COMMITS=$(echo $TMP | cut -d' ' -f1)
     REMOTE_COMMITS=$(echo $TMP | cut -d' ' -f2)
-    if (( $LOCAL_COMMITS > 0 )); then
-      echo "  ${red_b}Local master corrupted.${reset} Found $LOCAL_COMMITS local commits not on upstream." | fold -sw 82
+    if (( $LOCAL_COMMITS == 0 )) && (( $REMOTE_COMMITS == 0 )); then
+      echo "  Local master up to date."
+    elif (( $LOCAL_COMMITS == 0 )); then
+      echo "  ${yellow_b}Local master behind upstream/master $REMOTE_COMMITS.${reset}"
+    elif (( $REMOTE_COMMITS == 0 )); then
+      echo "  ${yellow_b}Local master ahead upstream/master $LOCAL_COMMITS.${reset}"
+    else
+      echo "  ${yellow_b}Local master ahead upstream/master $LOCAL_COMMITS and behind $REMOTE_COMMITS.${reset}"
     fi
-    case $REMOTE_COMMITS in
-      0)
-        MASTER_UP_TO_DATE=true
-        echo "  Local master up to date.";;
-      *)
-        echo "  ${yellow}Local master behind $REMOTE_COMMITS commits.${reset}";;
-    esac
 
+    local NEED_SYNC
     TMP="$(git rev-list --left-right --count $WORK_NAME...workspace/$WORK_NAME)"
     LOCAL_COMMITS=$(echo $TMP | cut -d' ' -f1)
     REMOTE_COMMITS=$(echo $TMP | cut -d' ' -f2)
     if (( $REMOTE_COMMITS == 0 )) && (( $LOCAL_COMMITS == 0 )); then
-      echo "  Local workbranch up to date."
+      echo "  Local workbranch up to date with workspace."
       TMP="$(git rev-list --left-right --count master...$WORK_NAME)"
       local MASTER_COMMITS WORKBRANCH_COMMITS
       MASTER_COMMITS=$(echo $TMP | cut -d' ' -f1)
       WORKBRANCH_COMMITS=$(echo $TMP | cut -d' ' -f2)
       if (( $MASTER_COMMITS == 0 )) && (( $WORKBRANCH_COMMITS == 0 )); then
-        echo "  Workbranch and master up to date."
+        echo "  Local workbranch and master up to date."
       elif (( $MASTER_COMMITS > 0 )); then
-        echo "  Workbranch behind master $MASTER_COMMITS commits."
+        echo "  ${yellow}Workbranch behind master $MASTER_COMMITS commits.${reset}"
+        NEED_SYNC=true
       elif (( $WORKBRANCH_COMMITS > 0 )); then
-        echo "  Workbranch ahead of master $WORKBRANCH_COMMITS commits."
+        echo "  Local workbranch ahead of master $WORKBRANCH_COMMITS commits."
       fi
-    elif (( $REMOTE_COMMITS > 0 )); then
-      echo "  ${yellow}Local workbranch behind $REMOTE_COMMITS commits.${reset}"
-    elif (( $LOCAL_COMMITS > 0 )); then
-      echo "  ${yellow}Local workranch ahead $LOCAL_COMMITS commits.${reset}"
+    elif (( $LOCAL_COMMITS == 0 )); then
+      echo "  ${yellow}Local workbranch behind workspace by $REMOTE_COMMITS commits.${reset}"
+      NEED_SYNC=true
+    elif (( $REMOTE_COMMITS == 0 )); then
+      echo "  ${yellow}Local workranch ahead of workspace by $LOCAL_COMMITS commits.${reset}"
+      NEED_SYNC=true
+    else
+      echo "  ${yellow}Local workranch ahead of workspace by $LOCAL_COMMITS and behind ${REMOTE_COMMITS} commits.${reset}"
+      NEED_SYNC=true
     fi
-    if (( $REMOTE_COMMITS != 0 )) && (( $LOCAL_COMMITS != 0 )); then
+    if (( $REMOTE_COMMITS != 0 )) || (( $LOCAL_COMMITS != 0 )); then
       echo "  ${yellow}Unable to analyze master-workbranch drift due to above issues.${reset}" | fold -sw 82
     fi
+    if [[ -n "$NEED_SYNC" ]]; then
+      echo "  Consider running:"
+      echo "    liq work sync"
+    fi
+    echo
     echo "  Local changes:"
     git status --short
   done
@@ -4133,6 +4167,25 @@ work-stop() {
   fi
 }
 
+work-sync() {
+  local TMP
+  TMP=$(setSimpleOptions FETCH_ONLY -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
+  source "${LIQ_WORK_DB}/curr_work"
+
+  git fetch upstream master:remotes/upstream/master
+  git fetch workspace master:remotes/workspace/master
+  git fetch workspace "${WORK_BRANCH}:remotes/workspace/${WORK_BRANCH}"
+
+  if [[ "$FETCH_ONLY" == true ]]; then
+    return 0
+  fi
+
+  echoerrandexit "Full sync not yet implemented."
+}
+
 work-test() {
   local TMP
   TMP=$(setSimpleOptions SELECT -- "$@") \
@@ -4153,7 +4206,7 @@ work-test() {
 
 work-submit() {
   local TMP
-  TMP=$(setSimpleOptions SELECT MESSAGE= -- "$@") \
+  TMP=$(setSimpleOptions SELECT MESSAGE= NOT_CLEAN:C -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
 
@@ -4167,7 +4220,13 @@ work-submit() {
 
   local IP
   for IP in $INVOLVED_PROJECTS; do
-    requireCleanRepo "${IP}"
+    if [[ "$NOT_CLEAN" != true ]]; then
+      requireCleanRepo "${IP}"
+    fi
+    if ! work-status --pr-ready; then
+      echoerrandexit "Local work branch not in sync with remote work branch. Try:\nliq work save --backup-only"
+    fi
+
     echo "Creating PR for ${IP}..."
     cd "${LIQ_PLAYGROUND}/$IP"
 

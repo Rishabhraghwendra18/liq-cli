@@ -50,7 +50,6 @@ setSimpleOptions() {
   local VAR_SPEC LOCAL_DECLS
   local LONG_OPTS=""
   local SHORT_OPTS=""
-  local OPTS_COUNT=0
   # Bash Bug? This looks like a straight up bug in bash, but the left-paren in
   # '--)' was matching the '$(' and causing a syntax error. So we use ']' and
   # replace it later.
@@ -84,16 +83,16 @@ EOF
     LONG_OPTS=$( ( test ${#LONG_OPTS} -gt 0 && echo -n "${LONG_OPTS},") || true && echo -n "${LONG_OPT}${OPT_REQ}")
 
     LOCAL_DECLS="${LOCAL_DECLS:-}local ${VAR_NAME}='';"
-    local VAR_SETTER="echo \"${VAR_NAME}=true;\""
+    local VAR_SETTER="${VAR_NAME}=true;"
     if [[ -n "$OPT_REQ" ]]; then
       LOCAL_DECLS="${LOCAL_DECLS}local ${VAR_NAME}_SET='';"
-      VAR_SETTER="echo \"${VAR_NAME}='\"\${2//\\'/\\'\\\"\\'\\\"\\'}\"'; ${VAR_NAME}_SET=true;\"; shift;"
+      VAR_SETTER=${VAR_NAME}'="${2}"; '${VAR_NAME}'_SET=true; shift;'
     fi
     CASE_HANDLER=$(cat <<EOF
     ${CASE_HANDLER}
       -${SHORT_OPT}|--${LONG_OPT}]
         $VAR_SETTER
-        OPTS_COUNT=\$(( \$OPTS_COUNT + 1));;
+        _OPTS_COUNT=\$(( \$_OPTS_COUNT + 1));;
 EOF
 )
   done # main while loop
@@ -108,19 +107,19 @@ EOF
 
   echo "$LOCAL_DECLS"
 
-  local TMP # see https://unix.stackexchange.com/a/88338/84520
-  TMP=$(${GNU_GETOPT} -o "${SHORT_OPTS}" -l "${LONG_OPTS}" -- "$@") \
-    || return $?
-  eval set -- "$TMP"
-  while true; do
-    eval "$CASE_HANDLER"
-    shift
-  done
+  cat <<EOF
+local TMP # see https://unix.stackexchange.com/a/88338/84520
+TMP=\$(${GNU_GETOPT} -o "${SHORT_OPTS}" -l "${LONG_OPTS}" -- "\$@") \
+  || exit \$?
+eval set -- "\$TMP"
+local _OPTS_COUNT=0
+while true; do
+  $CASE_HANDLER
   shift
-
-  echo "local _OPTS_COUNT=${OPTS_COUNT};"
-  echo "set -- \"$@\""
-  echo 'if [[ -z "$1" ]]; then shift; fi' # TODO: explain this
+done
+shift
+EOF
+#  echo 'if [[ -z "$1" ]]; then shift; fi' # TODO: explain this
 }
 
 echoerr() {
@@ -523,7 +522,7 @@ requireCleanRepo() {
   ( test -n "$_WORK_BRANCH" \
       && git branch | grep -qE "^\* ${_WORK_BRANCH}" ) \
     || git diff-index --quiet HEAD -- \
-    || echoerrandexit "Cannot perform action '${ACTION}'. '${_IP}' has uncommitted changes. Please resolve." 1
+    || echoerrandexit "Cannot perform action '${ACTION}'. '${_IP}' has uncommitted changes. Try:\nliq work save"
 }
 
 requireCleanRepos() {
