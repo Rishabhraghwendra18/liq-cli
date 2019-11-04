@@ -612,7 +612,7 @@ work-test() {
 
 work-submit() {
   local TMP
-  TMP=$(setSimpleOptions SELECT MESSAGE= -- "$@") \
+  TMP=$(setSimpleOptions SELECT MESSAGE= NOT_CLEAN:C -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
 
@@ -626,7 +626,13 @@ work-submit() {
 
   local IP
   for IP in $INVOLVED_PROJECTS; do
-    requireCleanRepo "${IP}"
+    if [[ "$NOT_CLEAN" != true ]]; then
+      requireCleanRepo "${IP}"
+    fi
+    if ! work-status --pr-ready; then
+      echoerrandexit "Local work branch not in sync with remote work branch. Try:\nliq work save --backup-only"
+    fi
+
     echo "Creating PR for ${IP}..."
     cd "${LIQ_PLAYGROUND}/$IP"
 
