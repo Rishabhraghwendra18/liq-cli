@@ -399,17 +399,29 @@ work-stage() {
   if [[ $REVIEW == true ]]; then OPTIONS="${OPTIONS}--patch "; fi
   if [[ $DRY_RUN == true ]]; then OPTIONS="${OPTIONS}--dry-run "; fi
 
-  git add ${OPTIONS}"$@"
+  git add ${OPTIONS} "$@"
 }
 
 work-status() {
   local TMP
-  TMP=$(setSimpleOptions SELECT -- "$@") \
+  TMP=$(setSimpleOptions SELECT PR_READY NO_FETCH:F -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
 
-  local WORK_NAME
+  local WORK_NAME LOCAL_COMMITS REMOTE_COMMITS
   workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
+
+  if [[ -z "$NO_FETCH" ]]; then
+    work-sync --fetch-only
+  fi
+
+  if [[ "$PR_READY" == true ]]; then
+    TMP="$(git rev-list --left-right --count $WORK_NAME...workspace/$WORK_NAME)"
+    LOCAL_COMMITS=$(echo $TMP | cut -d' ' -f1)
+    REMOTE_COMMITS=$(echo $TMP | cut -d' ' -f2)
+    (( $LOCAL_COMMITS == 0 )) && (( $REMOTE_COMMITS == 0 ))
+    return $?
+  fi
 
   echo "Branch name: $WORK_NAME"
   echo
@@ -440,45 +452,54 @@ work-status() {
     echo "Repo status for $IP:"
     cd "${LIQ_PLAYGROUND}/$IP"
     TMP="$(git rev-list --left-right --count master...upstream/master)"
-    local LOCAL_COMMITS REMOTE_COMMITS MASTER_UP_TO_DATE
-    MASTER_UP_TO_DATE=false
     LOCAL_COMMITS=$(echo $TMP | cut -d' ' -f1)
     REMOTE_COMMITS=$(echo $TMP | cut -d' ' -f2)
-    if (( $LOCAL_COMMITS > 0 )); then
-      echo "  ${red_b}Local master corrupted.${reset} Found $LOCAL_COMMITS local commits not on upstream." | fold -sw 82
+    if (( $LOCAL_COMMITS == 0 )) && (( $REMOTE_COMMITS == 0 )); then
+      echo "  Local master up to date."
+    elif (( $LOCAL_COMMITS == 0 )); then
+      echo "  ${yellow_b}Local master behind upstream/master $REMOTE_COMMITS.${reset}"
+    elif (( $REMOTE_COMMITS == 0 )); then
+      echo "  ${yellow_b}Local master ahead upstream/master $LOCAL_COMMITS.${reset}"
+    else
+      echo "  ${yellow_b}Local master ahead upstream/master $LOCAL_COMMITS and behind $REMOTE_COMMITS.${reset}"
     fi
-    case $REMOTE_COMMITS in
-      0)
-        MASTER_UP_TO_DATE=true
-        echo "  Local master up to date.";;
-      *)
-        echo "  ${yellow}Local master behind $REMOTE_COMMITS commits.${reset}";;
-    esac
 
+    local NEED_SYNC
     TMP="$(git rev-list --left-right --count $WORK_NAME...workspace/$WORK_NAME)"
     LOCAL_COMMITS=$(echo $TMP | cut -d' ' -f1)
     REMOTE_COMMITS=$(echo $TMP | cut -d' ' -f2)
     if (( $REMOTE_COMMITS == 0 )) && (( $LOCAL_COMMITS == 0 )); then
-      echo "  Local workbranch up to date."
+      echo "  Local workbranch up to date with workspace."
       TMP="$(git rev-list --left-right --count master...$WORK_NAME)"
       local MASTER_COMMITS WORKBRANCH_COMMITS
       MASTER_COMMITS=$(echo $TMP | cut -d' ' -f1)
       WORKBRANCH_COMMITS=$(echo $TMP | cut -d' ' -f2)
       if (( $MASTER_COMMITS == 0 )) && (( $WORKBRANCH_COMMITS == 0 )); then
-        echo "  Workbranch and master up to date."
+        echo "  Local workbranch and master up to date."
       elif (( $MASTER_COMMITS > 0 )); then
-        echo "  Workbranch behind master $MASTER_COMMITS commits."
+        echo "  ${yellow}Workbranch behind master $MASTER_COMMITS commits.${reset}"
+        NEED_SYNC=true
       elif (( $WORKBRANCH_COMMITS > 0 )); then
-        echo "  Workbranch ahead of master $WORKBRANCH_COMMITS commits."
+        echo "  Local workbranch ahead of master $WORKBRANCH_COMMITS commits."
       fi
-    elif (( $REMOTE_COMMITS > 0 )); then
-      echo "  ${yellow}Local workbranch behind $REMOTE_COMMITS commits.${reset}"
-    elif (( $LOCAL_COMMITS > 0 )); then
-      echo "  ${yellow}Local workranch ahead $LOCAL_COMMITS commits.${reset}"
+    elif (( $LOCAL_COMMITS == 0 )); then
+      echo "  ${yellow}Local workbranch behind workspace by $REMOTE_COMMITS commits.${reset}"
+      NEED_SYNC=true
+    elif (( $REMOTE_COMMITS == 0 )); then
+      echo "  ${yellow}Local workranch ahead of workspace by $LOCAL_COMMITS commits.${reset}"
+      NEED_SYNC=true
+    else
+      echo "  ${yellow}Local workranch ahead of workspace by $LOCAL_COMMITS and behind ${REMOTE_COMMITS} commits.${reset}"
+      NEED_SYNC=true
     fi
-    if (( $REMOTE_COMMITS != 0 )) && (( $LOCAL_COMMITS != 0 )); then
+    if (( $REMOTE_COMMITS != 0 )) || (( $LOCAL_COMMITS != 0 )); then
       echo "  ${yellow}Unable to analyze master-workbranch drift due to above issues.${reset}" | fold -sw 82
     fi
+    if [[ -n "$NEED_SYNC" ]]; then
+      echo "  Consider running:"
+      echo "    liq work sync"
+    fi
+    echo
     echo "  Local changes:"
     git status --short
   done
