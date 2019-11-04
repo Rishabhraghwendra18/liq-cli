@@ -546,6 +546,25 @@ work-stop() {
   fi
 }
 
+work-sync() {
+  local TMP
+  TMP=$(setSimpleOptions FETCH_ONLY -- "$@") \
+    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$TMP"
+
+  source "${LIQ_WORK_DB}/curr_work"
+
+  git fetch upstream master:remotes/upstream/master
+  git fetch workspace master:remotes/workspace/master
+  git fetch workspace "${WORK_BRANCH}:remotes/workspace/${WORK_BRANCH}"
+
+  if [[ "$FETCH_ONLY" == true ]]; then
+    return 0
+  fi
+
+  echoerrandexit "Full sync not yet implemented."
+}
+
 work-test() {
   local TMP
   TMP=$(setSimpleOptions SELECT -- "$@") \
