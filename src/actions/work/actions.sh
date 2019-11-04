@@ -21,16 +21,7 @@ work-diff-master() {
 }
 
 work-close() {
-  local TMP
-  TMP=$(setSimpleOptions WORK_BRANCH= -- "$@")
-  eval "$TMP"
-
-  # rename option 'WORK_BRANCH' so the work source doesn't override the value
-  local TARGET_BRANCH="${WORK_BRANCH}"
   source "${LIQ_WORK_DB}/curr_work"
-  if [[ -z "$TARGET_BRANCH" ]]; then
-    TARGET_BRANCH="$WORK_BRANCH"
-  fi
 
   local PROJECTS
   if (( $# > 0 )); then
@@ -46,23 +37,26 @@ work-close() {
     cd "${LIQ_PLAYGROUND}/${PROJECT}"
     CURR_BRANCH=$(git branch | (grep '*' || true) | awk '{print $2}')
 
-    if [[ "$CURR_BRANCH" == "$TARGET_BRANCH" ]]; then
-      echoerrandexit "Local project '$PROJECT' repo currently on work branch '$TARGET_BRANCH' and cannot be closed."
+    if [[ "$CURR_BRANCH" != "$WORK_BRANCH" ]]; then
+      echoerrandexit "Local project '$PROJECT' repo branch does not match expected work branch."
     fi
+
+    requireCleanRepo "$PROJECT"
   done
 
   # now actually do the closures
   for PROJECT in $PROJECTS; do
-    local CURR_BRANCH
     cd "${LIQ_PLAYGROUND}/${PROJECT}"
+    local CURR_BRANCH
     CURR_BRANCH=$(git branch | (grep '*' || true) | awk '{print $2}')
 
-    git push workspace "${TARGET_BRANCH}:${TARGET_BRANCH}" \
-      || echoerrandexit "Could not push '${TARGET_BRANCH}' to workspace; refusing to close without backing up."
-    git branch -qd "$TARGET_BRANCH" \
-      || ( echoerr "Could not delete local '${TARGET_BRANCH}'. This can happen if the branch was renamed." \
+    git checkout master
+    git push workspace "${WORK_BRANCH}:${WORK_BRANCH}" \
+      || echoerrandexit "Could not push '${WORK_BRANCH}' to workspace; refusing to close without backing up."
+    git branch -qd "$WORK_BRANCH" \
+      || ( echoerr "Could not delete local '${WORK_BRANCH}'. This can happen if the branch was renamed." \
           && false)
-    list-rm-item INVOLVED_PROJECTS "$TM" # this cannot be done in a subshell
+    list-rm-item INVOLVED_PROJECTS "$PROJECT" # this cannot be done in a subshell
     workUpdateWorkDb
     # Notice we don't close the workspace branch. It may be involved in a PR and, generally, we don't care if the
     # workspace gets a little messy. TODO: reference workspace cleanup method here when we have one.
@@ -72,6 +66,8 @@ work-close() {
   if [[ -z "${INVOLVED_PROJECTS}" ]]; then
     rm "${LIQ_WORK_DB}/curr_work"
     rm "${LIQ_WORK_DB}/${WORK_BRANCH}"
+  else
+    rm "${LIQ_WORK_DB}/curr_work"
   fi
 }
 
