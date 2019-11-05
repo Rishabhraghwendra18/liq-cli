@@ -9,7 +9,7 @@ _liq()
     local OPTS # the options, set by this func, for completion
     local GLOBAL_ACTIONS="help"
     # Using 'GROUPS' was causing errors; set by some magic.
-    local ACTION_GROUPS="data environments packages project provided-services remotes required-services services work playground"
+    local ACTION_GROUPS="data environments packages project provided-services remotes required-services services work"
     COMPREPLY=()
     # local WORD_COUNT=${#COMP_WORDS[@]}
     # TODO: instead of simple 'CUR/PREV', use the above to see where in the
@@ -48,8 +48,6 @@ _liq()
           OPTS="connect err-log list log restart start stop";;
         work)
           OPTS="diff-master edit ignore-rest involve merge qa report resume save stage start status stop";;
-        playground)
-          OPTS="init close import";;
       esac
 
       COMPREPLY=( $(compgen -W "${OPTS}" -- ${CUR}) )

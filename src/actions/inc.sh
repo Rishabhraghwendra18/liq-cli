@@ -33,10 +33,6 @@ source ./work/actions.sh
 source ./work/help.sh
 source ./work/lib.sh
 
-source ./playground/actions.sh
-source ./playground/help.sh
-# source ./playground/lib.sh
-
 # getActions() {
 #  for d in `find "${SOURCE_DIR}/actions" -type d -maxdepth 1 -not -path "${SOURCE_DIR}/actions"`; do
 #    for f in "${d}/"*.sh; do source "$f"; done
