@@ -9,6 +9,9 @@ source ./meta/actions.sh
 source ./meta/help.sh
 source ./meta/lib.sh
 
+source ./orgs/actions.sh
+source ./orgs/help.sh
+
 source ./packages/actions.sh
 source ./packages/help.sh
 source ./packages/lib.sh
