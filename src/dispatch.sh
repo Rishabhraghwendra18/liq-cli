@@ -10,7 +10,7 @@ case "$GROUP" in
   *)
     case "$GROUP" in
       # TODO: build this from constant def... something...
-      data|environments|meta|packages|project|required-services|provided-services|services|work)
+      data|environments|meta|orgs|packages|project|required-services|provided-services|services|work)
         if (( $# == 0 )); then
           help $GROUP
           echoerrandexit "\nNo action argument provided. See valid actions above."

@@ -9,7 +9,7 @@ _liq()
     local OPTS # the options, set by this func, for completion
     local GLOBAL_ACTIONS="help"
     # Using 'GROUPS' was causing errors; set by some magic.
-    local ACTION_GROUPS="data environments packages project provided-services remotes required-services services work"
+    local ACTION_GROUPS="data environments orgs packages project provided-services remotes required-services services work"
     COMPREPLY=()
     # local WORD_COUNT=${#COMP_WORDS[@]}
     # TODO: instead of simple 'CUR/PREV', use the above to see where in the
@@ -33,7 +33,9 @@ _liq()
         environments)
           OPTS="add delete deselect list select set show update";;
         meta)
-          OPTS="bash-config";;
+          OPTS="init bash-config";;
+        orgs)
+          OPTS="create join list show select leave";;
         packages)
           OPTS="audit build deploy lint link version-check";;
         project)
