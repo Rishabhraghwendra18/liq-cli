@@ -18,10 +18,15 @@ Commands are organized by 'resources', which correspond to the ontology discusse
 There are three core Liquid Development resources (Core Resources). Core Resources are:
 
 * _meta_
+* _orgs_
 * _projects_
 * _work_
 
 ### Meta ~= self-control.
+
+### Orgs ~= "where" we're working.
+
+Org(anization)s define who "owns" the work we do and the policies that control that work.
 
 ### Projects ~= stuff we're working on and could work on.
 
