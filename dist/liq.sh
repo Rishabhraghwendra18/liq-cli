@@ -1001,7 +1001,7 @@ function log() {
     file=${BASH_SOURCE[$i-1]}
     echo "${now} $(hostname) $0:${lineno} ${msg}"
 }
-CATALYST_COMMAND_GROUPS=(data environments meta packages playground project provided-services required-services services work)
+CATALYST_COMMAND_GROUPS=(data environments meta packages project provided-services required-services services work)
 
 help() {
   local TMP
@@ -4175,9 +4175,11 @@ work-sync() {
 
   source "${LIQ_WORK_DB}/curr_work"
 
+  echo "Fetching remote histories..."
   git fetch upstream master:remotes/upstream/master
   git fetch workspace master:remotes/workspace/master
   git fetch workspace "${WORK_BRANCH}:remotes/workspace/${WORK_BRANCH}"
+  echo "Fetch done."
 
   if [[ "$FETCH_ONLY" == true ]]; then
     return 0
@@ -4402,42 +4404,6 @@ workProcessIssues() {
   echo "$ISSUES"
 }
 
-playground-init() {
-  touch "${_WORKSPACE_CONFIG}"
-  WORKSPACE_DIR="$PWD"
-  ensureWorkspaceDb
-}
-
-_playground_forEach() {
-  for f in `find -L "${BASE_DIR}" -maxdepth 1 -mindepth 1 -type d`; do
-    if [[ -f "${f}/.catalyst" ]]; then # TODO: switch '.catalyst' to '_PROJECT_CONFIG'
-      (cd "$f" && eval $*)
-    fi
-  done
-}
-
-playground-report() {
-  _playground_forEach 'liq work report'
-}
-
-playground-branch() {
-  local BRANCH_DESC="${1:-}"
-  requireArgs "$BRANCH_DESC" || exit $?
-
-  _playground_forEach 'git branch'
-}
-help-playground() {
-  local PREFIX="${1:-}"
-
-  handleSummary "${red_b}(deprecated)${reset}{PREFIX}${cyan_u}playground${reset} <action>: Manages the local playground." || cat <<EOF
-${red_b}(deprecated)${reset}${PREFIX}${cyan_u}playground${reset} <action>:
-   ${underline}init${reset}: Initializes the playground.
-   ${underline}import${reset} <git url>: Imports a repository into the playground.
-   ${underline}close${reset} <name>: Closes the named repository.
-EOF
-}
-# source ./playground/lib.sh
-
 # getActions() {
 #  for d in `find "${SOURCE_DIR}/actions" -type d -maxdepth 1 -not -path "${SOURCE_DIR}/actions"`; do
 #    for f in "${d}/"*.sh; do source "$f"; done
@@ -4470,7 +4436,7 @@ case "$GROUP" in
   *)
     case "$GROUP" in
       # TODO: build this from constant def... something...
-      data|environments|meta|packages|project|remotes|required-services|provided-services|services|work|playground)
+      data|environments|meta|packages|project|required-services|provided-services|services|work)
         if (( $# == 0 )); then
           help $GROUP
           echoerrandexit "\nNo action argument provided. See valid actions above."
@@ -4483,7 +4449,7 @@ case "$GROUP" in
             # source is not like other commands (?) and the attempt to replace possible source error with friendlier
             # message fails. The 'or' never gets evaluated, even when source fails.
             source "${LIQ_SETTINGS}" \ #2> /dev/null \
-              # || echoerrandexit "Could not source global Catalyst settings. Try:\nliq playground init"
+              # || echoerrandexit "Could not source global Catalyst settings. Try:\nliq meta init"
           fi
           requirements-${GROUP}
           ${GROUP}-${ACTION} "$@"
