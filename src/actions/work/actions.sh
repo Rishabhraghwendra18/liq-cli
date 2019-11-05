@@ -581,9 +581,11 @@ work-sync() {
 
   source "${LIQ_WORK_DB}/curr_work"
 
+  echo "Fetching remote histories..."
   git fetch upstream master:remotes/upstream/master
   git fetch workspace master:remotes/workspace/master
   git fetch workspace "${WORK_BRANCH}:remotes/workspace/${WORK_BRANCH}"
+  echo "Fetch done."
 
   if [[ "$FETCH_ONLY" == true ]]; then
     return 0
