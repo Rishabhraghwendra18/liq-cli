@@ -10,7 +10,7 @@ case "$GROUP" in
   *)
     case "$GROUP" in
       # TODO: build this from constant def... something...
-      data|environments|meta|packages|project|remotes|required-services|provided-services|services|work|playground)
+      data|environments|meta|packages|project|required-services|provided-services|services|work)
         if (( $# == 0 )); then
           help $GROUP
           echoerrandexit "\nNo action argument provided. See valid actions above."
@@ -23,7 +23,7 @@ case "$GROUP" in
             # source is not like other commands (?) and the attempt to replace possible source error with friendlier
             # message fails. The 'or' never gets evaluated, even when source fails.
             source "${LIQ_SETTINGS}" \ #2> /dev/null \
-              # || echoerrandexit "Could not source global Catalyst settings. Try:\nliq playground init"
+              # || echoerrandexit "Could not source global Catalyst settings. Try:\nliq meta init"
           fi
           requirements-${GROUP}
           ${GROUP}-${ACTION} "$@"
