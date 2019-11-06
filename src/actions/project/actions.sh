@@ -136,6 +136,70 @@ project-publish() {
   echoerrandexit "The 'publish' action is not yet implemented."
 }
 
+project-sync() {
+  eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M -- "$@")" \
+    || ( contextHelp; echoerrandexit "Bad options." )
+
+  local CURR_BRANCH REMOTE_COMMITS MASTER_UPDATED
+  CURR_BRANCH="$(workCurrentWorkBranch)"
+
+  echo "Fetching remote histories..."
+  git fetch upstream master:remotes/upstream/master
+  if [[ "$CURR_BRANCH" != "master" ]]; then
+    git fetch workspace master:remotes/workspace/master
+    git fetch workspace "${WORK_BRANCH}:remotes/workspace/${WORK_BRANCH}"
+  fi
+  echo "Fetch done."
+
+  if [[ "$FETCH_ONLY" == true ]]; then
+    return 0
+  fi
+
+  cleanupMaster() {
+    cd ${BASE_DIR}
+    # heh, need this to always be 'true' or 'set -e' complains
+    [[ ! -d _master ]] || git worktree remove _master
+  }
+
+  REMOTE_COMMITS=$(git rev-list --right-only --count master...upstream/master)
+  if (( $REMOTE_COMMITS > 0 )); then
+    echo "Syncing with upstream master..."
+    cd "$BASE_DIR"
+    (git worktree add _master master \
+      || echoerrandexit "Could not create 'master' worktree.") \
+    && { cd _master; git merge remotes/upstream/master; } || \
+        { cleanupMaster; echoerrandexit "Could not merge upstream master to local master."; }
+    MASTER_UPDATED=true
+  fi
+  echo "Upstream master synced."
+
+  if [[ "$CURR_BRANCH" != "master" ]]; then
+    REMOTE_COMMITS=$(git rev-list --right-only --count master...workspace/master)
+    if (( $REMOTE_COMMITS > 0 )); then
+      echo "Syncing with workspace master..."
+      cd "$BASE_DIR/_master"
+      git merge remotes/workspace/master || \
+          { cleanupMaster; echoerrandexit "Could not merge upstream master to local master."; }
+      MASTER_UPDATED=true
+    fi
+    echo "Workspace master synced."
+    cleanupMaster
+
+    REMOTE_COMMITS=$(git rev-list --right-only --count ${CURR_BRANCH}...workspace/${CURR_BRANCH})
+    if (( $REMOTE_COMMITS > 0 )); then
+      echo "Synching with workspace workbranch..."
+      git pull workspace "${CURR_BRANCH}:remotes/workspace/${CURR_BRANCH}"
+    fi
+    echo "Workspace workbranch synced."
+
+    if [[ -z "$NO_WORK_MASTER_MERGE" ]] && [[ "$MASTER_UPDATED" == true ]]; then
+      echo "Merging master updates to work branch..."
+      git merge master || echoerrandexit "Could not merge master updates to workbranch."
+      echo "Master updates merged to workbranch."
+    fi
+  fi # on workbranach check
+}
+
 project-test() {
   local TMP
   # TODO https://github.com/Liquid-Labs/liq-cli/issues/27

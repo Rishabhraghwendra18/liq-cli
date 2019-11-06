@@ -14,6 +14,10 @@ workConvertDot() {
   echo "$PROJ"
 }
 
+workCurrentWorkBranch() {
+  git branch | (grep '*' || true) | awk '{print $2}'
+}
+
 workSafeDesc() {
   local WORK_DESC="${1:-}"
   requireArgs "$WORK_DESC" || exit $?

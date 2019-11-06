@@ -35,7 +35,7 @@ work-close() {
   for PROJECT in $PROJECTS; do
     local CURR_BRANCH
     cd "${LIQ_PLAYGROUND}/${PROJECT}"
-    CURR_BRANCH=$(git branch | (grep '*' || true) | awk '{print $2}')
+    CURR_BRANCH=$(workCurrentWorkBranch)
 
     if [[ "$CURR_BRANCH" != "$WORK_BRANCH" ]]; then
       echoerrandexit "Local project '$PROJECT' repo branch does not match expected work branch."
@@ -234,6 +234,8 @@ work-merge() {
     DEL_COUNT=${DEL_COUNT:-0}
     local DIFF_COUNT=$(( $INS_COUNT - $DEL_COUNT ))
 
+    # TODO: don't assume the merge closes anything; may be merging for different reasons. Accept '--no-close' option or
+    # '--closes=x,y,z' where x etc. are alread associated to the unit of work
     local CLOSE_MSG BUGS_URL
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
     if [[ -z "$WORK_ISSUES" ]]; then
@@ -252,6 +254,7 @@ work-merge() {
     fi
 
     cleanupMaster() {
+      cd ${BASE_DIR}
       git worktree remove _master
     }
 
@@ -574,24 +577,20 @@ work-stop() {
 }
 
 work-sync() {
-  local TMP
-  TMP=$(setSimpleOptions FETCH_ONLY -- "$@") \
+  eval "$(setSimpleOptions FETCH_ONLY -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
 
-  source "${LIQ_WORK_DB}/curr_work"
-
-  echo "Fetching remote histories..."
-  git fetch upstream master:remotes/upstream/master
-  git fetch workspace master:remotes/workspace/master
-  git fetch workspace "${WORK_BRANCH}:remotes/workspace/${WORK_BRANCH}"
-  echo "Fetch done."
-
-  if [[ "$FETCH_ONLY" == true ]]; then
-    return 0
+  if [[ ! -f "${LIQ_WORK_DB}/curr_work" ]]; then
+    echoerrandexit "No current unit of work. Try:\nliq project sync"
   fi
 
-  echoerrandexit "Full sync not yet implemented."
+  source "${LIQ_WORK_DB}/curr_work"
+  local IP OPTS
+  if [[ -n "$FETCH_ONLY" ]]; then OPTS="--fetch-only "; fi
+  for IP in $INVOLVED_PROJECTS; do
+    echo "Syncing project '${IP}'..."
+    project-sync ${OPTS} "${IP}"
+  done
 }
 
 work-test() {

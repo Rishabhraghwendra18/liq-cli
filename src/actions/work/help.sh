@@ -3,9 +3,10 @@ help-work() {
 
   handleSummary "${PREFIX}${cyan_u}work${reset} <action>: Manages the current unit of work." || cat <<EOF
 ${PREFIX}${cyan_u}work${reset} <action>:
-  ${underline}save${reset} [-a|--all] [<path spec>...]:
+  ${underline}save${reset} [-a|--all] [--backup-only|-b] [<path spec>...]:
     Save staged files to the local working branch. '--all' auto stages all known files (does not
-    include new files) and saves them to the local working branch.
+    include new files) and saves them to the local working branch. '--backup-only' is useful if local commits
+    have been made directly through 'git' and you want to push them.
   ${underline}stage${reset} [-a|--all] [-i|--interactive] [-r|--review] [-d|--dry-run] [<path spec>...]:
     Stages files for save.
   ${underline}status${reset} [-s|--select] [<name>]: Shows details for the current or named unit of work.
@@ -28,7 +29,8 @@ ${PREFIX}${cyan_u}work${reset} <action>:
   ${underline}merge${reset}: Merges current work unit to master branches and updates mirrors.
   ${underline}qa${reset}: Checks the playground status and runs package audit, version check, and
     tests.
-  ${underline}backup${reset}: Pushes local changes to the workspace remote.
+  ${underline}sync${reset} [--fetch-only|-f] [--no-work-master-merge|-M]:
+    Synchronizes local project repos for all work. See `liq help work sync` for details.
   ${underline}test${reset}: Runs tests for each involved project in the current unit of work. See
     'project test' for details on options for the 'test' action.
 
