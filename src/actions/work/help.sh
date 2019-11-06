@@ -3,9 +3,10 @@ help-work() {
 
   handleSummary "${PREFIX}${cyan_u}work${reset} <action>: Manages the current unit of work." || cat <<EOF
 ${PREFIX}${cyan_u}work${reset} <action>:
-  ${underline}save${reset} [-a|--all] [<path spec>...]:
+  ${underline}save${reset} [-a|--all] [--backup-only|-b] [<path spec>...]:
     Save staged files to the local working branch. '--all' auto stages all known files (does not
-    include new files) and saves them to the local working branch.
+    include new files) and saves them to the local working branch. '--backup-only' is useful if local commits
+    have been made directly through 'git' and you want to push them.
   ${underline}stage${reset} [-a|--all] [-i|--interactive] [-r|--review] [-d|--dry-run] [<path spec>...]:
     Stages files for save.
   ${underline}status${reset} [-s|--select] [<name>]: Shows details for the current or named unit of work.

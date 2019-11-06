@@ -3057,6 +3057,11 @@ ${PREFIX}${cyan_u}project${reset} <action>:
     re-oriented to the project origin, unless the type is 'bare' in which case the project is cloned directly
     from the origin URL. Use 'liq project import' to import an existing project from a URL.
   ${underline}publish${reset}: Performs verification tests, updates package version, and publishes package.
+  ${underline}sync${reset} [--fetch-only|-f] [--no-work-master-merge|-M]:
+    Updates the remote master with new commits from upstream/master and, if currently on a work branch,
+    workspace/master and workspace/<workbranch> and then merges those updates with the current workbranch (if any).
+    '--fetch-only' will update the appropriate remote refs, and exit. --no-work-master-merge update the local master
+    branch and pull the workspace workbranch, but skips merging the new master updates to the workbranch.
   ${underline}test${reset} [-t|--types <types>][-D|--no-data-reset][-g|--go-run <testregex>][--no-start|-S] [<name>]:
     Runs unit tests for all or the named packages in the current project.
     * 'types' may be 'unit' or 'integration' (=='int') or 'all', which is default.
@@ -4492,9 +4497,10 @@ help-work() {
 
   handleSummary "${PREFIX}${cyan_u}work${reset} <action>: Manages the current unit of work." || cat <<EOF
 ${PREFIX}${cyan_u}work${reset} <action>:
-  ${underline}save${reset} [-a|--all] [<path spec>...]:
+  ${underline}save${reset} [-a|--all] [--backup-only|-b] [<path spec>...]:
     Save staged files to the local working branch. '--all' auto stages all known files (does not
-    include new files) and saves them to the local working branch.
+    include new files) and saves them to the local working branch. '--backup-only' is useful if local commits
+    have been made directly through 'git' and you want to push them.
   ${underline}stage${reset} [-a|--all] [-i|--interactive] [-r|--review] [-d|--dry-run] [<path spec>...]:
     Stages files for save.
   ${underline}status${reset} [-s|--select] [<name>]: Shows details for the current or named unit of work.
@@ -4517,7 +4523,8 @@ ${PREFIX}${cyan_u}work${reset} <action>:
   ${underline}merge${reset}: Merges current work unit to master branches and updates mirrors.
   ${underline}qa${reset}: Checks the playground status and runs package audit, version check, and
     tests.
-  ${underline}backup${reset}: Pushes local changes to the workspace remote.
+  ${underline}sync${reset} [--fetch-only|-f] [--no-work-master-merge|-M]:
+    Synchronizes local project repos for all work. See `liq help work sync` for details.
   ${underline}test${reset}: Runs tests for each involved project in the current unit of work. See
     'project test' for details on options for the 'test' action.
 
@@ -4526,7 +4533,7 @@ A 'unit of work' is essentially a set of work branches across all involved proje
 ${red_b}ALPHA Note:${reset} The 'stop' and 'resume' actions do not currently manage the work branches and only updates the 'current work' pointer.
 EOF
 }
-sworkBranchName() {
+workBranchName() {
   local WORK_DESC="${1:-}"
   requireArgs "$WORK_DESC" || exit $?
   requireArgs "$WORK_STARTED" || exit $?
