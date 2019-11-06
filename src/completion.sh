@@ -39,7 +39,7 @@ _liq()
         packages)
           OPTS="audit build deploy lint link version-check";;
         project)
-          OPTS="init publish test";;
+          OPTS="init publish sync test";;
         provided-services)
           OPTS="list add delete";;
         remotes)
@@ -49,7 +49,7 @@ _liq()
         services)
           OPTS="connect err-log list log restart start stop";;
         work)
-          OPTS="diff-master edit ignore-rest involve merge qa report resume save stage start status stop";;
+          OPTS="diff-master edit ignore-rest involve merge qa report resume save stage start status stop sync";;
       esac
 
       COMPREPLY=( $(compgen -W "${OPTS}" -- ${CUR}) )
