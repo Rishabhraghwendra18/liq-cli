@@ -17,6 +17,11 @@ ${PREFIX}${cyan_u}project${reset} <action>:
     re-oriented to the project origin, unless the type is 'bare' in which case the project is cloned directly
     from the origin URL. Use 'liq project import' to import an existing project from a URL.
   ${underline}publish${reset}: Performs verification tests, updates package version, and publishes package.
+  ${underline}sync${reset} [--fetch-only|-f] [--no-work-master-merge|-M]:
+    Updates the remote master with new commits from upstream/master and, if currently on a work branch,
+    workspace/master and workspace/<workbranch> and then merges those updates with the current workbranch (if any).
+    '--fetch-only' will update the appropriate remote refs, and exit. --no-work-master-merge update the local master
+    branch and pull the workspace workbranch, but skips merging the new master updates to the workbranch.
   ${underline}test${reset} [-t|--types <types>][-D|--no-data-reset][-g|--go-run <testregex>][--no-start|-S] [<name>]:
     Runs unit tests for all or the named packages in the current project.
     * 'types' may be 'unit' or 'integration' (=='int') or 'all', which is default.

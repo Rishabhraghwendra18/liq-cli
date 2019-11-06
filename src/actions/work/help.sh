@@ -28,7 +28,8 @@ ${PREFIX}${cyan_u}work${reset} <action>:
   ${underline}merge${reset}: Merges current work unit to master branches and updates mirrors.
   ${underline}qa${reset}: Checks the playground status and runs package audit, version check, and
     tests.
-  ${underline}backup${reset}: Pushes local changes to the workspace remote.
+  ${underline}sync${reset} [--fetch-only|-f] [--no-work-master-merge|-M]:
+    Synchronizes local project repos for all work. See `liq help work sync` for details.
   ${underline}test${reset}: Runs tests for each involved project in the current unit of work. See
     'project test' for details on options for the 'test' action.
 

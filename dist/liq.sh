@@ -2946,6 +2946,70 @@ project-publish() {
   echoerrandexit "The 'publish' action is not yet implemented."
 }
 
+project-sync() {
+  eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M -- "$@")" \
+    || ( contextHelp; echoerrandexit "Bad options." )
+
+  local CURR_BRANCH REMOTE_COMMITS MASTER_UPDATED
+  CURR_BRANCH="$(workCurrentWorkBranch)"
+
+  echo "Fetching remote histories..."
+  git fetch upstream master:remotes/upstream/master
+  if [[ "$CURR_BRANCH" != "master" ]]; then
+    git fetch workspace master:remotes/workspace/master
+    git fetch workspace "${WORK_BRANCH}:remotes/workspace/${WORK_BRANCH}"
+  fi
+  echo "Fetch done."
+
+  if [[ "$FETCH_ONLY" == true ]]; then
+    return 0
+  fi
+
+  cleanupMaster() {
+    cd ${BASE_DIR}
+    # heh, need this to always be 'true' or 'set -e' complains
+    [[ ! -d _master ]] || git worktree remove _master
+  }
+
+  REMOTE_COMMITS=$(git rev-list --right-only --count master...upstream/master)
+  if (( $REMOTE_COMMITS > 0 )); then
+    echo "Syncing with upstream master..."
+    cd "$BASE_DIR"
+    (git worktree add _master master \
+      || echoerrandexit "Could not create 'master' worktree.") \
+    && { cd _master; git merge remotes/upstream/master; } || \
+        { cleanupMaster; echoerrandexit "Could not merge upstream master to local master."; }
+    MASTER_UPDATED=true
+  fi
+  echo "Upstream master synced."
+
+  if [[ "$CURR_BRANCH" != "master" ]]; then
+    REMOTE_COMMITS=$(git rev-list --right-only --count master...workspace/master)
+    if (( $REMOTE_COMMITS > 0 )); then
+      echo "Syncing with workspace master..."
+      cd "$BASE_DIR/_master"
+      git merge remotes/workspace/master || \
+          { cleanupMaster; echoerrandexit "Could not merge upstream master to local master."; }
+      MASTER_UPDATED=true
+    fi
+    echo "Workspace master synced."
+    cleanupMaster
+
+    REMOTE_COMMITS=$(git rev-list --right-only --count ${CURR_BRANCH}...workspace/${CURR_BRANCH})
+    if (( $REMOTE_COMMITS > 0 )); then
+      echo "Synching with workspace workbranch..."
+      git pull workspace "${CURR_BRANCH}:remotes/workspace/${CURR_BRANCH}"
+    fi
+    echo "Workspace workbranch synced."
+
+    if [[ -z "$NO_WORK_MASTER_MERGE" ]] && [[ "$MASTER_UPDATED" == true ]]; then
+      echo "Merging master updates to work branch..."
+      git merge master || echoerrandexit "Could not merge master updates to workbranch."
+      echo "Master updates merged to workbranch."
+    fi
+  fi # on workbranach check
+}
+
 project-test() {
   local TMP
   # TODO https://github.com/Liquid-Labs/liq-cli/issues/27
@@ -3785,7 +3849,7 @@ work-close() {
   for PROJECT in $PROJECTS; do
     local CURR_BRANCH
     cd "${LIQ_PLAYGROUND}/${PROJECT}"
-    CURR_BRANCH=$(git branch | (grep '*' || true) | awk '{print $2}')
+    CURR_BRANCH=$(workCurrentWorkBranch)
 
     if [[ "$CURR_BRANCH" != "$WORK_BRANCH" ]]; then
       echoerrandexit "Local project '$PROJECT' repo branch does not match expected work branch."
@@ -3984,6 +4048,8 @@ work-merge() {
     DEL_COUNT=${DEL_COUNT:-0}
     local DIFF_COUNT=$(( $INS_COUNT - $DEL_COUNT ))
 
+    # TODO: don't assume the merge closes anything; may be merging for different reasons. Accept '--no-close' option or
+    # '--closes=x,y,z' where x etc. are alread associated to the unit of work
     local CLOSE_MSG BUGS_URL
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
     if [[ -z "$WORK_ISSUES" ]]; then
@@ -4002,6 +4068,7 @@ work-merge() {
     fi
 
     cleanupMaster() {
+      cd ${BASE_DIR}
       git worktree remove _master
     }
 
@@ -4324,24 +4391,20 @@ work-stop() {
 }
 
 work-sync() {
-  local TMP
-  TMP=$(setSimpleOptions FETCH_ONLY -- "$@") \
+  eval "$(setSimpleOptions FETCH_ONLY -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
 
-  source "${LIQ_WORK_DB}/curr_work"
-
-  echo "Fetching remote histories..."
-  git fetch upstream master:remotes/upstream/master
-  git fetch workspace master:remotes/workspace/master
-  git fetch workspace "${WORK_BRANCH}:remotes/workspace/${WORK_BRANCH}"
-  echo "Fetch done."
-
-  if [[ "$FETCH_ONLY" == true ]]; then
-    return 0
+  if [[ ! -f "${LIQ_WORK_DB}/curr_work" ]]; then
+    echoerrandexit "No current unit of work. Try:\nliq project sync"
   fi
 
-  echoerrandexit "Full sync not yet implemented."
+  source "${LIQ_WORK_DB}/curr_work"
+  local IP OPTS
+  if [[ -n "$FETCH_ONLY" ]]; then OPTS="--fetch-only "; fi
+  for IP in $INVOLVED_PROJECTS; do
+    echo "Syncing project '${IP}'..."
+    project-sync ${OPTS} "${IP}"
+  done
 }
 
 work-test() {
@@ -4463,7 +4526,7 @@ A 'unit of work' is essentially a set of work branches across all involved proje
 ${red_b}ALPHA Note:${reset} The 'stop' and 'resume' actions do not currently manage the work branches and only updates the 'current work' pointer.
 EOF
 }
-workBranchName() {
+sworkBranchName() {
   local WORK_DESC="${1:-}"
   requireArgs "$WORK_DESC" || exit $?
   requireArgs "$WORK_STARTED" || exit $?
@@ -4477,6 +4540,10 @@ workConvertDot() {
     PROJ=$(cat "$BASE_DIR/package.json" | jq --raw-output '.name' | tr -d "'")
   fi
   echo "$PROJ"
+}
+
+workCurrentWorkBranch() {
+  git branch | (grep '*' || true) | awk '{print $2}'
 }
 
 workSafeDesc() {
