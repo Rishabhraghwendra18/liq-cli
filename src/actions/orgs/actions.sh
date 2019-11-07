@@ -81,3 +81,35 @@ orgs-create() {
     rm -rf "$DIR_NAME"
   fi
 }
+
+orgs-select() {
+  echo "foo" >> log.tmp
+  eval "$(setSimpleOptions NONE -- "$@")"
+
+  if [[ -n "$NONE" ]]; then
+    rm "${CURR_ORG_FILE}"
+    return
+  fi
+
+  local ORG_NAME="${1:-}"
+  if [[ -z "$ORG_NAME" ]]; then
+    local ORGS
+    ORGS="$(orgsOrgList)"
+    echo "ORGS: $ORGS" >> log.tmp
+
+    if test -z "${ORGS}"; then
+      echoerrandexit "No org affiliations found. Try:\nliq orgs create\nor\nliq orgs join <GitHub name>"
+    fi
+
+    echo "Select org:"
+    selectOneCancel ORG_NAME ORGS
+    ORG_NAME="${ORG_NAME//[ *]/}"
+  fi
+  echo "blah: ${LIQ_ORG_DB}/${ORG_NAME}" >> log.tmp
+  if [[ -d "${LIQ_ORG_DB}/${ORG_NAME}" ]]; then
+    if [[ -L $CURR_ORG_FILE ]]; then rm $CURR_ORG_FILE; fi
+    cd "${LIQ_ORG_DB}" && ln -s "./${ORG_NAME}" $(basename "${CURR_ORG_FILE}")
+  else
+    echoerrandexit "No such org '$ORG_NAME' defined."
+  fi
+}

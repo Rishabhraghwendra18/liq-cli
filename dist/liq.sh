@@ -973,6 +973,7 @@ defineParameters() {
 LIQ_DB="${HOME}/.liquid-development"
 LIQ_SETTINGS="${LIQ_DB}/settings.sh"
 LIQ_ENV_DB="${LIQ_DB}/environments"
+LIQ_ORG_DB="${LIQ_DB}/orgs"
 LIQ_WORK_DB="${LIQ_DB}/work"
 LIQ_ENV_LOGS="${LIQ_DB}/logs"
 
@@ -985,6 +986,7 @@ _ORG_ID_URL='https://console.cloud.google.com/iam-admin/settings'
 _BILLING_ACCT_URL='https://console.cloud.google.com/billing?folder=&organizationId='
 
 # Global variables.
+CURR_ORG_FILE="${LIQ_ORG_DB}/curr_org"
 CURR_ENV_FILE='' # set by 'requireEnvironment'
 CURR_ENV='' # set by 'requireEnvironment'
 # 'requireEnvironment' calls 'requirePackage'
@@ -1517,10 +1519,8 @@ function environmentsAskIfSelect() {
     || true
 }
 doEnvironmentList() {
-  local TMP
-  TMP=$(setSimpleOptions LIST_ONLY -- "$@") \
+  eval "$(setSimpleOptions LIST_ONLY -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
 
   if [[ ! -d "${LIQ_ENV_DB}/${PACKAGE_NAME}" ]]; then
     return
@@ -1530,7 +1530,7 @@ doEnvironmentList() {
     CURR_ENV=`readlink "${LIQ_ENV_DB}/${PACKAGE_NAME}/curr_env" | xargs basename`
   fi
   local ENV
-  for ENV in `find "${LIQ_ENV_DB}/${PACKAGE_NAME}" -mindepth 1 -maxdepth 1 -type f -not -name "*~" -exec basename '{}' \; | sort`; do
+  for ENV in `find "${LIQ_ENV_DB}/${PACKAGE_NAME}" -type f -not -name "*~" -exec basename '{}' \; | sort`; do
     ( ( test -z "$LIST_ONLY" && test "$ENV" == "${CURR_ENV:-}" && echo -n '* ' ) || echo -n '  ' ) && echo "$ENV"
   done
 }
@@ -2163,11 +2163,14 @@ environments-select() {
       echoerrandexit "No environments defined. Try:\nliq environment add"
     fi
     echo "Select environment:"
-    select ENV_NAME in `doEnvironmentList`; do break; done
+    local ENVS
+    ENVS="$(doEnvironmentList)"
+    selectOneCancel ENV_NAME ENVS
+    ENV_NAME="${ENV_NAME//[ *]/}"
   fi
   local CURR_ENV_FILE="${LIQ_ENV_DB}/${PACKAGE_NAME}/curr_env"
   if [[ -f "${LIQ_ENV_DB}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
-    test -L $CURR_ENV_FILE && rm $CURR_ENV_FILE
+    if [[ -L $CURR_ENV_FILE ]]; then rm $CURR_ENV_FILE; fi
     cd "${LIQ_ENV_DB}/${PACKAGE_NAME}/" && ln -s "./${ENV_NAME}" curr_env
   else
     echoerrandexit "No such environment '$ENV_NAME' defined."
@@ -2492,6 +2495,38 @@ orgs-create() {
     rm -rf "$DIR_NAME"
   fi
 }
+
+orgs-select() {
+  echo "foo" >> log.tmp
+  eval "$(setSimpleOptions NONE -- "$@")"
+
+  if [[ -n "$NONE" ]]; then
+    rm "${CURR_ORG_FILE}"
+    return
+  fi
+
+  local ORG_NAME="${1:-}"
+  if [[ -z "$ORG_NAME" ]]; then
+    local ORGS
+    ORGS="$(orgsOrgList)"
+    echo "ORGS: $ORGS" >> log.tmp
+
+    if test -z "${ORGS}"; then
+      echoerrandexit "No org affiliations found. Try:\nliq orgs create\nor\nliq orgs join <GitHub name>"
+    fi
+
+    echo "Select org:"
+    selectOneCancel ORG_NAME ORGS
+    ORG_NAME="${ORG_NAME//[ *]/}"
+  fi
+  echo "blah: ${LIQ_ORG_DB}/${ORG_NAME}" >> log.tmp
+  if [[ -d "${LIQ_ORG_DB}/${ORG_NAME}" ]]; then
+    if [[ -L $CURR_ORG_FILE ]]; then rm $CURR_ORG_FILE; fi
+    cd "${LIQ_ORG_DB}" && ln -s "./${ORG_NAME}" $(basename "${CURR_ORG_FILE}")
+  else
+    echoerrandexit "No such org '$ORG_NAME' defined."
+  fi
+}
 help-orgs() {
   local PREFIX="${1:-}"
 
@@ -2516,6 +2551,21 @@ ${PREFIX}${cyan_u}orgs${reset} <action>:
 
 An org(anization) is the legal owner of work and all work is done in the context of an org. It's perfectly fine to create a 'personal' org representing yourself. Basic info (such as EIN and legal name)
 EOF
+}
+orgsOrgList() {
+  eval "$(setSimpleOptions LIST_ONLY -- "$@")" \
+    || ( contextHelp; echoerrandexit "Bad options." )
+
+  local CURR_ORG
+  if [[ -L "${CURR_ORG_FILE}" ]]; then
+    CURR_ORG=`readlink "${CURR_ORG_FILE}" | xargs basename`
+  fi
+  local ORG
+  echo 'blah2' >> log.tmp
+  echo "find \"${LIQ_ORG_DB}\" -type f -not -name \"*~\" -exec basename '{}' \; | sort" >> log.tmp
+  for ORG in $(find "${LIQ_ORG_DB}" -maxdepth 1 -mindepth 1 -type d -exec basename '{}' \; | sort); do
+    ( ( test -z "$LIST_ONLY" && test "$ORG" == "${CURR_ORG:-}" && echo -n '* ' ) || echo -n '  ' ) && echo "$ORG"
+  done
 }
 
 requirements-packages() {
@@ -4497,7 +4547,7 @@ help-work() {
 
   handleSummary "${PREFIX}${cyan_u}work${reset} <action>: Manages the current unit of work." || cat <<EOF
 ${PREFIX}${cyan_u}work${reset} <action>:
-  ${underline}save${reset} [-a|--all] [--backup-only|-b] [<path spec>...]:
+  ${underline}save${reset} [-a|--all] [--backup-only|-b] [--message|-m=<version ][<path spec>...]:
     Save staged files to the local working branch. '--all' auto stages all known files (does not
     include new files) and saves them to the local working branch. '--backup-only' is useful if local commits
     have been made directly through 'git' and you want to push them.

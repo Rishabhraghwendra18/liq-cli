@@ -11,6 +11,7 @@ source ./meta/lib.sh
 
 source ./orgs/actions.sh
 source ./orgs/help.sh
+source ./orgs/lib.sh
 
 source ./packages/actions.sh
 source ./packages/help.sh

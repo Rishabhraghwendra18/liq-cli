@@ -101,11 +101,14 @@ environments-select() {
       echoerrandexit "No environments defined. Try:\nliq environment add"
     fi
     echo "Select environment:"
-    select ENV_NAME in `doEnvironmentList`; do break; done
+    local ENVS
+    ENVS="$(doEnvironmentList)"
+    selectOneCancel ENV_NAME ENVS
+    ENV_NAME="${ENV_NAME//[ *]/}"
   fi
   local CURR_ENV_FILE="${LIQ_ENV_DB}/${PACKAGE_NAME}/curr_env"
   if [[ -f "${LIQ_ENV_DB}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
-    test -L $CURR_ENV_FILE && rm $CURR_ENV_FILE
+    if [[ -L $CURR_ENV_FILE ]]; then rm $CURR_ENV_FILE; fi
     cd "${LIQ_ENV_DB}/${PACKAGE_NAME}/" && ln -s "./${ENV_NAME}" curr_env
   else
     echoerrandexit "No such environment '$ENV_NAME' defined."
