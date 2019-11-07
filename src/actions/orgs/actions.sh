@@ -83,7 +83,6 @@ orgs-create() {
 }
 
 orgs-select() {
-  echo "foo" >> log.tmp
   eval "$(setSimpleOptions NONE -- "$@")"
 
   if [[ -n "$NONE" ]]; then
@@ -95,7 +94,6 @@ orgs-select() {
   if [[ -z "$ORG_NAME" ]]; then
     local ORGS
     ORGS="$(orgsOrgList)"
-    echo "ORGS: $ORGS" >> log.tmp
 
     if test -z "${ORGS}"; then
       echoerrandexit "No org affiliations found. Try:\nliq orgs create\nor\nliq orgs join <GitHub name>"
@@ -111,5 +109,26 @@ orgs-select() {
     cd "${LIQ_ORG_DB}" && ln -s "./${ORG_NAME}" $(basename "${CURR_ORG_FILE}")
   else
     echoerrandexit "No such org '$ORG_NAME' defined."
+  fi
+}
+
+orgs-show() {
+  eval "$(setSimpleOptions SENSITIVE -- "$@")"
+
+  local ORG_NAME="${1:-}"
+  if [[ -z "$ORG_NAME" ]]; then
+    ORG_NAME=$(orgsCurrentOrg)
+    if [[ -z "$ORG_NAME" ]]; then
+      echoerrandexit "No org name given and no org currently selected. Try one of:\nliq orgs show <org name>\nliq orgs select"
+    fi
+  fi
+
+  if [[ ! -d "${LIQ_ORG_DB}/${ORG_NAME}" ]]; then
+    echoerrandexit "No such org with local nick name '${ORG_NAME}'. Try:\nliq orgs list"
+  fi
+
+  cat "${LIQ_ORG_DB}/${ORG_NAME}/public/settings.sh"
+  if [[ -n "$SENSITIVE" ]]; then
+    cat "${LIQ_ORG_DB}/${ORG_NAME}/sensitive/settings.sh"
   fi
 }

@@ -15,11 +15,12 @@ ${PREFIX}${cyan_u}orgs${reset} <action>:
     * --ein
     * --naics
   ${underline}join${reset}:
-  ${underline}select${reset}:
+  ${underline}select${reset} [--none] [<org nick>]: Selects/changes currently active org. If no name is
+    given, then will enter interactive mode. '--none' de-activates the currently selected org.
   ${underline}leave${reset}:
   ${underline}list${reset}:
-  ${underline}show${reset}:
+  ${underline}show${reset} [--sensitive] [<org nick>]: Displays info on the currently active or named org.
 
-An org(anization) is the legal owner of work and all work is done in the context of an org. It's perfectly fine to create a 'personal' org representing yourself. Basic info (such as EIN and legal name)
+An org(anization) is the legal owner of work and all work is done in the context of an org. It's perfectly fine to create a 'personal' org representing yourself.
 EOF
 }
