@@ -82,6 +82,10 @@ orgs-create() {
   fi
 }
 
+orgs-list() {
+  orgsOrgList
+}
+
 orgs-select() {
   eval "$(setSimpleOptions NONE -- "$@")"
 
