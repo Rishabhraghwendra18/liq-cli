@@ -2,6 +2,44 @@ requirements-orgs() {
   findBase
 }
 
+orgs-affiliate() {
+  eval "$(setSimpleOptions LEAVE: SELECT SENSITIVE: -- "$@")"
+
+  local ORG_URL="${1:-}"
+
+  if [[ -n "$LEAVE" ]]; then
+    if [[ -z "$ORG_URL" ]]; then # which is really the nick name
+      echoerrandexit "You must explicitly name the org when leaving. Try:\nliq orgs leave <org nick>"
+    elif [[ ! -d "${LIQ_ORG_DB}/${ORG_URL}" ]]; then
+      echoerrandexit "Did not find org with nick name '${ORG_URL}'. Try:\nliq orgs list"
+    fi
+    cd "${LIQ_ORG_DB}"
+    if [[ "$(orgsCurrentOrg)" == "$ORG_URL" ]]; then
+      rm -rf curr_org
+    fi
+    rm -rf "$ORG_URL"
+    echo "Local org info removed."
+    return
+  fi
+
+  mkdir -p "${LIQ_ORG_DB}"
+  cd "${LIQ_ORG_DB}"
+  rm -rf .staging
+  git clone "${ORG_URL}/org_settings.git" .staging \
+    || { rm -rf .staging; echoerrandexit "Could not retrieve the public org repo."; }
+  source .staging/settings.sh
+  mkdir -p "${LIQ_ORG_DB}/${ORG_NICK_NAME}"
+  mv .staging "${LIQ_ORG_DB}/${ORG_NICK_NAME}/public"
+
+  if [[ -n "${SENSITIVE}" ]]; then
+    git clone "${ORG_URL}/org_settings_sensitive.git" .staging \
+      || { rm -rf .staging; echoerrandexit "Could not retrieve the sensitive org repo."; }
+    mv .staging "${LIQ_ORG_DB}/${ORG_NICK_NAME}/sensitive"
+  fi
+
+  if [[ -n "${SELECT}" ]]; then orgs-select "$ORG_NICK_NAME"; fi
+}
+
 orgs-create() {
   local FIELDS="COMMON_NAME GITHUB_NAME LEGAL_NAME ADDRESS NAICS"
   local FIELDS_SENSITIVE="EIN"
@@ -60,6 +98,7 @@ orgs-create() {
   for FIELD in $FIELDS; do
     echo "ORG_${FIELD}='$(echo "${!FIELD}" | sed "s/'/'\"'\"'/g")'" >> settings.sh
   done
+  echo "ORG_NICK_NAME='${DIR_NAME}'" >> settings.sh
   prep-repo public
   hub create -d "Public liq settings for ${LEGAL_NAME}." "${GITHUB_NAME}/org_settings"
   git push --set-upstream origin master
@@ -100,7 +139,7 @@ orgs-select() {
     ORGS="$(orgsOrgList)"
 
     if test -z "${ORGS}"; then
-      echoerrandexit "No org affiliations found. Try:\nliq orgs create\nor\nliq orgs join <GitHub name>"
+      echoerrandexit "No org affiliations found. Try:\nliq orgs create\nor\nliq orgs affiliate <git url>"
     fi
 
     echo "Select org:"

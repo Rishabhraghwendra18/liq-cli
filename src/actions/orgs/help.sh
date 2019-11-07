@@ -14,7 +14,11 @@ ${PREFIX}${cyan_u}orgs${reset} <action>:
     * --github-name
     * --ein
     * --naics
-  ${underline}affiliate${reset}:
+  ${underline}affiliate${reset} [--sensitive] [--leave] [--select|-s] <org url>: Will attempt to retrieve
+    the standord org repo at '<org url>/org_settings'. '--sentisive' will also attempt to retrieve the
+    sensitive repo. '--select' will cause a successfully retrieved org to be activated. With '--leave',
+    provide the org nick instead of URL and the local repos will be removed. This will also de-select
+    the named org if it is the currently selected org.
   ${underline}select${reset} [--none] [<org nick>]: Selects/changes currently active org. If no name is
     given, then will enter interactive mode. '--none' de-activates the currently selected org.
   ${underline}list${reset}: Lists the currently affiliated orgs.

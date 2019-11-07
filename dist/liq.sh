@@ -48,10 +48,8 @@ else
 fi
 
 # Usage:
-#   local TMP
-#   TMP=$(setSimpleOptions SHORT LONG= SPECIFY_SHORT:X LONG_SPEC:S= -- "$@") \
+#   eval "$(setSimpleOptions SHORT LONG= SPECIFY_SHORT:X LONG_SPEC:S= -- "$@")" \
 #     || ( contextHelp; echoerrandexit "Bad options."; )
-#   eval "$TMP"
 #
 # Note the use of the intermediate TMP is important to preserve the exit value
 # setSimpleOptions. E.g., doing 'eval "$(setSimpleOptions ...)"' will work fine,
@@ -86,24 +84,30 @@ EOF
       VAR_NAME="$VAR_SPEC"
       SHORT_OPT=$(echo "${VAR_NAME::1}" | tr '[:upper:]' '[:lower:]')
     fi
-    local OPT_REQ=$(echo "$VAR_NAME" | sed -Ee 's/[^=]//g' | tr '=' ':')
-    VAR_NAME=`echo "$VAR_NAME" | tr -d "="`
-    LOWER_NAME=`echo "$VAR_NAME" | tr '[:upper:]' '[:lower:]'`
+    local OPT_ARG=$(echo "$VAR_NAME" | sed -Ee 's/[^=]//g' | tr '=' ':')
+    VAR_NAME=$(echo "$VAR_NAME" | tr -d "=")
+    LOWER_NAME=$(echo "$VAR_NAME" | tr '[:upper:]' '[:lower:]')
     LONG_OPT="$(echo "${LOWER_NAME}" | tr '_' '-')"
 
-    SHORT_OPTS="${SHORT_OPTS:-}${SHORT_OPT}${OPT_REQ}"
+    if [[ -n "${SHORT_OPT}" ]]; then
+      SHORT_OPTS="${SHORT_OPTS:-}${SHORT_OPT}${OPT_ARG}"
+    fi
 
-    LONG_OPTS=$( ( test ${#LONG_OPTS} -gt 0 && echo -n "${LONG_OPTS},") || true && echo -n "${LONG_OPT}${OPT_REQ}")
+    LONG_OPTS=$( ( test ${#LONG_OPTS} -gt 0 && echo -n "${LONG_OPTS},") || true && echo -n "${LONG_OPT}${OPT_ARG}")
 
     LOCAL_DECLS="${LOCAL_DECLS:-}local ${VAR_NAME}='';"
     local VAR_SETTER="${VAR_NAME}=true;"
-    if [[ -n "$OPT_REQ" ]]; then
+    if [[ -n "$OPT_ARG" ]]; then
       LOCAL_DECLS="${LOCAL_DECLS}local ${VAR_NAME}_SET='';"
       VAR_SETTER=${VAR_NAME}'="${2}"; '${VAR_NAME}'_SET=true; shift;'
     fi
+    local CASE_SELECT="-${SHORT_OPT}|--${LONG_OPT}]"
+    if [[ -z "$SHORT_OPT" ]]; then
+      CASE_SELECT="--${LONG_OPT}]"
+    fi
     CASE_HANDLER=$(cat <<EOF
     ${CASE_HANDLER}
-      -${SHORT_OPT}|--${LONG_OPT}]
+      ${CASE_SELECT}
         $VAR_SETTER
         _OPTS_COUNT=\$(( \$_OPTS_COUNT + 1));;
 EOF
@@ -2416,6 +2420,44 @@ requirements-orgs() {
   findBase
 }
 
+orgs-affiliate() {
+  eval "$(setSimpleOptions LEAVE: SELECT SENSITIVE: -- "$@")"
+
+  local ORG_URL="${1:-}"
+
+  if [[ -n "$LEAVE" ]]; then
+    if [[ -z "$ORG_URL" ]]; then # which is really the nick name
+      echoerrandexit "You must explicitly name the org when leaving. Try:\nliq orgs leave <org nick>"
+    elif [[ ! -d "${LIQ_ORG_DB}/${ORG_URL}" ]]; then
+      echoerrandexit "Did not find org with nick name '${ORG_URL}'. Try:\nliq orgs list"
+    fi
+    cd "${LIQ_ORG_DB}"
+    if [[ "$(orgsCurrentOrg)" == "$ORG_URL" ]]; then
+      rm -rf curr_org
+    fi
+    rm -rf "$ORG_URL"
+    echo "Local org info removed."
+    return
+  fi
+
+  mkdir -p "${LIQ_ORG_DB}"
+  cd "${LIQ_ORG_DB}"
+  rm -rf .staging
+  git clone "${ORG_URL}/org_settings.git" .staging \
+    || { rm -rf .staging; echoerrandexit "Could not retrieve the public org repo."; }
+  source .staging/settings.sh
+  mkdir -p "${LIQ_ORG_DB}/${ORG_NICK_NAME}"
+  mv .staging "${LIQ_ORG_DB}/${ORG_NICK_NAME}/public"
+
+  if [[ -n "${SENSITIVE}" ]]; then
+    git clone "${ORG_URL}/org_settings_sensitive.git" .staging \
+      || { rm -rf .staging; echoerrandexit "Could not retrieve the sensitive org repo."; }
+    mv .staging "${LIQ_ORG_DB}/${ORG_NICK_NAME}/sensitive"
+  fi
+
+  if [[ -n "${SELECT}" ]]; then orgs-select "$ORG_NICK_NAME"; fi
+}
+
 orgs-create() {
   local FIELDS="COMMON_NAME GITHUB_NAME LEGAL_NAME ADDRESS NAICS"
   local FIELDS_SENSITIVE="EIN"
@@ -2474,6 +2516,7 @@ orgs-create() {
   for FIELD in $FIELDS; do
     echo "ORG_${FIELD}='$(echo "${!FIELD}" | sed "s/'/'\"'\"'/g")'" >> settings.sh
   done
+  echo "ORG_NICK_NAME='${DIR_NAME}'" >> settings.sh
   prep-repo public
   hub create -d "Public liq settings for ${LEGAL_NAME}." "${GITHUB_NAME}/org_settings"
   git push --set-upstream origin master
@@ -2496,6 +2539,10 @@ orgs-create() {
   fi
 }
 
+orgs-list() {
+  orgsOrgList
+}
+
 orgs-select() {
   eval "$(setSimpleOptions NONE -- "$@")"
 
@@ -2510,7 +2557,7 @@ orgs-select() {
     ORGS="$(orgsOrgList)"
 
     if test -z "${ORGS}"; then
-      echoerrandexit "No org affiliations found. Try:\nliq orgs create\nor\nliq orgs join <GitHub name>"
+      echoerrandexit "No org affiliations found. Try:\nliq orgs create\nor\nliq orgs affiliate <git url>"
     fi
 
     echo "Select org:"
@@ -2562,11 +2609,14 @@ ${PREFIX}${cyan_u}orgs${reset} <action>:
     * --github-name
     * --ein
     * --naics
-  ${underline}join${reset}:
+  ${underline}affiliate${reset} [--sensitive] [--leave] [--select|-s] <org url>: Will attempt to retrieve
+    the standord org repo at '<org url>/org_settings'. '--sentisive' will also attempt to retrieve the
+    sensitive repo. '--select' will cause a successfully retrieved org to be activated. With '--leave',
+    provide the org nick instead of URL and the local repos will be removed. This will also de-select
+    the named org if it is the currently selected org.
   ${underline}select${reset} [--none] [<org nick>]: Selects/changes currently active org. If no name is
     given, then will enter interactive mode. '--none' de-activates the currently selected org.
-  ${underline}leave${reset}:
-  ${underline}list${reset}:
+  ${underline}list${reset}: Lists the currently affiliated orgs.
   ${underline}show${reset} [--sensitive] [<org nick>]: Displays info on the currently active or named org.
 
 An org(anization) is the legal owner of work and all work is done in the context of an org. It's perfectly fine to create a 'personal' org representing yourself.
