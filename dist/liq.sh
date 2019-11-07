@@ -3097,11 +3097,16 @@ project-sync() {
   if (( $REMOTE_COMMITS > 0 )); then
     echo "Syncing with upstream master..."
     cd "$BASE_DIR"
-    (git worktree add _master master \
-      || echoerrandexit "Could not create 'master' worktree.") \
-    && { cd _master; git merge remotes/upstream/master; } || \
-        { cleanupMaster; echoerrandexit "Could not merge upstream master to local master."; }
-    MASTER_UPDATED=true
+    if [[ "$CURR_BRANCH" != 'master' ]]; then
+      (git worktree add _master master \
+        || echoerrandexit "Could not create 'master' worktree.") \
+      && { cd _master; git merge remotes/upstream/master; } || \
+          { cleanupMaster; echoerrandexit "Could not merge upstream master to local master."; }
+      MASTER_UPDATED=true
+    else
+      git pull upstream master \
+        || echoerrandexit "There were problems merging upstream master to local master."
+    fi
   fi
   echo "Upstream master synced."
 
