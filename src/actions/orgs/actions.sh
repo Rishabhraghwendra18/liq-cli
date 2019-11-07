@@ -2,6 +2,44 @@ requirements-orgs() {
   findBase
 }
 
+orgs-affiliate() {
+  eval "$(setSimpleOptions LEAVE: SELECT SENSITIVE: -- "$@")"
+
+  local ORG_URL="${1:-}"
+
+  if [[ -n "$LEAVE" ]]; then
+    if [[ -z "$ORG_URL" ]]; then # which is really the nick name
+      echoerrandexit "You must explicitly name the org when leaving. Try:\nliq orgs leave <org nick>"
+    elif [[ ! -d "${LIQ_ORG_DB}/${ORG_URL}" ]]; then
+      echoerrandexit "Did not find org with nick name '${ORG_URL}'. Try:\nliq orgs list"
+    fi
+    cd "${LIQ_ORG_DB}"
+    if [[ "$(orgsCurrentOrg)" == "$ORG_URL" ]]; then
+      rm -rf curr_org
+    fi
+    rm -rf "$ORG_URL"
+    echo "Local org info removed."
+    return
+  fi
+
+  mkdir -p "${LIQ_ORG_DB}"
+  cd "${LIQ_ORG_DB}"
+  rm -rf .staging
+  git clone "${ORG_URL}/org_settings.git" .staging \
+    || { rm -rf .staging; echoerrandexit "Could not retrieve the public org repo."; }
+  source .staging/settings.sh
+  mkdir -p "${LIQ_ORG_DB}/${ORG_NICK_NAME}"
+  mv .staging "${LIQ_ORG_DB}/${ORG_NICK_NAME}/public"
+
+  if [[ -n "${SENSITIVE}" ]]; then
+    git clone "${ORG_URL}/org_settings_sensitive.git" .staging \
+      || { rm -rf .staging; echoerrandexit "Could not retrieve the sensitive org repo."; }
+    mv .staging "${LIQ_ORG_DB}/${ORG_NICK_NAME}/sensitive"
+  fi
+
+  if [[ -n "${SELECT}" ]]; then orgs-select "$ORG_NICK_NAME"; fi
+}
+
 orgs-create() {
   local FIELDS="COMMON_NAME GITHUB_NAME LEGAL_NAME ADDRESS NAICS"
   local FIELDS_SENSITIVE="EIN"
@@ -60,6 +98,7 @@ orgs-create() {
   for FIELD in $FIELDS; do
     echo "ORG_${FIELD}='$(echo "${!FIELD}" | sed "s/'/'\"'\"'/g")'" >> settings.sh
   done
+  echo "ORG_NICK_NAME='${DIR_NAME}'" >> settings.sh
   prep-repo public
   hub create -d "Public liq settings for ${LEGAL_NAME}." "${GITHUB_NAME}/org_settings"
   git push --set-upstream origin master
@@ -79,5 +118,60 @@ orgs-create() {
   if [[ "$NO_SUBSCRIBE" == true ]]; then
     cd "${LIQ_DB}/orgs"
     rm -rf "$DIR_NAME"
+  fi
+}
+
+orgs-list() {
+  orgsOrgList
+}
+
+orgs-select() {
+  eval "$(setSimpleOptions NONE -- "$@")"
+
+  if [[ -n "$NONE" ]]; then
+    rm "${CURR_ORG_FILE}"
+    return
+  fi
+
+  local ORG_NAME="${1:-}"
+  if [[ -z "$ORG_NAME" ]]; then
+    local ORGS
+    ORGS="$(orgsOrgList)"
+
+    if test -z "${ORGS}"; then
+      echoerrandexit "No org affiliations found. Try:\nliq orgs create\nor\nliq orgs affiliate <git url>"
+    fi
+
+    echo "Select org:"
+    selectOneCancel ORG_NAME ORGS
+    ORG_NAME="${ORG_NAME//[ *]/}"
+  fi
+  echo "blah: ${LIQ_ORG_DB}/${ORG_NAME}" >> log.tmp
+  if [[ -d "${LIQ_ORG_DB}/${ORG_NAME}" ]]; then
+    if [[ -L $CURR_ORG_FILE ]]; then rm $CURR_ORG_FILE; fi
+    cd "${LIQ_ORG_DB}" && ln -s "./${ORG_NAME}" $(basename "${CURR_ORG_FILE}")
+  else
+    echoerrandexit "No such org '$ORG_NAME' defined."
+  fi
+}
+
+orgs-show() {
+  eval "$(setSimpleOptions SENSITIVE -- "$@")"
+
+  local ORG_NAME="${1:-}"
+  if [[ -z "$ORG_NAME" ]]; then
+    ORG_NAME=$(orgsCurrentOrg)
+    if [[ -z "$ORG_NAME" ]]; then
+      echoerrandexit "No org name given and no org currently selected. Try one of:\nliq orgs show <org name>\nliq orgs select"
+    fi
+  fi
+
+  if [[ ! -d "${LIQ_ORG_DB}/${ORG_NAME}" ]]; then
+    echoerrandexit "No such org with local nick name '${ORG_NAME}'. Try:\nliq orgs list"
+  fi
+
+  cat "${LIQ_ORG_DB}/${ORG_NAME}/public/settings.sh"
+  if [[ -n "$SENSITIVE" ]]; then
+    cat "${LIQ_ORG_DB}/${ORG_NAME}/sensitive/settings.sh"
   fi
 }

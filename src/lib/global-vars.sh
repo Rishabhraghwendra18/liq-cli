@@ -2,6 +2,7 @@
 LIQ_DB="${HOME}/.liquid-development"
 LIQ_SETTINGS="${LIQ_DB}/settings.sh"
 LIQ_ENV_DB="${LIQ_DB}/environments"
+LIQ_ORG_DB="${LIQ_DB}/orgs"
 LIQ_WORK_DB="${LIQ_DB}/work"
 LIQ_ENV_LOGS="${LIQ_DB}/logs"
 
@@ -14,6 +15,7 @@ _ORG_ID_URL='https://console.cloud.google.com/iam-admin/settings'
 _BILLING_ACCT_URL='https://console.cloud.google.com/billing?folder=&organizationId='
 
 # Global variables.
+CURR_ORG_FILE="${LIQ_ORG_DB}/curr_org"
 CURR_ENV_FILE='' # set by 'requireEnvironment'
 CURR_ENV='' # set by 'requireEnvironment'
 # 'requireEnvironment' calls 'requirePackage'

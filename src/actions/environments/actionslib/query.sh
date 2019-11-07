@@ -1,8 +1,6 @@
 doEnvironmentList() {
-  local TMP
-  TMP=$(setSimpleOptions LIST_ONLY -- "$@") \
+  eval "$(setSimpleOptions LIST_ONLY -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
 
   if [[ ! -d "${LIQ_ENV_DB}/${PACKAGE_NAME}" ]]; then
     return
@@ -12,7 +10,7 @@ doEnvironmentList() {
     CURR_ENV=`readlink "${LIQ_ENV_DB}/${PACKAGE_NAME}/curr_env" | xargs basename`
   fi
   local ENV
-  for ENV in `find "${LIQ_ENV_DB}/${PACKAGE_NAME}" -mindepth 1 -maxdepth 1 -type f -not -name "*~" -exec basename '{}' \; | sort`; do
+  for ENV in `find "${LIQ_ENV_DB}/${PACKAGE_NAME}" -type f -not -name "*~" -exec basename '{}' \; | sort`; do
     ( ( test -z "$LIST_ONLY" && test "$ENV" == "${CURR_ENV:-}" && echo -n '* ' ) || echo -n '  ' ) && echo "$ENV"
   done
 }

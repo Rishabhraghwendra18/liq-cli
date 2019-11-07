@@ -35,7 +35,7 @@ _liq()
         meta)
           OPTS="init bash-config";;
         orgs)
-          OPTS="create join list show select leave";;
+          OPTS="affiliate create list show select";;
         packages)
           OPTS="audit build deploy lint link version-check";;
         project)
