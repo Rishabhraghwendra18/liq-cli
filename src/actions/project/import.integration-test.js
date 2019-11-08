@@ -30,6 +30,6 @@ describe(`Command 'liq project import'`, () => {
     expect(result.stderr).toEqual('')
     expect(result.stdout).toMatch(expectedOutput)
     expect(result.code).toEqual(0);
-    ['README.md', '.git'].forEach((i) => expect(shell.test('-e', `${playground}/${projectName}/${i}`)).toBe(true))
+    ['README.md', '.git'].forEach((i) => expect(shell.test('-e', `${playground}/liquid_labs/${projectName}/${i}`)).toBe(true))
   })
 })

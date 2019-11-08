@@ -38,7 +38,7 @@ describe(`'liq meta init'`, () =>{
   test(`with '-s' should supress output`, () => {
     const result = shell.exec(`HOME=${testConfig.home} ${testing.LIQ} meta init -s <<< $(echo)`, execOpts)
 
-    expect(result.stderr).toEqual('')
+    expect(result.stderr).toMatch('')
     expect(result.stdout).toEqual('')
     expect(result.code).toEqual(0)
 

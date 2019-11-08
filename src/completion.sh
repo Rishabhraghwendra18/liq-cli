@@ -39,7 +39,7 @@ _liq()
         packages)
           OPTS="audit build deploy lint link version-check";;
         project)
-          OPTS="init publish sync test";;
+          OPTS="close init publish sync test";;
         provided-services)
           OPTS="list add delete";;
         remotes)

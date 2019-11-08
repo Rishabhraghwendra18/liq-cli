@@ -40,12 +40,12 @@ export const setup = () => {
   const home = `${tmpDir}/liq-cli-test-${setupSuffix}`
   const playground = `${home}/playground`
   // only valid if 'localCheckout' is called
-  const localRepoCheckout = `${playground}/@liquid-labs/lc-entities-model`
+  const localRepoCheckout = `${playground}/liquid_labs/@liquid-labs/lc-entities-model`
   // const testOriginDir = `${home}/git-origin`
   // const testCheckoutDir = `${playground}/test-checkout`
 
   const metaInit = () => {
-    const result = shell.exec(`HOME=${home} ${LIQ} meta init -s -p ${playground}`, execOpts)
+    const result = shell.exec(`HOME=${home} ${LIQ} meta init -s -p ${playground} --org='git@github.com:Liquid-Labs'`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.code).toEqual(0)
   }

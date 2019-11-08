@@ -50,13 +50,13 @@ describe(`Command 'liq project close'`, () => {
   })
 
   test(`should remove current project when no changes present`, () => {
-    console.error = jest.fn() // supresses err echo from shelljs
+    // console.error = jest.fn() // supresses err echo from shelljs
     const expectedOutput = /^Removed project '@liquid-labs\/lc-entities-model'/
     const result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} project close`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.stdout).toMatch(expectedOutput)
     expect(result.code).toEqual(0)
-    expect(shell.ls(setupConfig.playground)).toHaveLength(0)
+    expect(shell.ls(`${setupConfig.playground}/liquid_labs`)).toHaveLength(0)
   })
 
   test(`should remove specified project when no changes present`, () => {
@@ -66,6 +66,6 @@ describe(`Command 'liq project close'`, () => {
     expect(result.stderr).toEqual('')
     expect(result.stdout).toMatch(expectedOutput)
     expect(result.code).toEqual(0)
-    expect(shell.ls(setupConfig.playground)).toHaveLength(0)
+    expect(shell.ls(`${setupConfig.playground}/liquid_labs`)).toHaveLength(0)
   })
 })

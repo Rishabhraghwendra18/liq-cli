@@ -174,32 +174,6 @@ addLineIfNotPresentInFile() {
   grep "$LINE" "$FILE" > /dev/null || echo "$LINE" >> "$FILE"
 }
 
-updateProjectPubConfig() {
-  PROJECT_DIR="$BASE_DIR"
-  LIQ_PLAYGROUND="$BASE_DIR"
-  ensureWorkspaceDb
-  local SUPPRESS_MSG="${1:-}"
-  echo "PROJECT_HOME='$PROJECT_HOME'" > "$PROJECT_DIR/$_PROJECT_PUB_CONFIG"
-  for VAR in PROJECT_MIRRORS; do
-    if [[ -n "${!VAR:-}" ]]; then
-      echo "$VAR='${!VAR}'" >> "$PROJECT_DIR/$_PROJECT_PUB_CONFIG"
-    fi
-  done
-
-  local PROJECT_NAME=$(cat "${PROJECT_DIR}/package.json" | jq --raw-output '.name | @sh' | tr -d "'")
-  cp "$PROJECT_DIR/$_PROJECT_PUB_CONFIG" "$BASE_DIR/$_WORKSPACE_DB/projects/$PROJECT_NAME"
-  if [[ "$SUPPRESS_MSG" != 'suppress-msg' ]]; then
-    echo "Updated '$PROJECT_DIR/$_PROJECT_PUB_CONFIG' and '$BASE_DIR/projects/$PROJECT_NAME'."
-  fi
-}
-
-# Sets up Workspace DB directory structure.
-ensureWorkspaceDb() {
-  cd "$LIQ_PLAYGROUND"
-  mkdir -p "${_WORKSPACE_DB}"
-  mkdir -p "${_WORKSPACE_DB}"/projects
-}
-
 requireArgs() {
   local COUNT=$#
   local I=1
@@ -354,7 +328,7 @@ requireCleanRepo() {
   # TODO: the '_WORK_BRANCH' here seem to be more of a check than a command to check that branch.
   local _WORK_BRANCH="${2:-}"
 
-  cd "${LIQ_PLAYGROUND}/${_IP}"
+  cd "${LIQ_PLAYGROUND}/${orgsCurrentOrg --require}/${_IP}"
   ( test -n "$_WORK_BRANCH" \
       && git branch | grep -qE "^\* ${_WORK_BRANCH}" ) \
     || git diff-index --quiet HEAD -- \

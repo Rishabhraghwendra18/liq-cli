@@ -12,15 +12,18 @@ project-close() {
     PROJECT_NAME=$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name | @sh' | tr -d "'")
   fi
 
-  cd "$LIQ_PLAYGROUND"
+  local CURR_ORG
+  CURR_ORG="$(orgsCurrentOrg --require)"
+
+  cd "$LIQ_PLAYGROUND/${CURR_ORG}"
   if [[ -d "$PROJECT_NAME" ]]; then
     cd "$PROJECT_NAME"
     # Is everything comitted?
     # credit: https://stackoverflow.com/a/8830922/929494
     if git diff --quiet && git diff --cached --quiet; then
-      if (( $(git status --porcelain 2>/dev/null| grep '^??' || true | wc -l) == 0 )); then
-        if [[ $(git rev-parse --verify master) == $(git rev-parse --verify origin/master) ]]; then
-          cd "$LIQ_PLAYGROUND"
+      if (( $({ git status --porcelain 2>/dev/null| grep '^??' || true; } | wc -l) == 0 )); then
+        if [[ $(git rev-parse --verify master) == $(git rev-parse --verify upstream/master) ]]; then
+          cd "${LIQ_PLAYGROUND}/${CURR_ORG}"
           rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
           # now check to see if we have an empty "org" dir
           local ORG_NAME
@@ -96,9 +99,7 @@ project-create() {
 
 project-import() {
   local PROJ_SPEC PROJ_NAME PROJ_URL PROJ_STAGE
-  local TMP
-  TMP=$(setSimpleOptions NO_FORK:F -- "$@")
-  eval "$TMP"
+  eval "$(setSimpleOptions NO_FORK:F -- "$@")"
 
   if [[ "$1" == *:* ]]; then # it's a URL
     PROJ_URL="${1}"

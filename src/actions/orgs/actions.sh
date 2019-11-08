@@ -25,14 +25,14 @@ orgs-affiliate() {
   mkdir -p "${LIQ_ORG_DB}"
   cd "${LIQ_ORG_DB}"
   rm -rf .staging
-  git clone "${ORG_URL}/org_settings.git" .staging \
+  git clone --quiet "${ORG_URL}/org_settings.git" .staging \
     || { rm -rf .staging; echoerrandexit "Could not retrieve the public org repo."; }
   source .staging/settings.sh
   mkdir -p "${LIQ_ORG_DB}/${ORG_NICK_NAME}"
   mv .staging "${LIQ_ORG_DB}/${ORG_NICK_NAME}/public"
 
   if [[ -n "${SENSITIVE}" ]]; then
-    git clone "${ORG_URL}/org_settings_sensitive.git" .staging \
+    git clone --quiet "${ORG_URL}/org_settings_sensitive.git" .staging \
       || { rm -rf .staging; echoerrandexit "Could not retrieve the sensitive org repo."; }
     mv .staging "${LIQ_ORG_DB}/${ORG_NICK_NAME}/sensitive"
   fi
