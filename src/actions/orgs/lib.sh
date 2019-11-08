@@ -1,12 +1,15 @@
 orgsCurrentOrg() {
+  eval "$(setSimpleOptions REQUIRE -- "$@")"
+
   if [[ -L "${CURR_ORG_FILE}" ]]; then
     readlink "${CURR_ORG_FILE}" | xargs basename
+  elif [[ -n "$REQUIRE" ]]; then
+    echoerrandexit "Command requires active org selection. Try:\nliq orgs select"
   fi
 }
 
 orgsOrgList() {
-  eval "$(setSimpleOptions LIST_ONLY -- "$@")" \
-    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$(setSimpleOptions LIST_ONLY -- "$@")"
 
   local CURR_ORG ORG
   CURR_ORG=$(orgsCurrentOrg)

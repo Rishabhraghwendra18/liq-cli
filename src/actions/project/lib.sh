@@ -1,6 +1,6 @@
 projectCheckIfInPlayground() {
   local PROJ_NAME="${1}"
-  if [[ -d "${LIQ_PLAYGROUND}/${PROJ_NAME}" ]]; then
+  if [[ -d "${LIQ_PLAYGROUND}/$(orgsCurrentOrg --require)/${PROJ_NAME}" ]]; then
     echo "'$PROJ_NAME' is already in the playground."
     exit 0
   fi
@@ -16,7 +16,7 @@ projectCheckGitAuth() {
 # expects STAGING and PROJ_STAGE to be set declared by caller(s)
 projectResetStaging() {
   local PROJ_NAME="${1}"
-  STAGING="${LIQ_PLAYGROUND}/.staging"
+  STAGING="${LIQ_PLAYGROUND}/$(orgsCurrentOrg --require)/.staging"
   rm -rf "${STAGING}"
   mkdir -p "${STAGING}"
 
@@ -35,7 +35,7 @@ projectClone() {
   projectResetStaging $(basename "$URL")
   cd "$STAGING"
 
-  git clone --quiet "${URL}" || echoerrandexit "Failed to clone."
+  git clone --quiet --origin upstream "${URL}" || echoerrandexit "Failed to clone."
 
   if [[ ! -d "$PROJ_STAGE" ]]; then
     echoerrandexit "Did not find expected project direcotry '$PROJ_STAGE' in staging."
@@ -92,9 +92,10 @@ projectForkClone() {
 
 # Expects caller to have defined PROJ_NAME and PROJ_STAGE
 projectMoveStaged() {
-  local TRUNC_NAME
+  local TRUNC_NAME CURR_ORG
   TRUNC_NAME="$(dirname "$PROJ_NAME")"
-  mkdir -p "${LIQ_PLAYGROUND}/${TRUNC_NAME}"
-  mv "$PROJ_STAGE" "$LIQ_PLAYGROUND/${TRUNC_NAME}" \
+  CURR_ORG=$(orgsCurrentOrg --require)
+  mkdir -p "${LIQ_PLAYGROUND}/${CURR_ORG}/${TRUNC_NAME}"
+  mv "$PROJ_STAGE" "$LIQ_PLAYGROUND/${CURR_ORG}/${TRUNC_NAME}" \
     || echoerrandexit "Could not moved staged '$PROJ_NAME' to playground. See above for details."
 }

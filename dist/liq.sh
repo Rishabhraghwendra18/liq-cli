@@ -736,32 +736,6 @@ addLineIfNotPresentInFile() {
   grep "$LINE" "$FILE" > /dev/null || echo "$LINE" >> "$FILE"
 }
 
-updateProjectPubConfig() {
-  PROJECT_DIR="$BASE_DIR"
-  LIQ_PLAYGROUND="$BASE_DIR"
-  ensureWorkspaceDb
-  local SUPPRESS_MSG="${1:-}"
-  echo "PROJECT_HOME='$PROJECT_HOME'" > "$PROJECT_DIR/$_PROJECT_PUB_CONFIG"
-  for VAR in PROJECT_MIRRORS; do
-    if [[ -n "${!VAR:-}" ]]; then
-      echo "$VAR='${!VAR}'" >> "$PROJECT_DIR/$_PROJECT_PUB_CONFIG"
-    fi
-  done
-
-  local PROJECT_NAME=$(cat "${PROJECT_DIR}/package.json" | jq --raw-output '.name | @sh' | tr -d "'")
-  cp "$PROJECT_DIR/$_PROJECT_PUB_CONFIG" "$BASE_DIR/$_WORKSPACE_DB/projects/$PROJECT_NAME"
-  if [[ "$SUPPRESS_MSG" != 'suppress-msg' ]]; then
-    echo "Updated '$PROJECT_DIR/$_PROJECT_PUB_CONFIG' and '$BASE_DIR/projects/$PROJECT_NAME'."
-  fi
-}
-
-# Sets up Workspace DB directory structure.
-ensureWorkspaceDb() {
-  cd "$LIQ_PLAYGROUND"
-  mkdir -p "${_WORKSPACE_DB}"
-  mkdir -p "${_WORKSPACE_DB}"/projects
-}
-
 requireArgs() {
   local COUNT=$#
   local I=1
@@ -916,7 +890,7 @@ requireCleanRepo() {
   # TODO: the '_WORK_BRANCH' here seem to be more of a check than a command to check that branch.
   local _WORK_BRANCH="${2:-}"
 
-  cd "${LIQ_PLAYGROUND}/${_IP}"
+  cd "${LIQ_PLAYGROUND}/$(orgsCurrentOrg --require)/${_IP}"
   ( test -n "$_WORK_BRANCH" \
       && git branch | grep -qE "^\* ${_WORK_BRANCH}" ) \
     || git diff-index --quiet HEAD -- \
@@ -2360,7 +2334,7 @@ requirements-meta() {
 
 meta-init() {
   local TMP # see https://unix.stackexchange.com/a/88338/84520
-  TMP=$(setSimpleOptions PLAYGROUND= SILENT -- "$@") \
+  TMP=$(setSimpleOptions ORG= PLAYGROUND= SILENT -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
 
@@ -2378,6 +2352,12 @@ meta-init() {
     metaSetupLiqDb > /dev/null
   else
     metaSetupLiqDb
+  fi
+
+  if [[ -n "$ORG" ]]; then
+    orgs-affiliate --select "$ORG"
+  elif [[ -z "$SILENT" ]]; then
+    echo "Don't forget to create or affiliate with an organization."
   fi
 }
 
@@ -2443,14 +2423,14 @@ orgs-affiliate() {
   mkdir -p "${LIQ_ORG_DB}"
   cd "${LIQ_ORG_DB}"
   rm -rf .staging
-  git clone "${ORG_URL}/org_settings.git" .staging \
+  git clone --quiet "${ORG_URL}/org_settings.git" .staging \
     || { rm -rf .staging; echoerrandexit "Could not retrieve the public org repo."; }
   source .staging/settings.sh
   mkdir -p "${LIQ_ORG_DB}/${ORG_NICK_NAME}"
   mv .staging "${LIQ_ORG_DB}/${ORG_NICK_NAME}/public"
 
   if [[ -n "${SENSITIVE}" ]]; then
-    git clone "${ORG_URL}/org_settings_sensitive.git" .staging \
+    git clone --quiet "${ORG_URL}/org_settings_sensitive.git" .staging \
       || { rm -rf .staging; echoerrandexit "Could not retrieve the sensitive org repo."; }
     mv .staging "${LIQ_ORG_DB}/${ORG_NICK_NAME}/sensitive"
   fi
@@ -2623,14 +2603,17 @@ An org(anization) is the legal owner of work and all work is done in the context
 EOF
 }
 orgsCurrentOrg() {
+  eval "$(setSimpleOptions REQUIRE -- "$@")"
+
   if [[ -L "${CURR_ORG_FILE}" ]]; then
     readlink "${CURR_ORG_FILE}" | xargs basename
+  elif [[ -n "$REQUIRE" ]]; then
+    echoerrandexit "Command requires active org selection. Try:\nliq orgs select"
   fi
 }
 
 orgsOrgList() {
-  eval "$(setSimpleOptions LIST_ONLY -- "$@")" \
-    || ( contextHelp; echoerrandexit "Bad options." )
+  eval "$(setSimpleOptions LIST_ONLY -- "$@")"
 
   local CURR_ORG ORG
   CURR_ORG=$(orgsCurrentOrg)
@@ -2887,45 +2870,6 @@ packagesVersionCheck() {
   npm-check ${CMD_OPTS} || true
 }
 
-# TODO: Deprecated? This was used in an older version of the package-linking implementation. It may no longer be usesful, but we keep it for reference until package linking is re-enabled.
-# packages-find-package() {
-#   local FILE_VAR="${1}"; shift
-#   local NAME_VAR="${1}"; shift
-#   local LINK_SPEC="${1}"; shift
-#
-#   local LINK_PROJECT=$(echo "$LINK_SPEC" | awk -F: '{print $1}')
-#   local LINK_PACKAGE=$(echo "$LINK_SPEC" | awk -F: '{print $2}')
-#
-#   if [[ ! -d "${LIQ_PLAYGROUND}/${LINK_PROJECT}" ]]; then
-#     echoerrandexit "Could not find project directory '${LINK_PROJECT}' in Catalyst playground."
-#   fi
-#
-#   local CANDIDATE_PACKAGE_FILE=''
-#   local CANDIDATE_PACKAGE_NAME=''
-#   local CANDIDATE_PACKAGE_FILE=''
-#   local CANDIDATE_PACKAGE_FILE_IT=''
-#   local CANDIDATE_COUNT=0
-#   while read CANDIDATE_PACKAGE_FILE_IT; do
-#     # Not sure why, but the _IT is necessary because setting
-#     # CANDIDATE_PACKAGE_FILE directly in the read causes the value to reset
-#     # after the loop.
-#     CANDIDATE_PACKAGE_FILE="${CANDIDATE_PACKAGE_FILE_IT}"
-#     CANDIDATE_PACKAGE_NAME=$(cat "$CANDIDATE_PACKAGE_FILE" | jq --raw-output '.name | @sh' | tr -d "'")
-#     if [[ -n "$LINK_PACKAGE" ]]; then
-#       if [[ "$LINK_PACKAGE" == "$CANDIDATE_PACKAGE_NAME" ]]; then
-#         break;
-#       fi
-#     elif (( $CANDIDATE_COUNT > 0 )); then
-#       echoerrandexit "Project '$LINK_PROJECT' contains multiple packages. You must specify the package. Try\nliq packages link $(test ! -n "$UNLINK" || echo "--unlink " )${LINK_PROJECT}:<package name>"
-#     fi
-#     CANDIDATE_COUNT=$(( $CANDIDATE_COUNT + 1 ))
-#   done < <(find -H "${LIQ_PLAYGROUND}/${LINK_PROJECT}" -name "package.json" -not -path "*/node_modules*/*")
-#
-#   # If we get here without exiting, then 'CANDIDATE_PACKAGE_FILE' has the
-#   # location of the package.json we want to link.
-#   eval "${FILE_VAR}='${CANDIDATE_PACKAGE_FILE}'; ${NAME_VAR}='${CANDIDATE_PACKAGE_NAME}'"
-# }
-
 packages-link-list() {
   echoerrandexit 'Package link functions currently disabled.'
 }
@@ -2944,15 +2888,18 @@ project-close() {
     PROJECT_NAME=$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name | @sh' | tr -d "'")
   fi
 
-  cd "$LIQ_PLAYGROUND"
+  local CURR_ORG
+  CURR_ORG="$(orgsCurrentOrg --require)"
+
+  cd "$LIQ_PLAYGROUND/${CURR_ORG}"
   if [[ -d "$PROJECT_NAME" ]]; then
     cd "$PROJECT_NAME"
     # Is everything comitted?
     # credit: https://stackoverflow.com/a/8830922/929494
     if git diff --quiet && git diff --cached --quiet; then
-      if (( $(git status --porcelain 2>/dev/null| grep '^??' || true | wc -l) == 0 )); then
-        if [[ $(git rev-parse --verify master) == $(git rev-parse --verify origin/master) ]]; then
-          cd "$LIQ_PLAYGROUND"
+      if (( $({ git status --porcelain 2>/dev/null| grep '^??' || true; } | wc -l) == 0 )); then
+        if [[ $(git rev-parse --verify master) == $(git rev-parse --verify upstream/master) ]]; then
+          cd "${LIQ_PLAYGROUND}/${CURR_ORG}"
           rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
           # now check to see if we have an empty "org" dir
           local ORG_NAME
@@ -3028,9 +2975,7 @@ project-create() {
 
 project-import() {
   local PROJ_SPEC PROJ_NAME PROJ_URL PROJ_STAGE
-  local TMP
-  TMP=$(setSimpleOptions NO_FORK:F -- "$@")
-  eval "$TMP"
+  eval "$(setSimpleOptions NO_FORK:F -- "$@")"
 
   if [[ "$1" == *:* ]]; then # it's a URL
     PROJ_URL="${1}"
@@ -3206,7 +3151,7 @@ EOF
 }
 projectCheckIfInPlayground() {
   local PROJ_NAME="${1}"
-  if [[ -d "${LIQ_PLAYGROUND}/${PROJ_NAME}" ]]; then
+  if [[ -d "${LIQ_PLAYGROUND}/$(orgsCurrentOrg --require)/${PROJ_NAME}" ]]; then
     echo "'$PROJ_NAME' is already in the playground."
     exit 0
   fi
@@ -3222,7 +3167,7 @@ projectCheckGitAuth() {
 # expects STAGING and PROJ_STAGE to be set declared by caller(s)
 projectResetStaging() {
   local PROJ_NAME="${1}"
-  STAGING="${LIQ_PLAYGROUND}/.staging"
+  STAGING="${LIQ_PLAYGROUND}/$(orgsCurrentOrg --require)/.staging"
   rm -rf "${STAGING}"
   mkdir -p "${STAGING}"
 
@@ -3241,7 +3186,7 @@ projectClone() {
   projectResetStaging $(basename "$URL")
   cd "$STAGING"
 
-  git clone --quiet "${URL}" || echoerrandexit "Failed to clone."
+  git clone --quiet --origin upstream "${URL}" || echoerrandexit "Failed to clone."
 
   if [[ ! -d "$PROJ_STAGE" ]]; then
     echoerrandexit "Did not find expected project direcotry '$PROJ_STAGE' in staging."
@@ -3298,10 +3243,11 @@ projectForkClone() {
 
 # Expects caller to have defined PROJ_NAME and PROJ_STAGE
 projectMoveStaged() {
-  local TRUNC_NAME
+  local TRUNC_NAME CURR_ORG
   TRUNC_NAME="$(dirname "$PROJ_NAME")"
-  mkdir -p "${LIQ_PLAYGROUND}/${TRUNC_NAME}"
-  mv "$PROJ_STAGE" "$LIQ_PLAYGROUND/${TRUNC_NAME}" \
+  CURR_ORG=$(orgsCurrentOrg --require)
+  mkdir -p "${LIQ_PLAYGROUND}/${CURR_ORG}/${TRUNC_NAME}"
+  mv "$PROJ_STAGE" "$LIQ_PLAYGROUND/${CURR_ORG}/${TRUNC_NAME}" \
     || echoerrandexit "Could not moved staged '$PROJ_NAME' to playground. See above for details."
 }
 
@@ -3976,11 +3922,12 @@ work-close() {
     PROJECTS="$INVOLVED_PROJECTS"
   fi
 
-  local PROJECT
+  local PROJECT CURR_ORG
+  CURR_ORG="$(orgsCurrentOrg --require)"
   # first, do the checks
   for PROJECT in $PROJECTS; do
     local CURR_BRANCH
-    cd "${LIQ_PLAYGROUND}/${PROJECT}"
+    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT}"
     CURR_BRANCH=$(workCurrentWorkBranch)
 
     if [[ "$CURR_BRANCH" != "$WORK_BRANCH" ]]; then
@@ -3992,7 +3939,7 @@ work-close() {
 
   # now actually do the closures
   for PROJECT in $PROJECTS; do
-    cd "${LIQ_PLAYGROUND}/${PROJECT}"
+    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT}"
     local CURR_BRANCH
     CURR_BRANCH=$(git branch | (grep '*' || true) | awk '{print $2}')
 
@@ -4035,17 +3982,19 @@ work-ignore-rest() {
 }
 
 work-involve() {
-  local PROJECT_NAME WORK_DESC WORK_STARTED WORK_INITIATOR INVOLVED_PROJECTS
+  local PROJECT_NAME WORK_DESC WORK_STARTED WORK_INITIATOR INVOLVED_PROJECTS CURR_ORG
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "There is no active unit of work to involve. Try:\nliq work resume"
   fi
+
+  CURR_ORG="$(orgsCurrentOrg --require)"
 
   if (( $# == 0 )) && [[ -n "$BASE_DIR" ]]; then
     requirePackage
     PROJECT_NAME=$(echo "$PACKAGE" | jq --raw-output '.name | @sh' | tr -d "'")
   else
     exactUserArgs PROJECT_NAME -- "$@"
-    test -d "${LIQ_PLAYGROUND}/${PROJECT_NAME}" \
+    test -d "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT_NAME}" \
       || echoerrandexit "Invalid project name '$PROJECT_NAME'. Perhaps it needs to be imported? Try:\nliq playground import <git URL>"
   fi
 
@@ -4053,8 +4002,7 @@ work-involve() {
   local BRANCH_NAME=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
   requirePackage # used later if auto-linking
 
-  echo "${LIQ_PLAYGROUND}/${PROJECT_NAME}"
-  cd "${LIQ_PLAYGROUND}/${PROJECT_NAME}"
+  cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT_NAME}"
   if git branch | grep -qE "^\*? *${BRANCH_NAME}\$"; then
     echowarn "Found existing work branch '${BRANCH_NAME}' in project ${PROJECT_NAME}. We will use it. Please fix manually if this is unexpected."
     git checkout -q "${BRANCH_NAME}" || echoerrandexit "There was a problem checking out the work branch. ($?)"
@@ -4078,7 +4026,7 @@ work-involve() {
         # Currently disabled
         # packages-link "${PROJECT_NAME}:${NEW_PACKAGE_NAME}"
       fi
-    done < <(find "${LIQ_PLAYGROUND}/${PROJECT_NAME}" -name "package.json" -not -path "*node_modules/*")
+    done < <(find "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT_NAME}" -name "package.json" -not -path "*node_modules/*")
   fi
 }
 
@@ -4129,9 +4077,10 @@ work-list() {
 
 work-merge() {
   # TODO: https://github.com/Liquid-Labs/liq-cli/issues/57 support org-level config to default allow unforced merge
-  local TMP
-  TMP=$(setSimpleOptions FORCE CLOSE PUSH_UPSTREAM -- "$@")
-  eval "$TMP"
+  eval "$(setSimpleOptions FORCE CLOSE PUSH_UPSTREAM -- "$@")"
+
+  local CURR_ORG
+  CURR_ORG="$(orgsCurrentOrg --require)"
 
   if [[ "${PUSH_UPSTREAM}" == true ]] && [[ "$FORCE" != true ]]; then
     echoerrandexit "'work merge --push-upstream' is not allowed by default. You can use '--force', but generally you will either want to configure the project to enable non-forced upstream merges or try:\nliq work submit"
@@ -4172,7 +4121,7 @@ work-merge() {
 
   for TM in $TO_MERGE; do
     TM=$(workConvertDot "$TM")
-    cd "${LIQ_PLAYGROUND}/${TM}"
+    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${TM}"
     local SHORT_STAT=`git diff --shortstat master ${WORK_BRANCH}`
     local INS_COUNT=`echo "${SHORT_STAT}" | egrep -Eio -e '\d+ insertion' | awk '{print $1}' || true`
     INS_COUNT=${INS_COUNT:-0}
@@ -4352,12 +4301,11 @@ work-stage() {
 }
 
 work-status() {
-  local TMP
-  TMP=$(setSimpleOptions SELECT PR_READY NO_FETCH:F -- "$@") \
+  eval "$(setSimpleOptions SELECT PR_READY NO_FETCH:F -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
 
-  local WORK_NAME LOCAL_COMMITS REMOTE_COMMITS
+  local WORK_NAME LOCAL_COMMITS REMOTE_COMMITS CURR_ORG
+  CURR_ORG="$(orgsCurrentOrg --require)"
   workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
 
   if [[ -z "$NO_FETCH" ]]; then
@@ -4399,7 +4347,7 @@ work-status() {
   for IP in $INVOLVED_PROJECTS; do
     echo
     echo "Repo status for $IP:"
-    cd "${LIQ_PLAYGROUND}/$IP"
+    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/$IP"
     TMP="$(git rev-list --left-right --count master...upstream/master)"
     LOCAL_COMMITS=$(echo $TMP | cut -d' ' -f1)
     REMOTE_COMMITS=$(echo $TMP | cut -d' ' -f2)
@@ -4540,30 +4488,28 @@ work-sync() {
 }
 
 work-test() {
-  local TMP
-  TMP=$(setSimpleOptions SELECT -- "$@") \
+  eval "$(setSimpleOptions SELECT -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
 
-  local WORK_NAME
+  local WORK_NAME CURR_ORG
+  CURR_ORG="$(orgsCurrentOrg --require)"
   workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
   source "${LIQ_WORK_DB}/${WORK_NAME}"
 
   local IP
   for IP in $INVOLVED_PROJECTS; do
     echo "Testing ${IP}..."
-    cd "${LIQ_PLAYGROUND}/$IP"
+    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
     project-test "$@"
   done
 }
 
 work-submit() {
-  local TMP
-  TMP=$(setSimpleOptions SELECT MESSAGE= NOT_CLEAN:C -- "$@") \
+  eval "$(setSimpleOptions SELECT MESSAGE= NOT_CLEAN:C -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
 
-  local WORK_NAME
+  local WORK_NAME CURR_ORG
+  CURR_ORG="$(orgsCurrentOrg --require)"
   workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
   source "${LIQ_WORK_DB}/${WORK_NAME}"
 
@@ -4581,7 +4527,7 @@ work-submit() {
     fi
 
     echo "Creating PR for ${IP}..."
-    cd "${LIQ_PLAYGROUND}/$IP"
+    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
 
     local BUGS_URL
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
@@ -4651,7 +4597,7 @@ ${PREFIX}${cyan_u}work${reset} <action>:
   ${underline}qa${reset}: Checks the playground status and runs package audit, version check, and
     tests.
   ${underline}sync${reset} [--fetch-only|-f] [--no-work-master-merge|-M]:
-    Synchronizes local project repos for all work. See `liq help work sync` for details.
+    Synchronizes local project repos for all work. See 'liq help work sync' for details.
   ${underline}test${reset}: Runs tests for each involved project in the current unit of work. See
     'project test' for details on options for the 'test' action.
 
@@ -4734,11 +4680,13 @@ workUserSelectOne() {
 workSwitchBranches() {
   # We expect that the name and existence of curr_work already checked.
   local _BRANCH_NAME="$1"
+  local CURR_ORG
+  CURR_ORG="$(orgsCurrentOrg --require)"
   source "${LIQ_WORK_DB}/curr_work"
   local IP
   for IP in $INVOLVED_PROJECTS; do
     echo "Updating project '$IP' to work branch '${_BRANCH_NAME}'"
-    cd "${LIQ_PLAYGROUND}/${IP}"
+    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
     git checkout "${_BRANCH_NAME}" \
       || echoerrandexit "Error updating '${IP}' to work branch '${_BRANCH_NAME}'. See above for details."
   done
