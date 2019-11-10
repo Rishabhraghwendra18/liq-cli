@@ -964,7 +964,7 @@ _ORG_ID_URL='https://console.cloud.google.com/iam-admin/settings'
 _BILLING_ACCT_URL='https://console.cloud.google.com/billing?folder=&organizationId='
 
 # Global variables.
-CURR_ORG_FILE="${LIQ_ORG_DB}/curr_org"
+CURR_ORG_DIR="${LIQ_ORG_DB}/curr_org"
 CURR_ENV_FILE='' # set by 'requireEnvironment'
 CURR_ENV='' # set by 'requireEnvironment'
 # 'requireEnvironment' calls 'requirePackage'
@@ -2527,7 +2527,7 @@ orgs-select() {
   eval "$(setSimpleOptions NONE -- "$@")"
 
   if [[ -n "$NONE" ]]; then
-    rm "${CURR_ORG_FILE}"
+    rm "${CURR_ORG_DIR}"
     return
   fi
 
@@ -2546,8 +2546,8 @@ orgs-select() {
   fi
   echo "blah: ${LIQ_ORG_DB}/${ORG_NAME}" >> log.tmp
   if [[ -d "${LIQ_ORG_DB}/${ORG_NAME}" ]]; then
-    if [[ -L $CURR_ORG_FILE ]]; then rm $CURR_ORG_FILE; fi
-    cd "${LIQ_ORG_DB}" && ln -s "./${ORG_NAME}" $(basename "${CURR_ORG_FILE}")
+    if [[ -L $CURR_ORG_DIR ]]; then rm $CURR_ORG_DIR; fi
+    cd "${LIQ_ORG_DB}" && ln -s "./${ORG_NAME}" $(basename "${CURR_ORG_DIR}")
   else
     echoerrandexit "No such org '$ORG_NAME' defined."
   fi
@@ -2605,8 +2605,8 @@ EOF
 orgsCurrentOrg() {
   eval "$(setSimpleOptions REQUIRE -- "$@")"
 
-  if [[ -L "${CURR_ORG_FILE}" ]]; then
-    readlink "${CURR_ORG_FILE}" | xargs basename
+  if [[ -L "${CURR_ORG_DIR}" ]]; then
+    readlink "${CURR_ORG_DIR}" | xargs basename
   elif [[ -n "$REQUIRE" ]]; then
     echoerrandexit "Command requires active org selection. Try:\nliq orgs select"
   fi

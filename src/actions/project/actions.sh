@@ -99,7 +99,13 @@ project-create() {
 
 project-import() {
   local PROJ_SPEC PROJ_NAME PROJ_URL PROJ_STAGE
-  eval "$(setSimpleOptions NO_FORK:F -- "$@")"
+  eval "$(setSimpleOptions NO_FORK:F SET_NAME= SET_URL= -- "$@")"
+
+  set-stuff() {
+    # TODO: protect this eval
+    if [[ -n "$SET_NAME" ]]; then eval "$SET_NAME='$PROJ_NAME'"; fi
+    if [[ -n "$SET_URL" ]]; then eval "$SET_URL='$PROJ_URL'"; fi
+  }
 
   if [[ "$1" == *:* ]]; then # it's a URL
     PROJ_URL="${1}"
@@ -109,17 +115,24 @@ project-import() {
       projectForkClone "$PROJ_URL"
     fi
     if PROJ_NAME=$(cat "$PROJ_STAGE/package.json" | jq --raw-output '.name' | tr -d "'"); then
-      projectCheckIfInPlayground "$PROJ_NAME"
+      set-stuff
+      if projectCheckIfInPlayground "$PROJ_NAME"; then return 0; fi
     else
       rm -rf "$PROJ_STAGE"
       echoerrandexit -F "The specified source is not a valid Liquid Dev package (no 'package.json'). Try:\nliq project create --type=bare --origin='$PROJ_URL' <project name>"
     fi
   else # it's an NPM package
     PROJ_NAME="${1}"
-    projectCheckIfInPlayground "$PROJ_NAME"
+    set-stuff
+    if projectCheckIfInPlayground "$PROJ_NAME"; then
+      PROJ_URL="$(projectsGetUpstreamUrl "$PROJ_NAME")"
+      set-stuff
+      return 0
+    fi
     # Note: NPM will accept git URLs, but this saves us a step, let's us check if in playground earlier, and simplifes branching
     PROJ_URL=$(npm view "$PROJ_NAME" repository.url) \
       || echoerrandexit "Did not find expected NPM package '${PROJ_NAME}'. Did you forget the '--url' option?"
+    set-stuff
     PROJ_URL=${PROJ_URL##git+}
     if [[ -n "$NO_FORK" ]]; then
       projectClone "$PROJ_URL"
