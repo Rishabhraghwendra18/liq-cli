@@ -15,6 +15,8 @@ orgsCurrentOrg() {
   elif [[ -n "$REQUIRE" ]]; then
     echoerrandexit "Command requires active org selection. Try:\nliq orgs select"
   fi
+
+	echo "$CURR_ORG"
 }
 
 orgsOrgList() {

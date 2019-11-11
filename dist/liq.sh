@@ -2420,17 +2420,32 @@ orgs-affiliate() {
     return
   fi
 
+  local CURR_ORG
+  CURR_ORG="$(orgsCurrentOrg)"
   mkdir -p "${LIQ_ORG_DB}"
   cd "${LIQ_ORG_DB}"
-  rm -rf .staging
-  git clone --quiet "${ORG_URL}/org_settings.git" .staging \
-    || { rm -rf .staging; echoerrandexit "Could not retrieve the public org repo."; }
-  source .staging/settings.sh
-  mkdir -p "${LIQ_ORG_DB}/${ORG_NICK_NAME}"
-  mv .staging "${LIQ_ORG_DB}/${ORG_NICK_NAME}/public"
+  if [[ -n "$ORG_URL" ]]; then
+    rm -rf .staging
+    git clone --origin upstream --quiet "${ORG_URL}/org_settings.git" .staging \
+      || { rm -rf .staging; echoerrandexit "Could not retrieve the public org repo."; }
+    source .staging/settings.sh
+    if [[ -d "${LIQ_ORG_DB}/${ORG_NICK_NAME}" ]]; then
+      echo "Public repo for '${ORG_NICK_NAME}' already present."
+      rm -rf .staging
+    else
+      mkdir -p "${LIQ_ORG_DB}/${ORG_NICK_NAME}"
+      mv .staging "${LIQ_ORG_DB}/${ORG_NICK_NAME}/public"
+    fi
+  elif [[ -z "$ORG_URL" ]] && [[ -n "$REQUIRE_SENSITIVE" ]] && [[ -n "$CURR_ORG" ]]; then
+    # setup ORG_URL from CURR_ORG for the 'add sensitive to current' use case
+    source "${CURR_ORG}/public/settings.sh"
+    ORG_URL="git@github.com:${ORG_GITHUB_NAME}"
+  else
+    echoerrandexit "Incompatable command options."
+  fi
 
   if [[ -n "${SENSITIVE}" ]]; then
-    git clone --quiet "${ORG_URL}/org_settings_sensitive.git" .staging \
+    git clone --origin upstream --quiet "${ORG_URL}/org_settings_sensitive.git" .staging \
       || { rm -rf .staging; echoerrandexit "Could not retrieve the sensitive org repo."; }
     mv .staging "${LIQ_ORG_DB}/${ORG_NICK_NAME}/sensitive"
   fi
@@ -2603,13 +2618,24 @@ An org(anization) is the legal owner of work and all work is done in the context
 EOF
 }
 orgsCurrentOrg() {
-  eval "$(setSimpleOptions REQUIRE -- "$@")"
+  eval "$(setSimpleOptions REQUIRE REQUIRE_SENSITIVE:s -- "$@")"
+
+  if [[ -n "$REQUIRE_SENSITIVE" ]]; then
+    REQUIRE=true
+  fi
 
   if [[ -L "${CURR_ORG_DIR}" ]]; then
-    readlink "${CURR_ORG_DIR}" | xargs basename
+    if [[ -n "$REQUIRE_SENSITIVE" ]]; then
+      if [[ ! -d "${CURR_ORG_DIR}/sensitive" ]]; then
+        echoerrandexit "Command requires access to the sensitive org settings. Try:\nliq orgs import --sensitive"
+      fi
+    fi
+    CURR_ORG="$(readlink "${CURR_ORG_DIR}" | xargs basename)"
   elif [[ -n "$REQUIRE" ]]; then
     echoerrandexit "Command requires active org selection. Try:\nliq orgs select"
   fi
+
+	echo "$CURR_ORG"
 }
 
 orgsOrgList() {
@@ -2874,6 +2900,74 @@ packages-link-list() {
   echoerrandexit 'Package link functions currently disabled.'
 }
 
+requirements-policies() {
+  :
+}
+
+policies-import() {
+  eval "$(setSimpleOptions FORK -- "$@")"
+
+  local CURR_ORG PROJ_NAME PROJ_URL IMPORT_URL
+  IMPORT_URL="${1}"
+  CURR_ORG="$(orgsCurrentOrg --require-sensitive)"
+
+  if [[ -n "$FORK" ]]; then
+    project-import --set-name="PROJ_NAME" "$IMPORT_URL"
+  else # default
+    project-import --set-name="PROJ_NAME" --no-fork "$IMPORT_URL"
+  fi
+
+  cd "${LIQ_ORG_DB}/${CURR_ORG}/sensitive"
+  PROJ_URL=$(projectsGetUpstreamUrl "${PROJ_NAME}")
+  # first, check to see if policy is already registered
+  local REGISTRATION REG_URL
+  if [[ -f 'policies.tsv' ]]; then
+    REGISTRATION="$(grep -E "^$PROJ_NAME" policies.tsv || true)"
+  fi
+
+  if [[ -n "$REGISTRATION" ]]; then
+    REG_URL=$(echo "$REGISTRATION" | awk -F, '{print $2}')
+    if [[ "$REG_URL" != "$PROJ_URL" ]]; then
+      echowarn "Policy is already registered, but the registered URL and project upstream URL differ. This may be merely a syntax difference, but it should be checked and fixed."
+    elif [[ "$REG_URL" != "$IMPORT_URL" ]]; then
+      echo "Policy is already registered, but under a different URL than requested: '$REG_URL'"
+    else
+      echo "Policy is already registered."
+    fi
+  else # policy is not registered
+	mkdir -p policies
+    echo -e "$PROJ_NAME\t$PROJ_URL" >> policies/policies.tsv
+		git add policies/policies.tsv
+	local ROLES
+	ROLES="$(find "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJ_NAME}" -name 'roles.tsv')"
+	if [[ -n "$ROLES" ]]; then
+		if [[ -f policies/roles ]]; then
+			echoerr "Newly imported policies defines roles ('${PROJ_NAME}/${ROLES}'), but we found existing 'roles' reference for: $(cat policies/roles)".
+		else
+			echo -n "${PROJ_NAME}/${ROLES}" > policies/roles
+			git add policies/roles
+			echo "Found and regitered roles definition."
+		fi
+	fi
+    git commit -am "Added policy '$PROJ_NAME'"
+    git push
+  fi
+}
+help-policies() {
+  local PREFIX="${1:-}"
+
+  handleSummary "${PREFIX}${cyan_u}policies${reset} <action>: Manages organization policies." || cat <<EOF
+${PREFIX}${cyan_u}policies${reset} <action>:
+  ${underline}import${reset} [--fork|-f] <git URL>: Imports the policies into the user playground and
+    registers them with the active org (if not already done). To work on the policies without
+    registering them, use 'liq project import'. By default, 'policy import' does NOT create a forked
+    workespace on the assumption that the policy is being imported for use/reference rather than
+    for editting. If you want to register the policy AND edit it, then include the '--fork' option.
+
+Policies defines all manner of organizational operations. They are "organizational code".
+EOF
+}
+
 requirements-project() {
   :
 }
@@ -2924,13 +3018,13 @@ project-close() {
 
 project-create() {
   echoerrandexit "'create' needs to be reworked for forks."
-  local TMP PROJ_STAGE PROJ_NAME TEMPLATE_URL
+  local TMP PROJ_STAGE __PROJ_NAME TEMPLATE_URL
   TMP=$(setSimpleOptions TYPE= TEMPLATE:T= ORIGIN= -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options."; )
   eval "$TMP"
 
-  PROJ_NAME="${1}"
-  if [[ -z "$PROJ_NAME" ]]; then
+  __PROJ_NAME="${1}"
+  if [[ -z "$__PROJ_NAME" ]]; then
     echoerrandexit "Must specify project name (1st argument)."
   fi
 
@@ -2958,10 +3052,10 @@ project-create() {
   git remote set-url origin "${ORIGIN}"
   git remote set-url origin --push "${ORIGIN}"
   if [[ -f "package.json" ]]; then
-    echowarn --no-fold "This project already has a 'project.json' file. Will continue as import.\nIn future, try:\nliq import $PROJ_NAME"
+    echowarn --no-fold "This project already has a 'project.json' file. Will continue as import.\nIn future, try:\nliq import $__PROJ_NAME"
   else
     local SCOPE
-    SCOPE=$(dirname "$PROJ_NAME")
+    SCOPE=$(dirname "$__PROJ_NAME")
     if [[ -n "$SCOPE" ]]; then
       npm init --scope "${SCOPE}"
     else
@@ -2974,39 +3068,54 @@ project-create() {
 }
 
 project-import() {
-  local PROJ_SPEC PROJ_NAME PROJ_URL PROJ_STAGE
-  eval "$(setSimpleOptions NO_FORK:F -- "$@")"
+  local PROJ_SPEC __PROJ_NAME _PROJ_URL PROJ_STAGE
+  eval "$(setSimpleOptions NO_FORK:F SET_NAME= SET_URL= -- "$@")"
+
+  set-stuff() {
+    # TODO: protect this eval
+		echo "setting stuff: $SET_NAME='$_PROJ_NAME'" >> ~/log.tmp
+    if [[ -n "$SET_NAME" ]]; then eval "$SET_NAME='$_PROJ_NAME'"; fi
+    if [[ -n "$SET_URL" ]]; then eval "$SET_URL='$_PROJ_URL'"; fi
+  }
 
   if [[ "$1" == *:* ]]; then # it's a URL
-    PROJ_URL="${1}"
+		echo "url" >> ~/log.tmp
+    _PROJ_URL="${1}"
     if [[ -n "$NO_FORK" ]]; then
-      projectClone "$PROJ_URL"
+      projectClone "$_PROJ_URL"
     else
-      projectForkClone "$PROJ_URL"
+      projectForkClone "$_PROJ_URL"
     fi
-    if PROJ_NAME=$(cat "$PROJ_STAGE/package.json" | jq --raw-output '.name' | tr -d "'"); then
-      projectCheckIfInPlayground "$PROJ_NAME"
+    if _PROJ_NAME=$(cat "$PROJ_STAGE/package.json" | jq --raw-output '.name' | tr -d "'"); then
+      set-stuff
+      if projectCheckIfInPlayground "$_PROJ_NAME"; then return 0; fi
     else
       rm -rf "$PROJ_STAGE"
-      echoerrandexit -F "The specified source is not a valid Liquid Dev package (no 'package.json'). Try:\nliq project create --type=bare --origin='$PROJ_URL' <project name>"
+      echoerrandexit -F "The specified source is not a valid Liquid Dev package (no 'package.json'). Try:\nliq project create --type=bare --origin='$_PROJ_URL' <project name>"
     fi
   else # it's an NPM package
-    PROJ_NAME="${1}"
-    projectCheckIfInPlayground "$PROJ_NAME"
+    _PROJ_NAME="${1}"
+    set-stuff
+    if projectCheckIfInPlayground "$_PROJ_NAME"; then
+      _PROJ_URL="$(projectsGetUpstreamUrl "$_PROJ_NAME")"
+      set-stuff
+      return 0
+    fi
     # Note: NPM will accept git URLs, but this saves us a step, let's us check if in playground earlier, and simplifes branching
-    PROJ_URL=$(npm view "$PROJ_NAME" repository.url) \
-      || echoerrandexit "Did not find expected NPM package '${PROJ_NAME}'. Did you forget the '--url' option?"
-    PROJ_URL=${PROJ_URL##git+}
+    _PROJ_URL=$(npm view "$_PROJ_NAME" repository.url) \
+      || echoerrandexit "Did not find expected NPM package '${_PROJ_NAME}'. Did you forget the '--url' option?"
+    set-stuff
+    _PROJ_URL=${_PROJ_URL##git+}
     if [[ -n "$NO_FORK" ]]; then
-      projectClone "$PROJ_URL"
+      projectClone "$_PROJ_URL"
     else
-      projectForkClone "$PROJ_URL"
+      projectForkClone "$_PROJ_URL"
     fi
   fi
 
   projectMoveStaged
 
-  echo "'$PROJ_NAME' imported into playground."
+  echo "'$_PROJ_NAME' imported into playground."
 }
 
 project-publish() {
@@ -3153,7 +3262,7 @@ projectCheckIfInPlayground() {
   local PROJ_NAME="${1}"
   if [[ -d "${LIQ_PLAYGROUND}/$(orgsCurrentOrg --require)/${PROJ_NAME}" ]]; then
     echo "'$PROJ_NAME' is already in the playground."
-    exit 0
+    return 0
   fi
 }
 
@@ -3162,6 +3271,16 @@ projectCheckGitAuth() {
   ssh -qT git@github.com 2> /dev/null || if [ $? -ne 1 ]; then
     echoerrandexit "Could not connect to github; add your github key with 'ssh-add'."
   fi
+}
+
+projectsGetUpstreamUrl() {
+  local PROJ_NAME="${1}"
+
+  local CURR_ORG
+  CURR_ORG="$(orgsCurrentOrg --require)"
+  cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJ_NAME}"
+  git config --get remote.upstream.url \
+		|| echoerrandexit "Failed to get upstream remote URL for ${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJ_NAME}"
 }
 
 # expects STAGING and PROJ_STAGE to be set declared by caller(s)
@@ -3221,16 +3340,16 @@ projectForkClone() {
   cd "$STAGING"
 
   echo -n "Checking for existing fork at '${FORK_URL}'... "
-  git clone --quiet --origin workspace "${FORK_URL}" \
-  && ( \
+  git clone --dry-run --quiet --origin workspace "${FORK_URL}" \
+  && { \
     # Be sure and exit on errors to avoid a failure here and then executing the || branch
     echo "found existing fork."
     cd $PROJ_STAGE || echoerrandexit "Did not find expected staging dir: $PROJ_STAGE"
     echo "Updating remotes..."
     git remote add upstream "$URL" || echoerrandexit "Problem setting upstream URL."
     git branch -u upstream/master master
-  ) \
-  || ( \
+  } \
+  || { \
     echo "none found; cloning source."
     local GITHUB_NAME
     git clone --quiet --origin upstream "${URL}" || echoerrandexit "Could not clone source."
@@ -3238,7 +3357,7 @@ projectForkClone() {
     echo "Creating fork..."
     hub fork --remote-name workspace
     git branch -u upstream/master master
-  )
+  }
 }
 
 # Expects caller to have defined PROJ_NAME and PROJ_STAGE
@@ -4739,31 +4858,27 @@ case "$GROUP" in
     help "$@";;
   # components and actionsprojct
   *)
-    case "$GROUP" in
-      # TODO: build this from constant def... something...
-      data|environments|meta|orgs|packages|project|required-services|provided-services|services|work)
-        if (( $# == 0 )); then
-          help $GROUP
-          echoerrandexit "\nNo action argument provided. See valid actions above."
-        fi
-        ACTION="${1:-}"; shift
-        if [[ $(type -t "${GROUP}-${ACTION}" || echo '') == 'function' ]]; then
-          # the only exception to requiring a playground configuration is the
-          # 'playground init' command
-          if [[ "$GROUP" != 'meta' ]] || [[ "$ACTION" != 'init' ]]; then
-            # source is not like other commands (?) and the attempt to replace possible source error with friendlier
-            # message fails. The 'or' never gets evaluated, even when source fails.
-            source "${LIQ_SETTINGS}" \ #2> /dev/null \
-              # || echoerrandexit "Could not source global Catalyst settings. Try:\nliq meta init"
-          fi
-          requirements-${GROUP}
-          ${GROUP}-${ACTION} "$@"
-        else
-          exitUnknownAction
-        fi;;
-      *)
-        exitUnknownGroup
-    esac
+    if (( $# == 0 )); then
+      help $GROUP
+      echoerrandexit "\nNo action argument provided. See valid actions above."
+		elif [[ $(type -t "requirements-${GROUP}" || echo '') != 'function' ]]; then
+			exitUnknownGroup
+    fi
+    ACTION="${1:-}"; shift
+    if [[ $(type -t "${GROUP}-${ACTION}" || echo '') == 'function' ]]; then
+      # the only exception to requiring a playground configuration is the
+      # 'playground init' command
+      if [[ "$GROUP" != 'meta' ]] || [[ "$ACTION" != 'init' ]]; then
+        # source is not like other commands (?) and the attempt to replace possible source error with friendlier
+        # message fails. The 'or' never gets evaluated, even when source fails.
+        source "${LIQ_SETTINGS}" \ #2> /dev/null \
+          # || echoerrandexit "Could not source global Catalyst settings. Try:\nliq meta init"
+      fi
+      requirements-${GROUP}
+      ${GROUP}-${ACTION} "$@"
+    else
+      exitUnknownAction
+    fi;;
 esac
 
 exit 0

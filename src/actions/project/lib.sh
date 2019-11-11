@@ -18,8 +18,9 @@ projectsGetUpstreamUrl() {
 
   local CURR_ORG
   CURR_ORG="$(orgsCurrentOrg --require)"
-  cd "${$LIQ_PLAYGROUND}/${CURR_ORG}/${PROJ_NAME}"
-  git config --get remote.upstream.url
+  cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJ_NAME}"
+  git config --get remote.upstream.url \
+		|| echoerrandexit "Failed to get upstream remote URL for ${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJ_NAME}"
 }
 
 # expects STAGING and PROJ_STAGE to be set declared by caller(s)
@@ -79,7 +80,7 @@ projectForkClone() {
   cd "$STAGING"
 
   echo -n "Checking for existing fork at '${FORK_URL}'... "
-  git clone --quiet --origin workspace "${FORK_URL}" \
+  git clone --dry-run --quiet --origin workspace "${FORK_URL}" \
   && { \
     # Be sure and exit on errors to avoid a failure here and then executing the || branch
     echo "found existing fork."
