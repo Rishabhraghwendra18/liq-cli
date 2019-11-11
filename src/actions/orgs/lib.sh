@@ -1,11 +1,22 @@
 orgsCurrentOrg() {
-  eval "$(setSimpleOptions REQUIRE -- "$@")"
+  eval "$(setSimpleOptions REQUIRE REQUIRE_SENSITIVE:s -- "$@")"
 
-  if [[ -L "${CURR_ORG_FILE}" ]]; then
-    readlink "${CURR_ORG_FILE}" | xargs basename
+  if [[ -n "$REQUIRE_SENSITIVE" ]]; then
+    REQUIRE=true
+  fi
+
+  if [[ -L "${CURR_ORG_DIR}" ]]; then
+    if [[ -n "$REQUIRE_SENSITIVE" ]]; then
+      if [[ ! -d "${CURR_ORG_DIR}/sensitive" ]]; then
+        echoerrandexit "Command requires access to the sensitive org settings. Try:\nliq orgs import --sensitive"
+      fi
+    fi
+    CURR_ORG="$(readlink "${CURR_ORG_DIR}" | xargs basename)"
   elif [[ -n "$REQUIRE" ]]; then
     echoerrandexit "Command requires active org selection. Try:\nliq orgs select"
   fi
+
+	echo "$CURR_ORG"
 }
 
 orgsOrgList() {
