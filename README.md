@@ -8,7 +8,7 @@ The user interface is working towards conformance with the [target 1.0 ontology]
 
 ## Usage
 
-* **Create a workspace**: `liq meta init-workspace`
+* **Create a workspace**: `liq meta init`
 * **Create (or join) to an org**: `liq org create --activate` or `liq org join --activate`
 * **Identify projects to work on**: `liq projects import @liquid-labs/liquid-cli`
 * **Do some work**: `liq work start @liquid-labs/liquid-cli`
