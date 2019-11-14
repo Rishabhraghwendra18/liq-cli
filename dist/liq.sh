@@ -2935,22 +2935,22 @@ policies-import() {
       echo "Policy is already registered."
     fi
   else # policy is not registered
-	mkdir -p policies
-    echo -e "$PROJ_NAME\t$PROJ_URL" >> policies/policies.tsv
-		git add policies/policies.tsv
-	local ROLES
-	ROLES="$(find "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJ_NAME}" -name 'roles.tsv')"
-	if [[ -n "$ROLES" ]]; then
-		if [[ -f policies/roles ]]; then
-			echoerr "Newly imported policies defines roles ('${PROJ_NAME}/${ROLES}'), but we found existing 'roles' reference for: $(cat policies/roles)".
-		else
-			echo -n "${PROJ_NAME}/${ROLES}" > policies/roles
-			git add policies/roles
-			echo "Found and regitered roles definition."
+		mkdir -p policies
+	    echo -e "$PROJ_NAME\t$PROJ_URL" >> policies/policies.tsv
+			git add --policies/policies.tsv
+		local ROLES
+		ROLES="$(find "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJ_NAME}" -name 'roles.tsv')"
+		if [[ -n "$ROLES" ]]; then
+			if [[ -f policies/roles ]]; then
+				echoerr "Newly imported policies defines roles ('${PROJ_NAME}/${ROLES}'), but we found existing 'roles' reference for: $(cat policies/roles)".
+			else
+				echo -n "${PROJ_NAME}/${ROLES}" > policies/roles
+				git add policies/roles
+				echo "Found and regitered roles definition."
+			fi
 		fi
-	fi
-    git commit -am "Added policy '$PROJ_NAME'"
-    git push
+    git commit --quiet -am "Added policy '$PROJ_NAME'"
+    git push --quiet
   fi
 }
 help-policies() {
