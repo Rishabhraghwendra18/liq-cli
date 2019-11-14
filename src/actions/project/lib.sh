@@ -2,7 +2,7 @@ projectCheckIfInPlayground() {
   local PROJ_NAME="${1}"
   if [[ -d "${LIQ_PLAYGROUND}/$(orgsCurrentOrg --require)/${PROJ_NAME}" ]]; then
     echo "'$PROJ_NAME' is already in the playground."
-    exit 0
+    return 0
   fi
 }
 
@@ -11,6 +11,16 @@ projectCheckGitAuth() {
   ssh -qT git@github.com 2> /dev/null || if [ $? -ne 1 ]; then
     echoerrandexit "Could not connect to github; add your github key with 'ssh-add'."
   fi
+}
+
+projectsGetUpstreamUrl() {
+  local PROJ_NAME="${1}"
+
+  local CURR_ORG
+  CURR_ORG="$(orgsCurrentOrg --require)"
+  cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJ_NAME}"
+  git config --get remote.upstream.url \
+		|| echoerrandexit "Failed to get upstream remote URL for ${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJ_NAME}"
 }
 
 # expects STAGING and PROJ_STAGE to be set declared by caller(s)
@@ -70,16 +80,16 @@ projectForkClone() {
   cd "$STAGING"
 
   echo -n "Checking for existing fork at '${FORK_URL}'... "
-  git clone --quiet --origin workspace "${FORK_URL}" \
-  && ( \
+  git clone --dry-run --quiet --origin workspace "${FORK_URL}" \
+  && { \
     # Be sure and exit on errors to avoid a failure here and then executing the || branch
     echo "found existing fork."
     cd $PROJ_STAGE || echoerrandexit "Did not find expected staging dir: $PROJ_STAGE"
     echo "Updating remotes..."
     git remote add upstream "$URL" || echoerrandexit "Problem setting upstream URL."
     git branch -u upstream/master master
-  ) \
-  || ( \
+  } \
+  || { \
     echo "none found; cloning source."
     local GITHUB_NAME
     git clone --quiet --origin upstream "${URL}" || echoerrandexit "Could not clone source."
@@ -87,7 +97,7 @@ projectForkClone() {
     echo "Creating fork..."
     hub fork --remote-name workspace
     git branch -u upstream/master master
-  )
+  }
 }
 
 # Expects caller to have defined PROJ_NAME and PROJ_STAGE

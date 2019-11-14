@@ -48,13 +48,13 @@ project-close() {
 
 project-create() {
   echoerrandexit "'create' needs to be reworked for forks."
-  local TMP PROJ_STAGE PROJ_NAME TEMPLATE_URL
+  local TMP PROJ_STAGE __PROJ_NAME TEMPLATE_URL
   TMP=$(setSimpleOptions TYPE= TEMPLATE:T= ORIGIN= -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options."; )
   eval "$TMP"
 
-  PROJ_NAME="${1}"
-  if [[ -z "$PROJ_NAME" ]]; then
+  __PROJ_NAME="${1}"
+  if [[ -z "$__PROJ_NAME" ]]; then
     echoerrandexit "Must specify project name (1st argument)."
   fi
 
@@ -82,10 +82,10 @@ project-create() {
   git remote set-url origin "${ORIGIN}"
   git remote set-url origin --push "${ORIGIN}"
   if [[ -f "package.json" ]]; then
-    echowarn --no-fold "This project already has a 'project.json' file. Will continue as import.\nIn future, try:\nliq import $PROJ_NAME"
+    echowarn --no-fold "This project already has a 'project.json' file. Will continue as import.\nIn future, try:\nliq import $__PROJ_NAME"
   else
     local SCOPE
-    SCOPE=$(dirname "$PROJ_NAME")
+    SCOPE=$(dirname "$__PROJ_NAME")
     if [[ -n "$SCOPE" ]]; then
       npm init --scope "${SCOPE}"
     else
@@ -98,39 +98,54 @@ project-create() {
 }
 
 project-import() {
-  local PROJ_SPEC PROJ_NAME PROJ_URL PROJ_STAGE
-  eval "$(setSimpleOptions NO_FORK:F -- "$@")"
+  local PROJ_SPEC __PROJ_NAME _PROJ_URL PROJ_STAGE
+  eval "$(setSimpleOptions NO_FORK:F SET_NAME= SET_URL= -- "$@")"
+
+  set-stuff() {
+    # TODO: protect this eval
+		echo "setting stuff: $SET_NAME='$_PROJ_NAME'" >> ~/log.tmp
+    if [[ -n "$SET_NAME" ]]; then eval "$SET_NAME='$_PROJ_NAME'"; fi
+    if [[ -n "$SET_URL" ]]; then eval "$SET_URL='$_PROJ_URL'"; fi
+  }
 
   if [[ "$1" == *:* ]]; then # it's a URL
-    PROJ_URL="${1}"
+		echo "url" >> ~/log.tmp
+    _PROJ_URL="${1}"
     if [[ -n "$NO_FORK" ]]; then
-      projectClone "$PROJ_URL"
+      projectClone "$_PROJ_URL"
     else
-      projectForkClone "$PROJ_URL"
+      projectForkClone "$_PROJ_URL"
     fi
-    if PROJ_NAME=$(cat "$PROJ_STAGE/package.json" | jq --raw-output '.name' | tr -d "'"); then
-      projectCheckIfInPlayground "$PROJ_NAME"
+    if _PROJ_NAME=$(cat "$PROJ_STAGE/package.json" | jq --raw-output '.name' | tr -d "'"); then
+      set-stuff
+      if projectCheckIfInPlayground "$_PROJ_NAME"; then return 0; fi
     else
       rm -rf "$PROJ_STAGE"
-      echoerrandexit -F "The specified source is not a valid Liquid Dev package (no 'package.json'). Try:\nliq project create --type=bare --origin='$PROJ_URL' <project name>"
+      echoerrandexit -F "The specified source is not a valid Liquid Dev package (no 'package.json'). Try:\nliq project create --type=bare --origin='$_PROJ_URL' <project name>"
     fi
   else # it's an NPM package
-    PROJ_NAME="${1}"
-    projectCheckIfInPlayground "$PROJ_NAME"
+    _PROJ_NAME="${1}"
+    set-stuff
+    if projectCheckIfInPlayground "$_PROJ_NAME"; then
+      _PROJ_URL="$(projectsGetUpstreamUrl "$_PROJ_NAME")"
+      set-stuff
+      return 0
+    fi
     # Note: NPM will accept git URLs, but this saves us a step, let's us check if in playground earlier, and simplifes branching
-    PROJ_URL=$(npm view "$PROJ_NAME" repository.url) \
-      || echoerrandexit "Did not find expected NPM package '${PROJ_NAME}'. Did you forget the '--url' option?"
-    PROJ_URL=${PROJ_URL##git+}
+    _PROJ_URL=$(npm view "$_PROJ_NAME" repository.url) \
+      || echoerrandexit "Did not find expected NPM package '${_PROJ_NAME}'. Did you forget the '--url' option?"
+    set-stuff
+    _PROJ_URL=${_PROJ_URL##git+}
     if [[ -n "$NO_FORK" ]]; then
-      projectClone "$PROJ_URL"
+      projectClone "$_PROJ_URL"
     else
-      projectForkClone "$PROJ_URL"
+      projectForkClone "$_PROJ_URL"
     fi
   fi
 
   projectMoveStaged
 
-  echo "'$PROJ_NAME' imported into playground."
+  echo "'$_PROJ_NAME' imported into playground."
 }
 
 project-publish() {

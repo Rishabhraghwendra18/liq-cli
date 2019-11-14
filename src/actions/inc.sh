@@ -17,6 +17,9 @@ source ./packages/actions.sh
 source ./packages/help.sh
 source ./packages/lib.sh
 
+source ./policies/actions.sh
+source ./policies/help.sh
+
 source ./project/actions.sh
 source ./project/help.sh
 source ./project/lib.sh

@@ -22,17 +22,32 @@ orgs-affiliate() {
     return
   fi
 
+  local CURR_ORG
+  CURR_ORG="$(orgsCurrentOrg)"
   mkdir -p "${LIQ_ORG_DB}"
   cd "${LIQ_ORG_DB}"
-  rm -rf .staging
-  git clone --quiet "${ORG_URL}/org_settings.git" .staging \
-    || { rm -rf .staging; echoerrandexit "Could not retrieve the public org repo."; }
-  source .staging/settings.sh
-  mkdir -p "${LIQ_ORG_DB}/${ORG_NICK_NAME}"
-  mv .staging "${LIQ_ORG_DB}/${ORG_NICK_NAME}/public"
+  if [[ -n "$ORG_URL" ]]; then
+    rm -rf .staging
+    git clone --origin upstream --quiet "${ORG_URL}/org_settings.git" .staging \
+      || { rm -rf .staging; echoerrandexit "Could not retrieve the public org repo."; }
+    source .staging/settings.sh
+    if [[ -d "${LIQ_ORG_DB}/${ORG_NICK_NAME}" ]]; then
+      echo "Public repo for '${ORG_NICK_NAME}' already present."
+      rm -rf .staging
+    else
+      mkdir -p "${LIQ_ORG_DB}/${ORG_NICK_NAME}"
+      mv .staging "${LIQ_ORG_DB}/${ORG_NICK_NAME}/public"
+    fi
+  elif [[ -z "$ORG_URL" ]] && [[ -n "$REQUIRE_SENSITIVE" ]] && [[ -n "$CURR_ORG" ]]; then
+    # setup ORG_URL from CURR_ORG for the 'add sensitive to current' use case
+    source "${CURR_ORG}/public/settings.sh"
+    ORG_URL="git@github.com:${ORG_GITHUB_NAME}"
+  else
+    echoerrandexit "Incompatable command options."
+  fi
 
   if [[ -n "${SENSITIVE}" ]]; then
-    git clone --quiet "${ORG_URL}/org_settings_sensitive.git" .staging \
+    git clone --origin upstream --quiet "${ORG_URL}/org_settings_sensitive.git" .staging \
       || { rm -rf .staging; echoerrandexit "Could not retrieve the sensitive org repo."; }
     mv .staging "${LIQ_ORG_DB}/${ORG_NICK_NAME}/sensitive"
   fi
@@ -129,7 +144,7 @@ orgs-select() {
   eval "$(setSimpleOptions NONE -- "$@")"
 
   if [[ -n "$NONE" ]]; then
-    rm "${CURR_ORG_FILE}"
+    rm "${CURR_ORG_DIR}"
     return
   fi
 
@@ -148,8 +163,8 @@ orgs-select() {
   fi
   echo "blah: ${LIQ_ORG_DB}/${ORG_NAME}" >> log.tmp
   if [[ -d "${LIQ_ORG_DB}/${ORG_NAME}" ]]; then
-    if [[ -L $CURR_ORG_FILE ]]; then rm $CURR_ORG_FILE; fi
-    cd "${LIQ_ORG_DB}" && ln -s "./${ORG_NAME}" $(basename "${CURR_ORG_FILE}")
+    if [[ -L $CURR_ORG_DIR ]]; then rm $CURR_ORG_DIR; fi
+    cd "${LIQ_ORG_DB}" && ln -s "./${ORG_NAME}" $(basename "${CURR_ORG_DIR}")
   else
     echoerrandexit "No such org '$ORG_NAME' defined."
   fi
