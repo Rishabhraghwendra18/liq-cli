@@ -33,6 +33,7 @@ work-close() {
   CURR_ORG="$(orgsCurrentOrg --require)"
   # first, do the checks
   for PROJECT in $PROJECTS; do
+    PROJECT=$(workConvertDot "$PROJECT")
     local CURR_BRANCH
     cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT}"
     CURR_BRANCH=$(workCurrentWorkBranch)
@@ -46,6 +47,7 @@ work-close() {
 
   # now actually do the closures
   for PROJECT in $PROJECTS; do
+    PROJECT=$(workConvertDot "$PROJECT")
     cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT}"
     local CURR_BRANCH
     CURR_BRANCH=$(git branch | (grep '*' || true) | awk '{print $2}')
