@@ -71,8 +71,6 @@ work-close() {
   if [[ -z "${INVOLVED_PROJECTS}" ]]; then
     rm "${LIQ_WORK_DB}/curr_work"
     rm "${LIQ_WORK_DB}/${WORK_BRANCH}"
-  else
-    rm "${LIQ_WORK_DB}/curr_work"
   fi
 }
 
