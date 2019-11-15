@@ -33,6 +33,12 @@ ${PREFIX}${cyan_u}project${reset} <action>:
       re-running tests and the services are known to be running.
     * '--go-run' will only run those tests matching the provided regex (per go
       '-run' standards).
+  ${underline}services${reset}: sub-resource for managing services provided by the package.
+    ${underline}add${reset} [<package name>]: Add a provided service.
+    ${underline}list${reset} [<package name>...]: Lists the services provided by the named packages or
+      all packages in the current repository.
+    ${underline}delete${reset} [<package name>] <name>: Deletes a provided service.
+    ${underline}show${reset} [<service name>...]: Show service details.
 EOF
 
   test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" helpHelperAlphaPackagesNote

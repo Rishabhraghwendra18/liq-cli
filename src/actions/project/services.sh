@@ -1,14 +1,14 @@
-packages-services() {
+project-services() {
   local ACTION="${1}"; shift
 
-  if [[ $(type -t "packages-services-${ACTION}" || echo '') == 'function' ]]; then
-    packages-services-${ACTION} "$@"
+  if [[ $(type -t "project-services-${ACTION}" || echo '') == 'function' ]]; then
+    project-services-${ACTION} "$@"
   else
     exitUnknownAction
   fi
 }
 
-packages-services-add() {
+project-services-add() {
   # TODO: check for global to allow programatic use
   local SERVICE_NAME="${1:-}"
   if [[ -z "$SERVICE_NAME" ]]; then
@@ -57,7 +57,7 @@ EOF
   echo "$PACKAGE" | jq > "$PACKAGE_FILE"
 }
 
-packages-services-delete() {
+project-services-delete() {
   if (( $# == 0 )); then
     echoerrandexit "Must specify service names to delete."
   fi
@@ -72,11 +72,11 @@ packages-services-delete() {
   echo "$PACKAGE" | jq > "$PACKAGE_FILE"
 }
 
-packages-services-list() {
+project-services-list() {
   echo $PACKAGE | jq --raw-output ".catalyst.provides | .[] | .\"name\""
 }
 
-packages-services-show() {
+project-services-show() {
   while [[ $# -gt 0 ]]; do
     if ! echo $PACKAGE | jq -e "(.catalyst) and (.catalyst.provides) and (.catalyst.provides | .[] | select(.name == \"$1\"))" > /dev/null; then
       echoerr "No such service '$1'."

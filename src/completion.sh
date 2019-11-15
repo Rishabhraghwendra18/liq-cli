@@ -36,15 +36,15 @@ _liq()
           OPTS="init bash-config";;
         orgs)
           OPTS="affiliate create list show select";;
-        packages)
-          OPTS="audit build deploy lint link version-check services";;
+        packages) # deprecated
+          OPTS="audit build deploy lint link version-check";;
 				policies)
 					OPTS="document";;
         project)
-          OPTS="close init publish sync test";;
+          OPTS="close init publish sync test services";;
         remotes)
           OPTS="add delete set-main";;
-        required-services)
+        required-services) # deprecated
           OPTS="list add delete";;
         services)
           OPTS="connect err-log list log restart start stop";;
@@ -61,7 +61,7 @@ _liq()
               COMPREPLY=( $(compgen -o nospace -W "$(for d in ${CUR}*; do [[ -d "$d" ]] && echo $d/ || echo $d; done)" -- ${CUR}) )
             ;;
           esac ;;# work-actions
-        packages)
+        project)
           case "${ACTION}" in
             services)
               OPTS="add list delete show"

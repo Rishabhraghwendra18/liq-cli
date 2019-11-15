@@ -13,8 +13,8 @@ source ./orgs/actions.sh
 source ./orgs/help.sh
 source ./orgs/lib.sh
 
+# deppreted
 source ./packages/actions.sh
-source ./packages/services.sh
 source ./packages/help.sh
 source ./packages/lib.sh
 
@@ -23,9 +23,11 @@ source ./policies/help.sh
 source ./policies/lib.sh
 
 source ./project/actions.sh
+source ./project/services.sh
 source ./project/help.sh
 source ./project/lib.sh
 
+# deprecated
 source ./required-services/actions.sh
 source ./required-services/help.sh
 source ./required-services/lib.sh
