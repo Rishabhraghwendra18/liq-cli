@@ -33,6 +33,8 @@ ${PREFIX}${cyan_u}work${reset} <action>:
     Synchronizes local project repos for all work. See 'liq help work sync' for details.
   ${underline}test${reset}: Runs tests for each involved project in the current unit of work. See
     'project test' for details on options for the 'test' action.
+  ${underline}submit${reset} [<projects>]: Submits pull request for the current unit of work. With no
+    projects specified, submits patches for all projects in the current unit of work.
 
 A 'unit of work' is essentially a set of work branches across all involved projects. The first project involved in a unit of work is considered the primary project, which will effect automated linking when involving other projects.
 

@@ -33,6 +33,7 @@ work-close() {
   CURR_ORG="$(orgsCurrentOrg --require)"
   # first, do the checks
   for PROJECT in $PROJECTS; do
+    PROJECT=$(workConvertDot "$PROJECT")
     local CURR_BRANCH
     cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT}"
     CURR_BRANCH=$(workCurrentWorkBranch)
@@ -46,6 +47,7 @@ work-close() {
 
   # now actually do the closures
   for PROJECT in $PROJECTS; do
+    PROJECT=$(workConvertDot "$PROJECT")
     cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT}"
     local CURR_BRANCH
     CURR_BRANCH=$(git branch | (grep '*' || true) | awk '{print $2}')
@@ -69,8 +71,6 @@ work-close() {
   if [[ -z "${INVOLVED_PROJECTS}" ]]; then
     rm "${LIQ_WORK_DB}/curr_work"
     rm "${LIQ_WORK_DB}/${WORK_BRANCH}"
-  else
-    rm "${LIQ_WORK_DB}/curr_work"
   fi
 }
 
@@ -615,27 +615,44 @@ work-test() {
 }
 
 work-submit() {
-  eval "$(setSimpleOptions SELECT MESSAGE= NOT_CLEAN:C -- "$@")" \
+  eval "$(setSimpleOptions MESSAGE= NOT_CLEAN:C -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
-  local WORK_NAME CURR_ORG
+  if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
+    echoerrandexit "No current unit of work. Try:\nliq work select."
+  fi
+
+  local CURR_ORG
   CURR_ORG="$(orgsCurrentOrg --require)"
-  workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
-  source "${LIQ_WORK_DB}/${WORK_NAME}"
+  source "${LIQ_WORK_DB}/curr_work"
 
   if [[ -z "$MESSAGE" ]]; then
     MESSAGE="$WORK_DESC"
   fi
 
+
+  local TO_SUBMIT="$@"
+  if [[ -z "$TO_SUBMIT" ]]; then
+    TO_SUBMIT="$INVOLVED_PROJECTS"
+  fi
+
   local IP
-  for IP in $INVOLVED_PROJECTS; do
+  for IP in $TO_SUBMIT; do
+    IP=$(workConvertDot "$IP")
+    if ! echo "$INVOLVED_PROJECTS" | grep -qE '(^| +)'$IP'( +|$)'; then
+      echoerrandexit "Project '$IP' not in the current unit of work."
+    fi
+
     if [[ "$NOT_CLEAN" != true ]]; then
       requireCleanRepo "${IP}"
     fi
     if ! work-status --pr-ready; then
       echoerrandexit "Local work branch not in sync with remote work branch. Try:\nliq work save --backup-only"
     fi
+  done
 
+  for IP in $TO_SUBMIT; do
+    IP=$(workConvertDot "$IP")
     echo "Creating PR for ${IP}..."
     cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
 

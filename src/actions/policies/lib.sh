@@ -7,6 +7,14 @@ policiesGetPolicyDirs() {
   )
 }
 
+policiesGetPolicyFiles() {
+  local DIRS DIR
+  DIRS="$(policiesGetPolicyDirs)"
+  for DIR in $DIRS; do
+    find $DIR -name "*.tsv"
+  done
+}
+
 policiesGetPolicyPackages() {
   local DIR
   for DIR in $(policiesGetPolicyDirs); do
