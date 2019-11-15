@@ -2905,9 +2905,14 @@ requirements-policies() {
 }
 
 policies-document() {
-  local NODE_SCRIPT
-  NODE_SCRIPT="$(dirname $(real_path ${BASH_SOURCE[0]}))/../src/actions/policies/lib/policies-document.js"
-  node "$NODE_SCRIPT"
+  local NODE_SCRIPT CURR_ORG TARGET_DIR
+  NODE_SCRIPT="$(dirname $(real_path ${BASH_SOURCE[0]}))/index.js"
+  CURR_ORG="$(orgsCurrentOrg --require-sensitive)"
+  TARGET_DIR="${LIQ_ORG_DB}/${CURR_ORG}/sensitive/policy"
+
+  rm -rf "$TARGET_DIR"
+  mkdir -p "$TARGET_DIR"
+  node -e "require('$NODE_SCRIPT').refreshDocuments('${TARGET_DIR}', process.argv.slice(1))" $(policiesGetPolicyFiles)
 }
 
 policies-update() {
@@ -2937,6 +2942,14 @@ policiesGetPolicyDirs() {
     cd "${LIQ_ORG_DB}/${CURR_ORG}/sensitive"
     find "./node_modules/@liquid-labs" -maxdepth 1 -type d -name "policy-*" -exec echo "${PWD}/{}" \;
   )
+}
+
+policiesGetPolicyFiles() {
+  local DIRS DIR
+  DIRS="$(policiesGetPolicyDirs)"
+  for DIR in $DIRS; do
+    find $DIR -name "*.tsv"
+  done
 }
 
 policiesGetPolicyPackages() {
@@ -3043,7 +3056,7 @@ project-create() {
     git add package.json
   fi
   cd
-  projectMoveStaged
+  projectMoveStaged "$__PROJ_NAME" "$PROJ_STAGE"
 }
 
 project-import() {
@@ -3092,7 +3105,7 @@ project-import() {
     fi
   fi
 
-  projectMoveStaged
+  projectMoveStaged "$_PROJ_NAME" "$PROJ_STAGE"
 
   echo "'$_PROJ_NAME' imported into playground."
 }
@@ -3242,6 +3255,8 @@ projectCheckIfInPlayground() {
   if [[ -d "${LIQ_PLAYGROUND}/$(orgsCurrentOrg --require)/${PROJ_NAME}" ]]; then
     echo "'$PROJ_NAME' is already in the playground."
     return 0
+  else
+    return 1
   fi
 }
 
@@ -3342,6 +3357,8 @@ projectForkClone() {
 # Expects caller to have defined PROJ_NAME and PROJ_STAGE
 projectMoveStaged() {
   local TRUNC_NAME CURR_ORG
+  local PROJ_NAME="${1}"
+  local PROJ_STAGE="${2}"
   TRUNC_NAME="$(dirname "$PROJ_NAME")"
   CURR_ORG=$(orgsCurrentOrg --require)
   mkdir -p "${LIQ_PLAYGROUND}/${CURR_ORG}/${TRUNC_NAME}"
@@ -4023,6 +4040,7 @@ work-close() {
   CURR_ORG="$(orgsCurrentOrg --require)"
   # first, do the checks
   for PROJECT in $PROJECTS; do
+    PROJECT=$(workConvertDot "$PROJECT")
     local CURR_BRANCH
     cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT}"
     CURR_BRANCH=$(workCurrentWorkBranch)
@@ -4036,6 +4054,7 @@ work-close() {
 
   # now actually do the closures
   for PROJECT in $PROJECTS; do
+    PROJECT=$(workConvertDot "$PROJECT")
     cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT}"
     local CURR_BRANCH
     CURR_BRANCH=$(git branch | (grep '*' || true) | awk '{print $2}')
@@ -4059,8 +4078,6 @@ work-close() {
   if [[ -z "${INVOLVED_PROJECTS}" ]]; then
     rm "${LIQ_WORK_DB}/curr_work"
     rm "${LIQ_WORK_DB}/${WORK_BRANCH}"
-  else
-    rm "${LIQ_WORK_DB}/curr_work"
   fi
 }
 
@@ -4605,27 +4622,44 @@ work-test() {
 }
 
 work-submit() {
-  eval "$(setSimpleOptions SELECT MESSAGE= NOT_CLEAN:C -- "$@")" \
+  eval "$(setSimpleOptions MESSAGE= NOT_CLEAN:C -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
-  local WORK_NAME CURR_ORG
+  if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
+    echoerrandexit "No current unit of work. Try:\nliq work select."
+  fi
+
+  local CURR_ORG
   CURR_ORG="$(orgsCurrentOrg --require)"
-  workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
-  source "${LIQ_WORK_DB}/${WORK_NAME}"
+  source "${LIQ_WORK_DB}/curr_work"
 
   if [[ -z "$MESSAGE" ]]; then
     MESSAGE="$WORK_DESC"
   fi
 
+
+  local TO_SUBMIT="$@"
+  if [[ -z "$TO_SUBMIT" ]]; then
+    TO_SUBMIT="$INVOLVED_PROJECTS"
+  fi
+
   local IP
-  for IP in $INVOLVED_PROJECTS; do
+  for IP in $TO_SUBMIT; do
+    IP=$(workConvertDot "$IP")
+    if ! echo "$INVOLVED_PROJECTS" | grep -qE '(^| +)'$IP'( +|$)'; then
+      echoerrandexit "Project '$IP' not in the current unit of work."
+    fi
+
     if [[ "$NOT_CLEAN" != true ]]; then
       requireCleanRepo "${IP}"
     fi
     if ! work-status --pr-ready; then
       echoerrandexit "Local work branch not in sync with remote work branch. Try:\nliq work save --backup-only"
     fi
+  done
 
+  for IP in $TO_SUBMIT; do
+    IP=$(workConvertDot "$IP")
     echo "Creating PR for ${IP}..."
     cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
 
@@ -4700,6 +4734,8 @@ ${PREFIX}${cyan_u}work${reset} <action>:
     Synchronizes local project repos for all work. See 'liq help work sync' for details.
   ${underline}test${reset}: Runs tests for each involved project in the current unit of work. See
     'project test' for details on options for the 'test' action.
+  ${underline}submit${reset} [<projects>]: Submits pull request for the current unit of work. With no
+    projects specified, submits patches for all projects in the current unit of work.
 
 A 'unit of work' is essentially a set of work branches across all involved projects. The first project involved in a unit of work is considered the primary project, which will effect automated linking when involving other projects.
 

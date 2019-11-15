@@ -94,7 +94,7 @@ project-create() {
     git add package.json
   fi
   cd
-  projectMoveStaged
+  projectMoveStaged "$__PROJ_NAME" "$PROJ_STAGE"
 }
 
 project-import() {
@@ -143,7 +143,7 @@ project-import() {
     fi
   fi
 
-  projectMoveStaged
+  projectMoveStaged "$_PROJ_NAME" "$PROJ_STAGE"
 
   echo "'$_PROJ_NAME' imported into playground."
 }

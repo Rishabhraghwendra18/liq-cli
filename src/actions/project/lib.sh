@@ -3,6 +3,8 @@ projectCheckIfInPlayground() {
   if [[ -d "${LIQ_PLAYGROUND}/$(orgsCurrentOrg --require)/${PROJ_NAME}" ]]; then
     echo "'$PROJ_NAME' is already in the playground."
     return 0
+  else
+    return 1
   fi
 }
 
@@ -103,6 +105,8 @@ projectForkClone() {
 # Expects caller to have defined PROJ_NAME and PROJ_STAGE
 projectMoveStaged() {
   local TRUNC_NAME CURR_ORG
+  local PROJ_NAME="${1}"
+  local PROJ_STAGE="${2}"
   TRUNC_NAME="$(dirname "$PROJ_NAME")"
   CURR_ORG=$(orgsCurrentOrg --require)
   mkdir -p "${LIQ_PLAYGROUND}/${CURR_ORG}/${TRUNC_NAME}"
