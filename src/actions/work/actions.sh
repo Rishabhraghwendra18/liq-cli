@@ -3,7 +3,7 @@ requirements-work() {
 }
 
 work-backup() {
-  eval "$(setSimpleOptions TEST NO_SYNC -- "$@")"
+  eval "$(setSimpleOptions TEST -- "$@")"
 
   if [[ "$TEST" != true ]]; then
     local OLD_MSG
@@ -19,6 +19,7 @@ work-diff-master() {
 }
 
 work-close() {
+  eval "$(setSimpleOptions TEST NO_SYNC -- "$@")"
   source "${LIQ_WORK_DB}/curr_work"
 
   local PROJECTS
