@@ -22,6 +22,12 @@ ${PREFIX}${cyan_u}packages${reset} <action>:
     unlink all Catalyst linked packages from the current package unless specific
     packages are specified. '--fix' will check and attempt to fix any broken
     package links in the current project and takes no arguments.
+  ${underline}services${reset}: sub-resource for managing services provided by the package.
+    ${underline}add${reset} [<package name>]: Add a provided service.
+    ${underline}list${reset} [<package name>...]: Lists the services provided by the named packages or
+      all packages in the current repository.
+    ${underline}delete${reset} [<package name>] <name>: Deletes a provided service.
+    ${underline}show${reset} [<service name>...]: Show service details.
 
 ${red}Deprecated: these functions will migrate under 'project'.${reset}
 

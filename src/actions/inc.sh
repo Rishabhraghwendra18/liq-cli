@@ -14,6 +14,7 @@ source ./orgs/help.sh
 source ./orgs/lib.sh
 
 source ./packages/actions.sh
+source ./packages/services.sh
 source ./packages/help.sh
 source ./packages/lib.sh
 
@@ -24,10 +25,6 @@ source ./policies/lib.sh
 source ./project/actions.sh
 source ./project/help.sh
 source ./project/lib.sh
-
-source ./provided-services/actions.sh
-source ./provided-services/help.sh
-# source ./provided-services/lib.sh
 
 source ./required-services/actions.sh
 source ./required-services/help.sh

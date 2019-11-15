@@ -1,9 +1,14 @@
-requirements-provided-services() {
-  requireCatalystfile
-  requirePackage
+packages-services() {
+  local ACTION="${1}"; shift
+
+  if [[ $(type -t "packages-services-${ACTION}" || echo '') == 'function' ]]; then
+    packages-services-${ACTION} "$@"
+  else
+    exitUnknownAction
+  fi
 }
 
-provided-services-add() {
+packages-services-add() {
   # TODO: check for global to allow programatic use
   local SERVICE_NAME="${1:-}"
   if [[ -z "$SERVICE_NAME" ]]; then
@@ -52,7 +57,7 @@ EOF
   echo "$PACKAGE" | jq > "$PACKAGE_FILE"
 }
 
-provided-services-delete() {
+packages-services-delete() {
   if (( $# == 0 )); then
     echoerrandexit "Must specify service names to delete."
   fi
@@ -67,11 +72,11 @@ provided-services-delete() {
   echo "$PACKAGE" | jq > "$PACKAGE_FILE"
 }
 
-provided-services-list() {
+packages-services-list() {
   echo $PACKAGE | jq --raw-output ".catalyst.provides | .[] | .\"name\""
 }
 
-provided-services-show() {
+packages-services-show() {
   while [[ $# -gt 0 ]]; do
     if ! echo $PACKAGE | jq -e "(.catalyst) and (.catalyst.provides) and (.catalyst.provides | .[] | select(.name == \"$1\"))" > /dev/null; then
       echoerr "No such service '$1'."

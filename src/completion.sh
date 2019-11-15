@@ -9,7 +9,7 @@ _liq()
     local OPTS # the options, set by this func, for completion
     local GLOBAL_ACTIONS="help"
     # Using 'GROUPS' was causing errors; set by some magic.
-    local ACTION_GROUPS="data environments orgs packages policies project provided-services remotes required-services services work"
+    local ACTION_GROUPS="data environments orgs packages policies project remotes required-services services work"
     COMPREPLY=()
     # local WORD_COUNT=${#COMP_WORDS[@]}
     # TODO: instead of simple 'CUR/PREV', use the above to see where in the
@@ -37,13 +37,11 @@ _liq()
         orgs)
           OPTS="affiliate create list show select";;
         packages)
-          OPTS="audit build deploy lint link version-check";;
+          OPTS="audit build deploy lint link version-check services";;
 				policies)
 					OPTS="document";;
         project)
           OPTS="close init publish sync test";;
-        provided-services)
-          OPTS="list add delete";;
         remotes)
           OPTS="add delete set-main";;
         required-services)
@@ -62,8 +60,13 @@ _liq()
             stage)
               COMPREPLY=( $(compgen -o nospace -W "$(for d in ${CUR}*; do [[ -d "$d" ]] && echo $d/ || echo $d; done)" -- ${CUR}) )
             ;;
-          esac # work-actions
-        ;;
+          esac ;;# work-actions
+        packages)
+          case "${ACTION}" in
+            services)
+              OPTS="add list delete show"
+              COMPREPLY=( $(compgen -W "${OPTS}" -- ${CUR}) );;
+          esac ;; # packages-actions
       esac
     fi
 

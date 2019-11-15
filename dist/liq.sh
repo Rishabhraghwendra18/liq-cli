@@ -2725,6 +2725,100 @@ packages-version-check() {
     packagesVersionCheck
   fi
 }
+packages-services() {
+  local ACTION="${1}"; shift
+
+  if [[ $(type -t "packages-services-${ACTION}" || echo '') == 'function' ]]; then
+    packages-services-${ACTION} "$@"
+  else
+    exitUnknownAction
+  fi
+}
+
+packages-services-add() {
+  # TODO: check for global to allow programatic use
+  local SERVICE_NAME="${1:-}"
+  if [[ -z "$SERVICE_NAME" ]]; then
+    require-answer "Service name: " SERVICE_NAME
+  fi
+
+  local SERVICE_DEF=$(cat <<EOF
+{
+  "name": "${SERVICE_NAME}",
+  "interface-classes": [],
+  "platform-types": [],
+  "purposes": [],
+  "ctrl-scripts": [],
+  "params-req": [],
+  "params-opt": [],
+  "config-const": {}
+}
+EOF
+)
+
+  function selectOptions() {
+    local OPTION OPTIONS
+    local OPTIONS_NAME="$1"; shift
+    PS3="$1"; shift
+    local OPTS_ONLY="$1"; shift
+    local ENUM_CHOICES="$@"
+
+    if [[ -n "$OPTS_ONLY" ]]; then
+      selectDoneCancel OPTIONS ENUM_CHOICES
+    else
+      selectDoneCancelAnyOther OPTIONS ENUM_CHOICES
+    fi
+    for OPTION in $OPTIONS; do
+      SERVICE_DEF=`echo "$SERVICE_DEF" | jq ". + { \"$OPTIONS_NAME\": (.\"$OPTIONS_NAME\" + [\"$OPTION\"]) }"`
+    done
+  }
+
+  selectOptions 'interface-classes' 'Interface class: ' '' "$STD_IFACE_CLASSES"
+  selectOptions 'platform-types' 'Platform type: ' '' "$STD_PLATFORM_TYPES"
+  selectOptions 'purposes' 'Purpose: ' '' "$STD_ENV_PURPOSES"
+  selectOptions 'ctrl-scripts' "Control script: " true `find "${BASE_DIR}/bin/" -type f -not -name '*~' -prune -execdir echo '{}' \;`
+
+  defineParameters SERVICE_DEF
+
+  PACKAGE=`echo "$PACKAGE" | jq ".catalyst + { \"provides\": (.catalyst.provides + [$SERVICE_DEF]) }"`
+  echo "$PACKAGE" | jq > "$PACKAGE_FILE"
+}
+
+packages-services-delete() {
+  if (( $# == 0 )); then
+    echoerrandexit "Must specify service names to delete."
+  fi
+
+  local SERV_NAME
+  for SERV_NAME in "$@"; do
+    if echo "$PACKAGE" | jq -e "(.catalyst.provides | map(select(.name == \"$SERV_NAME\")) | length) == 0" > /dev/null; then
+      echoerr "Did not find service '$SERV_NAME' to delete."
+    fi
+    PACKAGE=`echo "$PACKAGE" | jq "setpath([.catalyst.requires]; .catalyst.provides | map(select(.name != \"$SERV_NAME\")))"`
+  done
+  echo "$PACKAGE" | jq > "$PACKAGE_FILE"
+}
+
+packages-services-list() {
+  echo $PACKAGE | jq --raw-output ".catalyst.provides | .[] | .\"name\""
+}
+
+packages-services-show() {
+  while [[ $# -gt 0 ]]; do
+    if ! echo $PACKAGE | jq -e "(.catalyst) and (.catalyst.provides) and (.catalyst.provides | .[] | select(.name == \"$1\"))" > /dev/null; then
+      echoerr "No such service '$1'."
+    else
+      echo "$1:"
+      echo
+      echo $PACKAGE | jq ".catalyst.provides | .[] | select(.name == \"$1\")"
+      if [[ $# -gt 1 ]]; then
+        echo
+        read -p "Hit enter to continue to '$2'..."
+      fi
+    fi
+    shift
+  done
+}
 help-packages() {
   local PREFIX="${1:-}"
 
@@ -2749,6 +2843,12 @@ ${PREFIX}${cyan_u}packages${reset} <action>:
     unlink all Catalyst linked packages from the current package unless specific
     packages are specified. '--fix' will check and attempt to fix any broken
     package links in the current project and takes no arguments.
+  ${underline}services${reset}: sub-resource for managing services provided by the package.
+    ${underline}add${reset} [<package name>]: Add a provided service.
+    ${underline}list${reset} [<package name>...]: Lists the services provided by the named packages or
+      all packages in the current repository.
+    ${underline}delete${reset} [<package name>] <name>: Deletes a provided service.
+    ${underline}show${reset} [<service name>...]: Show service details.
 
 ${red}Deprecated: these functions will migrate under 'project'.${reset}
 
@@ -3365,118 +3465,6 @@ projectMoveStaged() {
   mv "$PROJ_STAGE" "$LIQ_PLAYGROUND/${CURR_ORG}/${TRUNC_NAME}" \
     || echoerrandexit "Could not moved staged '$PROJ_NAME' to playground. See above for details."
 }
-
-requirements-provided-services() {
-  requireCatalystfile
-  requirePackage
-}
-
-provided-services-add() {
-  # TODO: check for global to allow programatic use
-  local SERVICE_NAME="${1:-}"
-  if [[ -z "$SERVICE_NAME" ]]; then
-    require-answer "Service name: " SERVICE_NAME
-  fi
-
-  local SERVICE_DEF=$(cat <<EOF
-{
-  "name": "${SERVICE_NAME}",
-  "interface-classes": [],
-  "platform-types": [],
-  "purposes": [],
-  "ctrl-scripts": [],
-  "params-req": [],
-  "params-opt": [],
-  "config-const": {}
-}
-EOF
-)
-
-  function selectOptions() {
-    local OPTION OPTIONS
-    local OPTIONS_NAME="$1"; shift
-    PS3="$1"; shift
-    local OPTS_ONLY="$1"; shift
-    local ENUM_CHOICES="$@"
-
-    if [[ -n "$OPTS_ONLY" ]]; then
-      selectDoneCancel OPTIONS ENUM_CHOICES
-    else
-      selectDoneCancelAnyOther OPTIONS ENUM_CHOICES
-    fi
-    for OPTION in $OPTIONS; do
-      SERVICE_DEF=`echo "$SERVICE_DEF" | jq ". + { \"$OPTIONS_NAME\": (.\"$OPTIONS_NAME\" + [\"$OPTION\"]) }"`
-    done
-  }
-
-  selectOptions 'interface-classes' 'Interface class: ' '' "$STD_IFACE_CLASSES"
-  selectOptions 'platform-types' 'Platform type: ' '' "$STD_PLATFORM_TYPES"
-  selectOptions 'purposes' 'Purpose: ' '' "$STD_ENV_PURPOSES"
-  selectOptions 'ctrl-scripts' "Control script: " true `find "${BASE_DIR}/bin/" -type f -not -name '*~' -prune -execdir echo '{}' \;`
-
-  defineParameters SERVICE_DEF
-
-  PACKAGE=`echo "$PACKAGE" | jq ".catalyst + { \"provides\": (.catalyst.provides + [$SERVICE_DEF]) }"`
-  echo "$PACKAGE" | jq > "$PACKAGE_FILE"
-}
-
-provided-services-delete() {
-  if (( $# == 0 )); then
-    echoerrandexit "Must specify service names to delete."
-  fi
-
-  local SERV_NAME
-  for SERV_NAME in "$@"; do
-    if echo "$PACKAGE" | jq -e "(.catalyst.provides | map(select(.name == \"$SERV_NAME\")) | length) == 0" > /dev/null; then
-      echoerr "Did not find service '$SERV_NAME' to delete."
-    fi
-    PACKAGE=`echo "$PACKAGE" | jq "setpath([.catalyst.requires]; .catalyst.provides | map(select(.name != \"$SERV_NAME\")))"`
-  done
-  echo "$PACKAGE" | jq > "$PACKAGE_FILE"
-}
-
-provided-services-list() {
-  echo $PACKAGE | jq --raw-output ".catalyst.provides | .[] | .\"name\""
-}
-
-provided-services-show() {
-  while [[ $# -gt 0 ]]; do
-    if ! echo $PACKAGE | jq -e "(.catalyst) and (.catalyst.provides) and (.catalyst.provides | .[] | select(.name == \"$1\"))" > /dev/null; then
-      echoerr "No such service '$1'."
-    else
-      echo "$1:"
-      echo
-      echo $PACKAGE | jq ".catalyst.provides | .[] | select(.name == \"$1\")"
-      if [[ $# -gt 1 ]]; then
-        echo
-        read -p "Hit enter to continue to '$2'..."
-      fi
-    fi
-    shift
-  done
-}
-help-provided-services() {
-  local PREFIX="${1:-}"
-
-handleSummary "${PREFIX}${red_b}(deprated)${reset} ${cyan_u}provided-services${reset} <action>: Manages package service declarations." || cat <<EOF
-${PREFIX}${cyan_u}provided-services${reset} <action>:
-  ${underline}list${reset} [<package name>...]: Lists the services provided by the named packages or
-    all packages in the current repository.
-  ${underline}add${reset} [<package name>]: Add a provided service.
-  ${underline}delete${reset} [<package name>] <name>: Deletes a provided service.
-
-${red_b}Deprated: These commands will migrate under 'project'.${reset}
-
-The 'add' action works interactively. Non-interactive alternatives will be
-provided in future versions.
-
-The ${underline}package name${reset} parameter in the 'add' and 'delete' actions is optional if
-there is a single package in the current repository.
-EOF
-
-  test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" helpHelperAlphaPackagesNote
-}
-# source ./provided-services/lib.sh
 
 requirements-required-services() {
   requirePackage
