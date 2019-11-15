@@ -2904,6 +2904,12 @@ requirements-policies() {
   :
 }
 
+policies-document() {
+  local NODE_SCRIPT
+  NODE_SCRIPT="$(dirname $(real_path ${BASH_SOURCE[0]}))/../src/actions/policies/lib/policies-document.js"
+  node "$NODE_SCRIPT"
+}
+
 policies-update() {
   local CURR_ORG POLICY
   CURR_ORG="$(orgsCurrentOrg --require-sensitive)"
@@ -2918,6 +2924,7 @@ help-policies() {
 
   handleSummary "${PREFIX}${cyan_u}policies${reset} <action>: Manages organization policies." || cat <<EOF
 ${PREFIX}${cyan_u}policies${reset} <action>:
+  ${underline}document${reset}: Refreshes (or generates) org policy documentation based on current data.
   ${underline}update${reset}: Updates organization policies.
 
 Policies defines all manner of organizational operations. They are "organizational code".
@@ -3986,7 +3993,7 @@ requirements-work() {
 }
 
 work-backup() {
-  eval "$(setSimpleOptions TEST NO_SYNC -- "$@")"
+  eval "$(setSimpleOptions TEST -- "$@")"
 
   if [[ "$TEST" != true ]]; then
     local OLD_MSG
@@ -4002,6 +4009,7 @@ work-diff-master() {
 }
 
 work-close() {
+  eval "$(setSimpleOptions TEST NO_SYNC -- "$@")"
   source "${LIQ_WORK_DB}/curr_work"
 
   local PROJECTS
