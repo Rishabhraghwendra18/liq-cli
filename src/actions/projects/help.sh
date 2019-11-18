@@ -2,7 +2,7 @@ help-projects() {
   local PREFIX="${1:-}"
 
   handleSummary "${PREFIX}${cyan_u}projects${reset} <action>: Project configuration and tools." || cat <<EOF
-${PREFIX}${cyan_u}project${reset} <action>:
+${PREFIX}${cyan_u}projects${reset} <action>:
   ${underline}close${reset} [<project name>]: Closes (deletes from playground) either the
     current or named project after checking that all changes are committed and pushed. ${red_b}Alpha
     note:${reset} The tool does not currently check whether the project is linked with other projects.
@@ -15,7 +15,7 @@ ${PREFIX}${cyan_u}project${reset} <action>:
     Creates a new Liquid project from one of the standard types or the given template URL. When the 'bare'
     type is specified, 'origin' must be specified. The project is initially cloned from the template, and then
     re-oriented to the project origin, unless the type is 'bare' in which case the project is cloned directly
-    from the origin URL. Use 'liq project import' to import an existing project from a URL.
+    from the origin URL. Use 'liq projects import' to import an existing project from a URL.
   ${underline}publish${reset}: Performs verification tests, updates package version, and publishes package.
   ${underline}sync${reset} [--fetch-only|-f] [--no-work-master-merge|-M]:
     Updates the remote master with new commits from upstream/master and, if currently on a work branch,

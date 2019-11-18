@@ -7,7 +7,7 @@ const execOpts = {
   silent: true,
 }
 
-describe(`Command 'liq project close'`, () => {
+describe(`Command 'liq projects close'`, () => {
   let setupConfig
   let playground
   beforeEach(() => {
@@ -37,12 +37,12 @@ describe(`Command 'liq project close'`, () => {
       expect(setupResult.stderr).toEqual('')
       expect(setupResult.code).toEqual(0)
 
-      let result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} project close`, execOpts)
+      let result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} projects close`, execOpts)
       expect(result.stderr).toMatch(testConfig.errMatch, "Bash output\n" + result.stderr)
       expect(result.stdout).toEqual('')
       expect(result.code).toEqual(1)
 
-      result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} project close @liquid-labs/lc-entities-model`, execOpts)
+      result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} projects close @liquid-labs/lc-entities-model`, execOpts)
       expect(result.stderr).toMatch(testConfig.errMatch)
       expect(result.stdout).toEqual('')
       expect(result.code).toEqual(1)
@@ -52,7 +52,7 @@ describe(`Command 'liq project close'`, () => {
   test(`should remove current project when no changes present`, () => {
     // console.error = jest.fn() // supresses err echo from shelljs
     const expectedOutput = /^Removed project '@liquid-labs\/lc-entities-model'/
-    const result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} project close`, execOpts)
+    const result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} projects close`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.stdout).toMatch(expectedOutput)
     expect(result.code).toEqual(0)
@@ -62,7 +62,7 @@ describe(`Command 'liq project close'`, () => {
   test(`should remove specified project when no changes present`, () => {
     console.error = jest.fn() // supresses err echo from shelljs
     const expectedOutput = /^Removed project '@liquid-labs\/lc-entities-model'/
-    const result = shell.exec(`HOME=${setupConfig.home} ${testing.LIQ} project close @liquid-labs/lc-entities-model`, execOpts)
+    const result = shell.exec(`HOME=${setupConfig.home} ${testing.LIQ} projects close @liquid-labs/lc-entities-model`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.stdout).toMatch(expectedOutput)
     expect(result.code).toEqual(0)

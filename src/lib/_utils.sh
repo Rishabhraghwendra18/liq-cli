@@ -104,7 +104,7 @@ sourceCatalystfile() {
 
 requireCatalystfile() {
   sourceCatalystfile \
-    || echoerrandexit "Run 'liq project init' from project root." 1
+    || echoerrandexit "Run 'liq projects init' from project root." 1
 }
 
 requireNpmPackage() {

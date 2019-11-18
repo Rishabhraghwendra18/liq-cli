@@ -44,11 +44,11 @@ describe(`Command 'liq' help`, () => {
     expect(result.code).toBe(0)
   })
 
-  test("with 'project' prints project help", () => {
-    const result = shell.exec(`${testing.LIQ} help project`, execOpts)
+  test("with 'projects' prints project help", () => {
+    const result = shell.exec(`${testing.LIQ} help projects`, execOpts)
 
     expect(result.stderr).toEqual('')
-    expect(result.stdout).toMatch(testing.expectedCommandGroupUsage(`project`))
+    expect(result.stdout).toMatch(testing.expectedCommandGroupUsage(`projects`))
     expect(result.code).toBe(0)
   })
 })

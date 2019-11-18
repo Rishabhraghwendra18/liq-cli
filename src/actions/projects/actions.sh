@@ -121,7 +121,7 @@ projects-import() {
       if projectCheckIfInPlayground "$_PROJ_NAME"; then return 0; fi
     else
       rm -rf "$PROJ_STAGE"
-      echoerrandexit -F "The specified source is not a valid Liquid Dev package (no 'package.json'). Try:\nliq project create --type=bare --origin='$_PROJ_URL' <project name>"
+      echoerrandexit -F "The specified source is not a valid Liquid Dev package (no 'package.json'). Try:\nliq projects create --type=bare --origin='$_PROJ_URL' <project name>"
     fi
   else # it's an NPM package
     _PROJ_NAME="${1}"

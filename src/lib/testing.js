@@ -51,7 +51,7 @@ export const setup = () => {
   }
 
   const localCheckout = () => {
-    const result = shell.exec(`HOME=${home} ${LIQ} project import --no-fork ${localRepoUrl}`, execOpts)
+    const result = shell.exec(`HOME=${home} ${LIQ} projects import --no-fork ${localRepoUrl}`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.code).toEqual(0)
   }

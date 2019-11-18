@@ -585,7 +585,7 @@ work-sync() {
     || ( contextHelp; echoerrandexit "Bad options." )
 
   if [[ ! -f "${LIQ_WORK_DB}/curr_work" ]]; then
-    echoerrandexit "No current unit of work. Try:\nliq project sync"
+    echoerrandexit "No current unit of work. Try:\nliq projects sync"
   fi
 
   source "${LIQ_WORK_DB}/curr_work"
