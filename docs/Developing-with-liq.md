@@ -13,6 +13,12 @@ This document discusses the liq development workflow conventions and tools. This
   * production deploy,
   * post-deploy verification and certification.
 
+## Overview
+
+![High level, "golden path" development, testing, and deploy workflow.](./liq Change Control Flow.svg)
+
+Source: https://docs.google.com/drawings/d/1dlhK32qiEcLBg2jzwnHXRRujJajHpV8Hty_LRYPUQiA/edit; Version: Initial Version 2019-11-17
+
 ## Change control
 
 liq change control processes are primarily organized around "work units". A work unit involves one or more issues and one or more projects.
