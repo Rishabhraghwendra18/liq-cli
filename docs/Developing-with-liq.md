@@ -30,11 +30,17 @@ liq change control processes are primarily organized around "work units". A work
 * A unit of work is created with
   `liq work start -i 24 "implement feature foo`
 * A work unit may be associated with multiple issues.
-* Associated issues may be 'cured' or 'related' by the associated unit of work. <span style="color:red">*'related' issues not implemented at time of writing.*</span>.
+* Associated issues may be 'cured' or 'related' by the associated unit of work.
+  ```js
+  // 'related' issues not implemented at time of writing.
+  ```
 * Issues are managed through the `liq work issues` sub-resource interface.
 * A work unit may involve one or more projects.
   * `liq work start` is executed against the 'primary' project involved in a work unit.
   * Additional projects may be involved with `liq work involve`.
-  * Projects may be dropped, without affecting the work unit, with `liq work drop`. <span style="color:red">*Not currently implemented.*</span>
+  * Projects may be dropped, without affecting the work unit, with `liq work drop`.
+    ```js
+    // Not currently implemented.
+    ```
 
 ### Implementing changes
