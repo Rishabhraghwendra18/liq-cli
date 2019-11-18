@@ -1,8 +1,8 @@
-requirements-project() {
+requirements-projects() {
   :
 }
 
-project-close() {
+projects-close() {
   local PROJECT_NAME="${1:-}"
 
   # first figure out what to close
@@ -46,7 +46,7 @@ project-close() {
   # TODO: need to check whether the project is linked to other projects
 }
 
-project-create() {
+projects-create() {
   echoerrandexit "'create' needs to be reworked for forks."
   local TMP PROJ_STAGE __PROJ_NAME TEMPLATE_URL
   TMP=$(setSimpleOptions TYPE= TEMPLATE:T= ORIGIN= -- "$@") \
@@ -97,7 +97,7 @@ project-create() {
   projectMoveStaged "$__PROJ_NAME" "$PROJ_STAGE"
 }
 
-project-import() {
+projects-import() {
   local PROJ_SPEC __PROJ_NAME _PROJ_URL PROJ_STAGE
   eval "$(setSimpleOptions NO_FORK:F SET_NAME= SET_URL= -- "$@")"
 
@@ -148,11 +148,11 @@ project-import() {
   echo "'$_PROJ_NAME' imported into playground."
 }
 
-project-publish() {
+projects-publish() {
   echoerrandexit "The 'publish' action is not yet implemented."
 }
 
-project-sync() {
+projects-sync() {
   eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
@@ -221,7 +221,7 @@ project-sync() {
   fi # on workbranach check
 }
 
-project-test() {
+projects-test() {
   local TMP
   # TODO https://github.com/Liquid-Labs/liq-cli/issues/27
   TMP=$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S NO_SERVICE_CHECK:C -- "$@") \

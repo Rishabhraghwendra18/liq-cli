@@ -61,7 +61,7 @@ work-close() {
     list-rm-item INVOLVED_PROJECTS "$PROJECT" # this cannot be done in a subshell
     workUpdateWorkDb
 		if [[ -z "$NO_SYNC" ]]; then
-			project-sync
+			projects-sync
 		fi
     # Notice we don't close the workspace branch. It may be involved in a PR and, generally, we don't care if the
     # workspace gets a little messy. TODO: reference workspace cleanup method here when we have one.
@@ -593,7 +593,7 @@ work-sync() {
   if [[ -n "$FETCH_ONLY" ]]; then OPTS="--fetch-only "; fi
   for IP in $INVOLVED_PROJECTS; do
     echo "Syncing project '${IP}'..."
-    project-sync ${OPTS} "${IP}"
+    projects-sync ${OPTS} "${IP}"
   done
 }
 
@@ -610,7 +610,7 @@ work-test() {
   for IP in $INVOLVED_PROJECTS; do
     echo "Testing ${IP}..."
     cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
-    project-test "$@"
+    projects-test "$@"
   done
 }
 

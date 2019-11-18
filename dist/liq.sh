@@ -1106,7 +1106,7 @@ handleSummary() {
 function dataSQLCheckRunning() {
   local TMP
   TMP=$(setSimpleOptions NO_CHECK -- "$@") \
-    || ( help-project-packages; echoerrandexit "Bad options." )
+    || ( help-projects-packages; echoerrandexit "Bad options." )
   eval "$TMP"
   if [[ -z "$NO_CHECK" ]] && ! services-list --exit-on-stopped -q sql; then
     services-start sql
@@ -2219,7 +2219,7 @@ environments-show() {
 environments-update() {
   local TMP
   TMP=$(setSimpleOptions NEW_ONLY -- "$@") \
-    || ( help-project-packages; echoerrandexit "Bad options." )
+    || ( help-projects-packages; echoerrandexit "Bad options." )
   eval "$TMP"
 
   local ENV_NAME="${1:-}"
@@ -2860,7 +2860,7 @@ packagesVersionCheckManageIgnored() {
   echo "$PACKAGE" > "$PACKAGE_FILE"
 
   if [[ -n "$SHOW_CONFIG" ]]; then
-    project-packages-version-check -c
+    projects-packages-version-check -c
   fi
 }
 
@@ -2965,7 +2965,7 @@ requirements-project() {
   :
 }
 
-project-close() {
+projects-close() {
   local PROJECT_NAME="${1:-}"
 
   # first figure out what to close
@@ -3009,7 +3009,7 @@ project-close() {
   # TODO: need to check whether the project is linked to other projects
 }
 
-project-create() {
+projects-create() {
   echoerrandexit "'create' needs to be reworked for forks."
   local TMP PROJ_STAGE __PROJ_NAME TEMPLATE_URL
   TMP=$(setSimpleOptions TYPE= TEMPLATE:T= ORIGIN= -- "$@") \
@@ -3060,7 +3060,7 @@ project-create() {
   projectMoveStaged "$__PROJ_NAME" "$PROJ_STAGE"
 }
 
-project-import() {
+projects-import() {
   local PROJ_SPEC __PROJ_NAME _PROJ_URL PROJ_STAGE
   eval "$(setSimpleOptions NO_FORK:F SET_NAME= SET_URL= -- "$@")"
 
@@ -3111,11 +3111,11 @@ project-import() {
   echo "'$_PROJ_NAME' imported into playground."
 }
 
-project-publish() {
+projects-publish() {
   echoerrandexit "The 'publish' action is not yet implemented."
 }
 
-project-sync() {
+projects-sync() {
   eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
@@ -3184,7 +3184,7 @@ project-sync() {
   fi # on workbranach check
 }
 
-project-test() {
+projects-test() {
   local TMP
   # TODO https://github.com/Liquid-Labs/liq-cli/issues/27
   TMP=$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S NO_SERVICE_CHECK:C -- "$@") \
@@ -3212,17 +3212,17 @@ project-test() {
   TEST_TYPES="$TYPES" NO_DATA_RESET="$NO_DATA_RESET" GO_RUN="$GO_RUN" runPackageScript test || \
     echoerrandexit "If failure due to non-running services, you can also run only the unit tests with:\nliq packages test --type=unit" $?
 }
-project-services() {
+projects-services() {
   local ACTION="${1}"; shift
 
-  if [[ $(type -t "project-services-${ACTION}" || echo '') == 'function' ]]; then
-    project-services-${ACTION} "$@"
+  if [[ $(type -t "projects-services-${ACTION}" || echo '') == 'function' ]]; then
+    projects-services-${ACTION} "$@"
   else
     exitUnknownAction
   fi
 }
 
-project-services-add() {
+projects-services-add() {
   # TODO: check for global to allow programatic use
   local SERVICE_NAME="${1:-}"
   if [[ -z "$SERVICE_NAME" ]]; then
@@ -3271,7 +3271,7 @@ EOF
   echo "$PACKAGE" | jq > "$PACKAGE_FILE"
 }
 
-project-services-delete() {
+projects-services-delete() {
   if (( $# == 0 )); then
     echoerrandexit "Must specify service names to delete."
   fi
@@ -3286,11 +3286,11 @@ project-services-delete() {
   echo "$PACKAGE" | jq > "$PACKAGE_FILE"
 }
 
-project-services-list() {
+projects-services-list() {
   echo $PACKAGE | jq --raw-output ".catalyst.provides | .[] | .\"name\""
 }
 
-project-services-show() {
+projects-services-show() {
   while [[ $# -gt 0 ]]; do
     if ! echo $PACKAGE | jq -e "(.catalyst) and (.catalyst.provides) and (.catalyst.provides | .[] | select(.name == \"$1\"))" > /dev/null; then
       echoerr "No such service '$1'."
@@ -4058,7 +4058,7 @@ work-close() {
     list-rm-item INVOLVED_PROJECTS "$PROJECT" # this cannot be done in a subshell
     workUpdateWorkDb
 		if [[ -z "$NO_SYNC" ]]; then
-			project-sync
+			projects-sync
 		fi
     # Notice we don't close the workspace branch. It may be involved in a PR and, generally, we don't care if the
     # workspace gets a little messy. TODO: reference workspace cleanup method here when we have one.
@@ -4590,7 +4590,7 @@ work-sync() {
   if [[ -n "$FETCH_ONLY" ]]; then OPTS="--fetch-only "; fi
   for IP in $INVOLVED_PROJECTS; do
     echo "Syncing project '${IP}'..."
-    project-sync ${OPTS} "${IP}"
+    projects-sync ${OPTS} "${IP}"
   done
 }
 
@@ -4607,7 +4607,7 @@ work-test() {
   for IP in $INVOLVED_PROJECTS; do
     echo "Testing ${IP}..."
     cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
-    project-test "$@"
+    projects-test "$@"
   done
 }
 
