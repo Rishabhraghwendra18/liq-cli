@@ -25,7 +25,9 @@ liq change control processes are primarily organized around "work units". A work
 
 ### Preparing a work unit
 
-<span style="color: red">*ALERT*</span>: The interface as defined here is ahead of and differs in some aspects from the interface as implemented at the time of writing. Refer to `liq work help` for current state.
+```js
+// The interface as defined here is ahead of and differs in some aspects from the interface as implemented at the time of writing. Refer to `liq work help` for current state.
+```
 
 * A unit of work is created with
   `liq work start -i 24 "implement feature foo`
@@ -44,3 +46,10 @@ liq change control processes are primarily organized around "work units". A work
     ```
 
 ### Implementing changes
+
+* Changes are made and tested locally.
+* Developers use `liq work status` to check the status of changes and relation of master and work branches across all units of work.
+* Developers use `liq work save` (along with `liq work stage`) to save local changes to remote workspace repos on their workbranch.
+* Developers use `liq work qa` to test and audit local changes.
+
+### Deploy Preparing
