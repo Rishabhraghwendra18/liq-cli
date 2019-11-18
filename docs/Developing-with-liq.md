@@ -52,4 +52,14 @@ liq change control processes are primarily organized around "work units". A work
 * Developers use `liq work save` (along with `liq work stage`) to save local changes to remote workspace repos on their workbranch.
 * Developers use `liq work qa` to test and audit local changes.
 
-### Deploy Preparing
+### Deploy prep
+
+The "deploy prep" phase is all about verifying a new product version prior to production deploy/release.
+
+* Changes from work units are submitted for inclusion into master (and thereby, to the next production release), with `liq work submit`.
+* After submitting their work, developers will generally close the local unit of work with `liq work close`.
+* Once submitted, changes the full battery of integration tests are run against the updates for each project.
+* All changes are also manually reviewed by at least one qualified human reviewer (who, if at all possible, did not contirbute to the changes themselves).
+* Once changes are approved and pass the automated tests, they are merged onto their projects respective `master` branches.
+* When all target changes have been collected on, or as otherwise determined by the stakeholders, products are published (internally or publicly) and deployed to a test environment for final comprehensive testing that combines all the changes in one place and verifies schema or other "system upgrade" processes associated with the release.
+* The pre-deploy testing may, as determined by Company policy, also include end-user testing in either a contrived or live-data environment.
