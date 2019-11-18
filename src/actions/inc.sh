@@ -22,10 +22,10 @@ source ./policies/actions.sh
 source ./policies/help.sh
 source ./policies/lib.sh
 
-source ./project/actions.sh
-source ./project/services.sh
-source ./project/help.sh
-source ./project/lib.sh
+source ./projects/actions.sh
+source ./projects/services.sh
+source ./projects/help.sh
+source ./projects/lib.sh
 
 # deprecated
 source ./required-services/actions.sh

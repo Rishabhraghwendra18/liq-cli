@@ -666,7 +666,7 @@ sourceCatalystfile() {
 
 requireCatalystfile() {
   sourceCatalystfile \
-    || echoerrandexit "Run 'liq project init' from project root." 1
+    || echoerrandexit "Run 'liq projects init' from project root." 1
 }
 
 requireNpmPackage() {
@@ -1028,7 +1028,7 @@ function log() {
     file=${BASH_SOURCE[$i-1]}
     echo "${now} $(hostname) $0:${lineno} ${msg}"
 }
-CATALYST_COMMAND_GROUPS=(data environments meta orgs packages project required-services services work)
+CATALYST_COMMAND_GROUPS=(data environments meta orgs packages projects required-services services work)
 
 help() {
   local TMP
@@ -1106,7 +1106,7 @@ handleSummary() {
 function dataSQLCheckRunning() {
   local TMP
   TMP=$(setSimpleOptions NO_CHECK -- "$@") \
-    || ( help-project-packages; echoerrandexit "Bad options." )
+    || ( help-projects-packages; echoerrandexit "Bad options." )
   eval "$TMP"
   if [[ -z "$NO_CHECK" ]] && ! services-list --exit-on-stopped -q sql; then
     services-start sql
@@ -2219,7 +2219,7 @@ environments-show() {
 environments-update() {
   local TMP
   TMP=$(setSimpleOptions NEW_ONLY -- "$@") \
-    || ( help-project-packages; echoerrandexit "Bad options." )
+    || ( help-projects-packages; echoerrandexit "Bad options." )
   eval "$TMP"
 
   local ENV_NAME="${1:-}"
@@ -2860,7 +2860,7 @@ packagesVersionCheckManageIgnored() {
   echo "$PACKAGE" > "$PACKAGE_FILE"
 
   if [[ -n "$SHOW_CONFIG" ]]; then
-    project-packages-version-check -c
+    projects-packages-version-check -c
   fi
 }
 
@@ -2961,11 +2961,11 @@ policiesGetPolicyPackages() {
   done
 }
 
-requirements-project() {
+requirements-projects() {
   :
 }
 
-project-close() {
+projects-close() {
   local PROJECT_NAME="${1:-}"
 
   # first figure out what to close
@@ -3009,7 +3009,7 @@ project-close() {
   # TODO: need to check whether the project is linked to other projects
 }
 
-project-create() {
+projects-create() {
   echoerrandexit "'create' needs to be reworked for forks."
   local TMP PROJ_STAGE __PROJ_NAME TEMPLATE_URL
   TMP=$(setSimpleOptions TYPE= TEMPLATE:T= ORIGIN= -- "$@") \
@@ -3060,7 +3060,7 @@ project-create() {
   projectMoveStaged "$__PROJ_NAME" "$PROJ_STAGE"
 }
 
-project-import() {
+projects-import() {
   local PROJ_SPEC __PROJ_NAME _PROJ_URL PROJ_STAGE
   eval "$(setSimpleOptions NO_FORK:F SET_NAME= SET_URL= -- "$@")"
 
@@ -3084,7 +3084,7 @@ project-import() {
       if projectCheckIfInPlayground "$_PROJ_NAME"; then return 0; fi
     else
       rm -rf "$PROJ_STAGE"
-      echoerrandexit -F "The specified source is not a valid Liquid Dev package (no 'package.json'). Try:\nliq project create --type=bare --origin='$_PROJ_URL' <project name>"
+      echoerrandexit -F "The specified source is not a valid Liquid Dev package (no 'package.json'). Try:\nliq projects create --type=bare --origin='$_PROJ_URL' <project name>"
     fi
   else # it's an NPM package
     _PROJ_NAME="${1}"
@@ -3111,11 +3111,11 @@ project-import() {
   echo "'$_PROJ_NAME' imported into playground."
 }
 
-project-publish() {
+projects-publish() {
   echoerrandexit "The 'publish' action is not yet implemented."
 }
 
-project-sync() {
+projects-sync() {
   eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
@@ -3184,7 +3184,7 @@ project-sync() {
   fi # on workbranach check
 }
 
-project-test() {
+projects-test() {
   local TMP
   # TODO https://github.com/Liquid-Labs/liq-cli/issues/27
   TMP=$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S NO_SERVICE_CHECK:C -- "$@") \
@@ -3212,17 +3212,17 @@ project-test() {
   TEST_TYPES="$TYPES" NO_DATA_RESET="$NO_DATA_RESET" GO_RUN="$GO_RUN" runPackageScript test || \
     echoerrandexit "If failure due to non-running services, you can also run only the unit tests with:\nliq packages test --type=unit" $?
 }
-project-services() {
+projects-services() {
   local ACTION="${1}"; shift
 
-  if [[ $(type -t "project-services-${ACTION}" || echo '') == 'function' ]]; then
-    project-services-${ACTION} "$@"
+  if [[ $(type -t "projects-services-${ACTION}" || echo '') == 'function' ]]; then
+    projects-services-${ACTION} "$@"
   else
     exitUnknownAction
   fi
 }
 
-project-services-add() {
+projects-services-add() {
   # TODO: check for global to allow programatic use
   local SERVICE_NAME="${1:-}"
   if [[ -z "$SERVICE_NAME" ]]; then
@@ -3271,7 +3271,7 @@ EOF
   echo "$PACKAGE" | jq > "$PACKAGE_FILE"
 }
 
-project-services-delete() {
+projects-services-delete() {
   if (( $# == 0 )); then
     echoerrandexit "Must specify service names to delete."
   fi
@@ -3286,11 +3286,11 @@ project-services-delete() {
   echo "$PACKAGE" | jq > "$PACKAGE_FILE"
 }
 
-project-services-list() {
+projects-services-list() {
   echo $PACKAGE | jq --raw-output ".catalyst.provides | .[] | .\"name\""
 }
 
-project-services-show() {
+projects-services-show() {
   while [[ $# -gt 0 ]]; do
     if ! echo $PACKAGE | jq -e "(.catalyst) and (.catalyst.provides) and (.catalyst.provides | .[] | select(.name == \"$1\"))" > /dev/null; then
       echoerr "No such service '$1'."
@@ -3306,11 +3306,11 @@ project-services-show() {
     shift
   done
 }
-help-project() {
+help-projects() {
   local PREFIX="${1:-}"
 
-  handleSummary "${PREFIX}${cyan_u}project${reset} <action>: Project configuration and tools." || cat <<EOF
-${PREFIX}${cyan_u}project${reset} <action>:
+  handleSummary "${PREFIX}${cyan_u}projects${reset} <action>: Project configuration and tools." || cat <<EOF
+${PREFIX}${cyan_u}projects${reset} <action>:
   ${underline}close${reset} [<project name>]: Closes (deletes from playground) either the
     current or named project after checking that all changes are committed and pushed. ${red_b}Alpha
     note:${reset} The tool does not currently check whether the project is linked with other projects.
@@ -3323,7 +3323,7 @@ ${PREFIX}${cyan_u}project${reset} <action>:
     Creates a new Liquid project from one of the standard types or the given template URL. When the 'bare'
     type is specified, 'origin' must be specified. The project is initially cloned from the template, and then
     re-oriented to the project origin, unless the type is 'bare' in which case the project is cloned directly
-    from the origin URL. Use 'liq project import' to import an existing project from a URL.
+    from the origin URL. Use 'liq projects import' to import an existing project from a URL.
   ${underline}publish${reset}: Performs verification tests, updates package version, and publishes package.
   ${underline}sync${reset} [--fetch-only|-f] [--no-work-master-merge|-M]:
     Updates the remote master with new commits from upstream/master and, if currently on a work branch,
@@ -4058,7 +4058,7 @@ work-close() {
     list-rm-item INVOLVED_PROJECTS "$PROJECT" # this cannot be done in a subshell
     workUpdateWorkDb
 		if [[ -z "$NO_SYNC" ]]; then
-			project-sync
+			projects-sync
 		fi
     # Notice we don't close the workspace branch. It may be involved in a PR and, generally, we don't care if the
     # workspace gets a little messy. TODO: reference workspace cleanup method here when we have one.
@@ -4582,7 +4582,7 @@ work-sync() {
     || ( contextHelp; echoerrandexit "Bad options." )
 
   if [[ ! -f "${LIQ_WORK_DB}/curr_work" ]]; then
-    echoerrandexit "No current unit of work. Try:\nliq project sync"
+    echoerrandexit "No current unit of work. Try:\nliq projects sync"
   fi
 
   source "${LIQ_WORK_DB}/curr_work"
@@ -4590,7 +4590,7 @@ work-sync() {
   if [[ -n "$FETCH_ONLY" ]]; then OPTS="--fetch-only "; fi
   for IP in $INVOLVED_PROJECTS; do
     echo "Syncing project '${IP}'..."
-    project-sync ${OPTS} "${IP}"
+    projects-sync ${OPTS} "${IP}"
   done
 }
 
@@ -4607,7 +4607,7 @@ work-test() {
   for IP in $INVOLVED_PROJECTS; do
     echo "Testing ${IP}..."
     cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
-    project-test "$@"
+    projects-test "$@"
   done
 }
 

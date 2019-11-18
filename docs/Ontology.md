@@ -34,7 +34,7 @@ TODO: break out and reference 'liq-npm package spec'
 
 * Note, "liq" was originally called "catalyst".
 * A 'Liquid Project' is manifest as a NPM package associated to a Github project.
-* `liq project create` will configure each of either a new or existing NPM package and Github project.
+* `liq projects create` will configure each of either a new or existing NPM package and Github project.
   * Future versions may encode to multiple package formats.
   * Future versions may integrate with other version control protocols and issues/project management platforms.
 * A liq-npm `package.json`:
@@ -47,7 +47,7 @@ TODO: break out and reference 'liq-npm package spec'
 * Projects define both build and runtime dependencies.
 * In the liq ontology, the concept of "packages" is subsumed into the "project" concept.
   * Packages are the typical method by which projects are distributed. I.e., a "package" is a "packaged project version".
-  * Packages are used/manipulated by the `liq project import`, `create`, `audit`, and other commands
+  * Packages are used/manipulated by the `liq projects import`, `create`, `audit`, and other commands
 
 ### Work ~= outstanding changes.
 

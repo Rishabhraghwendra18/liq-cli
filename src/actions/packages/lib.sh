@@ -98,7 +98,7 @@ packagesVersionCheckManageIgnored() {
   echo "$PACKAGE" > "$PACKAGE_FILE"
 
   if [[ -n "$SHOW_CONFIG" ]]; then
-    project-packages-version-check -c
+    projects-packages-version-check -c
   fi
 }
 
