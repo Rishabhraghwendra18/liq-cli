@@ -1,7 +1,7 @@
-help-project() {
+help-projects() {
   local PREFIX="${1:-}"
 
-  handleSummary "${PREFIX}${cyan_u}project${reset} <action>: Project configuration and tools." || cat <<EOF
+  handleSummary "${PREFIX}${cyan_u}projects${reset} <action>: Project configuration and tools." || cat <<EOF
 ${PREFIX}${cyan_u}project${reset} <action>:
   ${underline}close${reset} [<project name>]: Closes (deletes from playground) either the
     current or named project after checking that all changes are committed and pushed. ${red_b}Alpha
