@@ -1,4 +1,4 @@
-# Liquid CLI Ontology
+# liq Ontology
 
 liq provides comprehensive development and operational support for
 managing, testing, and deploying Catalyst projects.
