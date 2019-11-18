@@ -15,7 +15,7 @@ This document discusses the liq development workflow conventions and tools. This
 
 ## Overview
 
-![High level, "golden path" development, testing, and deploy workflow.](./liq Change Control Flow.svg)
+![High level, "golden path" development, testing, and deploy workflow.](./liq%20Change%20Control%20Flow.svg)
 
 Source: https://docs.google.com/drawings/d/1dlhK32qiEcLBg2jzwnHXRRujJajHpV8Hty_LRYPUQiA/edit; Version: Initial Version 2019-11-17
 
