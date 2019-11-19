@@ -38,7 +38,7 @@
     "@babel/preset-env": "^7.3.1",
     "@liquid-labs/bash-toolkit": "^1.0.0-alpha.31",
     "@liquid-labs/policies-model": "^1.0.0-beta.1",
-    "jest": "^23.6.0",
+    "jest": "^25.0.0",
     "npm-run-all": "^4.1.5",
     "shelljs": "^0.8.3",
     "watch": "^1.0.2"
