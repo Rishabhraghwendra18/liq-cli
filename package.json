@@ -27,7 +27,7 @@
   },
   "homepage": "https://github.com/Liquid-Labs/liq-cli#readme",
   "dependencies": {
-    "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.24"
+    "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.25"
   },
   "bin": {
     "liq": "./dist/liq.sh"
