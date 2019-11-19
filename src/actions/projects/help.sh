@@ -17,6 +17,10 @@ ${PREFIX}${cyan_u}projects${reset} <action>:
     re-oriented to the project origin, unless the type is 'bare' in which case the project is cloned directly
     from the origin URL. Use 'liq projects import' to import an existing project from a URL.
   ${underline}publish${reset}: Performs verification tests, updates package version, and publishes package.
+  ${underline}qa${reset} [--update|-u] [--audit|-a] [--lint|-l] [--version-check|-v]:
+    Performs NPM audit, eslint, and NPM version checks. By default, all three checks are performed, but options
+    can be used to select specific checks. The '--update' option instruct to the selected options to attempt
+    updates/fixes.
   ${underline}sync${reset} [--fetch-only|-f] [--no-work-master-merge|-M]:
     Updates the remote master with new commits from upstream/master and, if currently on a work branch,
     workspace/master and workspace/<workbranch> and then merges those updates with the current workbranch (if any).
