@@ -221,12 +221,32 @@ projects-sync() {
   fi # on workbranach check
 }
 
+projects-qa() {
+  eval "$(setSimpleOptions UPDATE^ OPTIONS=^ AUDIT LINT VERSION_CHECK -- "$@")" \
+    || { contextHelp; echoerrandexit "Bad options."; }
+
+  findBase
+  cd "$BASE_DIR"
+
+  local RESTRICTED=''
+  if [[ -n "$AUDIT" ]] || [[ -n "$LINT" ]] || [[ -n "$VERSION_CHECK" ]]; then
+    RESTRICTED=true
+  fi
+
+  if [[ -z "$RESTRICTED" ]] || [[ -n "$AUDIT" ]]; then
+    projectsNpmAudit "$@" || true
+  fi
+  if [[ -z "$RESTRICTED" ]] || [[ -n "$LINT" ]]; then
+    projectsLint "$@" || true
+  fi
+  if [[ -z "$RESTRICTED" ]] || [[ -n "$VERSION_CHECK" ]]; then
+    projectsVersionCheck "$@" || true
+  fi
+}
+
 projects-test() {
-  local TMP
-  # TODO https://github.com/Liquid-Labs/liq-cli/issues/27
-  TMP=$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S NO_SERVICE_CHECK:C -- "$@") \
+  eval "$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S NO_SERVICE_CHECK:C -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
 
   if [[ -z "${NO_SERVICE_CHECK}" ]] \
      && ( [[ -z "${TEST_TYPES:-}" ]] \

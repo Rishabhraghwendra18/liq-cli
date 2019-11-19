@@ -12,6 +12,8 @@
     "test": "jest -i ./test-staging",
     "posttest": "rm -rf test-tmp/",
     "install": "./dist/install.sh",
+    "lint": "catalyst-scripts lint",
+    "lint-fix": "catalyst-scripts lint-fix",
     "clean": "rm -rf package-lock.json node_modules/ dist/"
   },
   "repository": {
@@ -34,7 +36,7 @@
     "@babel/cli": "^7.2.3",
     "@babel/core": "^7.2.2",
     "@babel/preset-env": "^7.3.1",
-    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.27",
+    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.31",
     "@liquid-labs/policies-model": "^1.0.0-beta.1",
     "jest": "^23.6.0",
     "npm-run-all": "^4.1.5",

@@ -37,11 +37,11 @@ _liq()
         orgs)
           OPTS="affiliate create list show select";;
         packages) # deprecated
-          OPTS="audit build deploy lint link version-check";;
+          OPTS=" build deploy link";;
 				policies)
 					OPTS="document";;
         projects)
-          OPTS="close init publish sync test services";;
+          OPTS="close init publish qa sync test services";;
         remotes)
           OPTS="add delete set-main";;
         required-services) # deprecated
