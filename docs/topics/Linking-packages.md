@@ -1,3 +1,3 @@
-# Linking packages
+# Linking projects
 
 Use yalc + go replace.
