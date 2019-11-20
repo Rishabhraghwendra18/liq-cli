@@ -2,6 +2,12 @@ requirements-projects() {
   :
 }
 
+projects-build() {
+  findBase
+  cd "$BASE_DIR"
+  projectsRunPackageScript build
+}
+
 projects-close() {
   local PROJECT_NAME="${1:-}"
 
@@ -95,6 +101,14 @@ projects-create() {
   fi
   cd
   projectMoveStaged "$__PROJ_NAME" "$PROJ_STAGE"
+}
+
+packages-deploy() {
+  if [[ -z "${GOPATH:-}" ]]; then
+    echoerr "'GOPATH' is not defined. Run 'liq go configure'."
+    exit 1
+  fi
+  colorerr "GOPATH=$GOPATH bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; gcloud app deploy'"
 }
 
 projects-import() {
@@ -266,6 +280,6 @@ projects-test() {
   fi
 
   # note this entails 'pretest' and 'posttest' as well
-  TEST_TYPES="$TYPES" NO_DATA_RESET="$NO_DATA_RESET" GO_RUN="$GO_RUN" runPackageScript test || \
+  TEST_TYPES="$TYPES" NO_DATA_RESET="$NO_DATA_RESET" GO_RUN="$GO_RUN" projectsRunPackageScript test || \
     echoerrandexit "If failure due to non-running services, you can also run only the unit tests with:\nliq packages test --type=unit" $?
 }

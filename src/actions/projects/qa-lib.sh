@@ -18,8 +18,8 @@ projectsLint() {
     || ( contextHelp; echoerrandexit "Bad options." )
 
   if [[ -z "$UPDATE" ]]; then
-    runPackageScript lint
-  else runPackageScript lint-fix; fi
+    projectsRunPackageScript lint
+  else projectsRunPackageScript lint-fix; fi
 }
 
 projectsVersionCheck() {

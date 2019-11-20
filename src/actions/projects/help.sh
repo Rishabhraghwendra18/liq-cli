@@ -3,9 +3,11 @@ help-projects() {
 
   handleSummary "${PREFIX}${cyan_u}projects${reset} <action>: Project configuration and tools." || cat <<EOF
 ${PREFIX}${cyan_u}projects${reset} <action>:
+  ${underline}build${reset} [<name>...]: Builds the current or specified project(s).
   ${underline}close${reset} [<project name>]: Closes (deletes from playground) either the
     current or named project after checking that all changes are committed and pushed. ${red_b}Alpha
     note:${reset} The tool does not currently check whether the project is linked with other projects.
+  ${underline}deploy${reset} [<name>...]: Deploys the current or named project(s).
   ${underline}import${reset} <package or URL>: Imports the indicated package into your
     playground. By default, the first arguments are understood as NPM package names and the URL
     will be retrieved via 'npm view'. If the '--url' option is specified, then the arguments are

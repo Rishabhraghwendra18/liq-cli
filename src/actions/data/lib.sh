@@ -6,7 +6,7 @@ findDataFiles() {
   local _FILES
 
   local CAT_PACKAGE FIND_RESULTS
-  # search Catalyst packages in dependencies (i.e., ./node_modules)
+  # search Catalyst projects in dependencies (i.e., ./node_modules)
   for CAT_PACKAGE in `getCatPackagePaths`; do
     if [[ -d "${CAT_PACKAGE}/data/${DATA_IFACE}/${FILE_TYPE}" ]]; then
       FIND_RESULTS="$(find "${CAT_PACKAGE}/data/${DATA_IFACE}/${FILE_TYPE}" -type f)"
