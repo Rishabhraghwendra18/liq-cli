@@ -29,7 +29,7 @@ ${PREFIX}${cyan_u}projects${reset} <action>:
     '--fetch-only' will update the appropriate remote refs, and exit. --no-work-master-merge update the local master
     branch and pull the workspace workbranch, but skips merging the new master updates to the workbranch.
   ${underline}test${reset} [-t|--types <types>][-D|--no-data-reset][-g|--go-run <testregex>][--no-start|-S] [<name>]:
-    Runs unit tests for all or the named packages in the current project.
+    Runs unit tests the current or named projects.
     * 'types' may be 'unit' or 'integration' (=='int') or 'all', which is default.
       Multiple tests may be specified in a comma delimited list. E.g.,
       '-t=unit,int' is equivalent no type or '-t=""'.
@@ -40,12 +40,9 @@ ${PREFIX}${cyan_u}projects${reset} <action>:
     * '--go-run' will only run those tests matching the provided regex (per go
       '-run' standards).
   ${underline}services${reset}: sub-resource for managing services provided by the package.
-    ${underline}add${reset} [<package name>]: Add a provided service.
-    ${underline}list${reset} [<package name>...]: Lists the services provided by the named packages or
-      all packages in the current repository.
-    ${underline}delete${reset} [<package name>] <name>: Deletes a provided service.
+    ${underline}add${reset} [<service name>]: Add a provided service to the current project.
+    ${underline}list${reset} [<project name>...]: Lists the services provided by the current or named projects.
+    ${underline}delete${reset} [<project name>] <name>: Deletes a provided service.
     ${underline}show${reset} [<service name>...]: Show service details.
 EOF
-
-  test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" helpHelperAlphaPackagesNote
 }

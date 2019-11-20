@@ -13,7 +13,7 @@ findDataFiles() {
       list-add-item _FILES "$FIND_RESULTS"
     fi
   done
-  # search our own package
+  # search our own project
   if [[ -d "${BASE_DIR}/data/${DATA_IFACE}/${FILE_TYPE}" ]]; then
     FIND_RESULTS="$(find "${BASE_DIR}/data/${DATA_IFACE}/${FILE_TYPE}" -type f)"
     list-add-item _FILES "$FIND_RESULTS"

@@ -592,7 +592,7 @@ getPackageDef() {
   local VAR_NAME="$1"
   local FQN_PACKAGE_NAME="${2:-}"
 
-  # The package we're looking at might be our own or might be a dependency.
+  # The project we're looking at might be our own or might be a dependency.
   if [[ -z "$FQN_PACKAGE_NAME" ]] || [[ "$FQN_PACKAGE_NAME" == "$PACKAGE_NAME" ]]; then
     eval "$VAR_NAME=\"\$PACKAGE\""
   else

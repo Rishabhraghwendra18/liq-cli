@@ -1,4 +1,4 @@
-CATALYST_COMMAND_GROUPS=(data environments meta orgs packages projects required-services services work)
+CATALYST_COMMAND_GROUPS=(data environments meta orgs projects required-services services work)
 
 help() {
   local TMP
@@ -21,11 +21,6 @@ EOF
       echo
       help-${GROUP}
     done
-
-    if [[ -z "$SUMMARY_ONLY" ]]; then
-      echo
-      helpHelperAlphaPackagesNote
-    fi
   elif (( $# == 1 )); then
     if type -t help-${GROUP} | grep -q 'function'; then
       help-${GROUP} "liq "
@@ -54,13 +49,6 @@ helperHandler() {
       $HELPER
     done
   fi
-}
-
-helpHelperAlphaPackagesNote() {
-cat <<EOF
-${red_b}Alpha note:${reset} There is currently no support for multiple packages in a single
-repository and the 'package.json' file is assumed to be in the project root.
-EOF
 }
 
 handleSummary() {

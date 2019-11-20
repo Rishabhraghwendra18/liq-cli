@@ -18,7 +18,7 @@ policies-update() {
   CURR_ORG="$(orgsCurrentOrg --require-sensitive)"
   cd "${LIQ_ORG_DB}/${CURR_ORG}/sensitive"
 
-  for POLICY in $(policiesGetPolicyPackages); do
+  for POLICY in $(policiesGetPolicyProjects); do
     npm i "${POLICY}"
   done
 }

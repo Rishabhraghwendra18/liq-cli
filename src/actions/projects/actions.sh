@@ -103,7 +103,7 @@ projects-create() {
   projectMoveStaged "$__PROJ_NAME" "$PROJ_STAGE"
 }
 
-packages-deploy() {
+projects-deploy() {
   if [[ -z "${GOPATH:-}" ]]; then
     echoerr "'GOPATH' is not defined. Run 'liq go configure'."
     exit 1
@@ -272,7 +272,7 @@ projects-test() {
         services-start || echoerrandexit "Could not start services for testing."
       else
         echo "${red}necessary services not running.${reset}"
-        echoerrandexit "Some services are not running. You can either run unit tests are start services. Try one of the following:\nliq packages test --types=unit\nliq services start"
+        echoerrandexit "Some services are not running. You can either run unit tests are start services. Try one of the following:\nliq projects test --types=unit\nliq services start"
       fi
     else
       echo "${green}looks good.${reset}"
@@ -281,5 +281,5 @@ projects-test() {
 
   # note this entails 'pretest' and 'posttest' as well
   TEST_TYPES="$TYPES" NO_DATA_RESET="$NO_DATA_RESET" GO_RUN="$GO_RUN" projectsRunPackageScript test || \
-    echoerrandexit "If failure due to non-running services, you can also run only the unit tests with:\nliq packages test --type=unit" $?
+    echoerrandexit "If failure due to non-running services, you can also run only the unit tests with:\nliq projects test --type=unit" $?
 }

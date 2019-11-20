@@ -13,7 +13,7 @@ ${PREFIX}${cyan_u}work${reset} <action>:
     Will enter interactive selection if no option and no current work or the
     '--select' option is given.
   ${underline}involve${reset} [-L|--no-link] [<repository name>]: Involves the current or named
-    repository in the current unit of work. When involved, any packages in the
+    repository in the current unit of work. When involved, any projects in the
     newly involved project will be linked to the primary project in the unit of
     work. The '--no-link' option will suppress this behavior.
   ${underline}start${reset} <name>: Creates a new unit of work and adds the current repository (if any) to it.

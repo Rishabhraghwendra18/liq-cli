@@ -64,7 +64,7 @@ _liq()
             services)
               OPTS="add list delete show"
               COMPREPLY=( $(compgen -W "${OPTS}" -- ${CUR}) );;
-          esac ;; # packages-actions
+          esac ;; # projects-actions
       esac
     fi
 

@@ -134,7 +134,7 @@ work-involve() {
       if echo "$PACKAGE" | jq -e ".dependencies and ((.dependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\"))) or (.devDependencies and (.devDependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\")))" > /dev/null; then
         :
         # Currently disabled
-        # packages-link "${PROJECT_NAME}:${NEW_PACKAGE_NAME}"
+        # projects-link "${PROJECT_NAME}:${NEW_PACKAGE_NAME}"
       fi
     done < <(find "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT_NAME}" -name "package.json" -not -path "*node_modules/*")
   fi
@@ -294,12 +294,12 @@ work-merge() {
 work-qa() {
   echo "Checking local repo status..."
   work-report
-  echo "Checking package dependencies..."
-  packages-version-check
-  echo "Linting code..."
-  packages-lint
-  echo "Running tests..."
-  packages-test
+
+  source "${LIQ_WORK_DB}/curr_work"
+  for PROJECT in $INVOLVED_PROJECTS; do
+    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT}"
+    projects-qa "$@"
+  done
 }
 
 work-report() {

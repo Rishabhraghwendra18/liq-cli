@@ -15,7 +15,7 @@ policiesGetPolicyFiles() {
   done
 }
 
-policiesGetPolicyPackages() {
+policiesGetPolicyProjects() {
   local DIR
   for DIR in $(policiesGetPolicyDirs); do
     cd "${DIR}"
