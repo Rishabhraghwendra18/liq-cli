@@ -2645,6 +2645,12 @@ ${PREFIX}${cyan_u}orgs${reset} <action>:
   ${underline}list${reset}: Lists the currently affiliated orgs.
   ${underline}show${reset} [--sensitive] [<org nick>]: Displays info on the currently active or named org.
 
+${PREFIX}Sub-resources:
+${PREFIX}${cyan_u}staff${reset} <action>:
+  ${underline}add${reset} [--email|-e <email>] [--family-name|-f <name>] [--given-name|-g <name>] [--start-date|-s <YYY-MM-DD>]:
+  ${underline}list${reset}
+  ${underline}remove${reset}
+
 An org(anization) is the legal owner of work and all work is done in the context of an org. It's perfectly fine to create a 'personal' org representing yourself.
 EOF
 }
@@ -2678,6 +2684,21 @@ orgsOrgList() {
   for ORG in $(find "${LIQ_ORG_DB}" -maxdepth 1 -mindepth 1 -type d -exec basename '{}' \; | sort); do
     ( ( test -z "$LIST_ONLY" && test "$ORG" == "${CURR_ORG:-}" && echo -n '* ' ) || echo -n '  ' ) && echo "$ORG"
   done
+}
+orgs-staff() {
+  local ACTION="${1}"; shift
+  local CMD="orgs-staff-${ACTION}"
+  echo $CMD
+
+  if [[ $(type -t "${CMD}" || echo '') == 'function' ]]; then
+    ${CMD} "$@"
+  else
+    exitUnknownAction
+  fi
+}
+
+orgs-staff-add() {
+  :
 }
 
 requirements-policies() {
