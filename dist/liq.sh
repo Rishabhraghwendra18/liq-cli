@@ -41,143 +41,6 @@ cyan_bu="${cyan}${bold}${underline}"
 white_bu="${white}${bold}${underline}"
 
 reset=`tput sgr0`
-if [[ $(uname) == 'Darwin' ]]; then
-  GNU_GETOPT="$(brew --prefix gnu-getopt)/bin/getopt"
-else
-  GNU_GETOPT="$(which getopt)"
-fi
-
-# Usage:
-#   eval "$(setSimpleOptions SHORT LONG= SPECIFY_SHORT:X LONG_SPEC:S= -- "$@")" \
-#     || ( contextHelp; echoerrandexit "Bad options."; )
-#
-# Note the use of the intermediate TMP is important to preserve the exit value
-# setSimpleOptions. E.g., doing 'eval "$(setSimpleOptions ...)"' will work fine,
-# but because the last statement is the eval of the results, and not the function
-# call itself, the return of setSimpleOptions gets lost.
-#
-# Instead, it's generally recommended to be strict, 'set -e', and use the TMP-form.
-setSimpleOptions() {
-  local VAR_SPEC LOCAL_DECLS
-  local LONG_OPTS=""
-  local SHORT_OPTS=""
-  # Bash Bug? This looks like a straight up bug in bash, but the left-paren in
-  # '--)' was matching the '$(' and causing a syntax error. So we use ']' and
-  # replace it later.
-  local CASE_HANDLER=$(cat <<EOF
-    --]
-      break;;
-EOF
-)
-  while true; do
-    if (( $# == 0 )); then
-      echoerrandexit "setSimpleOptions: No argument to process; did you forget to include the '--' marker?"
-    fi
-    VAR_SPEC="$1"; shift
-    local VAR_NAME LOWER_NAME SHORT_OPT LONG_OPT
-    if [[ "$VAR_SPEC" == '--' ]]; then
-      break
-    elif [[ "$VAR_SPEC" == *':'* ]]; then
-      VAR_NAME=$(echo "$VAR_SPEC" | cut -d: -f1)
-      SHORT_OPT=$(echo "$VAR_SPEC" | cut -d: -f2)
-    else # each input is a variable name
-      VAR_NAME="$VAR_SPEC"
-      SHORT_OPT=$(echo "${VAR_NAME::1}" | tr '[:upper:]' '[:lower:]')
-    fi
-    local OPT_ARG=$(echo "$VAR_NAME" | sed -Ee 's/[^=]//g' | tr '=' ':')
-    VAR_NAME=$(echo "$VAR_NAME" | tr -d "=")
-    LOWER_NAME=$(echo "$VAR_NAME" | tr '[:upper:]' '[:lower:]')
-    LONG_OPT="$(echo "${LOWER_NAME}" | tr '_' '-')"
-
-    if [[ -n "${SHORT_OPT}" ]]; then
-      SHORT_OPTS="${SHORT_OPTS:-}${SHORT_OPT}${OPT_ARG}"
-    fi
-
-    LONG_OPTS=$( ( test ${#LONG_OPTS} -gt 0 && echo -n "${LONG_OPTS},") || true && echo -n "${LONG_OPT}${OPT_ARG}")
-
-    LOCAL_DECLS="${LOCAL_DECLS:-}local ${VAR_NAME}='';"
-    local VAR_SETTER="${VAR_NAME}=true;"
-    if [[ -n "$OPT_ARG" ]]; then
-      LOCAL_DECLS="${LOCAL_DECLS}local ${VAR_NAME}_SET='';"
-      VAR_SETTER=${VAR_NAME}'="${2}"; '${VAR_NAME}'_SET=true; shift;'
-    fi
-    local CASE_SELECT="-${SHORT_OPT}|--${LONG_OPT}]"
-    if [[ -z "$SHORT_OPT" ]]; then
-      CASE_SELECT="--${LONG_OPT}]"
-    fi
-    CASE_HANDLER=$(cat <<EOF
-    ${CASE_HANDLER}
-      ${CASE_SELECT}
-        $VAR_SETTER
-        _OPTS_COUNT=\$(( \$_OPTS_COUNT + 1));;
-EOF
-)
-  done # main while loop
-  CASE_HANDLER=$(cat <<EOF
-    case "\$1" in
-      $CASE_HANDLER
-    esac
-EOF
-)
-  # replace the ']'; see 'Bash Bug?' above
-  CASE_HANDLER=$(echo "$CASE_HANDLER" | perl -pe 's/\]$/)/')
-
-  echo "$LOCAL_DECLS"
-
-  cat <<EOF
-local TMP # see https://unix.stackexchange.com/a/88338/84520
-TMP=\$(${GNU_GETOPT} -o "${SHORT_OPTS}" -l "${LONG_OPTS}" -- "\$@") \
-  || exit \$?
-eval set -- "\$TMP"
-local _OPTS_COUNT=0
-while true; do
-  $CASE_HANDLER
-  shift
-done
-shift
-EOF
-#  echo 'if [[ -z "$1" ]]; then shift; fi' # TODO: explain this
-}
-
-echoerr() {
-  local TMP
-  TMP=$(setSimpleOptions NO_FOLD:F -- "$@")
-  eval "$TMP"
-
-  if [[ -z "$NO_FOLD" ]]; then
-    echo -e "${red}$*${reset}" | fold -sw 82 >&2
-  else
-    echo -e "${red}$*${reset}"
-  fi
-}
-
-echowarn() {
-  local TMP
-  TMP=$(setSimpleOptions NO_FOLD:F -- "$@")
-  eval "$TMP"
-
-  if [[ -z "$NO_FOLD" ]]; then
-    echo -e "${yellow}$*${reset}" | fold -sw 82 >&2
-  else
-    echo -e "${yellow}$*${reset}"
-  fi
-}
-
-echoerrandexit() {
-  local TMP
-  TMP=$(setSimpleOptions NO_FOLD:F -- "$@") || $(echo "Bad options: $*"; exit -10)
-  eval "$TMP"
-
-  local MSG="$1"
-  local EXIT_CODE="${2:-10}"
-  # TODO: consider providing 'passopts' method which coordites with 'setSimpleOptions' to recreate option string
-  if [[ -n "$NO_FOLD" ]]; then
-    echoerr --no-fold "$MSG"
-  else
-    echoerr "$MSG"
-  fi
-  exit $EXIT_CODE
-}
 list-add-item() {
   local LIST_VAR="${1}"; shift
   while (( $# > 0 )); do
@@ -235,7 +98,7 @@ list-get-index() {
       return
     fi
     INDEX=$(($INDEX + 1))
-  done <<< "${!LIST_VAR}"
+  done <<< "${!LIST_VAR:-}"
 }
 
 list-get-item() {
@@ -260,7 +123,7 @@ list-replace-by-string() {
 
   local ITEM INDEX NEW_LIST
   INDEX=0
-  for ITEM in ${!LIST_VAR}; do
+  for ITEM in ${!LIST_VAR:-}; do
     if [[ "$(list-get-item $LIST_VAR $INDEX)" == "$TEST_ITEM" ]]; then
       list-add-item NEW_LIST "$NEW_ITEM"
     else
@@ -280,6 +143,188 @@ list-from-csv() {
       list-add-item "$LIST_VAR" "$i"
     done
   done <<< "$CSV"
+}
+
+list-quote() {
+  local LIST_VAR="${1}"
+
+  while read -r ITEM; do
+    echo -n "'$(echo "$ITEM" | sed -e "s/'/'\"'\"'/")' "
+  done <<< "${!LIST_VAR:-}"
+}
+
+if [[ $(uname) == 'Darwin' ]]; then
+  GNU_GETOPT="$(brew --prefix gnu-getopt)/bin/getopt"
+else
+  GNU_GETOPT="$(which getopt)"
+fi
+
+# Usage:
+#   eval "$(setSimpleOptions SHORT LONG= SPECIFY_SHORT:X LONG_SPEC:S= -- "$@")" \
+#     || ( contextHelp; echoerrandexit "Bad options."; )
+#
+# Note the use of the intermediate TMP is important to preserve the exit value
+# setSimpleOptions. E.g., doing 'eval "$(setSimpleOptions ...)"' will work fine,
+# but because the last statement is the eval of the results, and not the function
+# call itself, the return of setSimpleOptions gets lost.
+#
+# Instead, it's generally recommended to be strict, 'set -e', and use the TMP-form.
+setSimpleOptions() {
+  local VAR_SPEC LOCAL_DECLS
+  local LONG_OPTS=""
+  local SHORT_OPTS=""
+  # Bash Bug? This looks like a straight up bug in bash, but the left-paren in
+  # '--)' was matching the '$(' and causing a syntax error. So we use ']' and
+  # replace it later.
+  local CASE_HANDLER=$(cat <<EOF
+    --]
+      break;;
+EOF
+)
+  while true; do
+    if (( $# == 0 )); then
+      echoerrandexit "setSimpleOptions: No argument to process; did you forget to include the '--' marker?"
+    fi
+    VAR_SPEC="$1"; shift
+    local VAR_NAME LOWER_NAME SHORT_OPT LONG_OPT IS_PASSTHRU
+    IS_PASSTHRU=''
+    if [[ "$VAR_SPEC" == *'^' ]]; then
+      IS_PASSTHRU=true
+      VAR_SPEC=${VAR_SPEC/%^/}
+    fi
+    local OPT_ARG=''
+    if [[ "$VAR_SPEC" == *'=' ]]; then
+      OPT_ARG=':'
+      VAR_SPEC=${VAR_SPEC/%=/}
+    fi
+
+    if [[ "$VAR_SPEC" == '--' ]]; then
+      break
+    elif [[ "$VAR_SPEC" == *':'* ]]; then
+      VAR_NAME=$(echo "$VAR_SPEC" | cut -d: -f1)
+      SHORT_OPT=$(echo "$VAR_SPEC" | cut -d: -f2)
+    else # each input is a variable name
+      VAR_NAME="$VAR_SPEC"
+      SHORT_OPT=$(echo "${VAR_NAME::1}" | tr '[:upper:]' '[:lower:]')
+    fi
+
+    VAR_NAME=$(echo "$VAR_NAME" | tr -d "=")
+    LOWER_NAME=$(echo "$VAR_NAME" | tr '[:upper:]' '[:lower:]')
+    LONG_OPT="$(echo "${LOWER_NAME}" | tr '_' '-')"
+
+    if [[ -n "${SHORT_OPT}" ]]; then
+      SHORT_OPTS="${SHORT_OPTS:-}${SHORT_OPT}${OPT_ARG}"
+    fi
+
+    LONG_OPTS=$( ( test ${#LONG_OPTS} -gt 0 && echo -n "${LONG_OPTS},") || true && echo -n "${LONG_OPT}${OPT_ARG}")
+
+    LOCAL_DECLS="${LOCAL_DECLS:-}local ${VAR_NAME}='';"
+    local CASE_SELECT="-${SHORT_OPT}|--${LONG_OPT}]"
+    if [[ "$IS_PASSTHRU" == true ]]; then # handle passthru
+      CASE_HANDLER=$(cat <<EOF
+        ${CASE_HANDLER}
+          ${CASE_SELECT}
+          list-add-item _PASSTHRU "\$1"
+EOF
+      )
+      if [[ -n "$OPT_ARG" ]]; then
+        CASE_HANDLER=$(cat <<EOF
+          ${CASE_HANDLER}
+            list-add-item _PASSTHRU "\$2"
+            shift
+EOF
+        )
+      fi
+      CASE_HANDLER=$(cat <<EOF
+        ${CASE_HANDLER}
+          shift;;
+EOF
+      )
+    else # non-passthru vars
+      local VAR_SETTER="${VAR_NAME}=true;"
+      if [[ -n "$OPT_ARG" ]]; then
+        LOCAL_DECLS="${LOCAL_DECLS}local ${VAR_NAME}_SET='';"
+        VAR_SETTER=${VAR_NAME}'="${2}"; '${VAR_NAME}'_SET=true; shift;'
+      fi
+      if [[ -z "$SHORT_OPT" ]]; then
+        CASE_SELECT="--${LONG_OPT}]"
+      fi
+      CASE_HANDLER=$(cat <<EOF
+      ${CASE_HANDLER}
+        ${CASE_SELECT}
+          $VAR_SETTER
+          _OPTS_COUNT=\$(( \$_OPTS_COUNT + 1))
+          shift;;
+EOF
+      )
+    fi
+  done # main while loop
+  CASE_HANDLER=$(cat <<EOF
+    case "\${1}" in
+      $CASE_HANDLER
+    esac
+EOF
+)
+  # replace the ']'; see 'Bash Bug?' above
+  CASE_HANDLER=$(echo "$CASE_HANDLER" | perl -pe 's/\]$/)/')
+
+  echo "$LOCAL_DECLS"
+
+  cat <<EOF
+local TMP # see https://unix.stackexchange.com/a/88338/84520
+local _PASSTHRU=""
+TMP=\$(${GNU_GETOPT} -o "${SHORT_OPTS}" -l "${LONG_OPTS}" -- "\$@") \
+  || exit \$?
+eval set -- "\$TMP"
+local _OPTS_COUNT=0
+while true; do
+  $CASE_HANDLER
+done
+shift
+if [[ -n "\$_PASSTHRU" ]]; then
+  eval set -- \$(list-quote _PASSTHRU) "\$@"
+fi
+EOF
+}
+
+echoerr() {
+  local TMP
+  TMP=$(setSimpleOptions NO_FOLD:F -- "$@")
+  eval "$TMP"
+
+  if [[ -z "$NO_FOLD" ]]; then
+    echo -e "${red}$*${reset}" | fold -sw 82 >&2
+  else
+    echo -e "${red}$*${reset}"
+  fi
+}
+
+echowarn() {
+  local TMP
+  TMP=$(setSimpleOptions NO_FOLD:F -- "$@")
+  eval "$TMP"
+
+  if [[ -z "$NO_FOLD" ]]; then
+    echo -e "${yellow}$*${reset}" | fold -sw 82 >&2
+  else
+    echo -e "${yellow}$*${reset}"
+  fi
+}
+
+echoerrandexit() {
+  local TMP
+  TMP=$(setSimpleOptions NO_FOLD:F -- "$@") || $(echo "Bad options: $*"; exit -10)
+  eval "$TMP"
+
+  local MSG="$1"
+  local EXIT_CODE="${2:-10}"
+  # TODO: consider providing 'passopts' method which coordites with 'setSimpleOptions' to recreate option string
+  if [[ -n "$NO_FOLD" ]]; then
+    echoerr --no-fold "$MSG"
+  else
+    echoerr "$MSG"
+  fi
+  exit $EXIT_CODE
 }
 
 get-answer() {
@@ -830,7 +875,7 @@ getPackageDef() {
   local VAR_NAME="$1"
   local FQN_PACKAGE_NAME="${2:-}"
 
-  # The package we're looking at might be our own or might be a dependency.
+  # The project we're looking at might be our own or might be a dependency.
   if [[ -z "$FQN_PACKAGE_NAME" ]] || [[ "$FQN_PACKAGE_NAME" == "$PACKAGE_NAME" ]]; then
     eval "$VAR_NAME=\"\$PACKAGE\""
   else
@@ -1028,7 +1073,7 @@ function log() {
     file=${BASH_SOURCE[$i-1]}
     echo "${now} $(hostname) $0:${lineno} ${msg}"
 }
-CATALYST_COMMAND_GROUPS=(data environments meta orgs packages projects required-services services work)
+CATALYST_COMMAND_GROUPS=(data environments meta orgs projects required-services services work)
 
 help() {
   local TMP
@@ -1051,11 +1096,6 @@ EOF
       echo
       help-${GROUP}
     done
-
-    if [[ -z "$SUMMARY_ONLY" ]]; then
-      echo
-      helpHelperAlphaPackagesNote
-    fi
   elif (( $# == 1 )); then
     if type -t help-${GROUP} | grep -q 'function'; then
       help-${GROUP} "liq "
@@ -1086,13 +1126,6 @@ helperHandler() {
   fi
 }
 
-helpHelperAlphaPackagesNote() {
-cat <<EOF
-${red_b}Alpha note:${reset} There is currently no support for multiple packages in a single
-repository and the 'package.json' file is assumed to be in the project root.
-EOF
-}
-
 handleSummary() {
   local SUMMARY="${1}"; shift
 
@@ -1104,10 +1137,8 @@ handleSummary() {
   fi
 }
 function dataSQLCheckRunning() {
-  local TMP
-  TMP=$(setSimpleOptions NO_CHECK -- "$@") \
-    || ( help-projects-packages; echoerrandexit "Bad options." )
-  eval "$TMP"
+  eval "$(setSimpleOptions NO_CHECK -- "$@")"
+  
   if [[ -z "$NO_CHECK" ]] && ! services-list --exit-on-stopped -q sql; then
     services-start sql
   fi
@@ -1377,14 +1408,14 @@ findDataFiles() {
   local _FILES
 
   local CAT_PACKAGE FIND_RESULTS
-  # search Catalyst packages in dependencies (i.e., ./node_modules)
+  # search Catalyst projects in dependencies (i.e., ./node_modules)
   for CAT_PACKAGE in `getCatPackagePaths`; do
     if [[ -d "${CAT_PACKAGE}/data/${DATA_IFACE}/${FILE_TYPE}" ]]; then
       FIND_RESULTS="$(find "${CAT_PACKAGE}/data/${DATA_IFACE}/${FILE_TYPE}" -type f)"
       list-add-item _FILES "$FIND_RESULTS"
     fi
   done
-  # search our own package
+  # search our own project
   if [[ -d "${BASE_DIR}/data/${DATA_IFACE}/${FILE_TYPE}" ]]; then
     FIND_RESULTS="$(find "${BASE_DIR}/data/${DATA_IFACE}/${FILE_TYPE}" -type f)"
     list-add-item _FILES "$FIND_RESULTS"
@@ -1423,7 +1454,7 @@ $(help-data-build)
     existing data will be cleared.
 
 The data commands deal exclusively with primary interface classes (${underline}iface${reset}). Thus even
-if the current package requires 'sql-mysql', the data commands will work and
+if the current project requires 'sql-mysql', the data commands will work and
 require an 'iface' designation of 'sql'.
 
 ${red_b}ALPHA NOTE:${reset} The only currently supported interface class is 'sql'.
@@ -1539,14 +1570,14 @@ environmentsFindProvidersFor() {
   local DEFAULT="${3:-}"
 
   local CAT_PACKAGE_PATHS=`getCatPackagePaths`
-  local SERVICES SERVICE_PACKAGES PROVIDER_OPTIONS CAT_PACKAGE_PATH
+  local SERVICES SERVICE_PROJECTS PROVIDER_OPTIONS CAT_PACKAGE_PATH
   for CAT_PACKAGE_PATH in "${BASE_DIR}" $CAT_PACKAGE_PATHS; do
     local NPM_PACKAGE=$(cat "${CAT_PACKAGE_PATH}/package.json")
     local PACKAGE_NAME=$(echo "$NPM_PACKAGE" | jq --raw-output ".name")
     local SERVICE
     for SERVICE in $((echo "$NPM_PACKAGE" | jq --raw-output ".catalyst.provides | .[] | select((.\"interface-classes\" | .[] | select(. == \"$REQ_SERVICE\")) | length > 0) | .name | @sh" 2>/dev/null || echo '') | tr -d "'"); do
       SERVICES=$((test -n "$SERVICE" && echo "$SERVICES '$SERVICE'") || echo "'$SERVICE'")
-      SERVICE_PACKAGES=$((test -n "$SERVICE_PACKAGES" && echo "$SERVICE_PACKAGES '$PACKAGE_NAME'") || echo "'$PACKAGE_NAME'")
+      SERVICE_PROJECTS=$((test -n "$SERVICE_PROJECTS" && echo "$SERVICE_PROJECTS '$PACKAGE_NAME'") || echo "'$PACKAGE_NAME'")
       local SERV_DESC
       environmentsServiceDescription SERV_DESC "$SERVICE" "$PACKAGE_NAME"
       list-add-item PROVIDER_OPTIONS "$SERV_DESC"
@@ -2219,7 +2250,7 @@ environments-show() {
 environments-update() {
   local TMP
   TMP=$(setSimpleOptions NEW_ONLY -- "$@") \
-    || ( help-projects-packages; echoerrandexit "Bad options." )
+    || ( help-environments-update; echoerrandexit "Bad options." )
   eval "$TMP"
 
   local ENV_NAME="${1:-}"
@@ -2649,258 +2680,6 @@ orgsOrgList() {
   done
 }
 
-# deppreted
-requirements-packages() {
-  requireCatalystfile
-  # Requiring 'the' NPM package here (rather than based on command parameters)
-  # is an artifact of the alpha-version limitation to a single package.
-  requirePackage
-}
-
-packages-audit() {
-  cd "${BASE_DIR}"
-  npm audit
-}
-
-packages-build() {
-  runPackageScript build
-}
-
-packages-deploy() {
-  if [[ -z "${GOPATH:-}" ]]; then
-    echoerr "'GOPATH' is not defined. Run 'liq go configure'."
-    exit 1
-  fi
-  colorerr "GOPATH=$GOPATH bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; gcloud app deploy'"
-}
-
-packages-link() {
-  echoerrandexit "Linking currently disabled."
-}
-
-packages-lint() {
-  local TMP
-  TMP=$(setSimpleOptions FIX -- "$@") \
-    || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
-
-  if [[ -z "$FIX" ]]; then
-    runPackageScript lint
-  else
-    runPackageScript lint-fix
-  fi
-}
-
-packages-version-check() {
-  requireNpmCheck
-
-  local TMP
-  TMP=$(setSimpleOptions IGNORE UNIGNORE:I SHOW_CONFIG:c UPDATE OPTIONS= -- "$@") \
-    || ( help-packages; echoerrandexit "Bad options." )
-  eval "$TMP"
-
-  local IGNORED_PACKAGES IPACKAGE
-  # the '@sh' breaks '-e'; https://github.com/stedolan/jq/issues/1792
-  if echo "$PACKAGE" | jq -e --raw-output '.catalyst."version-check".ignore' > /dev/null; then
-    IGNORED_PACKAGES=`echo "$PACKAGE" | jq --raw-output '.catalyst."version-check".ignore | @sh' | tr -d "'" | sort`
-  fi
-  local CMD_OPTS="$OPTIONS"
-  if [[ -z "$CMD_OPTS" ]] && echo "$PACKAGE" | jq -e --raw-output '.catalyst."version-check".options' > /dev/null; then
-    CMD_OPTS=`echo "$PACKAGE" | jq --raw-output '.catalyst."version-check".options'`
-  fi
-
-  if [[ -n "$UPDATE" ]] \
-      && ( (( ${_OPTS_COUNT} > 2 )) || ( (( ${_OPTS_COUNT} == 2 )) && [[ -z $OPTIONS_SET ]]) ); then
-    echoerrandexit "'--update' option may only be combined with '--options'."
-  elif [[ -n "$IGNORE" ]] || [[ -n "$UNIGNORE" ]]; then
-    if [[ -n "$IGNORE" ]] && [[ -n "$UNIGNORE" ]]; then
-      echoerrandexit "Cannot 'ignore' and 'unignore' packages in same command."
-    fi
-
-    packagesVersionCheckManageIgnored
-  elif [[ -n "$SHOW_CONFIG" ]]; then
-    packagesVersionCheckShowConfig
-  elif [[ -n "$OPTIONS_SET" ]] && (( $_OPTS_COUNT == 1 )); then
-    packagesVersionCheckSetOptions
-  else # actually do the check
-    packagesVersionCheck
-  fi
-}
-help-packages() {
-  local PREFIX="${1:-}"
-
-  handleSummary "${PREFIX}${red_b}(deprecated)${reset} ${cyan_u}packages${reset} <action>: Package configuration and tools." || cat <<EOF
-${PREFIX}${cyan_u}packages${reset} <action>:
-  ${underline}build${reset} [<name>]: Builds all or the named (NPM) package in the current project.
-  ${underline}audit${reset} [<name>]: Runs a security audit for all or the named (NPM) package in
-    the current project.
-  ${red_b}(deprecated)${reset} ${underline}version-check${reset} [-u|update] [<name>]: Runs version check with optional
-    interactive update for all or named dependency packages.
-    ${red}This will be reworked as 'dependencies'.${reset}
-      [-i|--ignore|-I|--unignore] [<name>]: Configures dependency packages
-        ignored during update checks.
-      [-o|--options <option string>]: Sets options to use with 'npm-check'.
-      [-c|--show-config]: Shows the current configuration used with 'npm-check'.
-  ${underline}lint${reset} [-f|--fix] [<name>]: Lints all or the named (NPM) package in the current
-    project.
-  ${underline}deploy${reset} [<name>...]: Deploys all or named packages to the current environment.
-  ${underline}link${reset} [-l|--list][-f|--fix][-u|--unlink]<package spec>...: Links (via npm) the
-    named packages to the current package. '--list' lists the packages linked in
-    the current project and takes no arguements. The '--unlink' version will
-    unlink all Catalyst linked packages from the current package unless specific
-    packages are specified. '--fix' will check and attempt to fix any broken
-    package links in the current project and takes no arguments.
-
-${red}Deprecated: these functions will migrate under 'project'.${reset}
-
-${red_b}ALPHA NOTE:${reset} The 'test' action is likely to chaneg significantly in the future to
-support the definition of test sets based on type (unit, integration, load,
-etc.) and name.
-EOF
-
-  test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" helpHelperAlphaPackagesNote
-}
-runPackageScript() {
-  local TMP
-  TMP=$(setSimpleOptions IGNORE_MISSING SCRIPT_ONLY -- "$@") \
-    || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
-
-  local ACTION="$1"; shift
-
-  cd "${BASE_DIR}"
-  if cat package.json | jq -e "(.scripts | keys | map(select(. == \"$ACTION\")) | length) == 1" > /dev/null; then
-    npm run-script "${ACTION}"
-  elif [[ -n "$SCRIPT_ONLY" ]] && [[ -z "$IGNORE_MISSING" ]]; then # SCRIPT_ONLY is a temp. workaround to implement future behaior. See note below.
-    echoerrandexit "Did not find expected NPM script for '$ACTION'."
-  elif [[ -z "$SCRIPT_ONLY" ]]; then
-    # TODO: drop this; require that the package interface with catalyst-scripts
-    # through the the 'package-scripts'. This will avoid confusion and also
-    # allow "plain npm" to run more of what can be run. It will also allow users
-    # to override the scripts if they really want to. (But we should catch) that
-    # on an audit.
-    local CATALYST_SCRIPTS=$(npm bin)/catalyst-scripts
-    if [[ ! -x "$CATALYST_SCRIPTS" ]]; then
-      # TODO: offer to install and re-run
-      echoerr "This project does not appear to be using 'catalyst-scripts'. Try:"
-      echoerr ""
-      echoerrandexit "npm install --save-dev @liquid-labs/catalyst-scripts"
-    fi
-    # kill the debug trap because if the script exits with an error (as in a
-    # failed lint), that's OK and the debug doesn't provide any useful info.
-    "${CATALYST_SCRIPTS}" "${BASE_DIR}" $ACTION || true
-  fi
-}
-
-requireNpmCheck() {
-  # TODO: offer to install
-  if ! which -s npm-check; then
-    echoerr "'npm-check' not found; could not check package status. Install with:"
-    echoerr ''
-    echoerr '    npm install -g npm-check'
-    echoerr ''
-    exit 10
-  fi
-}
-
-packagesVersionCheckManageIgnored() {
-  local IPACKAGES
-  if [[ -n "$IGNORE" ]]; then
-    local LIVE_PACKAGES=`echo "$PACKAGE" | jq --raw-output '.dependencies | keys | @sh' | tr -d "'"`
-    for IPACKAGE in $IGNORED_PACKAGES; do
-      LIVE_PACKAGES=$(echo "$LIVE_PACKAGES" | sed -Ee 's~(^| +)'$IPACKAGE'( +|$)~~')
-    done
-    if (( $# == 0 )); then # interactive add
-      PS3="Exclude package: "
-      selectDoneCancel IPACKAGES LIVE_PACKAGES
-    else
-      IPACKAGES="$@"
-    fi
-
-    for IPACKAGE in $IPACKAGES; do
-      if echo "$IGNORED_PACKAGES" | grep -Eq '(^| +)'$IPACKAGE'( +|$)'; then
-        echoerr "Package '$IPACKAGE' already ignored."
-      elif ! echo "$LIVE_PACKAGES" | grep -Eq '(^| +)'$IPACKAGE'( +|$)'; then
-        echoerr "No such package '$IPACKAGE' in dependencies."
-      else
-        if [[ -z "$IGNORED_PACKAGES" ]]; then
-          PACKAGE=`echo "$PACKAGE" | jq 'setpath(["catalyst","version-check","ignore"]; ["'$IPACKAGE'"])'`
-        else
-          PACKAGE=`echo "$PACKAGE" | jq 'setpath(["catalyst","version-check","ignore"]; getpath(["catalyst","version-check","ignore"]) + ["'$IPACKAGE'"])'`
-        fi
-        IGNORED_PACKAGES="${IGNORED_PACKAGES} ${IPACKAGE}"
-      fi
-    done
-  elif [[ -n "$UNIGNORE" ]]; then
-    if [[ -z "$IGNORED_PACKAGES" ]]; then
-      if (( $# > 0 )); then
-        echoerr "No packages currently ignored."
-      else
-        echo "No packages currently ignored."
-      fi
-      exit
-    fi
-    if (( $# == 0 )); then # interactive add
-      PS3="Include package: "
-      selectDoneCancelAll IPACKAGES IGNORED_PACKAGES
-    else
-      IPACKAGES="$@"
-    fi
-
-    for IPACKAGE in $IPACKAGES; do
-      if ! echo "$IGNORED_PACKAGES" | grep -Eq '(^| +)'$IPACKAGE'( +|$)'; then
-        echoerr "Package '$IPACKAGE' is not currently ignored."
-      else
-        PACKAGE=`echo "$PACKAGE" | jq 'setpath(["catalyst","version-check","ignore"]; getpath(["catalyst","version-check","ignore"]) | map(select(. != "'$IPACKAGE'")))'`
-      fi
-    done
-  fi
-
-  # TODO: cleanup empty bits
-  echo "$PACKAGE" > "$PACKAGE_FILE"
-
-  if [[ -n "$SHOW_CONFIG" ]]; then
-    projects-packages-version-check -c
-  fi
-}
-
-packagesVersionCheckShowConfig() {
-  if [[ -z "$IGNORED_PACKAGES" ]]; then
-    echo "Ignored packages: none"
-  else
-    echo "Ignored packages:"
-    echo "$IGNORED_PACKAGES" | tr " " "\n" | sed -E 's/^/  /'
-  fi
-  if [[ -z "$CMD_OPTS" ]]; then
-    echo "Additional options: none"
-  else
-    echo "Additional options: $CMD_OPTS"
-  fi
-}
-
-packagesVersionCheckSetOptions() {
-  if [[ -n "$OPTIONS" ]]; then
-    PACKAGE=$(echo "$PACKAGE" | jq 'setpath(["catalyst","version-check","options"]; "'$OPTIONS'")')
-  elif [[ -z "$OPTIONS" ]]; then
-    PACKAGE=$(echo "$PACKAGE" | jq 'del(.catalyst."version-check".options)')
-  fi
-  echo "$PACKAGE" > "$PACKAGE_FILE"
-}
-
-packagesVersionCheck() {
-  for IPACKAGE in $IGNORED_PACKAGES; do
-    CMD_OPTS="${CMD_OPTS} -i ${IPACKAGE}"
-  done
-  if [[ -n "$UPDATE" ]]; then
-    CMD_OPTS="${CMD_OPTS} -u"
-  fi
-  npm-check ${CMD_OPTS} || true
-}
-
-packages-link-list() {
-  echoerrandexit 'Package link functions currently disabled.'
-}
-
 requirements-policies() {
   :
 }
@@ -2921,7 +2700,7 @@ policies-update() {
   CURR_ORG="$(orgsCurrentOrg --require-sensitive)"
   cd "${LIQ_ORG_DB}/${CURR_ORG}/sensitive"
 
-  for POLICY in $(policiesGetPolicyPackages); do
+  for POLICY in $(policiesGetPolicyProjects); do
     npm i "${POLICY}"
   done
 }
@@ -2953,7 +2732,7 @@ policiesGetPolicyFiles() {
   done
 }
 
-policiesGetPolicyPackages() {
+policiesGetPolicyProjects() {
   local DIR
   for DIR in $(policiesGetPolicyDirs); do
     cd "${DIR}"
@@ -2963,6 +2742,12 @@ policiesGetPolicyPackages() {
 
 requirements-projects() {
   :
+}
+
+projects-build() {
+  findBase
+  cd "$BASE_DIR"
+  projectsRunPackageScript build
 }
 
 projects-close() {
@@ -3058,6 +2843,14 @@ projects-create() {
   fi
   cd
   projectMoveStaged "$__PROJ_NAME" "$PROJ_STAGE"
+}
+
+projects-deploy() {
+  if [[ -z "${GOPATH:-}" ]]; then
+    echoerr "'GOPATH' is not defined. Run 'liq go configure'."
+    exit 1
+  fi
+  colorerr "GOPATH=$GOPATH bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; gcloud app deploy'"
 }
 
 projects-import() {
@@ -3184,12 +2977,32 @@ projects-sync() {
   fi # on workbranach check
 }
 
+projects-qa() {
+  eval "$(setSimpleOptions UPDATE^ OPTIONS=^ AUDIT LINT VERSION_CHECK -- "$@")" \
+    || { contextHelp; echoerrandexit "Bad options."; }
+
+  findBase
+  cd "$BASE_DIR"
+
+  local RESTRICTED=''
+  if [[ -n "$AUDIT" ]] || [[ -n "$LINT" ]] || [[ -n "$VERSION_CHECK" ]]; then
+    RESTRICTED=true
+  fi
+
+  if [[ -z "$RESTRICTED" ]] || [[ -n "$AUDIT" ]]; then
+    projectsNpmAudit "$@" || true
+  fi
+  if [[ -z "$RESTRICTED" ]] || [[ -n "$LINT" ]]; then
+    projectsLint "$@" || true
+  fi
+  if [[ -z "$RESTRICTED" ]] || [[ -n "$VERSION_CHECK" ]]; then
+    projectsVersionCheck "$@" || true
+  fi
+}
+
 projects-test() {
-  local TMP
-  # TODO https://github.com/Liquid-Labs/liq-cli/issues/27
-  TMP=$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S NO_SERVICE_CHECK:C -- "$@") \
+  eval "$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S NO_SERVICE_CHECK:C -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
 
   if [[ -z "${NO_SERVICE_CHECK}" ]] \
      && ( [[ -z "${TEST_TYPES:-}" ]] \
@@ -3201,7 +3014,7 @@ projects-test() {
         services-start || echoerrandexit "Could not start services for testing."
       else
         echo "${red}necessary services not running.${reset}"
-        echoerrandexit "Some services are not running. You can either run unit tests are start services. Try one of the following:\nliq packages test --types=unit\nliq services start"
+        echoerrandexit "Some services are not running. You can either run unit tests are start services. Try one of the following:\nliq projects test --types=unit\nliq services start"
       fi
     else
       echo "${green}looks good.${reset}"
@@ -3209,8 +3022,8 @@ projects-test() {
   fi
 
   # note this entails 'pretest' and 'posttest' as well
-  TEST_TYPES="$TYPES" NO_DATA_RESET="$NO_DATA_RESET" GO_RUN="$GO_RUN" runPackageScript test || \
-    echoerrandexit "If failure due to non-running services, you can also run only the unit tests with:\nliq packages test --type=unit" $?
+  TEST_TYPES="$TYPES" NO_DATA_RESET="$NO_DATA_RESET" GO_RUN="$GO_RUN" projectsRunPackageScript test || \
+    echoerrandexit "If failure due to non-running services, you can also run only the unit tests with:\nliq projects test --type=unit" $?
 }
 projects-services() {
   local ACTION="${1}"; shift
@@ -3311,9 +3124,11 @@ help-projects() {
 
   handleSummary "${PREFIX}${cyan_u}projects${reset} <action>: Project configuration and tools." || cat <<EOF
 ${PREFIX}${cyan_u}projects${reset} <action>:
+  ${underline}build${reset} [<name>...]: Builds the current or specified project(s).
   ${underline}close${reset} [<project name>]: Closes (deletes from playground) either the
     current or named project after checking that all changes are committed and pushed. ${red_b}Alpha
     note:${reset} The tool does not currently check whether the project is linked with other projects.
+  ${underline}deploy${reset} [<name>...]: Deploys the current or named project(s).
   ${underline}import${reset} <package or URL>: Imports the indicated package into your
     playground. By default, the first arguments are understood as NPM package names and the URL
     will be retrieved via 'npm view'. If the '--url' option is specified, then the arguments are
@@ -3325,13 +3140,17 @@ ${PREFIX}${cyan_u}projects${reset} <action>:
     re-oriented to the project origin, unless the type is 'bare' in which case the project is cloned directly
     from the origin URL. Use 'liq projects import' to import an existing project from a URL.
   ${underline}publish${reset}: Performs verification tests, updates package version, and publishes package.
+  ${underline}qa${reset} [--update|-u] [--audit|-a] [--lint|-l] [--version-check|-v]:
+    Performs NPM audit, eslint, and NPM version checks. By default, all three checks are performed, but options
+    can be used to select specific checks. The '--update' option instruct to the selected options to attempt
+    updates/fixes.
   ${underline}sync${reset} [--fetch-only|-f] [--no-work-master-merge|-M]:
     Updates the remote master with new commits from upstream/master and, if currently on a work branch,
     workspace/master and workspace/<workbranch> and then merges those updates with the current workbranch (if any).
     '--fetch-only' will update the appropriate remote refs, and exit. --no-work-master-merge update the local master
     branch and pull the workspace workbranch, but skips merging the new master updates to the workbranch.
   ${underline}test${reset} [-t|--types <types>][-D|--no-data-reset][-g|--go-run <testregex>][--no-start|-S] [<name>]:
-    Runs unit tests for all or the named packages in the current project.
+    Runs unit tests the current or named projects.
     * 'types' may be 'unit' or 'integration' (=='int') or 'all', which is default.
       Multiple tests may be specified in a comma delimited list. E.g.,
       '-t=unit,int' is equivalent no type or '-t=""'.
@@ -3342,14 +3161,11 @@ ${PREFIX}${cyan_u}projects${reset} <action>:
     * '--go-run' will only run those tests matching the provided regex (per go
       '-run' standards).
   ${underline}services${reset}: sub-resource for managing services provided by the package.
-    ${underline}add${reset} [<package name>]: Add a provided service.
-    ${underline}list${reset} [<package name>...]: Lists the services provided by the named packages or
-      all packages in the current repository.
-    ${underline}delete${reset} [<package name>] <name>: Deletes a provided service.
+    ${underline}add${reset} [<service name>]: Add a provided service to the current project.
+    ${underline}list${reset} [<project name>...]: Lists the services provided by the current or named projects.
+    ${underline}delete${reset} [<project name>] <name>: Deletes a provided service.
     ${underline}show${reset} [<service name>...]: Show service details.
 EOF
-
-  test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" helpHelperAlphaPackagesNote
 }
 projectCheckIfInPlayground() {
   local PROJ_NAME="${1}"
@@ -3467,6 +3283,202 @@ projectMoveStaged() {
     || echoerrandexit "Could not moved staged '$PROJ_NAME' to playground. See above for details."
 }
 
+projectsRunPackageScript() {
+  eval "$(setSimpleOptions IGNORE_MISSING SCRIPT_ONLY -- "$@")" \
+    || ( contextHelp; echoerrandexit "Bad options." )
+
+  local ACTION="$1"; shift
+
+  cd "${BASE_DIR}"
+  if cat package.json | jq -e "(.scripts | keys | map(select(. == \"$ACTION\")) | length) == 1" > /dev/null; then
+    npm run-script "${ACTION}"
+  elif [[ -n "$SCRIPT_ONLY" ]] && [[ -z "$IGNORE_MISSING" ]]; then # SCRIPT_ONLY is a temp. workaround to implement future behaior. See note below.
+    echoerrandexit "Did not find expected NPM script for '$ACTION'."
+  elif [[ -z "$SCRIPT_ONLY" ]]; then
+    # TODO: drop this; require that the package interface with catalyst-scripts
+    # through the the 'package-scripts'. This will avoid confusion and also
+    # allow "plain npm" to run more of what can be run. It will also allow users
+    # to override the scripts if they really want to. (But we should catch) that
+    # on an audit.
+    local CATALYST_SCRIPTS=$(npm bin)/catalyst-scripts
+    if [[ ! -x "$CATALYST_SCRIPTS" ]]; then
+      # TODO: offer to install and re-run
+      echoerr "This project does not appear to be using 'catalyst-scripts'. Try:"
+      echoerr ""
+      echoerrandexit "npm install --save-dev @liquid-labs/catalyst-scripts"
+    fi
+    # kill the debug trap because if the script exits with an error (as in a
+    # failed lint), that's OK and the debug doesn't provide any useful info.
+    "${CATALYST_SCRIPTS}" "${BASE_DIR}" $ACTION || true
+  fi
+}
+_QA_OPTIONS_SPEC="UPDATE OPTIONS="
+
+## Main lib functions
+
+# Assumes we are already in the BASE_DIR of the target project.
+projectsNpmAudit() {
+  eval "$(setSimpleOptions $_QA_OPTIONS_SPEC -- "$@")" \
+    || ( contextHelp; echoerrandexit "Bad options." )
+
+  if [[ -n "$UPDATE" ]]; then
+    npm audit fix
+  else npm audit; fi
+}
+
+# Assumes we are already in the BASE_DIR of the target project.
+projectsLint() {
+  eval "$(setSimpleOptions $_QA_OPTIONS_SPEC -- "$@")" \
+    || ( contextHelp; echoerrandexit "Bad options." )
+
+  if [[ -z "$UPDATE" ]]; then
+    projectsRunPackageScript lint
+  else projectsRunPackageScript lint-fix; fi
+}
+
+projectsVersionCheck() {
+  projectsRequireNpmCheck
+  # we are temporarily disabling the config manegement options
+  # see https://github.com/Liquid-Labs/liq-cli/issues/94
+  # IGNORE UNIGNORE:I SHOW_CONFIG:c UPDATE OPTIONS=
+  eval "$(setSimpleOptions $_QA_OPTIONS_SPEC IGNORE UNIGNORE:I SHOW_CONFIG:c UPDATE OPTIONS= -- "$@")" \
+    || ( help-projects; echoerrandexit "Bad options." )
+
+  local IGNORED_PACKAGES=""
+  # the '@sh' breaks '-e'; https://github.com/stedolan/jq/issues/1792
+  if echo "$PACKAGE" | jq -e --raw-output '.catalyst."version-check".ignore' > /dev/null; then
+    IGNORED_PACKAGES=`echo "$PACKAGE" | jq --raw-output '.catalyst."version-check".ignore | @sh' | tr -d "'" | sort`
+  fi
+  local CMD_OPTS="$OPTIONS"
+  if [[ -z "$CMD_OPTS" ]] && echo "$PACKAGE" | jq -e --raw-output '.catalyst."version-check".options' > /dev/null; then
+    CMD_OPTS=`echo "$PACKAGE" | jq --raw-output '.catalyst."version-check".options'`
+  fi
+
+  if [[ -n "$UPDATE" ]] \
+      && ( (( ${_OPTS_COUNT} > 2 )) || ( (( ${_OPTS_COUNT} == 2 )) && [[ -z $OPTIONS_SET ]]) ); then
+    echoerrandexit "'--update' option may only be combined with '--options'."
+  elif [[ -n "$IGNORE" ]] || [[ -n "$UNIGNORE" ]]; then
+    if [[ -n "$IGNORE" ]] && [[ -n "$UNIGNORE" ]]; then
+      echoerrandexit "Cannot 'ignore' and 'unignore' projects in same command."
+    fi
+
+    projectsVersionCheckManageIgnored
+  elif [[ -n "$SHOW_CONFIG" ]]; then
+    projectsVersionCheckShowConfig
+  elif [[ -n "$OPTIONS_SET" ]] && (( $_OPTS_COUNT == 1 )); then
+    projectsVersionCheckSetOptions
+  else # actually do the check
+    projectsVersionCheckDo
+  fi
+}
+
+## helper functions
+
+projectsRequireNpmCheck() {
+  # TODO: offer to install
+  if ! which -s npm-check; then
+    echoerr "'npm-check' not found; could not check package status. Install with:"
+    echoerr ''
+    echoerr '    npm install -g npm-check'
+    echoerr ''
+    exit 10
+  fi
+}
+
+projectsVersionCheckManageIgnored() {
+  local IPACKAGES IPACKAGE
+  if [[ -n "$IGNORE" ]]; then
+    local LIVE_PACKAGES=`echo "$PACKAGE" | jq --raw-output '.dependencies | keys | @sh' | tr -d "'"`
+    for IPACKAGE in $IGNORED_PACKAGES; do
+      LIVE_PACKAGES=$(echo "$LIVE_PACKAGES" | sed -Ee 's~(^| +)'$IPACKAGE'( +|$)~~')
+    done
+    if (( $# == 0 )); then # interactive add
+      PS3="Exclude package: "
+      selectDoneCancel IPACKAGES LIVE_PACKAGES
+    else
+      IPACKAGES="$@"
+    fi
+
+    for IPACKAGE in $IPACKAGES; do
+      if echo "$IGNORED_PACKAGES" | grep -Eq '(^| +)'$IPACKAGE'( +|$)'; then
+        echoerr "Package '$IPACKAGE' already ignored."
+      elif ! echo "$LIVE_PACKAGES" | grep -Eq '(^| +)'$IPACKAGE'( +|$)'; then
+        echoerr "No such package '$IPACKAGE' in dependencies."
+      else
+        if [[ -z "$IGNORED_PACKAGES" ]]; then
+          PACKAGE=`echo "$PACKAGE" | jq 'setpath(["catalyst","version-check","ignore"]; ["'$IPACKAGE'"])'`
+        else
+          PACKAGE=`echo "$PACKAGE" | jq 'setpath(["catalyst","version-check","ignore"]; getpath(["catalyst","version-check","ignore"]) + ["'$IPACKAGE'"])'`
+        fi
+        IGNORED_PACKAGES="${IGNORED_PACKAGES} ${IPACKAGE}"
+      fi
+    done
+  elif [[ -n "$UNIGNORE" ]]; then
+    if [[ -z "$IGNORED_PACKAGES" ]]; then
+      if (( $# > 0 )); then
+        echoerr "No projects currently ignored."
+      else
+        echo "No projects currently ignored."
+      fi
+      exit
+    fi
+    if (( $# == 0 )); then # interactive add
+      PS3="Include package: "
+      selectDoneCancelAll IPACKAGES IGNORED_PACKAGES
+    else
+      IPACKAGES="$@"
+    fi
+
+    for IPACKAGE in $IPACKAGES; do
+      if ! echo "$IGNORED_PACKAGES" | grep -Eq '(^| +)'$IPACKAGE'( +|$)'; then
+        echoerr "Package '$IPACKAGE' is not currently ignored."
+      else
+        PACKAGE=`echo "$PACKAGE" | jq 'setpath(["catalyst","version-check","ignore"]; getpath(["catalyst","version-check","ignore"]) | map(select(. != "'$IPACKAGE'")))'`
+      fi
+    done
+  fi
+
+  # TODO: cleanup empty bits
+  echo "$PACKAGE" > "$PACKAGE_FILE"
+
+  if [[ -n "$SHOW_CONFIG" ]]; then
+    projectsVersionCheck -c
+  fi
+}
+
+projectsVersionCheckShowConfig() {
+  if [[ -z "$IGNORED_PACKAGES" ]]; then
+    echo "Ignored projects: none"
+  else
+    echo "Ignored projects:"
+    echo "$IGNORED_PACKAGES" | tr " " "\n" | sed -E 's/^/  /'
+  fi
+  if [[ -z "$CMD_OPTS" ]]; then
+    echo "Additional options: none"
+  else
+    echo "Additional options: $CMD_OPTS"
+  fi
+}
+
+projectsVersionCheckSetOptions() {
+  if [[ -n "$OPTIONS" ]]; then
+    PACKAGE=$(echo "$PACKAGE" | jq 'setpath(["catalyst","version-check","options"]; "'$OPTIONS'")')
+  elif [[ -z "$OPTIONS" ]]; then
+    PACKAGE=$(echo "$PACKAGE" | jq 'del(.catalyst."version-check".options)')
+  fi
+  echo "$PACKAGE" > "$PACKAGE_FILE"
+}
+
+projectsVersionCheckDo() {
+  for IPACKAGE in $IGNORED_PACKAGES; do
+    CMD_OPTS="${CMD_OPTS} -i ${IPACKAGE}"
+  done
+  if [[ -n "$UPDATE" ]]; then
+    CMD_OPTS="${CMD_OPTS} -u"
+  fi
+  npm-check ${CMD_OPTS} || true
+}
+
 # deprecated
 requirements-required-services() {
   requirePackage
@@ -3545,9 +3557,8 @@ help-required-services() {
   local PREFIX="${1:-}"
 
   handleSummary "${PREFIX}${red_b}(deprated)${reset} ${cyan_u}required-services${reset} <action>: Configures runtime service requirements." || cat <<EOF
-${PREFIX}${cyan_u}required-services${reset} <action>:"
-  ${underline}list${reset} [<package name>...]: Lists the services required by the named packages or
-    all packages in the current repository.
+${PREFIX}${cyan_u}required-services${reset} <action>:
+  ${underline}list${reset} [<project name>...]: Lists the services required by the named current or named project.
   ${underline}add${reset} [<package name>]: Add a required service.
   ${underline}delete${reset} [<package name>] <name>: Deletes a required service.
 
@@ -3559,8 +3570,6 @@ provided in future versions.
 The ${underline}package name${reset} parameter in the 'add' and 'delete' actions is optional if
 there is a single package in the current repository.
 EOF
-
-  test -n "${SUMMARY_ONLY:-}" || helperHandler "$PREFIX" helpHelperAlphaPackagesNote
 }
 reqServDefine() {
   local IFACE_CLASS="$1"
@@ -4131,7 +4140,7 @@ work-involve() {
       if echo "$PACKAGE" | jq -e ".dependencies and ((.dependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\"))) or (.devDependencies and (.devDependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\")))" > /dev/null; then
         :
         # Currently disabled
-        # packages-link "${PROJECT_NAME}:${NEW_PACKAGE_NAME}"
+        # projects-link "${PROJECT_NAME}:${NEW_PACKAGE_NAME}"
       fi
     done < <(find "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT_NAME}" -name "package.json" -not -path "*node_modules/*")
   fi
@@ -4291,12 +4300,12 @@ work-merge() {
 work-qa() {
   echo "Checking local repo status..."
   work-report
-  echo "Checking package dependencies..."
-  packages-version-check
-  echo "Linting code..."
-  packages-lint
-  echo "Running tests..."
-  packages-test
+
+  source "${LIQ_WORK_DB}/curr_work"
+  for PROJECT in $INVOLVED_PROJECTS; do
+    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT}"
+    projects-qa "$@"
+  done
 }
 
 work-report() {
@@ -4656,13 +4665,14 @@ work-submit() {
     local BUGS_URL
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
 
-    local ISSUE PROJ_ISSUES OTHER_ISSUES CLOSES_MSG
+    local ISSUE=''
+    local PROJ_ISSUES=''
+    local OTHER_ISSUES=''
     for ISSUE in $WORK_ISSUES; do
       if [[ $ISSUE == $BUGS_URL* ]]; then
         local NUMBER=${ISSUE/$BUGS_URL/}
         NUMBER=${NUMBER/\//}
         list-add-item PROJ_ISSUES "#${NUMBER}"
-        list-add-item CLOSES_MSG "closes #${NUMBER}"
       else
         list-add-item OTHER_ISSUES "${ISSUE}"
       fi
@@ -4672,20 +4682,22 @@ work-submit() {
     BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
 
     local DESC
+    # recal, the first line is used in the 'summary' (title), the rest goes in the "description"
     DESC=$(cat <<EOF
 Merge ${WORK_BRANCH} to master
 
+## Summary
+
 $MESSAGE
 
-$CLOSES_MSG
-
 ## Issues
-$(( test -z "${PROJ_ISSUES:-}" && test -z "${OTHER_ISSUES:-}" \
-    && echo 'none' ) \
-  || ( for ISSUE in ${PROJ_ISSUES:-}; do echo "* $ISSUE"; done; \
-       for ISSUE in ${OTHER_ISSUES:-}; do echo "* $ISSUE"; done; ))
-
 EOF)
+    if [[ -n "$PROJ_ISSUES" ]]; then
+      DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
+    fi
+    if [[ -n "$OTHER_ISSUES" ]]; then
+      DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
+    fi
     hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
   done
 }
@@ -4704,7 +4716,7 @@ ${PREFIX}${cyan_u}work${reset} <action>:
     Will enter interactive selection if no option and no current work or the
     '--select' option is given.
   ${underline}involve${reset} [-L|--no-link] [<repository name>]: Involves the current or named
-    repository in the current unit of work. When involved, any packages in the
+    repository in the current unit of work. When involved, any projects in the
     newly involved project will be linked to the primary project in the unit of
     work. The '--no-link' option will suppress this behavior.
   ${underline}start${reset} <name>: Creates a new unit of work and adds the current repository (if any) to it.

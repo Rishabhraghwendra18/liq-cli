@@ -179,7 +179,7 @@ environments-show() {
 environments-update() {
   local TMP
   TMP=$(setSimpleOptions NEW_ONLY -- "$@") \
-    || ( help-projects-packages; echoerrandexit "Bad options." )
+    || ( help-environments-update; echoerrandexit "Bad options." )
   eval "$TMP"
 
   local ENV_NAME="${1:-}"

@@ -9,7 +9,7 @@ _liq()
     local OPTS # the options, set by this func, for completion
     local GLOBAL_ACTIONS="help"
     # Using 'GROUPS' was causing errors; set by some magic.
-    local ACTION_GROUPS="data environments orgs packages policies projects remotes required-services services work"
+    local ACTION_GROUPS="data environments orgs policies projects remotes required-services services work"
     COMPREPLY=()
     # local WORD_COUNT=${#COMP_WORDS[@]}
     # TODO: instead of simple 'CUR/PREV', use the above to see where in the
@@ -36,12 +36,10 @@ _liq()
           OPTS="init bash-config";;
         orgs)
           OPTS="affiliate create list show select";;
-        packages) # deprecated
-          OPTS="audit build deploy lint link version-check";;
 				policies)
 					OPTS="document";;
         projects)
-          OPTS="close init publish sync test services";;
+          OPTS="build close init publish qa sync test services";;
         remotes)
           OPTS="add delete set-main";;
         required-services) # deprecated
@@ -66,7 +64,7 @@ _liq()
             services)
               OPTS="add list delete show"
               COMPREPLY=( $(compgen -W "${OPTS}" -- ${CUR}) );;
-          esac ;; # packages-actions
+          esac ;; # projects-actions
       esac
     fi
 

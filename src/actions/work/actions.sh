@@ -134,7 +134,7 @@ work-involve() {
       if echo "$PACKAGE" | jq -e ".dependencies and ((.dependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\"))) or (.devDependencies and (.devDependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\")))" > /dev/null; then
         :
         # Currently disabled
-        # packages-link "${PROJECT_NAME}:${NEW_PACKAGE_NAME}"
+        # projects-link "${PROJECT_NAME}:${NEW_PACKAGE_NAME}"
       fi
     done < <(find "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT_NAME}" -name "package.json" -not -path "*node_modules/*")
   fi
@@ -294,12 +294,12 @@ work-merge() {
 work-qa() {
   echo "Checking local repo status..."
   work-report
-  echo "Checking package dependencies..."
-  packages-version-check
-  echo "Linting code..."
-  packages-lint
-  echo "Running tests..."
-  packages-test
+
+  source "${LIQ_WORK_DB}/curr_work"
+  for PROJECT in $INVOLVED_PROJECTS; do
+    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT}"
+    projects-qa "$@"
+  done
 }
 
 work-report() {
@@ -659,13 +659,14 @@ work-submit() {
     local BUGS_URL
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
 
-    local ISSUE PROJ_ISSUES OTHER_ISSUES CLOSES_MSG
+    local ISSUE=''
+    local PROJ_ISSUES=''
+    local OTHER_ISSUES=''
     for ISSUE in $WORK_ISSUES; do
       if [[ $ISSUE == $BUGS_URL* ]]; then
         local NUMBER=${ISSUE/$BUGS_URL/}
         NUMBER=${NUMBER/\//}
         list-add-item PROJ_ISSUES "#${NUMBER}"
-        list-add-item CLOSES_MSG "closes #${NUMBER}"
       else
         list-add-item OTHER_ISSUES "${ISSUE}"
       fi
@@ -675,20 +676,22 @@ work-submit() {
     BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
 
     local DESC
+    # recal, the first line is used in the 'summary' (title), the rest goes in the "description"
     DESC=$(cat <<EOF
 Merge ${WORK_BRANCH} to master
 
+## Summary
+
 $MESSAGE
 
-$CLOSES_MSG
-
 ## Issues
-$(( test -z "${PROJ_ISSUES:-}" && test -z "${OTHER_ISSUES:-}" \
-    && echo 'none' ) \
-  || ( for ISSUE in ${PROJ_ISSUES:-}; do echo "* $ISSUE"; done; \
-       for ISSUE in ${OTHER_ISSUES:-}; do echo "* $ISSUE"; done; ))
-
 EOF)
+    if [[ -n "$PROJ_ISSUES" ]]; then
+      DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
+    fi
+    if [[ -n "$OTHER_ISSUES" ]]; then
+      DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
+    fi
     hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
   done
 }

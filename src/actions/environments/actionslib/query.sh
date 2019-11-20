@@ -41,14 +41,14 @@ environmentsFindProvidersFor() {
   local DEFAULT="${3:-}"
 
   local CAT_PACKAGE_PATHS=`getCatPackagePaths`
-  local SERVICES SERVICE_PACKAGES PROVIDER_OPTIONS CAT_PACKAGE_PATH
+  local SERVICES SERVICE_PROJECTS PROVIDER_OPTIONS CAT_PACKAGE_PATH
   for CAT_PACKAGE_PATH in "${BASE_DIR}" $CAT_PACKAGE_PATHS; do
     local NPM_PACKAGE=$(cat "${CAT_PACKAGE_PATH}/package.json")
     local PACKAGE_NAME=$(echo "$NPM_PACKAGE" | jq --raw-output ".name")
     local SERVICE
     for SERVICE in $((echo "$NPM_PACKAGE" | jq --raw-output ".catalyst.provides | .[] | select((.\"interface-classes\" | .[] | select(. == \"$REQ_SERVICE\")) | length > 0) | .name | @sh" 2>/dev/null || echo '') | tr -d "'"); do
       SERVICES=$((test -n "$SERVICE" && echo "$SERVICES '$SERVICE'") || echo "'$SERVICE'")
-      SERVICE_PACKAGES=$((test -n "$SERVICE_PACKAGES" && echo "$SERVICE_PACKAGES '$PACKAGE_NAME'") || echo "'$PACKAGE_NAME'")
+      SERVICE_PROJECTS=$((test -n "$SERVICE_PROJECTS" && echo "$SERVICE_PROJECTS '$PACKAGE_NAME'") || echo "'$PACKAGE_NAME'")
       local SERV_DESC
       environmentsServiceDescription SERV_DESC "$SERVICE" "$PACKAGE_NAME"
       list-add-item PROVIDER_OPTIONS "$SERV_DESC"

@@ -17,7 +17,7 @@ $(help-data-build)
     existing data will be cleared.
 
 The data commands deal exclusively with primary interface classes (${underline}iface${reset}). Thus even
-if the current package requires 'sql-mysql', the data commands will work and
+if the current project requires 'sql-mysql', the data commands will work and
 require an 'iface' designation of 'sql'.
 
 ${red_b}ALPHA NOTE:${reset} The only currently supported interface class is 'sql'.

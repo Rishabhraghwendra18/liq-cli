@@ -1,36 +1,66 @@
-runPackageScript() {
-  local TMP
-  TMP=$(setSimpleOptions IGNORE_MISSING SCRIPT_ONLY -- "$@") \
+_QA_OPTIONS_SPEC="UPDATE OPTIONS="
+
+## Main lib functions
+
+# Assumes we are already in the BASE_DIR of the target project.
+projectsNpmAudit() {
+  eval "$(setSimpleOptions $_QA_OPTIONS_SPEC -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
 
-  local ACTION="$1"; shift
+  if [[ -n "$UPDATE" ]]; then
+    npm audit fix
+  else npm audit; fi
+}
 
-  cd "${BASE_DIR}"
-  if cat package.json | jq -e "(.scripts | keys | map(select(. == \"$ACTION\")) | length) == 1" > /dev/null; then
-    npm run-script "${ACTION}"
-  elif [[ -n "$SCRIPT_ONLY" ]] && [[ -z "$IGNORE_MISSING" ]]; then # SCRIPT_ONLY is a temp. workaround to implement future behaior. See note below.
-    echoerrandexit "Did not find expected NPM script for '$ACTION'."
-  elif [[ -z "$SCRIPT_ONLY" ]]; then
-    # TODO: drop this; require that the package interface with catalyst-scripts
-    # through the the 'package-scripts'. This will avoid confusion and also
-    # allow "plain npm" to run more of what can be run. It will also allow users
-    # to override the scripts if they really want to. (But we should catch) that
-    # on an audit.
-    local CATALYST_SCRIPTS=$(npm bin)/catalyst-scripts
-    if [[ ! -x "$CATALYST_SCRIPTS" ]]; then
-      # TODO: offer to install and re-run
-      echoerr "This project does not appear to be using 'catalyst-scripts'. Try:"
-      echoerr ""
-      echoerrandexit "npm install --save-dev @liquid-labs/catalyst-scripts"
+# Assumes we are already in the BASE_DIR of the target project.
+projectsLint() {
+  eval "$(setSimpleOptions $_QA_OPTIONS_SPEC -- "$@")" \
+    || ( contextHelp; echoerrandexit "Bad options." )
+
+  if [[ -z "$UPDATE" ]]; then
+    projectsRunPackageScript lint
+  else projectsRunPackageScript lint-fix; fi
+}
+
+projectsVersionCheck() {
+  projectsRequireNpmCheck
+  # we are temporarily disabling the config manegement options
+  # see https://github.com/Liquid-Labs/liq-cli/issues/94
+  # IGNORE UNIGNORE:I SHOW_CONFIG:c UPDATE OPTIONS=
+  eval "$(setSimpleOptions $_QA_OPTIONS_SPEC IGNORE UNIGNORE:I SHOW_CONFIG:c UPDATE OPTIONS= -- "$@")" \
+    || ( help-projects; echoerrandexit "Bad options." )
+
+  local IGNORED_PACKAGES=""
+  # the '@sh' breaks '-e'; https://github.com/stedolan/jq/issues/1792
+  if echo "$PACKAGE" | jq -e --raw-output '.catalyst."version-check".ignore' > /dev/null; then
+    IGNORED_PACKAGES=`echo "$PACKAGE" | jq --raw-output '.catalyst."version-check".ignore | @sh' | tr -d "'" | sort`
+  fi
+  local CMD_OPTS="$OPTIONS"
+  if [[ -z "$CMD_OPTS" ]] && echo "$PACKAGE" | jq -e --raw-output '.catalyst."version-check".options' > /dev/null; then
+    CMD_OPTS=`echo "$PACKAGE" | jq --raw-output '.catalyst."version-check".options'`
+  fi
+
+  if [[ -n "$UPDATE" ]] \
+      && ( (( ${_OPTS_COUNT} > 2 )) || ( (( ${_OPTS_COUNT} == 2 )) && [[ -z $OPTIONS_SET ]]) ); then
+    echoerrandexit "'--update' option may only be combined with '--options'."
+  elif [[ -n "$IGNORE" ]] || [[ -n "$UNIGNORE" ]]; then
+    if [[ -n "$IGNORE" ]] && [[ -n "$UNIGNORE" ]]; then
+      echoerrandexit "Cannot 'ignore' and 'unignore' projects in same command."
     fi
-    # kill the debug trap because if the script exits with an error (as in a
-    # failed lint), that's OK and the debug doesn't provide any useful info.
-    "${CATALYST_SCRIPTS}" "${BASE_DIR}" $ACTION || true
+
+    projectsVersionCheckManageIgnored
+  elif [[ -n "$SHOW_CONFIG" ]]; then
+    projectsVersionCheckShowConfig
+  elif [[ -n "$OPTIONS_SET" ]] && (( $_OPTS_COUNT == 1 )); then
+    projectsVersionCheckSetOptions
+  else # actually do the check
+    projectsVersionCheckDo
   fi
 }
 
-requireNpmCheck() {
+## helper functions
+
+projectsRequireNpmCheck() {
   # TODO: offer to install
   if ! which -s npm-check; then
     echoerr "'npm-check' not found; could not check package status. Install with:"
@@ -41,8 +71,8 @@ requireNpmCheck() {
   fi
 }
 
-packagesVersionCheckManageIgnored() {
-  local IPACKAGES
+projectsVersionCheckManageIgnored() {
+  local IPACKAGES IPACKAGE
   if [[ -n "$IGNORE" ]]; then
     local LIVE_PACKAGES=`echo "$PACKAGE" | jq --raw-output '.dependencies | keys | @sh' | tr -d "'"`
     for IPACKAGE in $IGNORED_PACKAGES; do
@@ -72,9 +102,9 @@ packagesVersionCheckManageIgnored() {
   elif [[ -n "$UNIGNORE" ]]; then
     if [[ -z "$IGNORED_PACKAGES" ]]; then
       if (( $# > 0 )); then
-        echoerr "No packages currently ignored."
+        echoerr "No projects currently ignored."
       else
-        echo "No packages currently ignored."
+        echo "No projects currently ignored."
       fi
       exit
     fi
@@ -98,15 +128,15 @@ packagesVersionCheckManageIgnored() {
   echo "$PACKAGE" > "$PACKAGE_FILE"
 
   if [[ -n "$SHOW_CONFIG" ]]; then
-    projects-packages-version-check -c
+    projectsVersionCheck -c
   fi
 }
 
-packagesVersionCheckShowConfig() {
+projectsVersionCheckShowConfig() {
   if [[ -z "$IGNORED_PACKAGES" ]]; then
-    echo "Ignored packages: none"
+    echo "Ignored projects: none"
   else
-    echo "Ignored packages:"
+    echo "Ignored projects:"
     echo "$IGNORED_PACKAGES" | tr " " "\n" | sed -E 's/^/  /'
   fi
   if [[ -z "$CMD_OPTS" ]]; then
@@ -116,7 +146,7 @@ packagesVersionCheckShowConfig() {
   fi
 }
 
-packagesVersionCheckSetOptions() {
+projectsVersionCheckSetOptions() {
   if [[ -n "$OPTIONS" ]]; then
     PACKAGE=$(echo "$PACKAGE" | jq 'setpath(["catalyst","version-check","options"]; "'$OPTIONS'")')
   elif [[ -z "$OPTIONS" ]]; then
@@ -125,7 +155,7 @@ packagesVersionCheckSetOptions() {
   echo "$PACKAGE" > "$PACKAGE_FILE"
 }
 
-packagesVersionCheck() {
+projectsVersionCheckDo() {
   for IPACKAGE in $IGNORED_PACKAGES; do
     CMD_OPTS="${CMD_OPTS} -i ${IPACKAGE}"
   done
@@ -133,8 +163,4 @@ packagesVersionCheck() {
     CMD_OPTS="${CMD_OPTS} -u"
   fi
   npm-check ${CMD_OPTS} || true
-}
-
-packages-link-list() {
-  echoerrandexit 'Package link functions currently disabled.'
 }
