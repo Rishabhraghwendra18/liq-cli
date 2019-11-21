@@ -54,7 +54,7 @@ function environmentsAskIfSelect() {
     environments-select "${ENV_NAME}"
   }
 
-  yesno "Would you like to select the newly added '${ENV_NAME}'? (Y\n) " \
+  yes-no "Would you like to select the newly added '${ENV_NAME}'? (Y\n) " \
     Y \
     selectNewEnv \
     || true

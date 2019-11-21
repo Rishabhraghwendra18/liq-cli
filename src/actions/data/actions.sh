@@ -30,7 +30,7 @@ data-dump() {
         if [[ -f "$OUT_FILE" ]]; then
           function clearPrev() { rm "$OUT_FILE"; }
           function cancelDump() { echo "Bailing out..."; exit 0; }
-          yesno "Found existing dump for '$OUTPUT_SET_NAME'. Would you like to replace? (y\N) " \
+          yes-no "Found existing dump for '$OUTPUT_SET_NAME'. Would you like to replace? (y\N) " \
             N \
             clearPrev \
             cancelDump

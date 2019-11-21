@@ -81,7 +81,7 @@ orgs-create() {
       echo "$FIELD: ${!FIELD}"
     done
     echo
-    yesno "Are these values correct? (y/N) " N verify no-verify
+    yes-no "Are these values correct? (y/N) " N verify no-verify
   done
 
   cd ${LIQ_DB}

@@ -32,7 +32,7 @@ brewInstall() {
       echo "Catalyst CLI requires '${EXEC}'. Please install with Homebrew (recommended) or manually."
       exit
     }
-    yesno \
+    yes-no \
       "Catalyst CLI requires command '${EXEC}'. OK to attempt install via Homebrew? (Y/n) " \
       Y \
       doInstall \

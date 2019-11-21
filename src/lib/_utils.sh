@@ -133,7 +133,7 @@ requireEnvironment() {
   CURR_ENV=`readlink "${CURR_ENV_FILE}" | xargs basename`
 }
 
-yesno() {
+yes-no() {
   default-yes() { return 0; }
   default-no() { return 1; } # bash fals-y
 
@@ -152,7 +152,7 @@ yesno() {
         $HANDLE_NO; return $?;;
       *)
         echo "You must choose an answer."
-        yesno "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO
+        yes-no "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO
     esac
   else
     case "$ANSWER" in
@@ -162,7 +162,7 @@ yesno() {
         $HANDLE_NO; return $?;;
       *)
         echo "Did not understand response, please answer 'y(es)' or 'n(o)'."
-        yesno "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO;;
+        yes-no "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO;;
     esac
   fi
 }
