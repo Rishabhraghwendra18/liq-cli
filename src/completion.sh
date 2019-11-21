@@ -11,7 +11,7 @@ _liq()
     # Using 'GROUPS' was causing errors; set by some magic.
     local ACTION_GROUPS="data environments orgs policies projects remotes required-services services work"
     COMPREPLY=()
-    # local WORD_COUNT=${#COMP_WORDS[@]}
+    local WORD_COUNT=${#COMP_WORDS[@]}
     # TODO: instead of simple 'CUR/PREV', use the above to see where in the
     # command we are. This will allow us to implement 'exhaustive' completion.
     # Switch on what we need: group, action, action OPTS, or action args.
@@ -20,7 +20,7 @@ _liq()
     GROUP="${COMP_WORDS[1]}"
     ACTION="${COMP_WORDS[2]}"
 
-    if (( ${#COMP_WORDS[@]} <= 3 )); then
+    if (( $WORD_COUNT <= 3 )); then
       case "${PREV}" in
         liq)
           OPTS="${GLOBAL_ACTIONS} ${ACTION_GROUPS}";;
@@ -35,7 +35,7 @@ _liq()
         meta)
           OPTS="init bash-config";;
         orgs)
-          OPTS="affiliate create list show select";;
+          OPTS="affiliate create list show select staff";;
 				policies)
 					OPTS="document";;
         projects)
@@ -49,25 +49,28 @@ _liq()
         work)
           OPTS="diff-master edit ignore-rest involve merge qa report resume save stage start status stop sync";;
       esac
-
-      COMPREPLY=( $(compgen -W "${OPTS}" -- ${CUR}) )
     else
       case "${GROUP}" in
+        projects)
+          case "${ACTION}" in
+            services)
+              OPTS="add list delete show";;
+          esac ;; # projects-actions
+        orgs)
+          if [[ "${ACTION}" == staff ]] && (( $WORD_COUNT == 4 )); then
+            OPTS="add list remove"
+          fi;;
         work)
           case "${ACTION}" in
             stage)
               COMPREPLY=( $(compgen -o nospace -W "$(for d in ${CUR}*; do [[ -d "$d" ]] && echo $d/ || echo $d; done)" -- ${CUR}) )
+              return 0
             ;;
           esac ;;# work-actions
-        projects)
-          case "${ACTION}" in
-            services)
-              OPTS="add list delete show"
-              COMPREPLY=( $(compgen -W "${OPTS}" -- ${CUR}) );;
-          esac ;; # projects-actions
       esac
     fi
 
+    COMPREPLY=( $(compgen -W "${OPTS}" -- ${CUR}) )
     return 0
 }
 
