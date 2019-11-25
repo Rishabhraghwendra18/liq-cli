@@ -62,13 +62,13 @@ environments-delete() {
   }
 
   if [[ "$ENV_NAME" == "$CURR_ENV" ]]; then
-    yesno \
+    yes-no \
       "Confirm deletion of current environment '${CURR_ENV}': (y/N) " \
       N \
       onDeleteCurrent \
       onDeleteCancel
   elif [[ -f "${LIQ_ENV_DB}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
-    yesno \
+    yes-no \
       "Confirm deletion of environment '${ENV_NAME}': (y/N) " \
       N \
       onDeleteConfirm \

@@ -13,6 +13,9 @@ source ./orgs/actions.sh
 source ./orgs/help.sh
 source ./orgs/lib.sh
 
+source ./orgs/staff/actions.sh
+source ./orgs/staff/lib.sh
+
 source ./policies/actions.sh
 source ./policies/help.sh
 source ./policies/lib.sh

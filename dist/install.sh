@@ -350,7 +350,7 @@ colorerr() {
   # TODO: in the case of long output, it would be nice to notice whether we saw
   # error or not and tell the user to scroll back and check the logs. e.g., if
   # we see an error and then 20+ lines of stuff, then emit advice.
-  (eval "$* 2> >(echo -n \"${red}\"; cat -; tput sgr0)")
+  (eval "$@ 2> >(echo -n \"${red}\"; cat -; tput sgr0)")
 }
 
 # TODO: is this better? We switched to it for awhile, but there were problems.
@@ -457,7 +457,7 @@ requireEnvironment() {
   CURR_ENV=`readlink "${CURR_ENV_FILE}" | xargs basename`
 }
 
-yesno() {
+yes-no() {
   default-yes() { return 0; }
   default-no() { return 1; } # bash fals-y
 
@@ -476,7 +476,7 @@ yesno() {
         $HANDLE_NO; return $?;;
       *)
         echo "You must choose an answer."
-        yesno "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO
+        yes-no "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO
     esac
   else
     case "$ANSWER" in
@@ -486,7 +486,7 @@ yesno() {
         $HANDLE_NO; return $?;;
       *)
         echo "Did not understand response, please answer 'y(es)' or 'n(o)'."
-        yesno "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO;;
+        yes-no "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO;;
     esac
   fi
 }
@@ -738,7 +738,7 @@ brewInstall() {
       echo "Catalyst CLI requires '${EXEC}'. Please install with Homebrew (recommended) or manually."
       exit
     }
-    yesno \
+    yes-no \
       "Catalyst CLI requires command '${EXEC}'. OK to attempt install via Homebrew? (Y/n) " \
       Y \
       doInstall \

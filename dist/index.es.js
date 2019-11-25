@@ -1,55 +1,5 @@
 import { existsSync, writeFileSync, readFileSync } from 'fs';
 
-function _arrayWithHoles(arr) {
-  if (Array.isArray(arr)) return arr;
-}
-
-var arrayWithHoles = _arrayWithHoles;
-
-function _iterableToArrayLimit(arr, i) {
-  if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) {
-    return;
-  }
-
-  var _arr = [];
-  var _n = true;
-  var _d = false;
-  var _e = undefined;
-
-  try {
-    for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
-      _arr.push(_s.value);
-
-      if (i && _arr.length === i) break;
-    }
-  } catch (err) {
-    _d = true;
-    _e = err;
-  } finally {
-    try {
-      if (!_n && _i["return"] != null) _i["return"]();
-    } finally {
-      if (_d) throw _e;
-    }
-  }
-
-  return _arr;
-}
-
-var iterableToArrayLimit = _iterableToArrayLimit;
-
-function _nonIterableRest() {
-  throw new TypeError("Invalid attempt to destructure non-iterable instance");
-}
-
-var nonIterableRest = _nonIterableRest;
-
-function _slicedToArray(arr, i) {
-  return arrayWithHoles(arr) || iterableToArrayLimit(arr, i) || nonIterableRest();
-}
-
-var slicedToArray = _slicedToArray;
-
 function _classCallCheck(instance, Constructor) {
   if (!(instance instanceof Constructor)) {
     throw new TypeError("Cannot call a class as a function");
@@ -75,23 +25,6 @@ function _createClass(Constructor, protoProps, staticProps) {
 }
 
 var createClass = _createClass;
-
-function _defineProperty(obj, key, value) {
-  if (key in obj) {
-    Object.defineProperty(obj, key, {
-      value: value,
-      enumerable: true,
-      configurable: true,
-      writable: true
-    });
-  } else {
-    obj[key] = value;
-  }
-
-  return obj;
-}
-
-var defineProperty = _defineProperty;
 
 var commonjsGlobal = typeof globalThis !== 'undefined' ? globalThis : typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
@@ -194,38 +127,283 @@ var tsv = createCommonjsModule(function (module) {
 }).call(commonjsGlobal);
 });
 
-var _temp, _data;
-var Roles = (_temp =
+var _temp, _headers, _fileName, _keys, _data, _cursor;
+
+var item = function item(keys, fields, pos) {
+  if (keys.length !== fields.length) throw new Error("Found ".concat(keys.length, " keys but ").concat(fields.length, " fields."));
+  var item = {
+    _pos: pos
+  };
+
+  for (var i = 0; i < fields.length; i += 1) {
+    item[keys[i]] = fields[i];
+  }
+
+  return item;
+};
+
+var TsvExt = (_temp =
 /*#__PURE__*/
 function () {
-  function Roles(file) {
-    classCallCheck(this, Roles);
+  function TsvExt(headers, keys, fileName) {
+    classCallCheck(this, TsvExt);
+
+    _headers.set(this, {
+      writable: true,
+      value: void 0
+    });
+
+    _fileName.set(this, {
+      writable: true,
+      value: void 0
+    });
+
+    _keys.set(this, {
+      writable: true,
+      value: void 0
+    });
 
     _data.set(this, {
       writable: true,
       value: void 0
     });
 
-    var contents = readFileSync(file, 'utf8');
+    _cursor.set(this, {
+      writable: true,
+      value: void 0
+    });
+
+    this.headers = headers;
+    this.fileName = fileName;
+    var contents = readFileSync(fileName, 'utf8'); // allow blank lines (which are ignored)
+
     var lines = contents.split("\n");
+    lines.shift(); // remove headers line
+
     var filteredLines = lines.filter(function (line) {
       return !line.match(/^\s*$/);
     });
+    tsv.header = false;
+    this.keys = keys;
     this.data = tsv.parse(filteredLines.join("\n"));
   }
 
-  createClass(Roles, [{
+  createClass(TsvExt, [{
+    key: "reset",
+    value: function reset() {
+      this.cursor = -1;
+    }
+  }, {
+    key: "next",
+    value: function next() {
+      this.cursor += 1;
+      if (this.cursor > this.length) return null;else return item(this.keys, this.data[this.cursor], this.cursor);
+    }
+  }, {
+    key: "add",
+    value: function add(item) {
+      var line = [];
+      this.keys.forEach(function (key) {
+        var field = item[key];
+        if (field === undefined) throw new Error("Item does not define key '".concat(key, "'."));
+        line.push(field);
+      });
+      var failDesc;
+      if (this.notUnique && (failDesc = this.notUnique(this.data.slice(), item))) throw new Error(failDesc);
+      this.data.push(line);
+    }
+  }, {
+    key: "remove",
+    value: function remove(key) {
+      var _this = this;
+
+      var index = this.data.findIndex(function (line) {
+        return _this.matchKey(line, key);
+      });
+      if (index >= 0) return this.data.splice(index, 1);else return null;
+    }
+  }, {
+    key: "write",
+    value: function write() {
+      writeFileSync(this.fileName, "".concat(this.headers.join("\t"), "\n").concat(this.data.map(function (line) {
+        return line.join("\t");
+      }).join("\n"), "\n"));
+    }
+  }, {
     key: "length",
     get: function get() {
       return this.data.length;
     }
   }]);
 
-  return Roles;
-}(), _data = new WeakMap(), _temp);
+  return TsvExt;
+}(), _headers = new WeakMap(), _fileName = new WeakMap(), _keys = new WeakMap(), _data = new WeakMap(), _cursor = new WeakMap(), _temp);
 
-var _temp$1, _docDir, _roles, _rolesFile, _terms;
-var Policies = (_temp$1 =
+function _arrayWithHoles(arr) {
+  if (Array.isArray(arr)) return arr;
+}
+
+var arrayWithHoles = _arrayWithHoles;
+
+function _iterableToArrayLimit(arr, i) {
+  if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) {
+    return;
+  }
+
+  var _arr = [];
+  var _n = true;
+  var _d = false;
+  var _e = undefined;
+
+  try {
+    for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+      _arr.push(_s.value);
+
+      if (i && _arr.length === i) break;
+    }
+  } catch (err) {
+    _d = true;
+    _e = err;
+  } finally {
+    try {
+      if (!_n && _i["return"] != null) _i["return"]();
+    } finally {
+      if (_d) throw _e;
+    }
+  }
+
+  return _arr;
+}
+
+var iterableToArrayLimit = _iterableToArrayLimit;
+
+function _nonIterableRest() {
+  throw new TypeError("Invalid attempt to destructure non-iterable instance");
+}
+
+var nonIterableRest = _nonIterableRest;
+
+function _slicedToArray(arr, i) {
+  return arrayWithHoles(arr) || iterableToArrayLimit(arr, i) || nonIterableRest();
+}
+
+var slicedToArray = _slicedToArray;
+
+function _defineProperty(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+  } else {
+    obj[key] = value;
+  }
+
+  return obj;
+}
+
+var defineProperty = _defineProperty;
+
+var _typeof_1 = createCommonjsModule(function (module) {
+function _typeof2(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof2 = function _typeof2(obj) { return typeof obj; }; } else { _typeof2 = function _typeof2(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof2(obj); }
+
+function _typeof(obj) {
+  if (typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol") {
+    module.exports = _typeof = function _typeof(obj) {
+      return _typeof2(obj);
+    };
+  } else {
+    module.exports = _typeof = function _typeof(obj) {
+      return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : _typeof2(obj);
+    };
+  }
+
+  return _typeof(obj);
+}
+
+module.exports = _typeof;
+});
+
+function _assertThisInitialized(self) {
+  if (self === void 0) {
+    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+  }
+
+  return self;
+}
+
+var assertThisInitialized = _assertThisInitialized;
+
+function _possibleConstructorReturn(self, call) {
+  if (call && (_typeof_1(call) === "object" || typeof call === "function")) {
+    return call;
+  }
+
+  return assertThisInitialized(self);
+}
+
+var possibleConstructorReturn = _possibleConstructorReturn;
+
+var getPrototypeOf = createCommonjsModule(function (module) {
+function _getPrototypeOf(o) {
+  module.exports = _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {
+    return o.__proto__ || Object.getPrototypeOf(o);
+  };
+  return _getPrototypeOf(o);
+}
+
+module.exports = _getPrototypeOf;
+});
+
+var setPrototypeOf = createCommonjsModule(function (module) {
+function _setPrototypeOf(o, p) {
+  module.exports = _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
+    o.__proto__ = p;
+    return o;
+  };
+
+  return _setPrototypeOf(o, p);
+}
+
+module.exports = _setPrototypeOf;
+});
+
+function _inherits(subClass, superClass) {
+  if (typeof superClass !== "function" && superClass !== null) {
+    throw new TypeError("Super expression must either be null or a function");
+  }
+
+  subClass.prototype = Object.create(superClass && superClass.prototype, {
+    constructor: {
+      value: subClass,
+      writable: true,
+      configurable: true
+    }
+  });
+  if (superClass) setPrototypeOf(subClass, superClass);
+}
+
+var inherits = _inherits;
+
+var _class, _temp$1;
+var Roles = (_temp$1 = _class =
+/*#__PURE__*/
+function (_TsvExt) {
+  inherits(Roles, _TsvExt);
+
+  function Roles(fileName) {
+    classCallCheck(this, Roles);
+
+    return possibleConstructorReturn(this, getPrototypeOf(Roles).call(this, Roles.keys, fileName));
+  }
+
+  return Roles;
+}(TsvExt), defineProperty(_class, "keys", ['name', 'application', 'superRole', 'description', 'notes']), _temp$1);
+
+var _temp$2, _docDir, _roles, _rolesFile, _terms;
+var Policies = (_temp$2 =
 /*#__PURE__*/
 function () {
   function Policies() {
@@ -323,7 +501,7 @@ function () {
   }]);
 
   return Policies;
-}(), _docDir = new WeakMap(), _roles = new WeakMap(), _rolesFile = new WeakMap(), _terms = new WeakMap(), _temp$1);
+}(), _docDir = new WeakMap(), _roles = new WeakMap(), _rolesFile = new WeakMap(), _terms = new WeakMap(), _temp$2);
 
 var refreshDocuments = function refreshDocuments(destDir, inputFiles) {
   var policies = new Policies();
@@ -334,5 +512,166 @@ var refreshDocuments = function refreshDocuments(destDir, inputFiles) {
   policies.generateDocuments();
 };
 
-export { refreshDocuments };
+function _classCallCheck$1(instance, Constructor) {
+  if (!(instance instanceof Constructor)) {
+    throw new TypeError("Cannot call a class as a function");
+  }
+}
+
+var classCallCheck$1 = _classCallCheck$1;
+
+function _defineProperties$1(target, props) {
+  for (var i = 0; i < props.length; i++) {
+    var descriptor = props[i];
+    descriptor.enumerable = descriptor.enumerable || false;
+    descriptor.configurable = true;
+    if ("value" in descriptor) descriptor.writable = true;
+    Object.defineProperty(target, descriptor.key, descriptor);
+  }
+}
+
+function _createClass$1(Constructor, protoProps, staticProps) {
+  if (protoProps) _defineProperties$1(Constructor.prototype, protoProps);
+  if (staticProps) _defineProperties$1(Constructor, staticProps);
+  return Constructor;
+}
+
+var createClass$1 = _createClass$1;
+
+function createCommonjsModule$1(fn, module) {
+	return module = { exports: {} }, fn(module, module.exports), module.exports;
+}
+
+var _typeof_1$1 = createCommonjsModule$1(function (module) {
+function _typeof2(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof2 = function _typeof2(obj) { return typeof obj; }; } else { _typeof2 = function _typeof2(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof2(obj); }
+
+function _typeof(obj) {
+  if (typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol") {
+    module.exports = _typeof = function _typeof(obj) {
+      return _typeof2(obj);
+    };
+  } else {
+    module.exports = _typeof = function _typeof(obj) {
+      return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : _typeof2(obj);
+    };
+  }
+
+  return _typeof(obj);
+}
+
+module.exports = _typeof;
+});
+
+function _assertThisInitialized$1(self) {
+  if (self === void 0) {
+    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
+  }
+
+  return self;
+}
+
+var assertThisInitialized$1 = _assertThisInitialized$1;
+
+function _possibleConstructorReturn$1(self, call) {
+  if (call && (_typeof_1$1(call) === "object" || typeof call === "function")) {
+    return call;
+  }
+
+  return assertThisInitialized$1(self);
+}
+
+var possibleConstructorReturn$1 = _possibleConstructorReturn$1;
+
+var getPrototypeOf$1 = createCommonjsModule$1(function (module) {
+function _getPrototypeOf(o) {
+  module.exports = _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {
+    return o.__proto__ || Object.getPrototypeOf(o);
+  };
+  return _getPrototypeOf(o);
+}
+
+module.exports = _getPrototypeOf;
+});
+
+var setPrototypeOf$1 = createCommonjsModule$1(function (module) {
+function _setPrototypeOf(o, p) {
+  module.exports = _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
+    o.__proto__ = p;
+    return o;
+  };
+
+  return _setPrototypeOf(o, p);
+}
+
+module.exports = _setPrototypeOf;
+});
+
+function _inherits$1(subClass, superClass) {
+  if (typeof superClass !== "function" && superClass !== null) {
+    throw new TypeError("Super expression must either be null or a function");
+  }
+
+  subClass.prototype = Object.create(superClass && superClass.prototype, {
+    constructor: {
+      value: subClass,
+      writable: true,
+      configurable: true
+    }
+  });
+  if (superClass) setPrototypeOf$1(subClass, superClass);
+}
+
+var inherits$1 = _inherits$1;
+
+function _defineProperty$1(obj, key, value) {
+  if (key in obj) {
+    Object.defineProperty(obj, key, {
+      value: value,
+      enumerable: true,
+      configurable: true,
+      writable: true
+    });
+  } else {
+    obj[key] = value;
+  }
+
+  return obj;
+}
+
+var defineProperty$1 = _defineProperty$1;
+
+var _class$1, _temp$3;
+var Staff = (_temp$3 = _class$1 =
+/*#__PURE__*/
+function (_TsvExt) {
+  inherits$1(Staff, _TsvExt);
+
+  function Staff(fileName) {
+    var _this;
+
+    classCallCheck$1(this, Staff);
+
+    _this = possibleConstructorReturn$1(this, getPrototypeOf$1(Staff).call(this, Staff.headers, Staff.keys, fileName));
+
+    defineProperty$1(assertThisInitialized$1(_this), "matchKey", function (line, key) {
+      return line[0] === key;
+    });
+
+    return _this;
+  }
+
+  createClass$1(Staff, [{
+    key: "notUnique",
+    value: function notUnique(data, item) {
+      var i;
+      return -1 !== (i = data.findIndex(function (line) {
+        return line[0].toLowerCase() === item.email.toLowerCase();
+      })) && "Staff member with email '".concat(item.email, "' already exists at entry ").concat(i + 1, ".");
+    }
+  }]);
+
+  return Staff;
+}(TsvExt), defineProperty$1(_class$1, "headers", ['Email', 'Family Name', 'Given Name', 'Start Date']), defineProperty$1(_class$1, "keys", ['email', 'familyName', 'givenName', 'startDate']), _temp$3);
+
+export { Staff, refreshDocuments };
 //# sourceMappingURL=index.es.js.map

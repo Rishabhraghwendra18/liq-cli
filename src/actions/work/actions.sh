@@ -206,7 +206,7 @@ work-merge() {
   if [[ -z "$INVOLVED_PROJECTS" ]]; then
     echoerrandexit "No projects involved in the current unit of work '${WORK_BRANCH}'."
   fi
-  if (( $# == 0 )) && ! yesno "Are you sure want to merge the entire unit of work? (y/N)" 'N'; then
+  if (( $# == 0 )) && ! yes-no "Are you sure want to merge the entire unit of work? (y/N)" 'N'; then
     return
   fi
 
