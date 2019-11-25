@@ -26,7 +26,7 @@ colorerr() {
   # TODO: in the case of long output, it would be nice to notice whether we saw
   # error or not and tell the user to scroll back and check the logs. e.g., if
   # we see an error and then 20+ lines of stuff, then emit advice.
-  (eval "$* 2> >(echo -n \"${red}\"; cat -; tput sgr0)")
+  (eval "$@ 2> >(echo -n \"${red}\"; cat -; tput sgr0)")
 }
 
 # TODO: is this better? We switched to it for awhile, but there were problems.

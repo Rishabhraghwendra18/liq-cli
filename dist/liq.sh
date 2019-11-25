@@ -384,6 +384,80 @@ require-answer() {
     fi
   done
 }
+
+yes-no() {
+  default-yes() { return 0; }
+  default-no() { return 1; } # bash false-y
+
+  local PROMPT="$1"
+  local DEFAULT=$2
+  local HANDLE_YES="${3:-default-yes}"
+  local HANDLE_NO="${4:-default-no}" # default to noop
+
+  local ANSWER=''
+  read -p "$PROMPT" ANSWER
+  if [ -z "$ANSWER" ]; then
+    case "$DEFAULT" in
+      Y*|y*)
+        $HANDLE_YES; return $?;;
+      N*|n*)
+        $HANDLE_NO; return $?;;
+      *)
+        echo "You must choose an answer."
+        yes-no "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO
+    esac
+  else
+    case "$(echo "$ANSWER" | tr '[:upper:]' '[:lower:]')" in
+      y|yes)
+        $HANDLE_YES; return $?;;
+      n|no)
+        $HANDLE_NO; return $?;;
+      *)
+        echo "Did not understand response, please answer 'y(es)' or 'n(o)'."
+        yes-no "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO;;
+    esac
+  fi
+}
+
+gather-answers() {
+  eval "$(setSimpleOptions VERIFY PROMPTER= -- "$@")"
+  local FIELDS="${1}"
+
+  local FIELD VERIFIED
+  while [[ "${VERIFIED}" != true ]]; do
+    # collect answers
+    for FIELD in $FIELDS; do
+      local OPTS=''
+      # if VERIFIED is set, but false, then we need to force require-answer to set the var
+      [[ "$VERIFIED" == false ]] && OPTS='--force '
+      if [[ "${FIELD}" == *: ]]; then
+        FIELD=${FIELD/%:/}
+        OPTS="${OPTS}--multi-line "
+      fi
+      local LABEL="$FIELD"
+      $(tr '[:lower:]' '[:upper:]' <<< ${foo:0:1})${foo:1}
+      LABEL="${LABEL:0:1}$(echo "${LABEL:1}" | tr '[:upper:]' '[:lower:]' | tr '_' ' ')"
+      local PROMPT
+      PROMPT="$({ [[ -n "$PROMPTER" ]] && $PROMPTER "$FIELD" "$LABEL"; } || echo "${LABEL}: ")"
+      require-answer ${OPTS} "${PROMPT}" $FIELD
+    done
+
+    # verify, as necessary
+    if [[ -z "${VERIFY}" ]]; then
+      VERIFIED=true
+    else
+      verify() { VERIFIED=true; }
+      no-verify() { VERIFIED=false; }
+      echo
+      echo "Verify the following:"
+      for FIELD in $FIELDS; do
+        echo "$FIELD: ${!FIELD}"
+      done
+      echo
+      yes-no "Are these values correct? (y/N) " N verify no-verify
+    fi
+  done
+}
 function real_path {
   local FILE="${1:-}"
   if [[ -z "$FILE" ]]; then
@@ -633,7 +707,7 @@ colorerr() {
   # TODO: in the case of long output, it would be nice to notice whether we saw
   # error or not and tell the user to scroll back and check the logs. e.g., if
   # we see an error and then 20+ lines of stuff, then emit advice.
-  (eval "$* 2> >(echo -n \"${red}\"; cat -; tput sgr0)")
+  (eval "$@ 2> >(echo -n \"${red}\"; cat -; tput sgr0)")
 }
 
 # TODO: is this better? We switched to it for awhile, but there were problems.
@@ -740,7 +814,7 @@ requireEnvironment() {
   CURR_ENV=`readlink "${CURR_ENV_FILE}" | xargs basename`
 }
 
-yesno() {
+yes-no() {
   default-yes() { return 0; }
   default-no() { return 1; } # bash fals-y
 
@@ -759,7 +833,7 @@ yesno() {
         $HANDLE_NO; return $?;;
       *)
         echo "You must choose an answer."
-        yesno "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO
+        yes-no "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO
     esac
   else
     case "$ANSWER" in
@@ -769,7 +843,7 @@ yesno() {
         $HANDLE_NO; return $?;;
       *)
         echo "Did not understand response, please answer 'y(es)' or 'n(o)'."
-        yesno "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO;;
+        yes-no "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO;;
     esac
   fi
 }
@@ -999,6 +1073,8 @@ LIQ_ENV_DB="${LIQ_DB}/environments"
 LIQ_ORG_DB="${LIQ_DB}/orgs"
 LIQ_WORK_DB="${LIQ_DB}/work"
 LIQ_ENV_LOGS="${LIQ_DB}/logs"
+
+LIQ_DIST_DIR="$(dirname "$(real_path "${0}")")"
 
 # defined in $CATALYST_SETTING; during load in dispatch.sh
 LIQ_PLAYGROUND=''
@@ -1308,7 +1384,7 @@ data-dump() {
         if [[ -f "$OUT_FILE" ]]; then
           function clearPrev() { rm "$OUT_FILE"; }
           function cancelDump() { echo "Bailing out..."; exit 0; }
-          yesno "Found existing dump for '$OUTPUT_SET_NAME'. Would you like to replace? (y\N) " \
+          yes-no "Found existing dump for '$OUTPUT_SET_NAME'. Would you like to replace? (y\N) " \
             N \
             clearPrev \
             cancelDump
@@ -1522,7 +1598,7 @@ function environmentsAskIfSelect() {
     environments-select "${ENV_NAME}"
   }
 
-  yesno "Would you like to select the newly added '${ENV_NAME}'? (Y\n) " \
+  yes-no "Would you like to select the newly added '${ENV_NAME}'? (Y\n) " \
     Y \
     selectNewEnv \
     || true
@@ -2133,13 +2209,13 @@ environments-delete() {
   }
 
   if [[ "$ENV_NAME" == "$CURR_ENV" ]]; then
-    yesno \
+    yes-no \
       "Confirm deletion of current environment '${CURR_ENV}': (y/N) " \
       N \
       onDeleteCurrent \
       onDeleteCancel
   elif [[ -f "${LIQ_ENV_DB}/${PACKAGE_NAME}/${ENV_NAME}" ]]; then
-    yesno \
+    yes-no \
       "Confirm deletion of environment '${ENV_NAME}': (y/N) " \
       N \
       onDeleteConfirm \
@@ -2510,7 +2586,7 @@ orgs-create() {
       echo "$FIELD: ${!FIELD}"
     done
     echo
-    yesno "Are these values correct? (y/N) " N verify no-verify
+    yes-no "Are these values correct? (y/N) " N verify no-verify
   done
 
   cd ${LIQ_DB}
@@ -2685,10 +2761,10 @@ orgsOrgList() {
     ( ( test -z "$LIST_ONLY" && test "$ORG" == "${CURR_ORG:-}" && echo -n '* ' ) || echo -n '  ' ) && echo "$ORG"
   done
 }
+
 orgs-staff() {
   local ACTION="${1}"; shift
   local CMD="orgs-staff-${ACTION}"
-  echo $CMD
 
   if [[ $(type -t "${CMD}" || echo '') == 'function' ]]; then
     ${CMD} "$@"
@@ -2698,7 +2774,82 @@ orgs-staff() {
 }
 
 orgs-staff-add() {
-  :
+  local FIELDS="EMAIL FAMILY_NAME GIVEN_NAME START_DATE"
+  local FIELDS_SPEC="${FIELDS}"
+  FIELDS_SPEC="$(echo "$FIELDS_SPEC" | sed -e 's/ /= /g')="
+  eval "$(setSimpleOptions $FIELDS_SPEC NO_CONFIRM:C -- "$@")"
+
+  source "${CURR_ORG_DIR}/public/settings.sh"
+
+  local ALL_SPECIFIED FIELD
+  ALL_SPECIFIED=true
+  for FIELD in $FIELDS; do
+    if [[ -z "${!FIELD}" ]]; then ALL_SPECIFIED=''; break; fi
+  done
+
+  if [[ -z "$ALL_SPECIFIED" ]] || [[ -z "$NO_CONFIRM" ]]; then
+    prompter() {
+      local FIELD="$1"
+      local LABEL="$2"
+      if [[ "$FIELD" == 'START_DATE' ]]; then
+        echo "$LABEL (YYYY-MM-DD): "
+      else
+        echo "$LABEL: "
+      fi
+    }
+
+    echo "Adding staff member to ${ORG_COMMON_NAME}..."
+    local OPTS='--prompter=prompter'
+    if [[ -z "$NO_CONFIRM" ]]; then OPTS="${OPTS} --verify"; fi
+    gather-answers ${OPTS} "$FIELDS"
+  fi
+
+  local STAFF_FILE="${CURR_ORG_DIR}/sensitive/staff.tsv"
+  [[ -f "$STAFF_FILE" ]] || touch "$STAFF_FILE"
+
+  trap - ERR
+  NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "try {
+      const { Staff } = require('${LIQ_DIST_DIR}');
+      const staff = new Staff('${STAFF_FILE}');
+      staff.add({ email: '${EMAIL}',
+                  familyName: '${FAMILY_NAME}',
+                  givenName: '${GIVEN_NAME}',
+                  startDate: '${START_DATE}'});
+      staff.write();
+    } catch (e) { console.error(e.message); process.exit(1); }
+    console.log(\"Staff memebr '${EMAIL}' added.\");" 2> >(while read line; do echo -e "${red}${line}${reset}" >&2; done)
+  orgsStaffCommit
+}
+
+orgs-staff-list() {
+  eval "$(setSimpleOptions ENUMERATE -- "$@")"
+  local STAFF_FILE="${CURR_ORG_DIR}/sensitive/staff.tsv"
+  if [[ -z "$ENUMERATE" ]]; then
+    column -s $'\t' -t "${STAFF_FILE}"
+  else
+    (echo -e "Entry #\t$(head -n 1 "${STAFF_FILE}")"; tail +2 "${STAFF_FILE}" | cat -ne ) \
+      | column -s $'\t' -t
+  fi
+}
+
+orgs-staff-remove() {
+  local EMAIL="${1}"
+  local STAFF_FILE="${CURR_ORG_DIR}/sensitive/staff.tsv"
+
+  trap - ERR
+  NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "
+    const { Staff } = require('${LIQ_DIST_DIR}');
+    const staff = new Staff('${STAFF_FILE}');
+    if (staff.remove('${EMAIL}')) { staff.write(); }
+    else { console.error(\"No such staff member '${EMAIL}'.\"); process.exit(1); }
+    console.log(\"Staff member '${EMAIL}' removed.\");" 2> >(while read line; do echo -e "${red}${line}${reset}" >&2; done)
+  orgsStaffCommit
+}
+orgsStaffCommit() {
+  cd "${CURR_ORG_DIR}/sensitive" \
+    && git add staff.tsv \
+    && git commit -am "Added staff member '${EMAIL}'." \
+    && git push
 }
 
 requirements-policies() {
@@ -4233,7 +4384,7 @@ work-merge() {
   if [[ -z "$INVOLVED_PROJECTS" ]]; then
     echoerrandexit "No projects involved in the current unit of work '${WORK_BRANCH}'."
   fi
-  if (( $# == 0 )) && ! yesno "Are you sure want to merge the entire unit of work? (y/N)" 'N'; then
+  if (( $# == 0 )) && ! yes-no "Are you sure want to merge the entire unit of work? (y/N)" 'N'; then
     return
   fi
 

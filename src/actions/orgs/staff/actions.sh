@@ -23,8 +23,7 @@ orgs-staff-add() {
     if [[ -z "${!FIELD}" ]]; then ALL_SPECIFIED=''; break; fi
   done
 
-  if [[ -z "$ALL_SPECIFIED" ]]; then
-
+  if [[ -z "$ALL_SPECIFIED" ]] || [[ -z "$NO_CONFIRM" ]]; then
     prompter() {
       local FIELD="$1"
       local LABEL="$2"
@@ -35,11 +34,50 @@ orgs-staff-add() {
       fi
     }
 
-    echo "Adding staff member to ${ORG_COMMON_NAME}:"
+    echo "Adding staff member to ${ORG_COMMON_NAME}..."
     local OPTS='--prompter=prompter'
     if [[ -z "$NO_CONFIRM" ]]; then OPTS="${OPTS} --verify"; fi
     gather-answers ${OPTS} "$FIELDS"
   fi
 
-  
+  local STAFF_FILE="${CURR_ORG_DIR}/sensitive/staff.tsv"
+  [[ -f "$STAFF_FILE" ]] || touch "$STAFF_FILE"
+
+  trap - ERR
+  NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "try {
+      const { Staff } = require('${LIQ_DIST_DIR}');
+      const staff = new Staff('${STAFF_FILE}');
+      staff.add({ email: '${EMAIL}',
+                  familyName: '${FAMILY_NAME}',
+                  givenName: '${GIVEN_NAME}',
+                  startDate: '${START_DATE}'});
+      staff.write();
+    } catch (e) { console.error(e.message); process.exit(1); }
+    console.log(\"Staff memebr '${EMAIL}' added.\");" 2> >(while read line; do echo -e "${red}${line}${reset}" >&2; done)
+  orgsStaffCommit
+}
+
+orgs-staff-list() {
+  eval "$(setSimpleOptions ENUMERATE -- "$@")"
+  local STAFF_FILE="${CURR_ORG_DIR}/sensitive/staff.tsv"
+  if [[ -z "$ENUMERATE" ]]; then
+    column -s $'\t' -t "${STAFF_FILE}"
+  else
+    (echo -e "Entry #\t$(head -n 1 "${STAFF_FILE}")"; tail +2 "${STAFF_FILE}" | cat -ne ) \
+      | column -s $'\t' -t
+  fi
+}
+
+orgs-staff-remove() {
+  local EMAIL="${1}"
+  local STAFF_FILE="${CURR_ORG_DIR}/sensitive/staff.tsv"
+
+  trap - ERR
+  NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "
+    const { Staff } = require('${LIQ_DIST_DIR}');
+    const staff = new Staff('${STAFF_FILE}');
+    if (staff.remove('${EMAIL}')) { staff.write(); }
+    else { console.error(\"No such staff member '${EMAIL}'.\"); process.exit(1); }
+    console.log(\"Staff member '${EMAIL}' removed.\");" 2> >(while read line; do echo -e "${red}${line}${reset}" >&2; done)
+  orgsStaffCommit
 }

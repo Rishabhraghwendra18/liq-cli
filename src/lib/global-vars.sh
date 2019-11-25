@@ -6,6 +6,8 @@ LIQ_ORG_DB="${LIQ_DB}/orgs"
 LIQ_WORK_DB="${LIQ_DB}/work"
 LIQ_ENV_LOGS="${LIQ_DB}/logs"
 
+LIQ_DIST_DIR="$(dirname "$(real_path "${0}")")"
+
 # defined in $CATALYST_SETTING; during load in dispatch.sh
 LIQ_PLAYGROUND=''
 

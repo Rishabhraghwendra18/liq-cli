@@ -8,8 +8,8 @@
     "prebuild": "command -v rollup-bash >/dev/null && rm -rf ./dist",
     "build": "catalyst-scripts build && rollup-bash ./src/cli.sh ./dist/liq.sh && rollup-bash ./src/install.sh ./dist/install.sh",
     "watch": "watch 'npm run build' ./src",
-    "pretest": "rm -rf test-staging/* && babel --source-maps inline src -d test-staging",
-    "test": "jest -i ./test-staging",
+    "pretest": "catalyst-scripts pretest && babel --source-maps inline src -d test-staging",
+    "test": "catalyst-scripts test",
     "posttest": "rm -rf test-tmp/",
     "install": "./dist/install.sh",
     "lint": "catalyst-scripts lint",
@@ -27,7 +27,8 @@
   },
   "homepage": "https://github.com/Liquid-Labs/liq-cli#readme",
   "dependencies": {
-    "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.26"
+    "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.26",
+    "@liquid-labs/policies-model": "^1.0.0-beta.5"
   },
   "bin": {
     "liq": "./dist/liq.sh"
@@ -36,8 +37,7 @@
     "@babel/cli": "^7.2.3",
     "@babel/core": "^7.2.2",
     "@babel/preset-env": "^7.3.1",
-    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.31",
-    "@liquid-labs/policies-model": "^1.0.0-beta.1",
+    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.32",
     "jest": "^25.0.0",
     "npm-run-all": "^4.1.5",
     "shelljs": "^0.8.3",
