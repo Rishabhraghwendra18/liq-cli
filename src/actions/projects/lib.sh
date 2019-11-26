@@ -82,7 +82,7 @@ projectForkClone() {
   cd "$STAGING"
 
   echo -n "Checking for existing fork at '${FORK_URL}'... "
-  git clone --dry-run --quiet --origin workspace "${FORK_URL}" \
+  git clone --quiet --origin workspace "${FORK_URL}" \
   && { \
     # Be sure and exit on errors to avoid a failure here and then executing the || branch
     echo "found existing fork."
