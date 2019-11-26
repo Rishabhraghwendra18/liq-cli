@@ -2938,6 +2938,10 @@ projects-close() {
   cd "$LIQ_PLAYGROUND/${CURR_ORG}"
   if [[ -d "$PROJECT_NAME" ]]; then
     cd "$PROJECT_NAME"
+    # Is the setup as expected?
+    if ! git remote -v | grep -q '^upstream$'; then
+      echoerrandexit "Did not find expected 'upstream' remote. Verify everything saved+pushed and try:\nliq projects close --force"
+    fi
     # Is everything comitted?
     # credit: https://stackoverflow.com/a/8830922/929494
     if git diff --quiet && git diff --cached --quiet; then
