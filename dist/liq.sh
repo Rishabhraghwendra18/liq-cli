@@ -2923,6 +2923,8 @@ projects-build() {
 }
 
 projects-close() {
+  eval "$(setSimpleOptions FORCE -- "$@")"
+
   local PROJECT_NAME="${1:-}"
 
   # first figure out what to close
@@ -2935,26 +2937,35 @@ projects-close() {
   local CURR_ORG
   CURR_ORG="$(orgsCurrentOrg --require)"
 
+  deleteLocal() {
+    cd "${LIQ_PLAYGROUND}/${CURR_ORG}" \
+      && rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
+    # now check to see if we have an empty "org" dir
+    local ORG_NAME
+    ORG_NAME=$(dirname "${PROJECT_NAME}")
+    if [[ "$ORG_NAME" != "." ]] && (( 0 == $(ls "$ORG_NAME" | wc -l) )); then
+      rmdir "$ORG_NAME"
+    fi
+  }
+
   cd "$LIQ_PLAYGROUND/${CURR_ORG}"
   if [[ -d "$PROJECT_NAME" ]]; then
+    if [[ "$FORCE" == true ]]; then
+      deleteLocal
+      return
+    fi
+
     cd "$PROJECT_NAME"
-    # Is the setup as expected?
+    # Are remotes setup as expected?
     if ! git remote -v | grep -q '^upstream$'; then
-      echoerrandexit "Did not find expected 'upstream' remote. Verify everything saved+pushed and try:\nliq projects close --force"
+      echoerrandexit "Did not find expected 'upstream' remote. Verify everything saved+pushed and try:\nliq projects close --force '${PROJECT_NAME}'"
     fi
     # Is everything comitted?
     # credit: https://stackoverflow.com/a/8830922/929494
     if git diff --quiet && git diff --cached --quiet; then
       if (( $({ git status --porcelain 2>/dev/null| grep '^??' || true; } | wc -l) == 0 )); then
         if [[ $(git rev-parse --verify master) == $(git rev-parse --verify upstream/master) ]]; then
-          cd "${LIQ_PLAYGROUND}/${CURR_ORG}"
-          rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
-          # now check to see if we have an empty "org" dir
-          local ORG_NAME
-          ORG_NAME=$(dirname "${PROJECT_NAME}")
-          if [[ "$ORG_NAME" != "." ]] && (( 0 == $(ls "$ORG_NAME" | wc -l) )); then
-            rmdir "$ORG_NAME"
-          fi
+          deleteLocal
         else
           echoerrandexit "Not all changes have been pushed to master." 1
         fi
@@ -3035,7 +3046,6 @@ projects-import() {
 
   set-stuff() {
     # TODO: protect this eval
-		echo "setting stuff: $SET_NAME='$_PROJ_NAME'" >> ~/log.tmp
     if [[ -n "$SET_NAME" ]]; then eval "$SET_NAME='$_PROJ_NAME'"; fi
     if [[ -n "$SET_URL" ]]; then eval "$SET_URL='$_PROJ_URL'"; fi
   }
@@ -3427,7 +3437,7 @@ projectForkClone() {
   cd "$STAGING"
 
   echo -n "Checking for existing fork at '${FORK_URL}'... "
-  git clone --dry-run --quiet --origin workspace "${FORK_URL}" \
+  git clone --quiet --origin workspace "${FORK_URL}" \
   && { \
     # Be sure and exit on errors to avoid a failure here and then executing the || branch
     echo "found existing fork."
