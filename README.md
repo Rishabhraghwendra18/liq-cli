@@ -6,7 +6,7 @@ The user interface is working towards conformance with the [target 1.0 ontology]
 
 * [Installation](#installation)
 * [Usage](#usage)
-* [CI/CD](#ci-cd)
+* [CI/CD](#cicd)
 * [Supported platforms](#supported-platforms)
 * [Contributions and bounties](#contributions-and-bounties)
 
@@ -62,7 +62,7 @@ Support for target distros is currently limited. Full support for additional dis
 This project offers bounties on many issues.
 
 * [Search for available bounties.](https://github.com/Liquid-Labs/liq-cli/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aopen+no%3Aassignee+label%3Abounty)
-* Refer to [Bounty Terms and Conditions](./docs/Bounty%20Terms%and%20Conditions.md).
+* Refer to [Bounty Terms and Conditions](./docs/Bounty%20Terms%20and%20Conditions.md).
 * Claim a bounty!
 
 Non-bounty contributions are also welcome. You may also refer to open, non-bountied issues and make an offer.
