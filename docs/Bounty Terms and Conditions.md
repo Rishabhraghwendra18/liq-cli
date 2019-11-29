@@ -2,6 +2,8 @@
 
 ## Summary
 
+This summary is provided as a good-faith overview of the terms and conditions and is meant to provide an overall understanding of the scope and purpose of the terms. Anyone considering requesting assignment to a bounty task under these terms will do so under the [Terms and conditions](#terms-and-conditions) section of this document.
+
 Liquid Labs, LLC offers bounties on certain issues. The amount of the bounty will be listed in the issue, which will also reference these terms and conditions. The basic bounty process is:
 
 * Review [Developing with liq](./Developing%20with%20liq.md)
@@ -9,9 +11,22 @@ Liquid Labs, LLC offers bounties on certain issues. The amount of the bounty wil
 * Request assignment to the a task.
 * Complete work and submit a PR.
 * Address any feedback.
-* Get paid.
+* After PR is accepted, get paid.
 
-## Task lock-in
+### Lock-in and payment
+
+Tasks are "locked-in" and assigned to a single individual for a specific period. This allows the Assignee time to complete the task without worrying about someone else "stealing" the bounty.
+
+
+Payment is sent after a task has been completed. Supported payment mechanisms Venmo, Zelle, PayPal, or ACH direct deposit.
+
+### Regarding disputes
+
+Due to the high cost of disputes, even with arbitration, disputes are not generally allowed under the [Understandings and disputes](#understandings-and-disputes) section of the Terms and Conditions. Liquid Labs continues to work on and is happy to receive any suggestion regarding how to implement a low-friction disputes resolution process allowing Assignees to retain effective dispute rights in the general case.
+
+## Terms and Conditions
+
+### Task lock-in
 
 * Tasks (GitHub issues) are assigned to an individual user for a specific period of time, known as the 'Lock-In Period'. The default Lock-In Period is specified in the task description but may be modified by request. When reuesting assignment to an issue, please provide a justification for a different Lock-In Period.
 * Liquid Labs reserves the sole right to make assignments.
@@ -21,7 +36,7 @@ Liquid Labs, LLC offers bounties on certain issues. The amount of the bounty wil
 * If the Lock-In Period (including any grace period) should expire, then Liquid Labs may, at their sole discretion, either extend the Lock-In Period or un-assign the issue, at which point it is available to be claimed by another user. Any previous Assignee may submit a [Speculative PR](#speculative-prs) within this period or re-apply for another Lock-In Period.
 * Assignments are always made to a single individual. Multiple individuals contribute to a project, but a single contact individual shall serve as contact point and be responsible to Liquid Labs under these terms and conditions.
 
-## Acceptance and rejection
+### Acceptance and rejection
 
 * To be accepted, a PR must implement all deliverables stated in the 'Deliverables' section of the task.
 * Deliverables must conform to and be consistent with the entire task description. E.g., the text of any "Overview", "Notes", or other sections in the task are part of the task specification and may inform, provide context for, or otherwise have bearing on the deliverables.
@@ -31,7 +46,7 @@ Liquid Labs, LLC offers bounties on certain issues. The amount of the bounty wil
 * PRs with significant issues may, at Liquid Labs sole discretion, be rejected with instructions to refer back to the task description for guidance.
 * A PR is considered "accepted" once it is merged into the source project, or in such a case where Liquid Labs decides not to merge the changes but finds no significant fault with the work provided.
 
-## Task errors and omissions
+### Task errors and omissions
 
 * By requesting and accepting an assignment, the Assignee accepts responsibility for ensuring that the task specification, as written, is clear and complete with regards to the goals of the task as laid out in the task title and description.
 * Changes made to the task to cure clearly incomplete or erroneous statements, even after assignment and/or submission, shall not be held against Liquid Labs. Liquid Labs may, but is under no obligation, to increase the bounty in light of any additional work created by such changes.
@@ -41,10 +56,12 @@ Liquid Labs, LLC offers bounties on certain issues. The amount of the bounty wil
   * In the event that an agreement cannot be reached regarding a bounty amount modification, then the original task, as described, shall remain in effect.
 * So long as a PR reflects fully satisfies task specifications, Liquid Lab shall be liable for payment under these terms and conditions even if a PR is ultimately rejected for technical reason, due to changes in product specification, or for any reason.
 
-## Payment
+### Payment
 
 * Once an issue is accepted, Liquid Labs shall request the Assignee to provide instructions for receiving payment.
 * Liquid Labs supports payment via Venmo, Zelle, PayPal, and via ACH direct deposit.
+* All payments will be sent as "commercial/business" payments.
+* At least one "fee-less" option will be provided, and any fees associated with the Assignees chosen option will be the responsibility and may be deducted from the "base" pay such that the gross payment is equivalent to the bounty amount.
 * Payment instructions will be received either through an issue comment or via email. If email is preferred, the Assignee must provide an email via either their public github profile or in the task comments.
 * Once instructions are received, Liquid Lab shall remit payment within 5 business days unless additional information is required as defined by these terms and conditions.
 * Payments may be split in two. Any additional splitting of payments must be handled by the receiving party.
@@ -52,14 +69,14 @@ Liquid Labs, LLC offers bounties on certain issues. The amount of the bounty wil
 * Individuals receiving payment for multiple bounties or from Liquid Labs through other channels must use the same identifying information and contact addresses or notify Liquid Labs of any change in such.
 * Liquid Labs may need to collect additional information for tax purposes. In particular, Liquid Labs may need to submit a '1099 Misc' income report for individuals earning more than a specific amount in a given calendar year. In this case, or in any case where Liquid Labs is required by applicable laws to gather additional information prior to remitting payments, payments shall be sent within 5 business days after all necessary information has been received.
 
-## Speculative PRs
+### Speculative PRs
 
 * There's nothing stopping users from submitting PRs for bounty tasks without first establishing assignment. Such submissions are termed "Speculative PRs".
 * **_It is generally recommended to request and receive assignment to a bounty issue before submitting a PR._**
 * The contents of a Speculative PR may be referenced and even copied by a task Assignee. In such a case, the Assignee shall receive the bounty, though the Assignee may, at their sole discretion, choose to share a portion or all of the bounty with the Speculative PR author.
 * If there is no current Assignee for the issue(s) related to a Speculative PR an the PR is accepted, then Liquid Lab shall offer the bounty the primary Speculative PR author, who will be assigned the issue for the purposes of ironing out any issues, final acceptance, and payment.
 
-## Understandings and disputes
+### Understandings and disputes
 
 * Due to the generally limited amount of work and payments, the Assignee, by requesting assignment to an task, waives all rights to dispute the decisions rendered by Liquid Labs under these terms except under the following conditions:
   * The task bounty description provides for the Assignee to retain some rights to dispute. This is rare, but may be provided in the case of "significantly large" bounties.
@@ -71,5 +88,3 @@ Liquid Labs, LLC offers bounties on certain issues. The amount of the bounty wil
 * Liquid Labs shall have the sole right to make a determination of the meaning of the terms "significantly" and "minor" as regards to these terms and conditions.
 * These terms and conditions should be understood as a "plain language" offer and do not rely on any legal terms or precedent for their meaning. In the case of any dispute over the meaning or implementation of these terms, such "strict construction" shall not be held against the interests of any party.
 * In the instance of any typographical or grammatical error or ambiguity in these terms and conditions, the "clearly intended" or "common sense" meaning of a phrase shall take precedence over a strict reading.
-
-As an informational aside, Liquid Labs continues to work on and is happy to receive any suggestion regarding how to implement a low-friction disputes resolution process allowing Assignees to retain effective dispute rights in the general case.
