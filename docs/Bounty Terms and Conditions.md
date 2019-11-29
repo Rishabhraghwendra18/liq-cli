@@ -8,28 +8,20 @@ Liquid Labs, LLC offers bounties on certain issues. The amount of the bounty wil
 
 * Review [Developing with liq](./Developing%20with%20liq.md)
 * [Search for available bounties.](https://github.com/Liquid-Labs/liq-cli/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aopen+no%3Aassignee+label%3Abounty)
-* Request assignment to the a task.
+* Request assignment to the a task. Task will remain assigned for a specified Lock-In Period and the Assignee shall have exclusive rights to complete the task and receive the bounty payment.
 * Complete work and submit a PR.
 * Address any feedback.
-* After PR is accepted, get paid.
-
-### Lock-in and payment
-
-Tasks are "locked-in" and assigned to a single individual for a specific period. This allows the Assignee time to complete the task without worrying about someone else "stealing" the bounty.
-
-
-Payment is sent after a task has been completed. Supported payment mechanisms Venmo, Zelle, PayPal, or ACH direct deposit.
-
-### Regarding disputes
-
-Due to the high cost of disputes, even with arbitration, disputes are not generally allowed under the [Understandings and disputes](#understandings-and-disputes) section of the Terms and Conditions. Liquid Labs continues to work on and is happy to receive any suggestion regarding how to implement a low-friction disputes resolution process allowing Assignees to retain effective dispute rights in the general case.
+* After PR is accepted, get paid via Venmo, Zelle, PayPal, or via ACH direct deposit.
 
 ## Terms and Conditions
 
-### Task lock-in
+### Task assignment and lock-in
 
-* Tasks (GitHub issues) are assigned to an individual user for a specific period of time, known as the 'Lock-In Period'. The default Lock-In Period is specified in the task description but may be modified by request. When reuesting assignment to an issue, please provide a justification for a different Lock-In Period.
+* Tasks (GitHub issues) are assigned to an individual user for a specific period of time, known as the 'Lock-In Period'. The default Lock-In Period is specified in the task description but may be modified by request. When requesting assignment to an issue, please provide a justification for a different Lock-In Period.
 * Liquid Labs reserves the sole right to make assignments.
+* Prior to assignment, the requesting party must provide an email address to be used for certain notifications and payment discussions per these terms.
+* For the purposes of this agreement, Liquid Labs may be reached at: bounties@liquid-labs.com.
+* Discussions regarding the work task itself should generally be held as comments on the task, however either party may utilize the counter-party's indicated email address as they deem appropriate and necessary.
 * Once assigned, the final date of the current lock in will be added in the task comments.
 * While a task is assigned, PRs from other users will not be accepted.
 * If a significantly correct PR is submitted within the Lock-In Period, an additional 5 working days grace period will be tacked onto the Lock-In Period to allow for the identification and address of any minor issues.
@@ -58,6 +50,7 @@ Due to the high cost of disputes, even with arbitration, disputes are not genera
 
 ### Payment
 
+* Clear and obvious typos or bounty payments which are far out of bounds for the work described and the historical amount offered for similar work shall be deemed invalid. Each party shall have an obligation to note and seek correction of any such "outsized bounties" immediately.
 * Once an issue is accepted, Liquid Labs shall request the Assignee to provide instructions for receiving payment.
 * Liquid Labs supports payment via Venmo, Zelle, PayPal, and via ACH direct deposit.
 * All payments will be sent as "commercial/business" payments.
@@ -76,15 +69,31 @@ Due to the high cost of disputes, even with arbitration, disputes are not genera
 * The contents of a Speculative PR may be referenced and even copied by a task Assignee. In such a case, the Assignee shall receive the bounty, though the Assignee may, at their sole discretion, choose to share a portion or all of the bounty with the Speculative PR author.
 * If there is no current Assignee for the issue(s) related to a Speculative PR an the PR is accepted, then Liquid Lab shall offer the bounty the primary Speculative PR author, who will be assigned the issue for the purposes of ironing out any issues, final acceptance, and payment.
 
-### Understandings and disputes
+### Construction
 
-* Due to the generally limited amount of work and payments, the Assignee, by requesting assignment to an task, waives all rights to dispute the decisions rendered by Liquid Labs under these terms except under the following conditions:
-  * The task bounty description provides for the Assignee to retain some rights to dispute. This is rare, but may be provided in the case of "significantly large" bounties.
-  * The potential assignee requests to retain specific rights to dispute in their assignment request, and such are explicitly granted by Liquid Labs.
-  * Statutory law or other applicable regulations do not permit a particular right to be waived.
-* The waiving of such rights is deemed necessary by both parties for the effective functioning of this "bounty market".
-  * It remains in interest of Liquid Labs to abide by the letter and spirit of this agreement in order to atract participants to the market.
-  * The Assignee recognizes that without waiving these rights, Liquid Labs would be unable to offer bounties in the first place as the cost of a single dispute would greatly outweigh the value of a task by orders of magnitude.
-* Liquid Labs shall have the sole right to make a determination of the meaning of the terms "significantly" and "minor" as regards to these terms and conditions.
+* In the first instance, Liquid Labs shall have the sole right to make a determination of the meaning of the terms "significantly" and "minor" as regards to these terms and conditions. The Assignee has the right to dispute such a judgement under these terms and conditions.
 * These terms and conditions should be understood as a "plain language" offer and do not rely on any legal terms or precedent for their meaning. In the case of any dispute over the meaning or implementation of these terms, such "strict construction" shall not be held against the interests of any party.
 * In the instance of any typographical or grammatical error or ambiguity in these terms and conditions, the "clearly intended" or "common sense" meaning of a phrase shall take precedence over a strict reading.
+
+### Choice of law
+
+* The parties agree these terms and conditions are to be understood with regard to the laws and regulations of the United States and the state of Texas.
+
+### Disputes
+
+* Due to the generally limited amount of work and payments, the Assignee and Liquid Labs agree that any disputes arising under these terms and conditions will be settled by arbitration under the following terms.
+* As Liquid Labs has the option to simply reject work and re-assign a task after the end of any Lock-In Period, Liquid Labs shall not generally have cause to dispute performance or raise a case under these terms and conditions except in the case which Liquid Labs alleges outright fraud and or malevolent action on the part of the Assignee, such as the introduction of intentional flaws, security holes, backdoors, or similar in submitted code, wether intentionally or through gross negligence.
+* Only the Liquid Labs and the Assignee shall have rights to dispute performance under these terms and conditions and neither may assign their rights to a third. party.
+* The Assignee may claim compensation only for any balance on the last offered and accepted bounty payment.
+* The complaining party shall give notice to the counter-party at the email address provided. To be valid, the complaint must clearly state the claims at issue on the basis these terms and conditions and propose one or more cures which would be acceptable to the complaining party.
+* The counter-party shall have 10 business days to either accept a proposed cure or refute the claims in whole or in part. The counter party may propose an alternate cure or compromise without necessarily conceding the original claims.
+* The complaining party shall have 10 days to either accept the response, continue dialog, or refer the claims to arbitration.
+* So long as dialog continues, each party shall have 10 business days to respond in a like manner with further discussion of the claims and potential cures, acceptance of a proposed cure, or by referring the matter to arbitration.
+* Once the matter is referred to arbitration, the parties shall have up to 30 days to select a mutually agreeable arbitrator, or they may agree at any time to submit the case to an arbitrator selected by the Better Business Bureau (or its natural successor) and each agrees to undertake whatever steps are necessary to secure such services in a timely manner. If no agreement can be reached by the end of the 30 day period, then they must submit the case to arbitration through the Better Business Bureau.
+* Each party shall provide the arbitrator with their own summary of the case, a copy of the email discussion, the a copy of these terms and conditions in effect at the commencement of the work, and any supporting documentation they deem relevant to the case.
+* Each party agrees and affirms that it is their intent and desire to conduct the arbitration via email and, if necessary, remote video or telephonic sessions with the arbitrator to set the schedule and deadlines relating thereto.
+* Each party agrees and affirms that it desires that no more than 1 hour of each party's time be spent in conference per $100 at issue.
+* The arbitrator shall have the option to reduce any damages awarded to either party based on a theory of actual harm, mutual responsibility, and/or to account for an "outsized" bounty payment as defined by these terms and conditions.
+* In addition to any reward of damages, the arbitrator shall direct the payment or compensation of arbitration fees according to the English Rule convention that the "loser pays". The arbitrator is free to apportion such payment on a theory of mutual responsibility where applicable and need not hold one party entirely liable for all fees.
+* Only arbitration fees and no other costs incurred by either party shall be awarded under these terms.
+* Barring any conflicts, the judgement of a duly appointed and qualified arbitrator under these terms and conditions shall be binding on both parties and the prevailing party may seek court judgement and enforcement, if necessary, and the prevailing party may submit a tally of all fees and reasonable expenses to the court, and any such additional costs approved by the court shall be added to the sum due to the prevailing party in any final judgement.
