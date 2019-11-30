@@ -15,10 +15,11 @@ policiesGetPolicyFiles() {
   done
 }
 
+# Gets the installed policy projects. Note that we get installed rather than declared as policies are often an
+# 'optional' dependency, so this is considered slightly more robust.
 policiesGetPolicyProjects() {
   local DIR
   for DIR in $(policiesGetPolicyDirs); do
-    cd "${DIR}"
-    cat package.json | jq --raw-output '.name' | tr -d "'"
+    cat "${DIR}/package.json" | jq --raw-output '.name' | tr -d "'"
   done
 }
