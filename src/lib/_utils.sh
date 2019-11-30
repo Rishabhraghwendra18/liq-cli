@@ -1,6 +1,19 @@
 # TODO: move to bash-toolkit
+
+# Prints line to any standard color. First arg is the color name, everything else, along with any options, are passed
+# through to echo.
+echocolor() {
+  eval "$(setSimpleOptions NO_NEWLINE -- "$@")"
+  local COLOR="${1}"; shift
+  [[ -n "${!COLOR}" ]]
+  OPTS="-e"
+  if [[ -n "$NO_NEWLINE" ]]; then OPTS="$OPTS -n"; fi
+  echo ${OPTS} "${!COLOR}$*${reset}" | fold -sw 82
+}
+
+# Prints the line in green. Any options are passed through to echo.
 echogreen() {
-  echo -e "${green}$*${reset}" | fold -sw 82
+  echocolor green "$@"
 }
 
 indent() {
