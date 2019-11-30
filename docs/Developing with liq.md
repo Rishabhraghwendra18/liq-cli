@@ -49,10 +49,12 @@ liq change control processes are primarily organized around "work units". A work
 
 ### Implementing changes
 
-* Changes are made and tested locally.
-* Developers use `liq work status` to check the status of changes and relation of master and work branches across all units of work.
-* Developers use `liq work save` (along with `liq work stage`) to save local changes to remote workspace repos on their workbranch.
-* Developers use `liq work qa` to test and audit local changes.
+Developers:
+
+* Make and test changes locally.
+* Use `liq work status` to check the status of changes and available updates across all work units.
+* Use `liq work save` (along with `liq work stage`) to save local changes to remote workspace repos on the workbranch.
+* Use `liq work test` and `liq work qa` to test and audit local changes.
 
 ## Release and deploy
 
