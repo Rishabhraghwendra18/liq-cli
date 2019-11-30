@@ -622,14 +622,13 @@ work-submit() {
     echoerrandexit "No current unit of work. Try:\nliq work select."
   fi
 
-  local CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg --require)"
   source "${LIQ_WORK_DB}/curr_work"
+  orgsCurrentOrg --require-sensitive > /dev/null # just a check, don't need value
+  source "${LIQ_ORG_DB}/curr_org/sensitive/settings.sh" # this is used in the submission checks
 
   if [[ -z "$MESSAGE" ]]; then
     MESSAGE="$WORK_DESC"
   fi
-
 
   local TO_SUBMIT="$@"
   if [[ -z "$TO_SUBMIT" ]]; then
@@ -653,8 +652,13 @@ work-submit() {
 
   for IP in $TO_SUBMIT; do
     IP=$(workConvertDot "$IP")
-    echo "Creating PR for ${IP}..."
     cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
+
+    echo "Checking for submission controls..."
+    workSubmitChecks
+    exit 1
+
+    echo "Creating PR for ${IP}..."
 
     local BUGS_URL
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")

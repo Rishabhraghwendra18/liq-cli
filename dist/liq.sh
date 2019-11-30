@@ -680,8 +680,17 @@ selectDoneCancelAll() {
   _commonSelectHelper '' "$1" '<done>'$'\n''<cancel>' '<all>' "$2"
 }
 # TODO: move to bash-toolkit
+echocolor() {
+  eval "$(setSimpleOptions NO_NEWLINE -- "$@")"
+  local COLOR="${1}"; shift
+  [[ -n "${!COLOR}" ]]
+  OPTS="-e"
+  if [[ -n "$NO_NEWLINE" ]]; then OPTS="$OPTS -n"; fi
+  echo ${OPTS} "${!COLOR}$*${reset}" | fold -sw 82
+}
+
 echogreen() {
-  echo -e "${green}$*${reset}" | fold -sw 82
+  echocolor green "$@"
 }
 
 indent() {
@@ -812,40 +821,6 @@ requireEnvironment() {
     echoerrandexit "No environment currently selected."
   fi
   CURR_ENV=`readlink "${CURR_ENV_FILE}" | xargs basename`
-}
-
-yes-no() {
-  default-yes() { return 0; }
-  default-no() { return 1; } # bash fals-y
-
-  local PROMPT="$1"
-  local DEFAULT=$2
-  local HANDLE_YES="${3:-default-yes}"
-  local HANDLE_NO="${4:-default-no}" # default to noop
-
-  local ANSWER=''
-  read -p "$PROMPT" ANSWER
-  if [ -z "$ANSWER" ]; then
-    case "$DEFAULT" in
-      Y*|y*)
-        $HANDLE_YES; return $?;;
-      N*|n*)
-        $HANDLE_NO; return $?;;
-      *)
-        echo "You must choose an answer."
-        yes-no "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO
-    esac
-  else
-    case "$ANSWER" in
-      Y*|y*)
-        $HANDLE_YES; return $?;;
-      N*|n*)
-        $HANDLE_NO; return $?;;
-      *)
-        echo "Did not understand response, please answer 'y(es)' or 'n(o)'."
-        yes-no "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO;;
-    esac
-  fi
 }
 
 addLineIfNotPresentInFile() {
@@ -2856,6 +2831,7 @@ requirements-policies() {
   :
 }
 
+# see ./help.sh for behavior
 policies-document() {
   local NODE_SCRIPT CURR_ORG TARGET_DIR
   NODE_SCRIPT="$(dirname $(real_path ${BASH_SOURCE[0]}))/index.js"
@@ -2867,13 +2843,16 @@ policies-document() {
   node -e "require('$NODE_SCRIPT').refreshDocuments('${TARGET_DIR}', process.argv.slice(1))" $(policiesGetPolicyFiles)
 }
 
+# see ./help.sh for behavior
 policies-update() {
-  local CURR_ORG POLICY
+  local CURR_ORG POLICY REPO
   CURR_ORG="$(orgsCurrentOrg --require-sensitive)"
-  cd "${LIQ_ORG_DB}/${CURR_ORG}/sensitive"
+  for REPO in public sensitive; do
+    cd "${LIQ_ORG_DB}/${CURR_ORG}/${REPO}"
 
-  for POLICY in $(policiesGetPolicyProjects); do
-    npm i "${POLICY}"
+    for POLICY in $(policiesGetPolicyProjects .); do
+      npm i "${POLICY}"
+    done
   done
 }
 help-policies() {
@@ -2887,13 +2866,20 @@ ${PREFIX}${cyan_u}policies${reset} <action>:
 Policies defines all manner of organizational operations. They are "organizational code".
 EOF
 }
+# Retrieves the policy directories from the current org. Currenly requires sensitive until we think through the
+# implication of having 'partial' policy access and whether that's ever useful.
+#
+# Returns one file per line, suitable for use with:
+#
+# while read VAR; do ... ; done < <(policiesGetPolicyDirs)
 policiesGetPolicyDirs() {
-  (
-    local CURR_ORG
+  {
+    local CURR_ORG REPO
     CURR_ORG="$(orgsCurrentOrg --require-sensitive)"
-    cd "${LIQ_ORG_DB}/${CURR_ORG}/sensitive"
-    find "./node_modules/@liquid-labs" -maxdepth 1 -type d -name "policy-*" -exec echo "${PWD}/{}" \;
-  )
+    for REPO in public sensitive; do
+      find "${LIQ_ORG_DB}/${CURR_ORG}/${REPO}/node_modules/@liquid-labs" -maxdepth 1 -type d -name "policy-*"
+    done
+  } | uniq
 }
 
 policiesGetPolicyFiles() {
@@ -2904,11 +2890,12 @@ policiesGetPolicyFiles() {
   done
 }
 
+# Gets the installed policy projects. Note that we get installed rather than declared as policies are often an
+# 'optional' dependency, so this is considered slightly more robust.
 policiesGetPolicyProjects() {
   local DIR
   for DIR in $(policiesGetPolicyDirs); do
-    cd "${DIR}"
-    cat package.json | jq --raw-output '.name' | tr -d "'"
+    cat "${DIR}/package.json" | jq --raw-output '.name' | tr -d "'"
   done
 }
 
@@ -3098,6 +3085,8 @@ projects-sync() {
   eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
+  [[ -n "${BASE_DIR:-}" ]] || findBase
+
   local CURR_BRANCH REMOTE_COMMITS MASTER_UPDATED
   CURR_BRANCH="$(workCurrentWorkBranch)"
 
@@ -3105,7 +3094,7 @@ projects-sync() {
   git fetch upstream master:remotes/upstream/master
   if [[ "$CURR_BRANCH" != "master" ]]; then
     git fetch workspace master:remotes/workspace/master
-    git fetch workspace "${WORK_BRANCH}:remotes/workspace/${WORK_BRANCH}"
+    git fetch workspace "${CURR_BRANCH}:remotes/workspace/${CURR_BRANCH}"
   fi
   echo "Fetch done."
 
@@ -3147,7 +3136,7 @@ projects-sync() {
     fi
     echo "Workspace master synced."
     cleanupMaster
-
+    
     REMOTE_COMMITS=$(git rev-list --right-only --count ${CURR_BRANCH}...workspace/${CURR_BRANCH})
     if (( $REMOTE_COMMITS > 0 )); then
       echo "Synching with workspace workbranch..."
@@ -4814,14 +4803,13 @@ work-submit() {
     echoerrandexit "No current unit of work. Try:\nliq work select."
   fi
 
-  local CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg --require)"
   source "${LIQ_WORK_DB}/curr_work"
+  orgsCurrentOrg --require-sensitive > /dev/null # just a check, don't need value
+  source "${LIQ_ORG_DB}/curr_org/sensitive/settings.sh" # this is used in the submission checks
 
   if [[ -z "$MESSAGE" ]]; then
     MESSAGE="$WORK_DESC"
   fi
-
 
   local TO_SUBMIT="$@"
   if [[ -z "$TO_SUBMIT" ]]; then
@@ -4845,8 +4833,13 @@ work-submit() {
 
   for IP in $TO_SUBMIT; do
     IP=$(workConvertDot "$IP")
-    echo "Creating PR for ${IP}..."
     cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
+
+    echo "Checking for submission controls..."
+    workSubmitChecks
+    exit 1
+
+    echo "Creating PR for ${IP}..."
 
     local BUGS_URL
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
@@ -4954,6 +4947,46 @@ workSafeDesc() {
   local WORK_DESC="${1:-}"
   requireArgs "$WORK_DESC" || exit $?
   echo "$WORK_DESC" | tr ' -' '_' | tr '[:upper:]' '[:lower:]'
+}
+
+# Runs submitter through interactive submit checks specified by company policy. Expects the CWD to be that of or within
+# the project being submitted.
+workSubmitChecks() {
+  local POLICY_DIR CC_TYPE CHECKS_FILE QUESTION
+
+  requirePackage
+  CC_TYPE="$(echo "$PACKAGE" | jq --raw-output '.liquidDev.changeControl.type' | tr -d "'")"
+
+  while read POLICY_DIR; do
+    while read CHECKS_FILE; do
+      while read QUESTION; do
+        echo
+        echocolor -n yellow "$QUESTION"
+      done < <(tail +2 "${CHECKS_FILE}" | perl -e '
+        while (<>) {
+          use strict; use warnings;
+          if (!/^\s*$/) {
+            my ($question, $absCondition) = split(/\t/, "$_");
+            my $include = 1;
+            if ($absCondition) {
+              my @conditions = split(/\s*,\s*/, $absCondition);
+
+              while (@conditions && $include) {
+                my $condition = shift @conditions;
+                $condition =~ s/HAS_TECHNICAL_OPS/$ENV{"HAS_TECHNICAL_OPS"}/;
+                $condition =~ s/DEVELOPS_APPS/$ENV{"DEVELOPS_APPS"}/;
+                $condition =~ s/GEN_SEC_LVL/$ENV{"GEN_SEC_LVL"}/;
+                $condition =~ s/SEC_TRIVIAL/1/;
+
+                eval "$condition" or $include = 0;
+              }
+            }
+
+            print "$question\n" if $include;
+          }
+        }')
+    done < <(find "${POLICY_DIR}" -path "*/policy/change-control/${CC_TYPE}/*" -name "*submit-checks.tsv")
+  done < <(policiesGetPolicyDirs)
 }
 
 workUpdateWorkDb() {

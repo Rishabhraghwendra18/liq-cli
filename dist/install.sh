@@ -323,8 +323,17 @@ echoerrandexit() {
 }
 
 # TODO: move to bash-toolkit
+echocolor() {
+  eval "$(setSimpleOptions NO_NEWLINE -- "$@")"
+  local COLOR="${1}"; shift
+  [[ -n "${!COLOR}" ]]
+  OPTS="-e"
+  if [[ -n "$NO_NEWLINE" ]]; then OPTS="$OPTS -n"; fi
+  echo ${OPTS} "${!COLOR}$*${reset}" | fold -sw 82
+}
+
 echogreen() {
-  echo -e "${green}$*${reset}" | fold -sw 82
+  echocolor green "$@"
 }
 
 indent() {
@@ -455,40 +464,6 @@ requireEnvironment() {
     echoerrandexit "No environment currently selected."
   fi
   CURR_ENV=`readlink "${CURR_ENV_FILE}" | xargs basename`
-}
-
-yes-no() {
-  default-yes() { return 0; }
-  default-no() { return 1; } # bash fals-y
-
-  local PROMPT="$1"
-  local DEFAULT=$2
-  local HANDLE_YES="${3:-default-yes}"
-  local HANDLE_NO="${4:-default-no}" # default to noop
-
-  local ANSWER=''
-  read -p "$PROMPT" ANSWER
-  if [ -z "$ANSWER" ]; then
-    case "$DEFAULT" in
-      Y*|y*)
-        $HANDLE_YES; return $?;;
-      N*|n*)
-        $HANDLE_NO; return $?;;
-      *)
-        echo "You must choose an answer."
-        yes-no "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO
-    esac
-  else
-    case "$ANSWER" in
-      Y*|y*)
-        $HANDLE_YES; return $?;;
-      N*|n*)
-        $HANDLE_NO; return $?;;
-      *)
-        echo "Did not understand response, please answer 'y(es)' or 'n(o)'."
-        yes-no "$PROMPT" "$DEFAULT" $HANDLE_YES $HANDLE_NO;;
-    esac
-  fi
 }
 
 addLineIfNotPresentInFile() {

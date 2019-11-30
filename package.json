@@ -47,5 +47,10 @@
     "version-check": {
       "options": "--skip-unused"
     }
+  },
+  "liquidDev": {
+    "changeControl": {
+      "type": "code"
+    }
   }
 }

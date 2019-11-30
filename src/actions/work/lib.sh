@@ -24,6 +24,46 @@ workSafeDesc() {
   echo "$WORK_DESC" | tr ' -' '_' | tr '[:upper:]' '[:lower:]'
 }
 
+# Runs submitter through interactive submit checks specified by company policy. Expects the CWD to be that of or within
+# the project being submitted.
+workSubmitChecks() {
+  local POLICY_DIR CC_TYPE CHECKS_FILE QUESTION
+
+  requirePackage
+  CC_TYPE="$(echo "$PACKAGE" | jq --raw-output '.liquidDev.changeControl.type' | tr -d "'")"
+
+  while read POLICY_DIR; do
+    while read CHECKS_FILE; do
+      while read QUESTION; do
+        echo
+        echocolor yellow "$QUESTION"
+      done < <(tail +2 "${CHECKS_FILE}" | perl -e '
+        while (<>) {
+          use strict; use warnings;
+          if (!/^\s*$/) {
+            my ($question, $absCondition) = split(/\t/, "$_");
+            my $include = 1;
+            if ($absCondition) {
+              my @conditions = split(/\s*,\s*/, $absCondition);
+
+              while (@conditions && $include) {
+                my $condition = shift @conditions;
+                $condition =~ s/HAS_TECHNICAL_OPS/$ENV{"HAS_TECHNICAL_OPS"}/;
+                $condition =~ s/DEVELOPS_APPS/$ENV{"DEVELOPS_APPS"}/;
+                $condition =~ s/GEN_SEC_LVL/$ENV{"GEN_SEC_LVL"}/;
+                $condition =~ s/SEC_TRIVIAL/1/;
+
+                eval "$condition" or $include = 0;
+              }
+            }
+
+            print "$question\n" if $include;
+          }
+        }')
+    done < <(find "${POLICY_DIR}" -path "*/policy/change-control/${CC_TYPE}/*" -name "*submit-checks.tsv")
+  done < <(policiesGetPolicyDirs)
+}
+
 workUpdateWorkDb() {
   cat <<EOF > "${LIQ_WORK_DB}/curr_work"
 WORK_DESC="$WORK_DESC"
