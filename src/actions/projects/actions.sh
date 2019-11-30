@@ -184,6 +184,8 @@ projects-sync() {
   eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
+  [[ -n "${BASE_DIR:-}" ]] || findBase
+
   local CURR_BRANCH REMOTE_COMMITS MASTER_UPDATED
   CURR_BRANCH="$(workCurrentWorkBranch)"
 
@@ -191,7 +193,7 @@ projects-sync() {
   git fetch upstream master:remotes/upstream/master
   if [[ "$CURR_BRANCH" != "master" ]]; then
     git fetch workspace master:remotes/workspace/master
-    git fetch workspace "${WORK_BRANCH}:remotes/workspace/${WORK_BRANCH}"
+    git fetch workspace "${CURR_BRANCH}:remotes/workspace/${CURR_BRANCH}"
   fi
   echo "Fetch done."
 
@@ -233,7 +235,7 @@ projects-sync() {
     fi
     echo "Workspace master synced."
     cleanupMaster
-
+    
     REMOTE_COMMITS=$(git rev-list --right-only --count ${CURR_BRANCH}...workspace/${CURR_BRANCH})
     if (( $REMOTE_COMMITS > 0 )); then
       echo "Synching with workspace workbranch..."
