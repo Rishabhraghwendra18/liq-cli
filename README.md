@@ -61,7 +61,7 @@ Support for target distros is currently limited. Full support for additional dis
 
 This project offers bounties on many issues.
 
-* [Search for available bounties.](https://github.com/Liquid-Labs/liq-cli/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aopen+no%3Aassignee+label%3Abounty)
+* [Search for available bounty tasks in this project](https://github.com/Liquid-Labs/liq-cli/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aopen+no%3Aassignee+label%3Abounty) or [all Liquid Labs bounty tasks](https://github.com/issues?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+org%3ALiquid-Labs+archived%3Afalse+label%3Abounty).
 * Refer to [Bounty Terms and Conditions](./docs/Bounty%20Terms%20and%20Conditions.md).
 * Claim a bounty!
 
