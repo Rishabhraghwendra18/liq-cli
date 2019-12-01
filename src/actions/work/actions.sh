@@ -622,14 +622,13 @@ work-submit() {
     echoerrandexit "No current unit of work. Try:\nliq work select."
   fi
 
-  local CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg --require)"
   source "${LIQ_WORK_DB}/curr_work"
+  orgsCurrentOrg --require-sensitive > /dev/null # just a check, don't need value
+  source "${LIQ_ORG_DB}/curr_org/sensitive/settings.sh" # this is used in the submission checks
 
   if [[ -z "$MESSAGE" ]]; then
     MESSAGE="$WORK_DESC"
   fi
-
 
   local TO_SUBMIT="$@"
   if [[ -z "$TO_SUBMIT" ]]; then
@@ -646,6 +645,7 @@ work-submit() {
     if [[ "$NOT_CLEAN" != true ]]; then
       requireCleanRepo "${IP}"
     fi
+    # TODO: This is incorrect, we need to check IP; https://github.com/Liquid-Labs/liq-cli/issues/121
     if ! work-status --pr-ready; then
       echoerrandexit "Local work branch not in sync with remote work branch. Try:\nliq work save --backup-only"
     fi
@@ -653,8 +653,13 @@ work-submit() {
 
   for IP in $TO_SUBMIT; do
     IP=$(workConvertDot "$IP")
-    echo "Creating PR for ${IP}..."
     cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
+
+    local SUBMIT_CERTS
+    echo "Checking for submission controls..."
+    workSubmitChecks SUBMIT_CERTS
+
+    echo "Creating PR for ${IP}..."
 
     local BUGS_URL
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
@@ -684,14 +689,20 @@ Merge ${WORK_BRANCH} to master
 
 $MESSAGE
 
+## Submission Certifications
+
+${SUBMIT_CERTS}
+
 ## Issues
 EOF)
+    # populate issues lists
     if [[ -n "$PROJ_ISSUES" ]]; then
       DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
     fi
     if [[ -n "$OTHER_ISSUES" ]]; then
       DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
     fi
+
     hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
   done
 }
