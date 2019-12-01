@@ -645,6 +645,7 @@ work-submit() {
     if [[ "$NOT_CLEAN" != true ]]; then
       requireCleanRepo "${IP}"
     fi
+    # TODO: This is incorrect, we need to check IP; https://github.com/Liquid-Labs/liq-cli/issues/121
     if ! work-status --pr-ready; then
       echoerrandexit "Local work branch not in sync with remote work branch. Try:\nliq work save --backup-only"
     fi
@@ -654,9 +655,9 @@ work-submit() {
     IP=$(workConvertDot "$IP")
     cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
 
+    local SUBMIT_CERTS
     echo "Checking for submission controls..."
-    workSubmitChecks
-    exit 1
+    workSubmitChecks SUBMIT_CERTS
 
     echo "Creating PR for ${IP}..."
 
@@ -688,14 +689,20 @@ Merge ${WORK_BRANCH} to master
 
 $MESSAGE
 
+## Submission Certifications
+
+${SUBMIT_CERTS}
+
 ## Issues
 EOF)
+    # populate issues lists
     if [[ -n "$PROJ_ISSUES" ]]; then
       DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
     fi
     if [[ -n "$OTHER_ISSUES" ]]; then
       DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
     fi
+
     hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
   done
 }

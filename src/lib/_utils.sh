@@ -1,8 +1,8 @@
 # TODO: move to bash-toolkit
 
-# Prints line to any standard color. First arg is the color name, everything else, along with any options, are passed
-# through to echo.
-echocolor() {
+# Prints line with any standard format. First arg is the format name, everything else, along with any options, are
+# passed through to echo.
+echofmt() {
   eval "$(setSimpleOptions NO_NEWLINE -- "$@")"
   local COLOR="${1}"; shift
   [[ -n "${!COLOR}" ]]
@@ -13,7 +13,7 @@ echocolor() {
 
 # Prints the line in green. Any options are passed through to echo.
 echogreen() {
-  echocolor green "$@"
+  echofmt green "$@"
 }
 
 indent() {

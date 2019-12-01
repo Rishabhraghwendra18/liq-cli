@@ -334,28 +334,34 @@ get-answer() {
   local DEFAULT="${3:-}"
 
   if [[ -n "${DEFAULT}" ]]; then
-    PROMPT="${PROMPT} (${DEFAULT}) "
+    if [[ -z "$MULTI_LINE" ]]; then
+      PROMPT="${PROMPT} (${DEFAULT}) "
+    else
+      PROMPT="${PROMPT}"$'\n''(Hit "<PERIOD><ENTER>" for default:'$'\n'"$DEFAULT"$'\n'')'
+    fi
   fi
 
   if [[ -z "$MULTI_LINE" ]]; then
     read -r -p "$PROMPT" $VAR
     if [[ -z ${!VAR:-} ]] && [[ -n "$DEFAULT" ]]; then
       # MacOS dosen't support 'declare -g' :(
-      eval "${VAR}='$(echo "$DEFAULT" | sed "s/'/'\"'\"'/g")'"
+      eval $VAR='"$DEFAULT"'
     fi
   else
     local LINE
-    echo "${green_bu}End multi-line input with single '.'${reset}"
     echo "$PROMPT"
-    unset $VAR
+    echo "(End multi-line input with single '.')"
+    unset $VAR LINE
     while true; do
-      read -r LINE
-      [[ "$LINE" == '.' ]] && break
-      if [[ -z "$LINE" ]] && [[ -z ${!VAR:-} ]] && [[ -n "$DEFAULT" ]]; then
-        eval "${VAR}='$(echo "$DEFAULT" | sed "s/'/'\"'\"'/g")'"
+      IFS= read -r LINE
+      if [[ "$LINE" == '.' ]]; then
+        if [[ -z "${!VAR:-}" ]] && [[ -n "$DEFAULT" ]]; then
+          eval $VAR='"$DEFAULT"'
+        fi
         break
+      else
+        list-add-item $VAR "$LINE"
       fi
-      list-add-item $VAR "$LINE"
     done
   fi
 }
@@ -390,13 +396,13 @@ yes-no() {
   default-no() { return 1; } # bash false-y
 
   local PROMPT="$1"
-  local DEFAULT=$2
+  local DEFAULT="${2:-}"
   local HANDLE_YES="${3:-default-yes}"
   local HANDLE_NO="${4:-default-no}" # default to noop
 
   local ANSWER=''
   read -p "$PROMPT" ANSWER
-  if [ -z "$ANSWER" ]; then
+  if [[ -z "$ANSWER" ]] && [[ -n "$DEFAULT" ]]; then
     case "$DEFAULT" in
       Y*|y*)
         $HANDLE_YES; return $?;;
@@ -680,7 +686,10 @@ selectDoneCancelAll() {
   _commonSelectHelper '' "$1" '<done>'$'\n''<cancel>' '<all>' "$2"
 }
 # TODO: move to bash-toolkit
-echocolor() {
+
+# Prints line with any standard format. First arg is the format name, everything else, along with any options, are
+# passed through to echo.
+echofmt() {
   eval "$(setSimpleOptions NO_NEWLINE -- "$@")"
   local COLOR="${1}"; shift
   [[ -n "${!COLOR}" ]]
@@ -689,8 +698,9 @@ echocolor() {
   echo ${OPTS} "${!COLOR}$*${reset}" | fold -sw 82
 }
 
+# Prints the line in green. Any options are passed through to echo.
 echogreen() {
-  echocolor green "$@"
+  echofmt green "$@"
 }
 
 indent() {
@@ -4826,6 +4836,7 @@ work-submit() {
     if [[ "$NOT_CLEAN" != true ]]; then
       requireCleanRepo "${IP}"
     fi
+    # TODO: This is incorrect, we need to check IP; https://github.com/Liquid-Labs/liq-cli/issues/121
     if ! work-status --pr-ready; then
       echoerrandexit "Local work branch not in sync with remote work branch. Try:\nliq work save --backup-only"
     fi
@@ -4835,9 +4846,9 @@ work-submit() {
     IP=$(workConvertDot "$IP")
     cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
 
+    local SUBMIT_CERTS
     echo "Checking for submission controls..."
-    workSubmitChecks
-    exit 1
+    workSubmitChecks SUBMIT_CERTS
 
     echo "Creating PR for ${IP}..."
 
@@ -4869,14 +4880,20 @@ Merge ${WORK_BRANCH} to master
 
 $MESSAGE
 
+## Submission Certifications
+
+${SUBMIT_CERTS}
+
 ## Issues
 EOF)
+    # populate issues lists
     if [[ -n "$PROJ_ISSUES" ]]; then
       DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
     fi
     if [[ -n "$OTHER_ISSUES" ]]; then
       DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
     fi
+
     hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
   done
 }
@@ -4952,21 +4969,101 @@ workSafeDesc() {
 # Runs submitter through interactive submit checks specified by company policy. Expects the CWD to be that of or within
 # the project being submitted.
 workSubmitChecks() {
-  local POLICY_DIR CC_TYPE CHECKS_FILE QUESTION
+  local RESULT_VAR="${1}"
+
+  local POLICY_DIR CC_TYPE CHECKS_FILE QUESTION RECORD
 
   requirePackage
-  CC_TYPE="$(echo "$PACKAGE" | jq --raw-output '.liquidDev.changeControl.type' | tr -d "'")"
+  local CC_QUERY='.liquidDev.changeControl.type'
+  CC_TYPE="$(echo "$PACKAGE" | jq --raw-output "$CC_QUERY" | tr -d "'")"
+  if [[ -z "$CC_TYPE" ]] || [[ "$CC_TYPE" == 'null' ]]; then
+    echoerrandexit "Package '$PACKAGE_NAME' does not define '$CC_QUERY'; bailing out."
+  fi
 
-  while read POLICY_DIR; do
-    while read CHECKS_FILE; do
-      while read QUESTION; do
-        echo
-        echocolor -n yellow "$QUESTION"
-      done < <(tail +2 "${CHECKS_FILE}" | perl -e '
+  local FIRST_REASON=true
+  local HAS_EXCEPTIONS=''
+  local DEF_REASON DEF_MITIGATION
+  # you would think we wou we would declare these in 'getReasons', but bash is funny with vars, and the inner-function
+  # locals (appearently) have strange effects and even 'unset'-ing them doesn't clear the vars as they appear to the
+  # 'require-answer' function.
+  local REASON MITIGATION
+  getReasons() {
+    unset REASON MITIGATION
+
+    if [[ -n "${FIRST_REASON:-}" ]]; then
+      echo
+      yes-no "By continuing, you are submitting these changes with an explicit exception. Do you wish to continue? (yes/no) " \
+        || { echo "Submission cancelled."; exit 0; }
+      unset FIRST_REASON
+
+      echo
+      echofmt "reset" "(Your explanation may use markdown format, but it is not required.)"
+      echo
+    fi
+
+    require-answer --multi-line "${yellow}Please provide a complete description as to why the exception is necessary:${reset} " REASON "$DEF_REASON"
+    require-answer --multi-line "${yellow}Please describe the steps ALREADY TAKEN (such as creating a task to revisit the issue, etc.) to mitigate and/or address this exception in a timely manner:${reset} " MITIGATION "$DEF_MITIGATION"
+
+    DEF_REASON="${REASON}"
+    DEF_MITIGATION="${MITIGATION}"
+
+    echofmt yellow "You will now be asked to review and confirm your answers. (Hit enter to continue.)"
+    read
+    echofmt green_b "Reason for the exception:"
+    echo "${REASON}"
+    echo "(Hit enter to continue)"
+    read
+    echofmt green_b "Steps taken to mitigate exception:"
+    echo "${MITIGATION}"
+    echo
+
+    if yes-no "Are these statements true and complete? (yes/no) "; then
+      RECORD="${RECORD}"$'\n'' '$'\n'"**_Reason given for excepion:_**"$'\n'"$REASON"$'\n'' '$'\n'"**_Steps taken to mitigate:_**"$'\n'"$MITIGATION"
+    else
+      getReasons
+    fi
+  }
+
+  submitQuery() {
+    local ANSWER
+    require-answer "confirmed/no/cancel: " ANSWER
+    ANSWER="$(echo "$ANSWER" | tr '[:upper:]' '[:lower:]')"
+    case "$ANSWER" in
+      confirmed)
+        RECORD="$RECORD"$'\n'"**_Answer:_** $ANSWER";;
+      no)
+        HAS_EXCEPTIONS=false
+        RECORD="$RECORD"$'\n'"**_Answer:_** $ANSWER"
+        getReasons;;
+      cancel)
+        echo "Submission cancelled."
+        exit 0;;
+      *)
+        echoerr "You must fully spell out 'confirmed', 'no', or 'cancel'."
+        submitQuery;;
+    esac
+  }
+
+  local POLICY_DIRS=/tmp/policy_dirs
+  rm -f $POLICY_DIRS
+  policiesGetPolicyDirs > $POLICY_DIRS
+  exec 10< $POLICY_DIRS
+
+  while read -u 10 POLICY_DIR; do
+    local CHECKS_FILES=/tmp/checks_files
+    rm -f $CHECKS_FILES
+    find "${POLICY_DIR}" -path "*/policy/change-control/${CC_TYPE}/*" -name "*submit-checks.tsv" > $CHECKS_FILES
+    exec 11< $CHECKS_FILES
+
+    while read -u 11 CHECKS_FILE; do
+      local QUESTIONS=/tmp/questions
+      rm -f $QUESTIONS
+      tail +2 "${CHECKS_FILE}" | perl -e '
+        use strict; use warnings;
         while (<>) {
-          use strict; use warnings;
           if (!/^\s*$/) {
             my ($question, $absCondition) = split(/\t/, "$_");
+            chomp($question);
             my $include = 1;
             if ($absCondition) {
               my @conditions = split(/\s*,\s*/, $absCondition);
@@ -4984,9 +5081,38 @@ workSubmitChecks() {
 
             print "$question\n" if $include;
           }
-        }')
-    done < <(find "${POLICY_DIR}" -path "*/policy/change-control/${CC_TYPE}/*" -name "*submit-checks.tsv")
-  done < <(policiesGetPolicyDirs)
+        }' > $QUESTIONS
+      exec 12< $QUESTIONS
+
+      local QUESTION_COUNT=1
+      while read -u 12 QUESTION; do
+        echo
+        echofmt yellow "${QUESTION_COUNT}) $QUESTION"
+        if [[ -z "$RECORD" ]]; then
+          RECORD="### $QUESTION"
+        else
+          RECORD="$RECORD"$'\n'$'\n'"### $QUESTION"
+        fi
+
+        submitQuery
+        QUESTION_COUNT=$(( $QUESTION_COUNT + 1 ))
+      done
+      exec 12<&-
+      rm "$QUESTIONS"
+    done
+    exec 11<&-
+    rm "$CHECKS_FILES"
+  done
+  exec 10<&-
+  rm "$POLICY_DIRS"
+
+  if [[ -z "$HAS_EXCEPTIONS" ]]; then
+    RECORD="**All certifications satisfied.**"$'\n'$'\n'"${RECORD}"
+  else
+    RECORD="**EXCEPTIONS PRESENT.**"$'\n'$'\n'"${RECORD}"
+  fi
+
+  eval $RESULT_VAR='"${RECORD}"'
 }
 
 workUpdateWorkDb() {
