@@ -18,35 +18,33 @@ describe(`Command 'liq projects close'`, () => {
   afterEach(() => setupConfig.cleanup())
 
   const closeFailureTests = [
-    { desc: `should do nothing and emit warning if there are untracked files.`,
-      setup: (setupConfig) => shell.exec(`cd ${setupConfig.localRepoCheckout} && touch foobar`, execOpts),
+    [ /*desc*/ `should do nothing and emit warning if there are untracked files.`,
+      /*setup*/ (setupConfig) => shell.exec(`cd ${setupConfig.localRepoCheckout} && touch foobar`, execOpts),
       // TODO: having trouble matching end to end because of the non-printing coloration characters.
-      errMatch: /Found untracked files./ },
-    { desc: `should do nothing and emit warning if there are uncommitted changes.`,
-      setup: (setupConfig) => shell.exec(`cd ${setupConfig.localRepoCheckout} && echo 'hey' >> README.md`, execOpts),
-      errMatch: /Found uncommitted changes./ },
-    { desc: `should do nothing and emit warning if there are un-pushed changes.`,
-      setup: (setupConfig) => shell.exec(`cd ${setupConfig.localRepoCheckout} && ( echo 'hey' >> README.md && git add README.md && git commit --quiet -m "test commit" )`, execOpts),
-      errMatch: /Not all changes have been pushed to master./ },
+      /*errMatch*/ /Found untracked files./ ],
+    [ `should do nothing and emit warning if there are uncommitted changes.`,
+      (setupConfig) => shell.exec(`cd ${setupConfig.localRepoCheckout} && echo 'hey' >> README.md`, execOpts),
+      /Found uncommitted changes./ ],
+    [ `should do nothing and emit warning if there are un-pushed changes.`,
+      (setupConfig) => shell.exec(`cd ${setupConfig.localRepoCheckout} && ( echo 'hey' >> README.md && git add README.md && git commit --quiet -m "test commit" )`, execOpts),
+      /Not all changes have been pushed to master./ ]
   ]
 
-  closeFailureTests.forEach(testConfig => {
-    test(testConfig.desc, () => {
-      console.error = jest.fn() // supresses err echo from shelljs
-      const setupResult = testConfig.setup(setupConfig)
-      expect(setupResult.stderr).toEqual('')
-      expect(setupResult.code).toEqual(0)
+  test.each(closeFailureTests)(`%s`, (desc, setup, errMatch) => {
+    console.error = jest.fn() // supresses err echo from shelljs
+    const setupResult = setup(setupConfig)
+    expect(setupResult.stderr).toEqual('')
+    expect(setupResult.code).toEqual(0)
 
-      let result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} projects close`, execOpts)
-      expect(result.stderr).toMatch(testConfig.errMatch, "Bash output\n" + result.stderr)
-      expect(result.stdout).toEqual('')
-      expect(result.code).toEqual(1)
+    let result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} projects close`, execOpts)
+    expect(result.stderr).toMatch(errMatch, "Bash output\n" + result.stderr)
+    expect(result.stdout).toEqual('')
+    expect(result.code).toEqual(1)
 
-      result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} projects close @liquid-labs/lc-entities-model`, execOpts)
-      expect(result.stderr).toMatch(testConfig.errMatch)
-      expect(result.stdout).toEqual('')
-      expect(result.code).toEqual(1)
-    })
+    result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} projects close @liquid-labs/lc-entities-model`, execOpts)
+    expect(result.stderr).toMatch(errMatch)
+    expect(result.stdout).toEqual('')
+    expect(result.code).toEqual(1)
   })
 
   test(`should remove current project when no changes present`, () => {

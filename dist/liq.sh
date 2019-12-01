@@ -327,6 +327,15 @@ echoerrandexit() {
   exit $EXIT_CODE
 }
 
+# Prompts the user for input and saves it to a var.
+# Arg 1: The prompt.
+# Arg 2: The name of the var to save the answer to. (BUG: Don't use 'VAR'. 'ANSWER' is always safe.)
+# Arg 3 (opt): Default value to use if the user just hits enter.
+#
+# The defult value will be added to the prompt.
+# If '--multi-line' is specified, the user may enter multiple lines, and end input with a line containing a single '.'.
+# Instructions to this effect will emitted. Also, in this mode, spaces in the answer will be preserved, while in
+# 'single line' mode, leading and trailing spaces will be removed.
 get-answer() {
   eval "$(setSimpleOptions MULTI_LINE -- "$@")"
   local PROMPT="$1"
@@ -366,6 +375,10 @@ get-answer() {
   fi
 }
 
+# Functions as 'get-answer', but will continually propmt the user if no answer is given.
+# '--force' causes the default to be set to the previous answer and the query to be run again. This is mainly useful
+# internally and direct calls should generally note have cause to use this option. (TODO: let's rewrite this to 'unset'
+# the vars (?) and avoid the need for force?)
 require-answer() {
   eval "$(setSimpleOptions FORCE MULTI_LINE -- "$@")"
   local PROMPT="$1"
@@ -391,6 +404,8 @@ require-answer() {
   done
 }
 
+# Produces a 'yes/no' prompt, accepting 'y', 'yes', 'n', or 'no' (case insensitive). Unlike other prompts, this function
+# returns true or false, making it convenient for boolean tests.
 yes-no() {
   default-yes() { return 0; }
   default-no() { return 1; } # bash false-y
@@ -2954,7 +2969,7 @@ projects-close() {
 
     cd "$PROJECT_NAME"
     # Are remotes setup as expected?
-    if ! git remote -v | grep -q '^upstream$'; then
+    if ! git remote | grep -q '^upstream$'; then
       echoerrandexit "Did not find expected 'upstream' remote. Verify everything saved+pushed and try:\nliq projects close --force '${PROJECT_NAME}'"
     fi
     # Is everything comitted?
@@ -3146,7 +3161,7 @@ projects-sync() {
     fi
     echo "Workspace master synced."
     cleanupMaster
-    
+
     REMOTE_COMMITS=$(git rev-list --right-only --count ${CURR_BRANCH}...workspace/${CURR_BRANCH})
     if (( $REMOTE_COMMITS > 0 )); then
       echo "Synching with workspace workbranch..."

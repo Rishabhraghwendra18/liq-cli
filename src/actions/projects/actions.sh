@@ -43,7 +43,7 @@ projects-close() {
 
     cd "$PROJECT_NAME"
     # Are remotes setup as expected?
-    if ! git remote -v | grep -q '^upstream$'; then
+    if ! git remote | grep -q '^upstream$'; then
       echoerrandexit "Did not find expected 'upstream' remote. Verify everything saved+pushed and try:\nliq projects close --force '${PROJECT_NAME}'"
     fi
     # Is everything comitted?
@@ -235,7 +235,7 @@ projects-sync() {
     fi
     echo "Workspace master synced."
     cleanupMaster
-    
+
     REMOTE_COMMITS=$(git rev-list --right-only --count ${CURR_BRANCH}...workspace/${CURR_BRANCH})
     if (( $REMOTE_COMMITS > 0 )); then
       echo "Synching with workspace workbranch..."

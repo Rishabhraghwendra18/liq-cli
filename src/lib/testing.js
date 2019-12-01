@@ -67,6 +67,6 @@ export const setup = () => {
     metaInit,
     localCheckout,
     // TODO: don't cleanup if errors? (and mention the fact)
-    cleanup: () => shell.rm('-rf', home)
+    cleanup: () => {}//shell.rm('-rf', home)
   }
 }
