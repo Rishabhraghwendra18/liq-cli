@@ -1,6 +1,6 @@
 {
   "name": "@liquid-labs/liq-cli",
-  "version": "1.0.0-prototype.8",
+  "version": "1.0.0-prototype.9",
   "description": "Local development and management tool for Liquid Development projects.",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
