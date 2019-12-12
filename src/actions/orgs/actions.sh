@@ -161,7 +161,7 @@ orgs-select() {
     selectOneCancel ORG_NAME ORGS
     ORG_NAME="${ORG_NAME//[ *]/}"
   fi
-  echo "blah: ${LIQ_ORG_DB}/${ORG_NAME}" >> log.tmp
+  
   if [[ -d "${LIQ_ORG_DB}/${ORG_NAME}" ]]; then
     if [[ -L $CURR_ORG_DIR ]]; then rm $CURR_ORG_DIR; fi
     cd "${LIQ_ORG_DB}" && ln -s "./${ORG_NAME}" $(basename "${CURR_ORG_DIR}")
