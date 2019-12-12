@@ -1,15 +1,28 @@
-CATALYST_COMMAND_GROUPS=(data environments meta orgs projects required-services services work)
+CATALYST_COMMAND_GROUPS=(help data environments meta orgs orgs-staff projects required-services services work)
+
+help-help() {
+  PREFIX="${1:-}"
+
+  handleSummary "${PREFIX}${cyan_u}help${reset} [<group> [<action>]]: Displays help summary or—with group—details." || cat <<EOF
+${PREFIX}${cyan_u}help${reset} [--all|-a] [--summary-only|-s] [<group> [<action>]]:
+  Displays liq help. With no arguments, defaults to a summary listing of the available groups. The '--all' option will print the full help for each group, even with no args. If a group or action is specified, then only help for that group and or group+action is displayed. In this case, '--all' is the default and '--summary-only' will cause a one-line summary to be displayed.
+
+  Note, to display help for a sub-group, a '-' must be used between the parent and child group like: 'help orgs-staff'.
+EOF
+}
 
 help() {
-  local TMP
-  TMP=$(setSimpleOptions SUMMARY_ONLY -- "$@") \
-    || ( help-runtime-services; echoerrandexit "Bad options." )
-  eval "$TMP"
+  eval "$(setSimpleOptions ALL SUMMARY_ONLY -- "$@")" \
+    || { echoerr "Bad options."; help-help; exit 1; }
 
   local GROUP="${1:-}"
   local ACTION="${2:-}"
+  local SUMMARY_ONLY
 
   if (( $# == 0 )); then
+    # If displaying all, only display summary.
+    if [[ -z "$ALL" ]]; then SUMMARY_ONLY=true; fi
+
     cat <<EOF
 Usage:
   liq <resource/group> <action> [...options...] [...selectors...]
