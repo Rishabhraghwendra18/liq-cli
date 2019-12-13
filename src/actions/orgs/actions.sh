@@ -2,6 +2,7 @@ requirements-orgs() {
   findBase
 }
 
+# see `liq help orgs affiliate`
 orgs-affiliate() {
   eval "$(setSimpleOptions LEAVE: SELECT SENSITIVE: -- "$@")"
 
@@ -55,6 +56,7 @@ orgs-affiliate() {
   if [[ -n "${SELECT}" ]]; then orgs-select "$ORG_NICK_NAME"; fi
 }
 
+# see `liq help orgs create`
 orgs-create() {
   local FIELDS="COMMON_NAME GITHUB_NAME LEGAL_NAME ADDRESS: NAICS"
   local OPT_FIELDS="NPM_REGISTRY NPM_SCOPE"
@@ -143,10 +145,12 @@ orgs-create() {
   fi
 }
 
+# see `liq help orgs list`
 orgs-list() {
-  orgsOrgList
+  orgsOrgList "$@"
 }
 
+# see `liq help orgs select`
 orgs-select() {
   eval "$(setSimpleOptions NONE -- "$@")"
 
@@ -181,6 +185,7 @@ orgs-select() {
   fi
 }
 
+# see `liq help orgs show`
 orgs-show() {
   eval "$(setSimpleOptions SENSITIVE -- "$@")"
 
