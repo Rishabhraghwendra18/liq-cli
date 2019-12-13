@@ -15,11 +15,12 @@ ${PREFIX}${cyan_u}orgs${reset} <action>:
     sensitive repo. '--select' will cause a successfully retrieved org to be activated. With '--leave',
     provide the org nick instead of URL and the local repos will be removed. This will also de-select
     the named org if it is the currently selected org.
-  ${underline}create${reset} [--no-subscribe|-S] [--activate|-a]:
+  ${underline}create${reset} [--no-affiliate|-A] [--select|-s]:
     Interactively gathers any org info not specified via CLI options and creates a 'org-settings' and
     'org-settings-sensitive' repos under the indicated GitHub org or user name. The following options
-    may be used to specify fields from the CLI. If all options are specified (even if blank), then the
-    command will run non-interactively.
+    may be used to specify fields from the CLI. If all required options are specified (even if blank),
+    then the command will run non-interactively and optional fields will be set to default values
+    unless specified.
 
     The org fields are:
     * --common-name
@@ -28,7 +29,8 @@ ${PREFIX}${cyan_u}orgs${reset} <action>:
     * --github-name
     * --ein
     * --naics
-    * (optional) --nmp-registry
+    * (optional) --npp-registry
+    * (optional) --npm-scope
   ${underline}list${reset}: Lists the currently affiliated orgs.
   ${underline}select${reset} [--none] [<org nick>]: Selects/changes currently active org. If no name is
     given, then will enter interactive mode. '--none' de-activates the currently selected org.

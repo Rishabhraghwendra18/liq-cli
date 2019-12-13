@@ -56,33 +56,39 @@ orgs-affiliate() {
 }
 
 orgs-create() {
-  local FIELDS="COMMON_NAME GITHUB_NAME LEGAL_NAME ADDRESS NAICS"
+  local FIELDS="COMMON_NAME GITHUB_NAME LEGAL_NAME ADDRESS: NAICS"
+  local OPT_FIELDS="NPM_REGISTRY NPM_SCOPE"
   local FIELDS_SENSITIVE="EIN"
-  eval "$(setSimpleOptions NO_SUBSCRIBE:S ACTIVATE COMMON_NAME= GITHUB_NAME= LEGAL_NAME= ADDRESS= EIN= NAICS= -- "$@")"
+  eval "$(setSimpleOptions NO_AFFILIATE:S SELECT COMMON_NAME= GITHUB_NAME= LEGAL_NAME= ADDRESS= EIN= NAICS= NPM_REGISTRY:= NPM_SCOPE:= -- "$@")"
 
-  if [[ -n "$NO_SUBSCRIBE" ]] && [[ -n "$ACTIVATE" ]]; then
-    echoerrandexit "The '--no-subscribe' and '--activate' options are incompatible."
+  if [[ -n "$NO_AFFILIATE" ]] && [[ -n "$SELECT" ]]; then
+    echoerrandexit "The '--no-affiliate' and '--select' options are incompatible."
   fi
 
-  local FIELD FIELD_SET VERIFIED
-  while [[ "${VERIFIED}" != true ]]; do
-    for FIELD in $FIELDS $FIELDS_SENSITIVE; do
-      local OPTS=''
-      # if VERIFIED is set, but false, then we need to force require-answer to set the var
-      [[ "$VERIFIED" == false ]] && OPTS='--force '
-      [[ "$FIELD" == "ADDRESS" ]] && OPTS="${OPTS}--multi-line "
-      require-answer ${OPTS} "${FIELD//_/ }: " $FIELD
-    done
-    verify() { VERIFIED=true; }
-    no-verify() { VERIFIED=false; }
-    echo
-    echo "Verify the following:"
-    for FIELD in $FIELDS $FIELDS_SENSITIVE; do
-      echo "$FIELD: ${!FIELD}"
-    done
-    echo
-    yes-no "Are these values correct? (y/N) " N verify no-verify
+  # because some fields are optional, but may be set, we can't just rely on 'gather-answers' to skip interactive bit
+  local FULLY_DEFINED=true
+  for FIELD in $FIELDS $FIELDS_SENSITIVE; do
+    FIELD=${FIELD/:/}
+    [[ -n "${!FIELD}" ]] || FULLY_DEFINED=false
   done
+
+  defaulter() {
+    local FIELD="${1}"
+
+    case "$FIELD" in
+      "NPM_REGISTRY")
+        echo "https://registry.npmjs.org/";;
+      "NPM_SCOPE")
+        echo "$GITHUB_NAME" | tr '[:upper:]' '[:lower:]';;
+    esac
+  }
+
+  if [[ "$FULLY_DEFINED" == true ]]; then
+    NPM_REGISTRY=$(defaulter NPM_REGISTRY)
+    NPM_SCOPE=$(defaulter NPM_SCOPE)
+  else
+    gather-answers --defaulter=defaulter --verify "$FIELDS $OPT_FIELDS $FIELDS_SENSITIVE"
+  fi
 
   cd ${LIQ_DB}
   mkdir -p orgs
@@ -110,7 +116,8 @@ orgs-create() {
   }
 
   cd "${LIQ_DB}/orgs/${DIR_NAME}/public"
-  for FIELD in $FIELDS; do
+  for FIELD in $FIELDS $OPT_FIELDS; do
+    FIELD=${FIELD/:/}
     echo "ORG_${FIELD}='$(echo "${!FIELD}" | sed "s/'/'\"'\"'/g")'" >> settings.sh
   done
   echo "ORG_NICK_NAME='${DIR_NAME}'" >> settings.sh
@@ -120,17 +127,17 @@ orgs-create() {
 
   cd "${LIQ_DB}/orgs/${DIR_NAME}/sensitive"
   for FIELD in $FIELDS_SENSITIVE; do
+    FIELD=${FIELD/:/}
     echo "ORG_${FIELD}='$(echo "${!FIELD}" | sed "s/'/'\"'\"'/g")'" >> settings.sh
   done
   prep-repo sensitive
   hub create -p -d "Sensitive liq settings for ${LEGAL_NAME}." "${GITHUB_NAME}/org_settings_sensitive"
   git push --set-upstream origin master
 
-  if [[ "$ACTIVATE" == true ]]; then
-    cd "${LIQ_DB}/orgs"
-    ln -s "$DIR_NAME" curr_org
+  if [[ "$SELECT" == true ]]; then
+    orgs-select "$DIR_NAME"
   fi
-  if [[ "$NO_SUBSCRIBE" == true ]]; then
+  if [[ "$NO_AFFILIATE" == true ]]; then
     cd "${LIQ_DB}/orgs"
     rm -rf "$DIR_NAME"
   fi
@@ -161,7 +168,7 @@ orgs-select() {
     selectOneCancel ORG_NAME ORGS
     ORG_NAME="${ORG_NAME//[ *]/}"
   fi
-  
+
   if [[ -d "${LIQ_ORG_DB}/${ORG_NAME}" ]]; then
     if [[ -L $CURR_ORG_DIR ]]; then rm $CURR_ORG_DIR; fi
     cd "${LIQ_ORG_DB}" && ln -s "./${ORG_NAME}" $(basename "${CURR_ORG_DIR}")

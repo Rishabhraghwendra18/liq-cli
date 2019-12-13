@@ -441,7 +441,7 @@ yes-no() {
 }
 
 gather-answers() {
-  eval "$(setSimpleOptions VERIFY PROMPTER= -- "$@")"
+  eval "$(setSimpleOptions VERIFY PROMPTER= DEFAULTER= -- "$@")"
   local FIELDS="${1}"
 
   local FIELD VERIFIED
@@ -458,9 +458,10 @@ gather-answers() {
       local LABEL="$FIELD"
       $(tr '[:lower:]' '[:upper:]' <<< ${foo:0:1})${foo:1}
       LABEL="${LABEL:0:1}$(echo "${LABEL:1}" | tr '[:upper:]' '[:lower:]' | tr '_' ' ')"
-      local PROMPT
+      local PROMPT DEFAULT
       PROMPT="$({ [[ -n "$PROMPTER" ]] && $PROMPTER "$FIELD" "$LABEL"; } || echo "${LABEL}: ")"
-      require-answer ${OPTS} "${PROMPT}" $FIELD
+      DEFAULT="$({ [[ -n "$DEFAULTER" ]] && $DEFAULTER "$FIELD"; } || echo '')"
+      require-answer ${OPTS} "${PROMPT}" $FIELD "$DEFAULT"
     done
 
     # verify, as necessary
@@ -472,6 +473,7 @@ gather-answers() {
       echo
       echo "Verify the following:"
       for FIELD in $FIELDS; do
+        FIELD=${FIELD/:/}
         echo "$FIELD: ${!FIELD}"
       done
       echo
@@ -2574,33 +2576,39 @@ orgs-affiliate() {
 }
 
 orgs-create() {
-  local FIELDS="COMMON_NAME GITHUB_NAME LEGAL_NAME ADDRESS NAICS"
+  local FIELDS="COMMON_NAME GITHUB_NAME LEGAL_NAME ADDRESS: NAICS"
+  local OPT_FIELDS="NPM_REGISTRY NPM_SCOPE"
   local FIELDS_SENSITIVE="EIN"
-  eval "$(setSimpleOptions NO_SUBSCRIBE:S ACTIVATE COMMON_NAME= GITHUB_NAME= LEGAL_NAME= ADDRESS= EIN= NAICS= -- "$@")"
+  eval "$(setSimpleOptions NO_AFFILIATE:S SELECT COMMON_NAME= GITHUB_NAME= LEGAL_NAME= ADDRESS= EIN= NAICS= NPM_REGISTRY:= NPM_SCOPE:= -- "$@")"
 
-  if [[ -n "$NO_SUBSCRIBE" ]] && [[ -n "$ACTIVATE" ]]; then
-    echoerrandexit "The '--no-subscribe' and '--activate' options are incompatible."
+  if [[ -n "$NO_AFFILIATE" ]] && [[ -n "$SELECT" ]]; then
+    echoerrandexit "The '--no-affiliate' and '--select' options are incompatible."
   fi
 
-  local FIELD FIELD_SET VERIFIED
-  while [[ "${VERIFIED}" != true ]]; do
-    for FIELD in $FIELDS $FIELDS_SENSITIVE; do
-      local OPTS=''
-      # if VERIFIED is set, but false, then we need to force require-answer to set the var
-      [[ "$VERIFIED" == false ]] && OPTS='--force '
-      [[ "$FIELD" == "ADDRESS" ]] && OPTS="${OPTS}--multi-line "
-      require-answer ${OPTS} "${FIELD//_/ }: " $FIELD
-    done
-    verify() { VERIFIED=true; }
-    no-verify() { VERIFIED=false; }
-    echo
-    echo "Verify the following:"
-    for FIELD in $FIELDS $FIELDS_SENSITIVE; do
-      echo "$FIELD: ${!FIELD}"
-    done
-    echo
-    yes-no "Are these values correct? (y/N) " N verify no-verify
+  # because some fields are optional, but may be set, we can't just rely on 'gather-answers' to skip interactive bit
+  local FULLY_DEFINED=true
+  for FIELD in $FIELDS $FIELDS_SENSITIVE; do
+    FIELD=${FIELD/:/}
+    [[ -n "${!FIELD}" ]] || FULLY_DEFINED=false
   done
+
+  defaulter() {
+    local FIELD="${1}"
+
+    case "$FIELD" in
+      "NPM_REGISTRY")
+        echo "https://registry.npmjs.org/";;
+      "NPM_SCOPE")
+        echo "$GITHUB_NAME" | tr '[:upper:]' '[:lower:]';;
+    esac
+  }
+
+  if [[ "$FULLY_DEFINED" == true ]]; then
+    NPM_REGISTRY=$(defaulter NPM_REGISTRY)
+    NPM_SCOPE=$(defaulter NPM_SCOPE)
+  else
+    gather-answers --defaulter=defaulter --verify "$FIELDS $OPT_FIELDS $FIELDS_SENSITIVE"
+  fi
 
   cd ${LIQ_DB}
   mkdir -p orgs
@@ -2628,7 +2636,8 @@ orgs-create() {
   }
 
   cd "${LIQ_DB}/orgs/${DIR_NAME}/public"
-  for FIELD in $FIELDS; do
+  for FIELD in $FIELDS $OPT_FIELDS; do
+    FIELD=${FIELD/:/}
     echo "ORG_${FIELD}='$(echo "${!FIELD}" | sed "s/'/'\"'\"'/g")'" >> settings.sh
   done
   echo "ORG_NICK_NAME='${DIR_NAME}'" >> settings.sh
@@ -2638,17 +2647,17 @@ orgs-create() {
 
   cd "${LIQ_DB}/orgs/${DIR_NAME}/sensitive"
   for FIELD in $FIELDS_SENSITIVE; do
+    FIELD=${FIELD/:/}
     echo "ORG_${FIELD}='$(echo "${!FIELD}" | sed "s/'/'\"'\"'/g")'" >> settings.sh
   done
   prep-repo sensitive
   hub create -p -d "Sensitive liq settings for ${LEGAL_NAME}." "${GITHUB_NAME}/org_settings_sensitive"
   git push --set-upstream origin master
 
-  if [[ "$ACTIVATE" == true ]]; then
-    cd "${LIQ_DB}/orgs"
-    ln -s "$DIR_NAME" curr_org
+  if [[ "$SELECT" == true ]]; then
+    orgs-select "$DIR_NAME"
   fi
-  if [[ "$NO_SUBSCRIBE" == true ]]; then
+  if [[ "$NO_AFFILIATE" == true ]]; then
     cd "${LIQ_DB}/orgs"
     rm -rf "$DIR_NAME"
   fi
@@ -2679,7 +2688,7 @@ orgs-select() {
     selectOneCancel ORG_NAME ORGS
     ORG_NAME="${ORG_NAME//[ *]/}"
   fi
-  echo "blah: ${LIQ_ORG_DB}/${ORG_NAME}" >> log.tmp
+
   if [[ -d "${LIQ_ORG_DB}/${ORG_NAME}" ]]; then
     if [[ -L $CURR_ORG_DIR ]]; then rm $CURR_ORG_DIR; fi
     cd "${LIQ_ORG_DB}" && ln -s "./${ORG_NAME}" $(basename "${CURR_ORG_DIR}")
@@ -2725,11 +2734,12 @@ ${PREFIX}${cyan_u}orgs${reset} <action>:
     sensitive repo. '--select' will cause a successfully retrieved org to be activated. With '--leave',
     provide the org nick instead of URL and the local repos will be removed. This will also de-select
     the named org if it is the currently selected org.
-  ${underline}create${reset} [--no-subscribe|-S] [--activate|-a]:
+  ${underline}create${reset} [--no-affiliate|-A] [--select|-s]:
     Interactively gathers any org info not specified via CLI options and creates a 'org-settings' and
     'org-settings-sensitive' repos under the indicated GitHub org or user name. The following options
-    may be used to specify fields from the CLI. If all options are specified (even if blank), then the
-    command will run non-interactively.
+    may be used to specify fields from the CLI. If all required options are specified (even if blank),
+    then the command will run non-interactively and optional fields will be set to default values
+    unless specified.
 
     The org fields are:
     * --common-name
@@ -2738,7 +2748,8 @@ ${PREFIX}${cyan_u}orgs${reset} <action>:
     * --github-name
     * --ein
     * --naics
-    * (optional) --nmp-registry
+    * (optional) --npp-registry
+    * (optional) --npm-scope
   ${underline}list${reset}: Lists the currently affiliated orgs.
   ${underline}select${reset} [--none] [<org nick>]: Selects/changes currently active org. If no name is
     given, then will enter interactive mode. '--none' de-activates the currently selected org.
