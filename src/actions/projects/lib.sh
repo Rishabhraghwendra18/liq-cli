@@ -40,6 +40,7 @@ projectResetStaging() {
 # Expects 'PROJ_STAGE' to be declared local by the caller.
 projectClone() {
   local URL="${1}"
+  local ORIGIN_NAME="${2:-upstream}"
 
   projectCheckGitAuth
 
@@ -47,10 +48,10 @@ projectClone() {
   projectResetStaging $(basename "$URL")
   cd "$STAGING"
 
-  git clone --quiet --origin upstream "${URL}" || echoerrandexit "Failed to clone."
+  git clone --quiet --origin "$ORIGIN_NAME" "${URL}" || echoerrandexit "Failed to clone."
 
   if [[ ! -d "$PROJ_STAGE" ]]; then
-    echoerrandexit "Did not find expected project direcotry '$PROJ_STAGE' in staging."
+    echoerrandexit "Did not find expected project direcotry '$PROJ_STAGE' in staging after cloning repo."
   fi
 }
 

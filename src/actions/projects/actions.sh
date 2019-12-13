@@ -68,53 +68,56 @@ projects-close() {
 }
 
 projects-create() {
-  echoerrandexit "'create' needs to be reworked for forks."
-  local TMP PROJ_STAGE __PROJ_NAME TEMPLATE_URL
-  TMP=$(setSimpleOptions TYPE= TEMPLATE:T= ORIGIN= -- "$@") \
-    || ( contextHelp; echoerrandexit "Bad options."; )
-  eval "$TMP"
+  eval "$(setSimpleOptions NEW= SOURCE= FOLLOW NO_FORK:F VERSION= LICENSE= DESCRIPTION=)"
 
   __PROJ_NAME="${1}"
   if [[ -z "$__PROJ_NAME" ]]; then
     echoerrandexit "Must specify project name (1st argument)."
+  elif [[ "$_PROJ_NAME" == */* ]]; then
+    echoerrandexit 'It appears that the project name includes the package scope. Scope is derived from the current org settings. Please specify just the "base name".'
   fi
 
-  if [[ -n "$TYPE" ]] && [[ -n "$TEMPLATE" ]]; then
-    echoerrandexit "You specify either project 'type' or 'template, but not both.'"
-  elif [[ -z "$TYPE" ]] && [[ -z "$TEMPLATE" ]]; then
-    echoerrandexit "You must specify one of 'type' or 'template'."
-  elif [[ -n "$TEMPLATE" ]]; then
-    # determine if package or URL
-    : # TODO: we do this in import too; abstract?
-  else # it's a type
-    case "$TYPE" in
-      bare)
-        if [[ -z "$ORIGIN" ]]; then
-          echoerrandexit "Creating a 'raw' project, '--origin' must be specified."
-        fi
-        TEMPLATE_URL="$ORIGIN";;
-      *)
-        echoerrandexit "Unknown 'type'. Try one of: bare"
-    esac
+  if [[ -n "$NEW" ]] && [[ -n "$SOURCE" ]]; then
+    echoerrandexit "The '--new' and '--source' options are not compatible. Please refer to:\nliq help projects create"
+  elif [[ -z "$NEW" ]] && [[ -z "$SOURCE" ]]; then
+    echoerrandexit "You must specify one of the '--new' or '--source' options when creating a project.Please refer to:\nliq help projects create"
   fi
-  projectClone "$TEMPLATE_URL"
-  cd "$PROJ_STAGE"
-  # re-orient the origin from the template to the ORIGIN URL
-  git remote set-url origin "${ORIGIN}"
-  git remote set-url origin --push "${ORIGIN}"
-  if [[ -f "package.json" ]]; then
-    echowarn --no-fold "This project already has a 'project.json' file. Will continue as import.\nIn future, try:\nliq import $__PROJ_NAME"
+
+  source "${CURR_ORG_DIR}/public"
+
+  local REPO_FRAG REPO_URL BUGS_URL README_URL
+  REPO_FRAG="github.com/${ORG_GITHUB_NAME}/${__PROJ_NAME}"
+  REPO_URL="git+ssh://git@${REPO_FRAG}.git"
+  BUGS_URL="https://${REPO_FRAG}/issues"
+  HOMEPAGE="https://${REPO_FRAG}#readme"
+
+  if [[ -n "$NEW" ]]; then
+    npm init "$NEW"
+    # The init script is responsible for setting up package.json
   else
-    local SCOPE
-    SCOPE=$(dirname "$__PROJ_NAME")
-    if [[ -n "$SCOPE" ]]; then
-      npm init --scope "${SCOPE}"
-    else
-      npm init
+    projectClone "$SOURCE" 'source'
+
+    # setup all the vars
+    [[ -n "$VERSION" ]] || VERSION='1.0.0'
+    [[ -n "$LICENSE" ]] \
+      || { [[ -n "$ORG_DEFAULT_LICENSE" ]] && LICENSE="$ORG_DEFAULT_LICENSE"; } \
+      || LICENSE='UNLICENSED'
+
+    cd "$PROJ_STAGE"
+    [[ -f "package.json" ]] || echo '{}' > package.json
+    cat package.json | jq ".name = '@${ORG_NPM_SCOPE}/${__PROJ_NAME}'" > package.json
+    cat package.json | jq ".version = '${VERSION}'" > package.json
+    cat package.json | jq ".license = '${LICENSE}'" > package.json
+    cat package.json | jq ".repository = { type: \"git\", url: \"${REPO_URL}\"}" > package.json
+    cat package.json | jq ".bugs = { url: \"${BUGS_URL}\"}" > package.json
+    cat package.json | jq ".homepage = '${HOMEPAGE}'" > package.json
+    if [[ -n "$DESCRIPTION" ]]; then
+      cat package.json | jq ".description = '${DESCRIPTION}'" > package.json
     fi
+
     git add package.json
   fi
-  cd
+  cd -
   projectMoveStaged "$__PROJ_NAME" "$PROJ_STAGE"
 }
 
@@ -137,7 +140,6 @@ projects-import() {
   }
 
   if [[ "$1" == *:* ]]; then # it's a URL
-		echo "url" >> ~/log.tmp
     _PROJ_URL="${1}"
     if [[ -n "$NO_FORK" ]]; then
       projectClone "$_PROJ_URL"
