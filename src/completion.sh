@@ -47,7 +47,7 @@ _liq()
         services)
           OPTS="connect err-log list log restart start stop";;
         work)
-          OPTS="diff-master edit ignore-rest involve merge qa report resume save stage start status stop submit sync";;
+          OPTS="diff-master edit ignore-rest involve issues merge qa report resume save stage start status stop submit sync";;
       esac
     else
       case "${GROUP}" in
@@ -59,6 +59,12 @@ _liq()
         orgs)
           if [[ "${ACTION}" == staff ]] && (( $WORD_COUNT == 4 )); then
             OPTS="add list remove"
+          else
+            case "${ACTION}" in
+              select)
+                COMPREPLY=( $(compgen -W "$(find ~/.liquid-development/orgs -maxdepth 1 -mindepth 1 -type d -exec basename {} \;)" -- ${CUR}) )
+                return 0;;
+            esac
           fi;;
         work)
           case "${ACTION}" in
