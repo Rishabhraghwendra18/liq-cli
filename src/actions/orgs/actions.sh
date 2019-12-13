@@ -172,6 +172,10 @@ orgs-select() {
   if [[ -d "${LIQ_ORG_DB}/${ORG_NAME}" ]]; then
     if [[ -L $CURR_ORG_DIR ]]; then rm $CURR_ORG_DIR; fi
     cd "${LIQ_ORG_DB}" && ln -s "./${ORG_NAME}" $(basename "${CURR_ORG_DIR}")
+    source "${CURR_ORG_DIR}/public/settings.sh"
+    if [[ -n "${ORG_NPM_SCOPE}" ]] && [[ -n "${ORG_NPM_REGISTRY}" ]]; then
+      addLineIfNotPresentInFile ~/.npmrc "@${ORG_NPM_SCOPE}:registry=${ORG_NPM_REGISTRY}"
+    fi
   else
     echoerrandexit "No such org '$ORG_NAME' defined."
   fi

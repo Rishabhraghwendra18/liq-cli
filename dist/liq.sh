@@ -2692,6 +2692,10 @@ orgs-select() {
   if [[ -d "${LIQ_ORG_DB}/${ORG_NAME}" ]]; then
     if [[ -L $CURR_ORG_DIR ]]; then rm $CURR_ORG_DIR; fi
     cd "${LIQ_ORG_DB}" && ln -s "./${ORG_NAME}" $(basename "${CURR_ORG_DIR}")
+    source "${CURR_ORG_DIR}/public/settings.sh"
+    if [[ -n "${ORG_NPM_SCOPE}" ]] && [[ -n "${ORG_NPM_REGISTRY}" ]]; then
+      addLineIfNotPresentInFile ~/.npmrc "@${ORG_NPM_SCOPE}:registry=${ORG_NPM_REGISTRY}"
+    fi
   else
     echoerrandexit "No such org '$ORG_NAME' defined."
   fi
@@ -4966,6 +4970,8 @@ ${PREFIX}${cyan_u}work${reset} <action>:
     repository in the current unit of work. When involved, any projects in the
     newly involved project will be linked to the primary project in the unit of
     work. The '--no-link' option will suppress this behavior.
+  ${underline}issues${reset} [--list|--add|--remove]: Manages issues associated with the current unit of work.
+    TODO: this should be re-worked as sub-group.
   ${underline}start${reset} <name>: Creates a new unit of work and adds the current repository (if any) to it.
   ${underline}stop${reset} [-k|--keep-checkout]: Stops working on the current unit of work. The
     master branch will be checked out for all involved projects unless
