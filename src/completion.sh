@@ -47,7 +47,7 @@ _liq()
         services)
           OPTS="connect err-log list log restart start stop";;
         work)
-          OPTS="diff-master edit ignore-rest involve merge qa report resume save stage start status stop submit sync";;
+          OPTS="diff-master edit ignore-rest involve issues merge qa report resume save stage start status stop submit sync";;
       esac
     else
       case "${GROUP}" in

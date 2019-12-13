@@ -16,6 +16,8 @@ ${PREFIX}${cyan_u}work${reset} <action>:
     repository in the current unit of work. When involved, any projects in the
     newly involved project will be linked to the primary project in the unit of
     work. The '--no-link' option will suppress this behavior.
+  ${underline}issues${reset} [--list|--add|--remove]: Manages issues associated with the current unit of work.
+    TODO: this should be re-worked as sub-group.
   ${underline}start${reset} <name>: Creates a new unit of work and adds the current repository (if any) to it.
   ${underline}stop${reset} [-k|--keep-checkout]: Stops working on the current unit of work. The
     master branch will be checked out for all involved projects unless
