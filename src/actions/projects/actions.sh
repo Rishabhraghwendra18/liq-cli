@@ -2,12 +2,14 @@ requirements-projects() {
   :
 }
 
+# see: liq help projects build
 projects-build() {
   findBase
   cd "$BASE_DIR"
   projectsRunPackageScript build
 }
 
+# see: liq help projects close
 projects-close() {
   eval "$(setSimpleOptions FORCE -- "$@")"
 
@@ -67,6 +69,7 @@ projects-close() {
   # TODO: need to check whether the project is linked to other projects
 }
 
+# see: liq help projects create
 projects-create() {
   eval "$(setSimpleOptions NEW= SOURCE= FOLLOW NO_FORK:F VERSION= LICENSE= DESCRIPTION= PUBLIC: -- "$@")"
 
@@ -153,6 +156,7 @@ projects-create() {
   projectMoveStaged "$__PROJ_NAME" "$PROJ_STAGE"
 }
 
+# see: liq help projects deploy
 projects-deploy() {
   if [[ -z "${GOPATH:-}" ]]; then
     echoerr "'GOPATH' is not defined. Run 'liq go configure'."
@@ -161,6 +165,7 @@ projects-deploy() {
   colorerr "GOPATH=$GOPATH bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; gcloud app deploy'"
 }
 
+# see: liq help projects import
 projects-import() {
   local PROJ_SPEC __PROJ_NAME _PROJ_URL PROJ_STAGE
   eval "$(setSimpleOptions NO_FORK:F SET_NAME= SET_URL= -- "$@")"
@@ -210,10 +215,12 @@ projects-import() {
   echo "'$_PROJ_NAME' imported into playground."
 }
 
+# see: liq help projects publish
 projects-publish() {
   echoerrandexit "The 'publish' action is not yet implemented."
 }
 
+# see: liq help projects qa
 projects-qa() {
   eval "$(setSimpleOptions UPDATE^ OPTIONS=^ AUDIT LINT VERSION_CHECK -- "$@")" \
     || { contextHelp; echoerrandexit "Bad options."; }
@@ -237,6 +244,7 @@ projects-qa() {
   fi
 }
 
+# see: liq help projects sync
 projects-sync() {
   eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
@@ -308,6 +316,7 @@ projects-sync() {
   fi # on workbranach check
 }
 
+# see: liq help projects test
 projects-test() {
   eval "$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S NO_SERVICE_CHECK:C -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
