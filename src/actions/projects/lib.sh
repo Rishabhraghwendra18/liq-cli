@@ -48,6 +48,7 @@ projectClone() {
   projectResetStaging $(basename "$URL")
   cd "$STAGING"
 
+  echo "Cloning '${ORIGIN_NAME}'..."
   git clone --quiet --origin "$ORIGIN_NAME" "${URL}" || echoerrandexit "Failed to clone."
 
   if [[ ! -d "$PROJ_STAGE" ]]; then
