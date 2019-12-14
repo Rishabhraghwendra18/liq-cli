@@ -68,11 +68,18 @@ projects-close() {
 }
 
 projects-create() {
-  eval "$(setSimpleOptions NEW= SOURCE= FOLLOW NO_FORK:F VERSION= LICENSE= DESCRIPTION=)"
+  eval "$(setSimpleOptions NEW= SOURCE= FOLLOW NO_FORK:F VERSION= LICENSE= DESCRIPTION= PUBLIC: -- "$@")"
 
-  __PROJ_NAME="${1}"
-  if [[ -z "$__PROJ_NAME" ]]; then
-    echoerrandexit "Must specify project name (1st argument)."
+  # TODO: check that the upstream and workspace projects don't already exist
+
+  __PROJ_NAME="${1:-}"
+  if [[ -z "${__PROJ_NAME:-}" ]]; then
+    if [[ -n "$SOURCE" ]]; then
+      __PROJ_NAME=$(basename "$SOURCE" | sed -e 's/\.[a-zA-Z0-9]*$//')
+      echo "Default project name to: ${__PROJ_NAME}"
+    else
+      echoerrandexit "Must specify project name for '--new' projects."
+    fi
   elif [[ "$_PROJ_NAME" == */* ]]; then
     echoerrandexit 'It appears that the project name includes the package scope. Scope is derived from the current org settings. Please specify just the "base name".'
   fi
@@ -83,7 +90,7 @@ projects-create() {
     echoerrandexit "You must specify one of the '--new' or '--source' options when creating a project.Please refer to:\nliq help projects create"
   fi
 
-  source "${CURR_ORG_DIR}/public"
+  source "${CURR_ORG_DIR}/public/settings.sh"
 
   local REPO_FRAG REPO_URL BUGS_URL README_URL
   REPO_FRAG="github.com/${ORG_GITHUB_NAME}/${__PROJ_NAME}"
@@ -96,27 +103,52 @@ projects-create() {
     # The init script is responsible for setting up package.json
   else
     projectClone "$SOURCE" 'source'
+    cd "$PROJ_STAGE"
+    git remote set-url --push source no_push
 
+    echo "Setting up package.json..."
     # setup all the vars
     [[ -n "$VERSION" ]] || VERSION='1.0.0'
     [[ -n "$LICENSE" ]] \
-      || { [[ -n "$ORG_DEFAULT_LICENSE" ]] && LICENSE="$ORG_DEFAULT_LICENSE"; } \
+      || { [[ -n "${ORG_DEFAULT_LICENSE:-}" ]] && LICENSE="$ORG_DEFAULT_LICENSE"; } \
       || LICENSE='UNLICENSED'
 
-    cd "$PROJ_STAGE"
     [[ -f "package.json" ]] || echo '{}' > package.json
-    cat package.json | jq ".name = '@${ORG_NPM_SCOPE}/${__PROJ_NAME}'" > package.json
-    cat package.json | jq ".version = '${VERSION}'" > package.json
-    cat package.json | jq ".license = '${LICENSE}'" > package.json
-    cat package.json | jq ".repository = { type: \"git\", url: \"${REPO_URL}\"}" > package.json
-    cat package.json | jq ".bugs = { url: \"${BUGS_URL}\"}" > package.json
-    cat package.json | jq ".homepage = '${HOMEPAGE}'" > package.json
+
+    update_pkg() {
+      echo "$(cat package.json | jq "${1}")" > package.json
+    }
+
+    update_pkg ".name = \"@${ORG_NPM_SCOPE}/${__PROJ_NAME}\""
+    update_pkg ".version = \"${VERSION}\""
+    update_pkg ".license = \"${LICENSE}\""
+    update_pkg ".repository = { type: \"git\", url: \"${REPO_URL}\"}"
+    update_pkg ".bugs = { url: \"${BUGS_URL}\"}"
+    update_pkg ".homepage = \"${HOMEPAGE}\""
     if [[ -n "$DESCRIPTION" ]]; then
-      cat package.json | jq ".description = '${DESCRIPTION}'" > package.json
+      update_pkg ".description = \"${DESCRIPTION}\""
     fi
 
     git add package.json
+    git commit -m "setup and/or updated package.json"
   fi
+
+  echo "Creating upstream repo..."
+  local CREATE_OPTS="--remote-name upstream"
+  if [[ -z "$PUBLIC" ]]; then CREATE_OPTS="${CREATE_OPTS} --private"; fi
+  hub create ${CREATE_OPTS} -d "$DESCRIPTION" "${ORG_GITHUB_NAME}/${__PROJ_NAME}"
+  git push --all upstream
+
+  if [[ -z "$NO_FORK" ]]; then
+    echo "Creating fork..."
+    hub fork --remote-name workspace
+    git branch -u upstream/master master
+  fi
+  if [[ -z "$FOLLOW" ]]; then
+    echo "Un-following source repo..."
+    git remote remove source
+  fi
+
   cd -
   projectMoveStaged "$__PROJ_NAME" "$PROJ_STAGE"
 }
