@@ -214,6 +214,29 @@ projects-publish() {
   echoerrandexit "The 'publish' action is not yet implemented."
 }
 
+projects-qa() {
+  eval "$(setSimpleOptions UPDATE^ OPTIONS=^ AUDIT LINT VERSION_CHECK -- "$@")" \
+    || { contextHelp; echoerrandexit "Bad options."; }
+
+  findBase
+  cd "$BASE_DIR"
+
+  local RESTRICTED=''
+  if [[ -n "$AUDIT" ]] || [[ -n "$LINT" ]] || [[ -n "$VERSION_CHECK" ]]; then
+    RESTRICTED=true
+  fi
+
+  if [[ -z "$RESTRICTED" ]] || [[ -n "$AUDIT" ]]; then
+    projectsNpmAudit "$@" || true
+  fi
+  if [[ -z "$RESTRICTED" ]] || [[ -n "$LINT" ]]; then
+    projectsLint "$@" || true
+  fi
+  if [[ -z "$RESTRICTED" ]] || [[ -n "$VERSION_CHECK" ]]; then
+    projectsVersionCheck "$@" || true
+  fi
+}
+
 projects-sync() {
   eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
@@ -283,29 +306,6 @@ projects-sync() {
       echo "Master updates merged to workbranch."
     fi
   fi # on workbranach check
-}
-
-projects-qa() {
-  eval "$(setSimpleOptions UPDATE^ OPTIONS=^ AUDIT LINT VERSION_CHECK -- "$@")" \
-    || { contextHelp; echoerrandexit "Bad options."; }
-
-  findBase
-  cd "$BASE_DIR"
-
-  local RESTRICTED=''
-  if [[ -n "$AUDIT" ]] || [[ -n "$LINT" ]] || [[ -n "$VERSION_CHECK" ]]; then
-    RESTRICTED=true
-  fi
-
-  if [[ -z "$RESTRICTED" ]] || [[ -n "$AUDIT" ]]; then
-    projectsNpmAudit "$@" || true
-  fi
-  if [[ -z "$RESTRICTED" ]] || [[ -n "$LINT" ]]; then
-    projectsLint "$@" || true
-  fi
-  if [[ -z "$RESTRICTED" ]] || [[ -n "$VERSION_CHECK" ]]; then
-    projectsVersionCheck "$@" || true
-  fi
 }
 
 projects-test() {
