@@ -35,8 +35,10 @@ EOF
 
 help-projects-create() {
   cat <<EOF
-${underline}create${reset} [[--new <type>] || [--source|-s <pkg|URL>] [--follow|-f]] [--no-fork|-F] [--version|-v <semver> ] [--license|-l <license name>] [--description|-d <desc>] <project name>:
-  Note, 'project name' should be a bare name. The scope is determined by the current org settings.
+${underline}create${reset} [[--new <type>] || [--source|-s <pkg|URL>] [--follow|-f]] [--no-fork|-F] [--version|-v <semver> ] [--license|-l <license name>] [--description|-d <desc>] [--public] [<project name>]:
+  Note, 'project name' should be a bare name. The scope is determined by the current org settings. An
+  explicit name is required for '--new' projects. If no name is given for '--source' projects, then
+  the base source name is used.
 
   Creates a new Liquid project in one of two modes. If '--new' is specified, then the indicated type
   will be used to initiate a 'create' script. There are various '@liquid-labs/create-*' projects
