@@ -2,12 +2,14 @@ requirements-projects() {
   :
 }
 
+# see: liq help projects build
 projects-build() {
   findBase
   cd "$BASE_DIR"
   projectsRunPackageScript build
 }
 
+# see: liq help projects close
 projects-close() {
   eval "$(setSimpleOptions FORCE -- "$@")"
 
@@ -67,57 +69,94 @@ projects-close() {
   # TODO: need to check whether the project is linked to other projects
 }
 
+# see: liq help projects create
 projects-create() {
-  echoerrandexit "'create' needs to be reworked for forks."
-  local TMP PROJ_STAGE __PROJ_NAME TEMPLATE_URL
-  TMP=$(setSimpleOptions TYPE= TEMPLATE:T= ORIGIN= -- "$@") \
-    || ( contextHelp; echoerrandexit "Bad options."; )
-  eval "$TMP"
+  eval "$(setSimpleOptions NEW= SOURCE= FOLLOW NO_FORK:F VERSION= LICENSE= DESCRIPTION= PUBLIC: -- "$@")"
 
-  __PROJ_NAME="${1}"
-  if [[ -z "$__PROJ_NAME" ]]; then
-    echoerrandexit "Must specify project name (1st argument)."
-  fi
+  # TODO: check that the upstream and workspace projects don't already exist
 
-  if [[ -n "$TYPE" ]] && [[ -n "$TEMPLATE" ]]; then
-    echoerrandexit "You specify either project 'type' or 'template, but not both.'"
-  elif [[ -z "$TYPE" ]] && [[ -z "$TEMPLATE" ]]; then
-    echoerrandexit "You must specify one of 'type' or 'template'."
-  elif [[ -n "$TEMPLATE" ]]; then
-    # determine if package or URL
-    : # TODO: we do this in import too; abstract?
-  else # it's a type
-    case "$TYPE" in
-      bare)
-        if [[ -z "$ORIGIN" ]]; then
-          echoerrandexit "Creating a 'raw' project, '--origin' must be specified."
-        fi
-        TEMPLATE_URL="$ORIGIN";;
-      *)
-        echoerrandexit "Unknown 'type'. Try one of: bare"
-    esac
-  fi
-  projectClone "$TEMPLATE_URL"
-  cd "$PROJ_STAGE"
-  # re-orient the origin from the template to the ORIGIN URL
-  git remote set-url origin "${ORIGIN}"
-  git remote set-url origin --push "${ORIGIN}"
-  if [[ -f "package.json" ]]; then
-    echowarn --no-fold "This project already has a 'project.json' file. Will continue as import.\nIn future, try:\nliq import $__PROJ_NAME"
-  else
-    local SCOPE
-    SCOPE=$(dirname "$__PROJ_NAME")
-    if [[ -n "$SCOPE" ]]; then
-      npm init --scope "${SCOPE}"
+  __PROJ_NAME="${1:-}"
+  if [[ -z "${__PROJ_NAME:-}" ]]; then
+    if [[ -n "$SOURCE" ]]; then
+      __PROJ_NAME=$(basename "$SOURCE" | sed -e 's/\.[a-zA-Z0-9]*$//')
+      echo "Default project name to: ${__PROJ_NAME}"
     else
-      npm init
+      echoerrandexit "Must specify project name for '--new' projects."
     fi
-    git add package.json
+  elif [[ "$_PROJ_NAME" == */* ]]; then
+    echoerrandexit 'It appears that the project name includes the package scope. Scope is derived from the current org settings. Please specify just the "base name".'
   fi
-  cd
+
+  if [[ -n "$NEW" ]] && [[ -n "$SOURCE" ]]; then
+    echoerrandexit "The '--new' and '--source' options are not compatible. Please refer to:\nliq help projects create"
+  elif [[ -z "$NEW" ]] && [[ -z "$SOURCE" ]]; then
+    echoerrandexit "You must specify one of the '--new' or '--source' options when creating a project.Please refer to:\nliq help projects create"
+  fi
+
+  source "${CURR_ORG_DIR}/public/settings.sh"
+
+  local REPO_FRAG REPO_URL BUGS_URL README_URL
+  REPO_FRAG="github.com/${ORG_GITHUB_NAME}/${__PROJ_NAME}"
+  REPO_URL="git+ssh://git@${REPO_FRAG}.git"
+  BUGS_URL="https://${REPO_FRAG}/issues"
+  HOMEPAGE="https://${REPO_FRAG}#readme"
+
+  if [[ -n "$NEW" ]]; then
+    npm init "$NEW"
+    # The init script is responsible for setting up package.json
+  else
+    projectClone "$SOURCE" 'source'
+    cd "$PROJ_STAGE"
+    git remote set-url --push source no_push
+
+    echo "Setting up package.json..."
+    # setup all the vars
+    [[ -n "$VERSION" ]] || VERSION='1.0.0'
+    [[ -n "$LICENSE" ]] \
+      || { [[ -n "${ORG_DEFAULT_LICENSE:-}" ]] && LICENSE="$ORG_DEFAULT_LICENSE"; } \
+      || LICENSE='UNLICENSED'
+
+    [[ -f "package.json" ]] || echo '{}' > package.json
+
+    update_pkg() {
+      echo "$(cat package.json | jq "${1}")" > package.json
+    }
+
+    update_pkg ".name = \"@${ORG_NPM_SCOPE}/${__PROJ_NAME}\""
+    update_pkg ".version = \"${VERSION}\""
+    update_pkg ".license = \"${LICENSE}\""
+    update_pkg ".repository = { type: \"git\", url: \"${REPO_URL}\"}"
+    update_pkg ".bugs = { url: \"${BUGS_URL}\"}"
+    update_pkg ".homepage = \"${HOMEPAGE}\""
+    if [[ -n "$DESCRIPTION" ]]; then
+      update_pkg ".description = \"${DESCRIPTION}\""
+    fi
+
+    git add package.json
+    git commit -m "setup and/or updated package.json"
+  fi
+
+  echo "Creating upstream repo..."
+  local CREATE_OPTS="--remote-name upstream"
+  if [[ -z "$PUBLIC" ]]; then CREATE_OPTS="${CREATE_OPTS} --private"; fi
+  hub create ${CREATE_OPTS} -d "$DESCRIPTION" "${ORG_GITHUB_NAME}/${__PROJ_NAME}"
+  git push --all upstream
+
+  if [[ -z "$NO_FORK" ]]; then
+    echo "Creating fork..."
+    hub fork --remote-name workspace
+    git branch -u upstream/master master
+  fi
+  if [[ -z "$FOLLOW" ]]; then
+    echo "Un-following source repo..."
+    git remote remove source
+  fi
+
+  cd -
   projectMoveStaged "$__PROJ_NAME" "$PROJ_STAGE"
 }
 
+# see: liq help projects deploy
 projects-deploy() {
   if [[ -z "${GOPATH:-}" ]]; then
     echoerr "'GOPATH' is not defined. Run 'liq go configure'."
@@ -126,6 +165,7 @@ projects-deploy() {
   colorerr "GOPATH=$GOPATH bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; gcloud app deploy'"
 }
 
+# see: liq help projects import
 projects-import() {
   local PROJ_SPEC __PROJ_NAME _PROJ_URL PROJ_STAGE
   eval "$(setSimpleOptions NO_FORK:F SET_NAME= SET_URL= -- "$@")"
@@ -137,7 +177,6 @@ projects-import() {
   }
 
   if [[ "$1" == *:* ]]; then # it's a URL
-		echo "url" >> ~/log.tmp
     _PROJ_URL="${1}"
     if [[ -n "$NO_FORK" ]]; then
       projectClone "$_PROJ_URL"
@@ -176,10 +215,36 @@ projects-import() {
   echo "'$_PROJ_NAME' imported into playground."
 }
 
+# see: liq help projects publish
 projects-publish() {
   echoerrandexit "The 'publish' action is not yet implemented."
 }
 
+# see: liq help projects qa
+projects-qa() {
+  eval "$(setSimpleOptions UPDATE^ OPTIONS=^ AUDIT LINT VERSION_CHECK -- "$@")" \
+    || { contextHelp; echoerrandexit "Bad options."; }
+
+  findBase
+  cd "$BASE_DIR"
+
+  local RESTRICTED=''
+  if [[ -n "$AUDIT" ]] || [[ -n "$LINT" ]] || [[ -n "$VERSION_CHECK" ]]; then
+    RESTRICTED=true
+  fi
+
+  if [[ -z "$RESTRICTED" ]] || [[ -n "$AUDIT" ]]; then
+    projectsNpmAudit "$@" || true
+  fi
+  if [[ -z "$RESTRICTED" ]] || [[ -n "$LINT" ]]; then
+    projectsLint "$@" || true
+  fi
+  if [[ -z "$RESTRICTED" ]] || [[ -n "$VERSION_CHECK" ]]; then
+    projectsVersionCheck "$@" || true
+  fi
+}
+
+# see: liq help projects sync
 projects-sync() {
   eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
@@ -251,29 +316,7 @@ projects-sync() {
   fi # on workbranach check
 }
 
-projects-qa() {
-  eval "$(setSimpleOptions UPDATE^ OPTIONS=^ AUDIT LINT VERSION_CHECK -- "$@")" \
-    || { contextHelp; echoerrandexit "Bad options."; }
-
-  findBase
-  cd "$BASE_DIR"
-
-  local RESTRICTED=''
-  if [[ -n "$AUDIT" ]] || [[ -n "$LINT" ]] || [[ -n "$VERSION_CHECK" ]]; then
-    RESTRICTED=true
-  fi
-
-  if [[ -z "$RESTRICTED" ]] || [[ -n "$AUDIT" ]]; then
-    projectsNpmAudit "$@" || true
-  fi
-  if [[ -z "$RESTRICTED" ]] || [[ -n "$LINT" ]]; then
-    projectsLint "$@" || true
-  fi
-  if [[ -z "$RESTRICTED" ]] || [[ -n "$VERSION_CHECK" ]]; then
-    projectsVersionCheck "$@" || true
-  fi
-}
-
+# see: liq help projects test
 projects-test() {
   eval "$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S NO_SERVICE_CHECK:C -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )

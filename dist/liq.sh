@@ -2522,6 +2522,7 @@ requirements-orgs() {
   findBase
 }
 
+# see `liq help orgs affiliate`
 orgs-affiliate() {
   eval "$(setSimpleOptions LEAVE: SELECT SENSITIVE: -- "$@")"
 
@@ -2575,9 +2576,10 @@ orgs-affiliate() {
   if [[ -n "${SELECT}" ]]; then orgs-select "$ORG_NICK_NAME"; fi
 }
 
+# see `liq help orgs create`
 orgs-create() {
   local FIELDS="COMMON_NAME GITHUB_NAME LEGAL_NAME ADDRESS: NAICS"
-  local OPT_FIELDS="NPM_REGISTRY NPM_SCOPE"
+  local OPT_FIELDS="NPM_REGISTRY NPM_SCOPE DEFAULT_LICENSE"
   local FIELDS_SENSITIVE="EIN"
   eval "$(setSimpleOptions NO_AFFILIATE:S SELECT COMMON_NAME= GITHUB_NAME= LEGAL_NAME= ADDRESS= EIN= NAICS= NPM_REGISTRY:= NPM_SCOPE:= -- "$@")"
 
@@ -2663,10 +2665,12 @@ orgs-create() {
   fi
 }
 
+# see `liq help orgs list`
 orgs-list() {
-  orgsOrgList
+  orgsOrgList "$@"
 }
 
+# see `liq help orgs select`
 orgs-select() {
   eval "$(setSimpleOptions NONE -- "$@")"
 
@@ -2701,6 +2705,7 @@ orgs-select() {
   fi
 }
 
+# see `liq help orgs show`
 orgs-show() {
   eval "$(setSimpleOptions SENSITIVE -- "$@")"
 
@@ -3034,53 +3039,88 @@ projects-close() {
 }
 
 projects-create() {
-  echoerrandexit "'create' needs to be reworked for forks."
-  local TMP PROJ_STAGE __PROJ_NAME TEMPLATE_URL
-  TMP=$(setSimpleOptions TYPE= TEMPLATE:T= ORIGIN= -- "$@") \
-    || ( contextHelp; echoerrandexit "Bad options."; )
-  eval "$TMP"
+  eval "$(setSimpleOptions NEW= SOURCE= FOLLOW NO_FORK:F VERSION= LICENSE= DESCRIPTION= PUBLIC: -- "$@")"
 
-  __PROJ_NAME="${1}"
-  if [[ -z "$__PROJ_NAME" ]]; then
-    echoerrandexit "Must specify project name (1st argument)."
-  fi
+  # TODO: check that the upstream and workspace projects don't already exist
 
-  if [[ -n "$TYPE" ]] && [[ -n "$TEMPLATE" ]]; then
-    echoerrandexit "You specify either project 'type' or 'template, but not both.'"
-  elif [[ -z "$TYPE" ]] && [[ -z "$TEMPLATE" ]]; then
-    echoerrandexit "You must specify one of 'type' or 'template'."
-  elif [[ -n "$TEMPLATE" ]]; then
-    # determine if package or URL
-    : # TODO: we do this in import too; abstract?
-  else # it's a type
-    case "$TYPE" in
-      bare)
-        if [[ -z "$ORIGIN" ]]; then
-          echoerrandexit "Creating a 'raw' project, '--origin' must be specified."
-        fi
-        TEMPLATE_URL="$ORIGIN";;
-      *)
-        echoerrandexit "Unknown 'type'. Try one of: bare"
-    esac
-  fi
-  projectClone "$TEMPLATE_URL"
-  cd "$PROJ_STAGE"
-  # re-orient the origin from the template to the ORIGIN URL
-  git remote set-url origin "${ORIGIN}"
-  git remote set-url origin --push "${ORIGIN}"
-  if [[ -f "package.json" ]]; then
-    echowarn --no-fold "This project already has a 'project.json' file. Will continue as import.\nIn future, try:\nliq import $__PROJ_NAME"
-  else
-    local SCOPE
-    SCOPE=$(dirname "$__PROJ_NAME")
-    if [[ -n "$SCOPE" ]]; then
-      npm init --scope "${SCOPE}"
+  __PROJ_NAME="${1:-}"
+  if [[ -z "${__PROJ_NAME:-}" ]]; then
+    if [[ -n "$SOURCE" ]]; then
+      __PROJ_NAME=$(basename "$SOURCE" | sed -e 's/\.[a-zA-Z0-9]*$//')
+      echo "Default project name to: ${__PROJ_NAME}"
     else
-      npm init
+      echoerrandexit "Must specify project name for '--new' projects."
     fi
-    git add package.json
+  elif [[ "$_PROJ_NAME" == */* ]]; then
+    echoerrandexit 'It appears that the project name includes the package scope. Scope is derived from the current org settings. Please specify just the "base name".'
   fi
-  cd
+
+  if [[ -n "$NEW" ]] && [[ -n "$SOURCE" ]]; then
+    echoerrandexit "The '--new' and '--source' options are not compatible. Please refer to:\nliq help projects create"
+  elif [[ -z "$NEW" ]] && [[ -z "$SOURCE" ]]; then
+    echoerrandexit "You must specify one of the '--new' or '--source' options when creating a project.Please refer to:\nliq help projects create"
+  fi
+
+  source "${CURR_ORG_DIR}/public/settings.sh"
+
+  local REPO_FRAG REPO_URL BUGS_URL README_URL
+  REPO_FRAG="github.com/${ORG_GITHUB_NAME}/${__PROJ_NAME}"
+  REPO_URL="git+ssh://git@${REPO_FRAG}.git"
+  BUGS_URL="https://${REPO_FRAG}/issues"
+  HOMEPAGE="https://${REPO_FRAG}#readme"
+
+  if [[ -n "$NEW" ]]; then
+    npm init "$NEW"
+    # The init script is responsible for setting up package.json
+  else
+    projectClone "$SOURCE" 'source'
+    cd "$PROJ_STAGE"
+    git remote set-url --push source no_push
+
+    echo "Setting up package.json..."
+    # setup all the vars
+    [[ -n "$VERSION" ]] || VERSION='1.0.0'
+    [[ -n "$LICENSE" ]] \
+      || { [[ -n "${ORG_DEFAULT_LICENSE:-}" ]] && LICENSE="$ORG_DEFAULT_LICENSE"; } \
+      || LICENSE='UNLICENSED'
+
+    [[ -f "package.json" ]] || echo '{}' > package.json
+
+    update_pkg() {
+      echo "$(cat package.json | jq "${1}")" > package.json
+    }
+
+    update_pkg ".name = \"@${ORG_NPM_SCOPE}/${__PROJ_NAME}\""
+    update_pkg ".version = \"${VERSION}\""
+    update_pkg ".license = \"${LICENSE}\""
+    update_pkg ".repository = { type: \"git\", url: \"${REPO_URL}\"}"
+    update_pkg ".bugs = { url: \"${BUGS_URL}\"}"
+    update_pkg ".homepage = \"${HOMEPAGE}\""
+    if [[ -n "$DESCRIPTION" ]]; then
+      update_pkg ".description = \"${DESCRIPTION}\""
+    fi
+
+    git add package.json
+    git commit -m "setup and/or updated package.json"
+  fi
+
+  echo "Creating upstream repo..."
+  local CREATE_OPTS="--remote-name upstream"
+  if [[ -z "$PUBLIC" ]]; then CREATE_OPTS="${CREATE_OPTS} --private"; fi
+  hub create ${CREATE_OPTS} -d "$DESCRIPTION" "${ORG_GITHUB_NAME}/${__PROJ_NAME}"
+  git push --all upstream
+
+  if [[ -z "$NO_FORK" ]]; then
+    echo "Creating fork..."
+    hub fork --remote-name workspace
+    git branch -u upstream/master master
+  fi
+  if [[ -z "$FOLLOW" ]]; then
+    echo "Un-following source repo..."
+    git remote remove source
+  fi
+
+  cd -
   projectMoveStaged "$__PROJ_NAME" "$PROJ_STAGE"
 }
 
@@ -3103,7 +3143,6 @@ projects-import() {
   }
 
   if [[ "$1" == *:* ]]; then # it's a URL
-		echo "url" >> ~/log.tmp
     _PROJ_URL="${1}"
     if [[ -n "$NO_FORK" ]]; then
       projectClone "$_PROJ_URL"
@@ -3144,6 +3183,29 @@ projects-import() {
 
 projects-publish() {
   echoerrandexit "The 'publish' action is not yet implemented."
+}
+
+projects-qa() {
+  eval "$(setSimpleOptions UPDATE^ OPTIONS=^ AUDIT LINT VERSION_CHECK -- "$@")" \
+    || { contextHelp; echoerrandexit "Bad options."; }
+
+  findBase
+  cd "$BASE_DIR"
+
+  local RESTRICTED=''
+  if [[ -n "$AUDIT" ]] || [[ -n "$LINT" ]] || [[ -n "$VERSION_CHECK" ]]; then
+    RESTRICTED=true
+  fi
+
+  if [[ -z "$RESTRICTED" ]] || [[ -n "$AUDIT" ]]; then
+    projectsNpmAudit "$@" || true
+  fi
+  if [[ -z "$RESTRICTED" ]] || [[ -n "$LINT" ]]; then
+    projectsLint "$@" || true
+  fi
+  if [[ -z "$RESTRICTED" ]] || [[ -n "$VERSION_CHECK" ]]; then
+    projectsVersionCheck "$@" || true
+  fi
 }
 
 projects-sync() {
@@ -3215,29 +3277,6 @@ projects-sync() {
       echo "Master updates merged to workbranch."
     fi
   fi # on workbranach check
-}
-
-projects-qa() {
-  eval "$(setSimpleOptions UPDATE^ OPTIONS=^ AUDIT LINT VERSION_CHECK -- "$@")" \
-    || { contextHelp; echoerrandexit "Bad options."; }
-
-  findBase
-  cd "$BASE_DIR"
-
-  local RESTRICTED=''
-  if [[ -n "$AUDIT" ]] || [[ -n "$LINT" ]] || [[ -n "$VERSION_CHECK" ]]; then
-    RESTRICTED=true
-  fi
-
-  if [[ -z "$RESTRICTED" ]] || [[ -n "$AUDIT" ]]; then
-    projectsNpmAudit "$@" || true
-  fi
-  if [[ -z "$RESTRICTED" ]] || [[ -n "$LINT" ]]; then
-    projectsLint "$@" || true
-  fi
-  if [[ -z "$RESTRICTED" ]] || [[ -n "$VERSION_CHECK" ]]; then
-    projectsVersionCheck "$@" || true
-  fi
 }
 
 projects-test() {
@@ -3364,47 +3403,126 @@ help-projects() {
 
   handleSummary "${PREFIX}${cyan_u}projects${reset} <action>: Project configuration and tools." || cat <<EOF
 ${PREFIX}${cyan_u}projects${reset} <action>:
-  ${underline}build${reset} [<name>...]: Builds the current or specified project(s).
-  ${underline}close${reset} [<project name>]: Closes (deletes from playground) either the
-    current or named project after checking that all changes are committed and pushed. ${red_b}Alpha
-    note:${reset} The tool does not currently check whether the project is linked with other projects.
-  ${underline}deploy${reset} [<name>...]: Deploys the current or named project(s).
-  ${underline}import${reset} <package or URL>: Imports the indicated package into your
-    playground. By default, the first arguments are understood as NPM package names and the URL
-    will be retrieved via 'npm view'. If the '--url' option is specified, then the arguments are
-    understood to be git repo URLs, which should contain a 'package.json' file in the repository
-    root.
-  ${underline}create${reset} [--type|-t <bare|lib|model|api|webapp>|| --template|-T <package name|git URL>] [--origin|-o <url>] <project name>:
-    Creates a new Liquid project from one of the standard types or the given template URL. When the 'bare'
-    type is specified, 'origin' must be specified. The project is initially cloned from the template, and then
-    re-oriented to the project origin, unless the type is 'bare' in which case the project is cloned directly
-    from the origin URL. Use 'liq projects import' to import an existing project from a URL.
-  ${underline}publish${reset}: Performs verification tests, updates package version, and publishes package.
-  ${underline}qa${reset} [--update|-u] [--audit|-a] [--lint|-l] [--version-check|-v]:
-    Performs NPM audit, eslint, and NPM version checks. By default, all three checks are performed, but options
-    can be used to select specific checks. The '--update' option instruct to the selected options to attempt
-    updates/fixes.
-  ${underline}sync${reset} [--fetch-only|-f] [--no-work-master-merge|-M]:
-    Updates the remote master with new commits from upstream/master and, if currently on a work branch,
-    workspace/master and workspace/<workbranch> and then merges those updates with the current workbranch (if any).
-    '--fetch-only' will update the appropriate remote refs, and exit. --no-work-master-merge update the local master
-    branch and pull the workspace workbranch, but skips merging the new master updates to the workbranch.
-  ${underline}test${reset} [-t|--types <types>][-D|--no-data-reset][-g|--go-run <testregex>][--no-start|-S] [<name>]:
-    Runs unit tests the current or named projects.
-    * 'types' may be 'unit' or 'integration' (=='int') or 'all', which is default.
-      Multiple tests may be specified in a comma delimited list. E.g.,
-      '-t=unit,int' is equivalent no type or '-t=""'.
-    * '--no-start' will skip tryng to start necessary services.
-    * '--no-data-reset' will cause the standard test DB reset to be skipped.
-    * '--no-service-check' will skip checking service status. This is useful when
-      re-running tests and the services are known to be running.
-    * '--go-run' will only run those tests matching the provided regex (per go
-      '-run' standards).
+$(help-projects-build | sed -e 's/^/  /')
+$(help-projects-close | sed -e 's/^/  /')
+$(help-projects-create | sed -e 's/^/  /')
+$(help-projects-import | sed -e 's/^/  /')
+$(help-projects-publish | sed -e 's/^/  /')
+$(help-projects-qa | sed -e 's/^/  /')
+$(help-projects-sync | sed -e 's/^/  /')
+$(help-projects-test | sed -e 's/^/  /')
   ${underline}services${reset}: sub-resource for managing services provided by the package.
     ${underline}add${reset} [<service name>]: Add a provided service to the current project.
     ${underline}list${reset} [<project name>...]: Lists the services provided by the current or named projects.
     ${underline}delete${reset} [<project name>] <name>: Deletes a provided service.
     ${underline}show${reset} [<service name>...]: Show service details.
+EOF
+}
+
+help-projects-build() {
+  cat <<EOF
+${underline}build${reset} [<name>...]: Builds the current or specified project(s).
+EOF
+}
+
+help-projects-close() {
+  cat <<EOF
+${underline}close${reset} [<name>...]: Closes (deletes from playground) either the
+  current or named project after checking that all changes are committed and pushed. ${red_b}Alpha
+  note:${reset} The tool does not currently check whether the project is linked with other projects.
+EOF
+}
+
+help-projects-create() {
+  cat <<EOF
+${underline}create${reset} [[--new <type>] || [--source|-s <pkg|URL>] [--follow|-f]] [--no-fork|-F] [--version|-v <semver> ] [--license|-l <license name>] [--description|-d <desc>] [--public] [<project name>]:
+  Note, 'project name' should be a bare name. The scope is determined by the current org settings. An
+  explicit name is required for '--new' projects. If no name is given for '--source' projects, then
+  the base source name is used.
+
+  Creates a new Liquid project in one of two modes. If '--new' is specified, then the indicated type
+  will be used to initiate a 'create' script. There are various '@liquid-labs/create-*' projects
+  which may be used, and third-party or private scripts may developed as well. This essentially
+  calls 'npm init <type>' and then sets up the GitHub repository and working repo (unless --no-fork
+  is specified).
+
+  If '--source' is specified, will first clone the source repo as a starting point. This can be used
+  to "convert" non-Liquid projects (from GitHub or other sources) as well as to create re-named
+  duplicates of Liquid projects If set to '--follow' the source, then this effectively sets up a
+  'source' remote conceptually upstream from 'upstream' and future invocations of 'project sync' will
+  attempt to merge changes from 'source' to 'upstream'. This can later be managed using the 'projects
+  remotes' sub-group.
+
+  Regardless, the following 'package.json' fields will be set according to the following:
+  * the package will be scoped accourding to the org scope.
+  * 'project name' will be used to create a git repository under the org scope.
+  * the 'repository' and 'bugs' fields will be set to match.
+  * the 'homepage' will be set to the repo 'README.md' (#readme).
+  * version to '--version', otherwise '1.0.0'.
+  * license to the '--license', otherwise org's default license, otherwise 'UNLICENSED'.
+
+  Any compatible create script must conform to the above, though additional rules and/or interactions
+  may added. Note, just because no option is given to change some of the above parameters they can, of
+  course, be modified post-create (though they are "very standard" for Liquid projects).
+
+  Use 'liq projects import' to import an existing project from a URL.
+EOF
+}
+
+help-projects-deploy() {
+  cat <<EOF
+${underline}deploy${reset} [<name>...]: Deploys the current or named project(s).
+EOF
+}
+
+help-projects-import() {
+  cat <<EOF
+${underline}import${reset} [--url] <package or URL>: Imports the indicated package into your
+  playground. By default, the first arguments are understood as NPM package names and the URL
+  will be retrieved via 'npm view'. If the '--url' option is specified, then the arguments are
+  understood to be git repo URLs, which should contain a 'package.json' file in the repository
+  root.
+EOF
+}
+
+help-projects-publish() {
+  cat <<EOF
+${underline}publish${reset}: Performs verification tests, updates package version, and publishes package.
+EOF
+}
+
+help-projects-qa() {
+  cat <<EOF
+${underline}qa${reset} [--update|-u] [--audit|-a] [--lint|-l] [--version-check|-v]:
+  Performs NPM audit, eslint, and NPM version checks. By default, all three checks are performed, but options
+  can be used to select specific checks. The '--update' option instruct to the selected options to attempt
+  updates/fixes.
+EOF
+}
+
+help-projects-sync() {
+  cat <<EOF
+${underline}sync${reset} [--fetch-only|-f] [--no-work-master-merge|-M]:
+  Updates the remote master with new commits from upstream/master and, if currently on a work branch,
+  workspace/master and workspace/<workbranch> and then merges those updates with the current workbranch (if any).
+  '--fetch-only' will update the appropriate remote refs, and exit. --no-work-master-merge update the local master
+  branch and pull the workspace workbranch, but skips merging the new master updates to the workbranch.
+EOF
+}
+
+help-projects-test() {
+  cat <<EOF
+${underline}test${reset} [-t|--types <types>][-D|--no-data-reset][-g|--go-run <testregex>][--no-start|-S] [<name>]:
+  Runs unit tests the current or named projects.
+  * 'types' may be 'unit' or 'integration' (=='int') or 'all', which is default.
+    Multiple tests may be specified in a comma delimited list. E.g.,
+    '-t=unit,int' is equivalent no type or '-t=""'.
+  * '--no-start' will skip tryng to start necessary services.
+  * '--no-data-reset' will cause the standard test DB reset to be skipped.
+  * '--no-service-check' will skip checking service status. This is useful when
+    re-running tests and the services are known to be running.
+  * '--go-run' will only run those tests matching the provided regex (per go
+    '-run' standards).
 EOF
 }
 projectCheckIfInPlayground() {
@@ -3449,6 +3567,7 @@ projectResetStaging() {
 # Expects 'PROJ_STAGE' to be declared local by the caller.
 projectClone() {
   local URL="${1}"
+  local ORIGIN_NAME="${2:-upstream}"
 
   projectCheckGitAuth
 
@@ -3456,10 +3575,11 @@ projectClone() {
   projectResetStaging $(basename "$URL")
   cd "$STAGING"
 
-  git clone --quiet --origin upstream "${URL}" || echoerrandexit "Failed to clone."
+  echo "Cloning '${ORIGIN_NAME}'..."
+  git clone --quiet --origin "$ORIGIN_NAME" "${URL}" || echoerrandexit "Failed to clone."
 
   if [[ ! -d "$PROJ_STAGE" ]]; then
-    echoerrandexit "Did not find expected project direcotry '$PROJ_STAGE' in staging."
+    echoerrandexit "Did not find expected project direcotry '$PROJ_STAGE' in staging after cloning repo."
   fi
 }
 
