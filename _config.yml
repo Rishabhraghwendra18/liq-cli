@@ -1,2 +1,6 @@
 theme: jekyll-theme-tactile
 include: ["./docs", "./docs/usage"]
+
+kramdown:
+  link_defs:
+    docs/usage/Setup.md: ["/docs/usage/Setup", "Setup"]
