@@ -1,6 +1,7 @@
 ---
 title: liq Setup
 description: How to set up your local liq environment and Projects.
+permalink: Setup.md
 ---
 
 ## TL;DR:
