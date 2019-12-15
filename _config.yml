@@ -1,5 +1,6 @@
 theme: jekyll-theme-tactile
 include: ["./docs", "./docs/usage"]
+markdown: kramdown
 
 kramdown:
   link_defs:
