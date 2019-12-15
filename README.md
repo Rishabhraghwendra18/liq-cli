@@ -12,7 +12,7 @@
 
 # Usage
 
-1. Setup your local environment. See [Usage: Setup A](/docs/usage/Setup.md) [Usage: Setup B](docs/usage/Setup.md) [Usage: Setup C](./docs/usage/Setup.md)for details.
+1. Setup your local environment. See [Usage: Setup A](/docs/usage/Setup.md) [Usage: Setup B](docs/usage/Setup.md) [Usage: Setup C](./docs/usage/Setup.md) [Usage D: Setup](docs/usage/Setup) for details.
    ```bash
    liq meta init
    liq projects import @liquid-labs/liquid-cli # or whatever
