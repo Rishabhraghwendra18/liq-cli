@@ -1,8 +1,4 @@
-# Liquid CLI
-
-This is a alpha project spiraling towards beta. **_Not all features listed her are currently implemented._**
-
-The user interface is working towards conformance with the [target 1.0 ontology](./docs/Ontology.md).
+<span style="color:red">This is a alpha project.</span> **_Documentation and implementation may not be entirely in-sync._**
 
 * [Installation](#installation)
 * [Usage](#usage)
@@ -10,15 +6,20 @@ The user interface is working towards conformance with the [target 1.0 ontology]
 * [Supported platforms](#supported-platforms)
 * [Contributions and bounties](#contributions-and-bounties)
 
-## Installation
+# Installation
 
 `npm inistall -g @liquid-labs/liq-cli`
 
-## Usage
+# Usage
 
-* **Create a workspace**: `liq meta init-workspace`
-* **Create (or join) to an org**: `liq orgs create --activate` or `liq orgs join --activate`
-* **Identify projects to work on**: `liq projects import @liquid-labs/liquid-cli`
+1. Setup your local environment. See [Usage: Setup](./docs/usage/Setup.md#) for details.
+   ```bash
+   liq meta init
+   liq projects import @liquid-labs/liquid-cli # or whatever
+  ```
+2. Do work. See...
+
+
 * **Do some work**: `liq work start @liquid-labs/liquid-cli`
 * **Dev workflow**:
   * `liq work edit`
@@ -66,3 +67,5 @@ This project offers bounties on many issues.
 * Claim a bounty!
 
 Non-bounty contributions are also welcome. You may also refer to open, non-bountied issues and make an offer.
+
+The user interface is working towards conformance with the [target 1.0 ontology](./docs/Ontology.md).
