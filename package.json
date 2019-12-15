@@ -1,7 +1,7 @@
 {
   "name": "@liquid-labs/liq-cli",
   "version": "1.0.0-prototype.9",
-  "description": "Local development and management tool for Liquid Development projects.",
+  "description": "A process aware development, testing, and deployment management tool.",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
   "scripts": {
@@ -25,7 +25,7 @@
   "bugs": {
     "url": "https://github.com/Liquid-Labs/liq-cli/issues"
   },
-  "homepage": "https://github.com/Liquid-Labs/liq-cli#readme",
+  "homepage": "https://liquid-labs.github.io/liq-cli/",
   "dependencies": {
     "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.26",
     "@liquid-labs/policies-model": "^1.0.0-beta.5"
