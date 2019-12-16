@@ -9,9 +9,11 @@ liq is user-friendly development and process management framework. liq provides:
 ___
 
 * [Installation](#installation)
-* [Usage](#usage)
+* [Basic usage](#basic-usage)
    * [Setup](#setup)
    * [Doing work](#doing-work)
+   * [Runtime management](#runtime-management)
+* [Policies](#policies)
 * [CI/CD](#cicd)
 * [Supported platforms](#supported-platforms)
 * [Contributions and bounties](#contributions-and-bounties)
@@ -20,7 +22,7 @@ ___
 
 `npm inistall -g @liquid-labs/liq-cli`
 
-# Usage
+# Basic usage
 
 ## Setup
 
@@ -30,9 +32,9 @@ Setup your local environment. See [Usage: Setup](/docs/usage/Setup.md) for detai
  liq projects import @liquid-labs/liquid-cli # or whatever
 ```
 
-## Doing work
+## Developing
 
-Do work; make changes. See [Usage: Do Work](/docs/usage/Do Work.md) for details.
+Do work; make changes. See [Usage: Developing with liq](/docs/usage/Developing with liq.md) for details.
  ```bash
  cd "$(liq projects dir @liquid-labs/liq-cli)"
  # cd ~/playground/\@liquid-labs/liq-cli
@@ -45,29 +47,35 @@ Do work; make changes. See [Usage: Do Work](/docs/usage/Do Work.md) for details.
  liq work close
  ```
 
-##
+## Runtime management
 
-* **Environment management**:
-  * `liq environments create`
-  * `liq environments select`
-* **Data management**:
-  * `liq data rebuild`
-  * `liq data snapshot`
-  * `liq data restore`
-* **Straightforward runtime management**:
-  * `liq services start`
-  * `liq services stop`
+Manage your local development, test, and production environments. See [Usage: Runtime management](/docs/usage/Runtime management) for details.
+```bash
+liq environments create
+liq data rebuild
+liq services start
+```
 
-## CI/CD
+# Policies
 
-Liquid Projects offer greatly simplified and entirely optional integration with a full CI/CD process supporting:
+liq has built in support for (optional) development and organizational policies:
 
-* **Workflow and process best-practices come built in.**
-* **Fully automated static analysis and CI/CD pipelines; free QA!** (TODO: list supported languages.)
-* **Built in change control management, complete with badges and trend reports.**
-* **Plug-in, largely automated compliance conformance (currently supporting PCI DSS and SOC 2 standards).**
+* Prebuilt policies libraries can be easily installed; Liquid Labs offers standard open source policies as well as PCI and SOC 2 compliant policies.
+* All policies are fully cutomizable.
+* Policies are subject to the same change controls as code.
 
-## Supported platforms
+See [Usage: Policy management](/docs/usage/Policy management.md) for details.
+
+# CI/CD
+
+Liquid Projects offer greatly simplified (and entirely optional) integration with a full CI/CD process supporting:
+
+* Built in CI/CD workflow best-practices.
+* Fully automated static code analysis (for supported languages).
+* Configurable automated or manual deploy.
+* Automated project badging and trend reports.
+
+# Supported platforms
 
 Support for target distros is currently limited. Full support for additional distros will be rolled out once we reach a stable beta.
 
@@ -76,7 +84,7 @@ Support for target distros is currently limited. Full support for additional dis
 * Most Linux or BSD based distros should work, perhaps with some tweaks.
 * At this point, Windows is entirely out of scope, though in theory Windows with CygWin or similar may work.
 
-## Contributions and bounties
+# Contributions and bounties
 
 This project offers bounties on many issues.
 
