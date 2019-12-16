@@ -1,7 +1,17 @@
-<span style="color:red">This is a alpha project.</span> **_Documentation and implementation may not be entirely in-sync._**
+**_<span style="color:red">This is a alpha project.</span> Documentation and implementation may not be entirely in-sync._**
+
+liq is user-friendly development and process management framework. liq provides:
+* clear project specification guidelines,
+* a straightforward, well-defined development workflow
+* extensible libraries of (mostly) automatically enforced change and submission policies, and
+* built in CI/CD.
+
+___
 
 * [Installation](#installation)
 * [Usage](#usage)
+   * [Setup](#setup)
+   * [Doing work](#doing-work)
 * [CI/CD](#cicd)
 * [Supported platforms](#supported-platforms)
 * [Contributions and bounties](#contributions-and-bounties)
@@ -12,23 +22,31 @@
 
 # Usage
 
-1. Setup your local environment. See [Usage: Setup](/docs/usage/Setup.md) for details.
-   ```bash
-   liq meta init
-   liq projects import @liquid-labs/liquid-cli # or whatever
-  ```
-2. Do work. See...
+## Setup
 
+Setup your local environment. See [Usage: Setup](/docs/usage/Setup.md) for details.
+ ```bash
+ liq meta init
+ liq projects import @liquid-labs/liquid-cli # or whatever
+```
 
-* **Do some work**: `liq work start @liquid-labs/liquid-cli`
-* **Dev workflow**:
-  * `liq work edit`
-  * `liq work review`
-  * `liq work stage`
-  * `liq work test`
-  * `liq work qa`
-  * `liq work save`
-  * `liq work publish`
+## Doing work
+
+Do work; make changes. See [Usage: Do Work](/docs/usage/Do Work.md) for details.
+ ```bash
+ cd "$(liq projects dir @liquid-labs/liq-cli)"
+ # cd ~/playground/\@liquid-labs/liq-cli
+ liq work start -i 100 "adding golang support"
+ # make changes
+ liq work test
+ liq work qa
+ liq work save -am "golang support added"
+ liq work submit
+ liq work close
+ ```
+
+##
+
 * **Environment management**:
   * `liq environments create`
   * `liq environments select`
