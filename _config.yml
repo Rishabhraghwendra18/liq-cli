@@ -1,5 +1,5 @@
 theme: jekyll-theme-tactile
-include: ["./docs", "./docs/usage"]
+include: ["./docs", "./docs/usage", "./docs/topics"]
 markdown: kramdown
 
 show_downloads: true
