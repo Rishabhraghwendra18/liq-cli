@@ -18,7 +18,7 @@ This summary is provided as a good-faith overview of the terms and conditions an
 
 Liquid Labs, LLC offers bounties on certain issues. The amount of the bounty will be listed in the issue, which will also reference these terms and conditions. The basic bounty process is:
 
-* Review [Developing with liq](./docs/Developing with liq.md)
+* Review [Developing with liq](./usage/Developing with liq.md)
 * [Search for available bounty tasks in this project.](https://github.com/Liquid-Labs/liq-cli/issues?utf8=%E2%9C%93&q=is%3Aissue+is%3Aopen+no%3Aassignee+label%3Abounty) You can also search for [all Liquid Labs bounty tasks](https://github.com/issues?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue+org%3ALiquid-Labs+archived%3Afalse+label%3Abounty).
 * Request assignment to the a task. Task will remain assigned for a specified Lock-In Period and the Assignee shall have exclusive rights to complete the task and receive the bounty payment.
 * Complete work and submit a PR.
@@ -44,7 +44,7 @@ Liquid Labs, LLC offers bounties on certain issues. The amount of the bounty wil
 
 * To be accepted, a PR must implement all deliverables stated in the 'Deliverables' section of the task.
 * Deliverables must conform to and be consistent with the entire task description. E.g., the text of any "Overview", "Notes", or other sections in the task are part of the task specification and may inform, provide context for, or otherwise have bearing on the deliverables.
-* All PRs must pass unit test and other qa checks as implemented by `liq` and the [development flow](* Review [Developing with liq](./Developing%20with%20liq.md).
+* All PRs must pass unit test and other qa checks as implemented by `liq` and the [development flow](* Review [Developing with liq](./usage/Developing with liq.md).
 * In addition, PRs may need to be modified for clarity or to conform general or project specific coding standards. Such standards may or may not be explicitly stated.
 * Liquid Labs will provide reasonable feedback on any significantly correct PR.
 * PRs with significant issues may, at Liquid Labs sole discretion, be rejected with instructions to refer back to the task description for guidance.
