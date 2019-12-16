@@ -72,6 +72,6 @@ The "deploy prep" phase is all about verifying a new product version prior to pr
 
 ### Deploy
 
-* After passing all necessary pre-deploy testing, the product is deployed via `liq work deploy` (or by other means depending in process particulars).
+* After passing all necessary pre-deploy testing, the product is deployed via `liq work deploy` (or by other means depending on process particulars).
 * After deploying, the deploy itself is verified through a series of simple automated and manual checks that include simple version checks and an end-user test script.
 * After these checks, the deploy is certified with `liq projects deploy --certify`.
