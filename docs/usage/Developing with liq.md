@@ -1,6 +1,14 @@
-# Developing with liq
+---
+title: Developing with liq
+description: Development workflow, conventions, and commands.
+permalink: /docs/usage/Developing with liq
+prev_url: /docs/usage/Setup
+prev_name: liq setup
+next_url: /docs/usage/Development
+next_name: Developing with liq
+---
 
-## Audience & scope
+# Audience & scope
 
 This document discusses the liq development workflow conventions and tools. This process may be broadly divided into 'change control' and 'deploy':
 
@@ -13,7 +21,7 @@ This document discusses the liq development workflow conventions and tools. This
   * production deploy,
   * post-deploy verification and certification.
 
-## Overview
+# Overview
 
 The following flow diagram gives a high level overview of the "golden path" development and deploy workflow. Of course, not all projects are "deployed" (e.g., a library would be "published", but not directly deployed) and, of course, there are many branches and options not shown which would deal with updating code based on feedback, failed verification tests, etc.
 
@@ -21,11 +29,11 @@ The following flow diagram gives a high level overview of the "golden path" deve
 
 Source: https://docs.google.com/drawings/d/1dlhK32qiEcLBg2jzwnHXRRujJajHpV8Hty_LRYPUQiA/; Version: "2019-11-18 updated flow - fix phase grouping"
 
-## Change control
+# Change control
 
 liq change control processes are primarily organized around "work units". A work unit involves one or more issues and one or more projects.
 
-### Preparing a work unit
+## Preparing a work unit
 
 ```js
 // The interface as defined here is ahead of and differs in some aspects from the interface as implemented at the time of writing. Refer to `liq work help` for current state.
@@ -47,7 +55,7 @@ liq change control processes are primarily organized around "work units". A work
     // Not currently implemented.
     ```
 
-### Implementing changes
+## Implementing changes
 
 Developers:
 
@@ -56,9 +64,9 @@ Developers:
 * Use `liq work save` (along with `liq work stage`) to save local changes to remote workspace repos on the workbranch.
 * Use `liq work test` and `liq work qa` to test and audit local changes.
 
-## Release and deploy
+# Release and deploy
 
-### Deploy prep
+## Deploy prep
 
 The "deploy prep" phase is all about verifying a new product version prior to production deploy/release.
 
@@ -70,7 +78,7 @@ The "deploy prep" phase is all about verifying a new product version prior to pr
 * When all target changes have been collected on, or as otherwise determined by the stakeholders, products are published (internally or publicly) and deployed to a test environment for final comprehensive testing that combines all the changes in one place and verifies schema or other "system upgrade" processes associated with the release.
 * The pre-deploy testing may, as determined by Company policy, also include end-user testing in either a contrived or live-data environment.
 
-### Deploy
+## Deploy
 
 * After passing all necessary pre-deploy testing, the product is deployed via `liq work deploy` (or by other means depending on process particulars).
 * After deploying, the deploy itself is verified through a series of simple automated and manual checks that include simple version checks and an end-user test script.
