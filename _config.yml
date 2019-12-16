@@ -1,3 +1,7 @@
 theme: jekyll-theme-tactile
 include: ["./docs", "./docs/usage"]
-markdown: CommonMark
+markdown: kramdown
+
+kramdown:
+  link_defs:
+    docs/usage/Setup.md: ["docs/usage/Setup", "Setup"]
