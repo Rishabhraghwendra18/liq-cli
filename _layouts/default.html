@@ -18,17 +18,19 @@
       <div class="inner">
 
         <header>
-          <h1>{{ page.title | default: site.title | default: site.github.repository_name }}</h1>
-          <h2>{{ page.description | default: site.description | default: site.github.project_tagline }}</h2>
-          <div style="float: left">
+          <div style="float: right">
             {% if page.prev_url %}
             <a href="{{ page.prev_url }}" id="nav-prev">&lt; {{ page.prev_name }}</a> |
             {% endif %}
             {% if page.next_url %}
             <a href="{{ page.next_url }}" id="nav-prev">{{ page.next_name }} &gt;</a> |
             {% endif %}
-            <a href="liq-cli" id="nav-prev">Home</a>
+            {% if page.url != "/docs/toc" %}
+            <a href="/docs/toc" id="nav-prev">TOC</a>
+            {% endif %}
           </div>
+          <h1>{{ page.title | default: site.title | default: site.github.repository_name }}</h1>
+          <h2>{{ page.description | default: site.description | default: site.github.project_tagline }}</h2>
         </header>
         <section id="downloads" class="clearfix">
           {% if site.show_downloads %}
