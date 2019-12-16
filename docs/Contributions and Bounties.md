@@ -2,7 +2,7 @@
 title: Contributions and Bounties
 description: How to contribute to this project and claim bounties.
 permalink: /docs/Contributions and Bounties
-prev_url: ./usage/Runtime management
+prev_url: /docs/usage/Runtime management
 prev_name: Runtime management
 ---
 
