@@ -2,10 +2,8 @@
 title: liq Ontology
 description: On how liq is defined.
 permalink: /docs/Ontology
-prev_url: ./usage/Policy management
-prev_name: Policy management
-next_url: ./Contributions and Bounties
-next_name: Contributions and Bounties
+next_url: ./usage/Setup
+next_name: liq Setup
 ---
 
 # Core resources

@@ -12,4 +12,4 @@ next_name: Ontology
    * [Developing with liq](./usage/Developing with liq.md)
    * [Runtime management](./usage/Runtime management.md)
    * [Policy management](./usage/Policy management.md)
-* [Contributions and bounties](./Contributions and bounties.md)
+* [Contributions and Bounties](./Contributions and Bounties.md)

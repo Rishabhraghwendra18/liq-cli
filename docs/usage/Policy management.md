@@ -4,8 +4,8 @@ description: Manage development and organizational policies and evidence.
 permalink: /docs/usage/Policy management
 prev_url: ./Runtime management
 prev_name: Runtime management
-next_url: ../Ontology
-next_name: Ontology
+next_url: ../Contributions and Bounties
+next_name: Contributions and Bounties
 ---
 
 # General concepts
