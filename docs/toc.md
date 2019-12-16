@@ -2,6 +2,8 @@
 title: liq Table of Contents
 description:
 permalink: /docs/toc
+prev_url: /
+prev_name: Overview
 next_url: ./Ontology
 next_name: Ontology
 ---
