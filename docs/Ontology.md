@@ -1,10 +1,10 @@
 ---
 title: liq Ontology
 description: On how liq is defined.
-permalink: /docs/usage/Ontology
+permalink: /docs/Ontology
 prev_url: ./usage/Policy management
 prev_name: Policy management
-next_url: ./Contributions and Bounties.md
+next_url: ./Contributions and Bounties
 next_name: Contributions and Bounties
 ---
 
