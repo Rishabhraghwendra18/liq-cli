@@ -1,38 +1,33 @@
-# liq Ontology
+---
+title: liq Ontology
+description: On how liq is defined.
+permalink: /docs/usage/Ontology
+prev_url: /docs/usage/Policy management
+prev_name: Policy management
+next_url: /docs/Contributions and Bounties.md
+next_name: Contributions and Bounties
+---
 
-liq provides comprehensive development and operational support for
-managing, testing, and deploying Catalyst projects.
+# Core resources
 
-## Audience & scope
+There core resources are:
 
-This document describes the key concepts and high level features embodied in Liquid CLI.
+* `orgs`
+* `projects`
+* `work`
+* `data`
+* `services`
+* `environments`
+* `policies`
+* (and `meta`)
 
-## CLI conformance
+## Orgs own projects and define policy.
 
-Commands are organized by 'resources', which correspond to the ontology discussed here. The general command form is:
+* Each project is owned by a logical `org`.
+* Operational policy is defined at the `org` level.
 
-  liq <resource> <action> [<target>...]
+## Projects are the building blocks of applications, environments, and policies.
 
-## Core resources
-
-There are three core Liquid Development resources (Core Resources). Core Resources are:
-
-* _meta_
-* _orgs_
-* _projects_
-* _work_
-
-### Meta ~= self-control.
-
-### Orgs ~= "where" we're working.
-
-Org(anization)s define who "owns" the work we do and the policies that control that work.
-
-### Projects ~= stuff we're working on and could work on.
-
-TODO: break out and reference 'liq-npm package spec'
-
-* Note, "liq" was originally called "catalyst".
 * A 'Liquid Project' is manifest as a NPM package associated to a Github project.
 * `liq projects create` will configure each of either a new or existing NPM package and Github project.
   * Future versions may encode to multiple package formats.
@@ -49,31 +44,28 @@ TODO: break out and reference 'liq-npm package spec'
   * Packages are the typical method by which projects are distributed. I.e., a "package" is a "packaged project version".
   * Packages are used/manipulated by the `liq projects import`, `create`, `audit`, and other commands
 
-### Work ~= outstanding changes.
+## Work a set of changes to a project.
 
-* Work represents units of outstanding change.
-* Work is managed through logical, git-based workflows.
+* Work represents an atomic unit of change.
+* Work is managed through logical, git-based workflows and via interaction with policy touchpoints.
 * The workflow ensures a basic (and configurable) level of quality control and security.
 
-## DevOps resources
+## Environments define the purpose and configuration of a runtime.
 
-There are three DevOps Resources:
-
-* _environments_
-* _data_
-* _services_
-
-### Environments ~= where stuff lives.
-
-* Environments serve one of three basic "purposes":
-  * `dev` environments are used to test speculative changes. They use small datasets, minimally scaled, and ephemeral.
-  * `test` environments simulate the 'real environment'.
+* There are three basic Environment (or Runtime) types:
+  * `dev` Environments are used to test speculative changes. They use small datasets, minimally scaled, and ephemeral.
+  * `test` Environments simulate the 'real environment'.
      * 'User' test environments are generally moderately scaled, but otherwise fully implement a production environment right down to user involvement (a dress rehearsal).
-     * 'Performance' test environments are fully automated, but simulate large scale over a short-period of time.
-  * `production` environments are where regular users live.
+     * 'Performance' test Environments are fully automated, but simulate large scale over a short-period of time.
+  * `production` Environments are where regular users live.
+* User identity and credentials passed through the Environment for use in the Runtime.
 
-### Data ~= data in an environment.
+## Data deals the bits in each runtime, as well as the underlying schema.
 
-### Services ~= runtime management.
+## Services create a runtime. (TODO: rename this resource 'runtime'.)
 
 * Services, running in an Environment, create a runtime.
+
+## Meta ~= self-control.
+
+Additionally, there is a `meta` resource which handles some basic setup tasks.

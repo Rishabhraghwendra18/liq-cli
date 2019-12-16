@@ -3,3 +3,5 @@ include: ["./docs", "./docs/usage"]
 markdown: kramdown
 
 show_downloads: true
+
+homepage: https://liquid-labs.github.io/liq-cli/

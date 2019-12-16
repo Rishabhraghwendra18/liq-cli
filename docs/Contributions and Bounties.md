@@ -1,3 +1,15 @@
+---
+title: Contributions and Bounties
+description: How to contribute to this project and claim bounties.
+permalink: /docs/usage/Contributions and Bounties
+prev_url: /docs/Ontology
+prev_name: Ontology
+---
+
+# Contributions
+
+`@liquid-labs/liq-cli` is a Liquid Project. Refer to {{ site.homepage }} for installation instructions and further details. The use of the liq CLI tool will speed development and ensure compliance to all development and contribution policies.
+
 # Bounty Terms and Conditions
 
 ## Summary
