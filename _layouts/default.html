@@ -22,11 +22,13 @@
             {% if page.prev_url %}
             <a href="{{ page.prev_url }}" id="nav-prev">&lt; {{ page.prev_name }}</a>
             {% endif %}
-            {% if page.url != "/docs/toc" %}
+            {% if page.url != "/" %}
             |
             {% endif %}
             {% if page.next_url %}
             <a href="{{ page.next_url }}" id="nav-prev">{{ page.next_name }} &gt;</a>
+            {% endif %}
+            {% if page.url != "/docs/toc" %}
             |
             {% endif %}
             {% if page.url != "/docs/toc" %}
