@@ -48,6 +48,6 @@ liq policies document --for-review
 ```
 Can also generate individualized "for review" collections for each staff member, essentially consisting of a spreadsheets of the portion of the policies they are obligated to review according to their role and the policy review requirements.
 
-## Other touchpoint
+## Other touchpoints
 
-There are policy hooks all throughout liq. Policy ties directly into the 'staff' resource and all throughout the development workflow.
+There are policy hooks and touchpoints all throughout liq. Policy ties directly into the 'staff' resource and all throughout the development workflow.
