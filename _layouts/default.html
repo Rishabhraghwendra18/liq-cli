@@ -20,10 +20,14 @@
         <header>
           <div style="float: right">
             {% if page.prev_url %}
-            <a href="{{ page.prev_url }}" id="nav-prev">&lt; {{ page.prev_name }}</a> |
+            <a href="{{ page.prev_url }}" id="nav-prev">&lt; {{ page.prev_name }}</a>
+            {% if page.url != "/docs/toc" %}
+            |
+            {% endif %}
             {% endif %}
             {% if page.next_url %}
-            <a href="{{ page.next_url }}" id="nav-prev">{{ page.next_name }} &gt;</a> |
+            <a href="{{ page.next_url }}" id="nav-prev">{{ page.next_name }} &gt;</a>
+            |
             {% endif %}
             {% if page.url != "/docs/toc" %}
             <a href="docs/toc" id="nav-prev">TOC</a>
