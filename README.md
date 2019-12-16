@@ -17,6 +17,7 @@ ___
 * [CI/CD](#cicd)
 * [Supported platforms](#supported-platforms)
 * [Contributions and bounties](#contributions-and-bounties)
+* [Further reading](#further-reading)
 
 # Installation
 
@@ -94,4 +95,6 @@ This project offers bounties on many issues.
 
 Non-bounty contributions are also welcome. You may also refer to open, non-bountied issues and make an offer.
 
-The user interface is working towards conformance with the [target 1.0 ontology](./docs/Ontology.md).
+# Further reading
+
+For a more detailed look at liq, please refer to the [project documentation](/docs/toc.md).
