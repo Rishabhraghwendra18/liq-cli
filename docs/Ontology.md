@@ -2,8 +2,6 @@
 title: liq Ontology
 description: On how liq is defined.
 permalink: /docs/Ontology
-prev_url: /docs/Ontology
-prev_name: Ontology
 next_url: /docs/usage/Setup
 next_name: liq Setup
 ---
