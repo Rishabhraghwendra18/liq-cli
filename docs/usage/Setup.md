@@ -2,9 +2,9 @@
 title: liq setup
 description: How to set up your local liq environment and Projects.
 permalink: /docs/usage/Setup
-prev_url: docs/Ontology
+prev_url: ../Ontology
 prev_name: liq Ontology
-next_url: docs/usage/Development
+next_url: ./Developing with liq
 next_name: Developing with liq
 ---
 

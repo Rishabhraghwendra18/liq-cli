@@ -1,10 +1,10 @@
 ---
 title: Policy management
 description: Manage development and organizational policies and evidence.
-permalink: /docs/usage/Policy management
+permalink: ./Policy management
 prev_url: docs/usage/Runtime management
 prev_name: Runtime management
-next_url: docs/Contributions and bounties.md
+next_url: ./Contributions and bounties.md
 next_name: Contributions and bounties
 ---
 

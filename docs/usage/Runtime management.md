@@ -2,9 +2,9 @@
 title: Runtime management
 description: Manage environments, services, and data with liq.
 permalink: /docs/usage/Runtime management
-prev_url: docs/usage/Developing with liq
+prev_url: ./Developing with liq
 prev_name: Developing with liq
-next_url: docs/usage/Policy management
+next_url: ./Policy management
 next_name: Policy management
 ---
 

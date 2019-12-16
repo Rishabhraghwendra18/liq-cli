@@ -2,10 +2,10 @@
 title: Developing with liq
 description: Development workflow, conventions, and commands.
 permalink: /docs/usage/Developing with liq
-prev_url: docs/usage/Setup
+prev_url: ./Setup
 prev_name: liq setup
-next_url: docs/usage/Development
-next_name: Developing with liq
+next_url: ./Runtime management
+next_name: Runtime management
 ---
 
 # Audience & scope
