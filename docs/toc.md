@@ -4,7 +4,7 @@ description:
 permalink: /docs/toc
 prev_url: /
 prev_name: Overview
-next_url: ./Ontology
+next_url: /docs/Ontology
 next_name: Ontology
 ---
 
