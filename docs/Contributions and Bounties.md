@@ -44,7 +44,7 @@ Liquid Labs, LLC offers bounties on certain issues. The amount of the bounty wil
 
 * To be accepted, a PR must implement all deliverables stated in the 'Deliverables' section of the task.
 * Deliverables must conform to and be consistent with the entire task description. E.g., the text of any "Overview", "Notes", or other sections in the task are part of the task specification and may inform, provide context for, or otherwise have bearing on the deliverables.
-* All PRs must pass unit test and other qa checks as implemented by `liq` and the [development flow](* Review [Developing with liq](./usage/Developing with liq.md).
+* All PRs must pass unit test and other qa checks as implemented by `liq` and the [development flow](./usage/Developing with liq.md).
 * In addition, PRs may need to be modified for clarity or to conform general or project specific coding standards. Such standards may or may not be explicitly stated.
 * Liquid Labs will provide reasonable feedback on any significantly correct PR.
 * PRs with significant issues may, at Liquid Labs sole discretion, be rejected with instructions to refer back to the task description for guidance.
