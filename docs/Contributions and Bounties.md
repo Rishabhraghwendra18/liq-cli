@@ -2,7 +2,7 @@
 title: Contributions and Bounties
 description: How to contribute to this project and claim bounties.
 permalink: /docs/usage/Contributions and Bounties
-prev_url: /docs/Ontology
+prev_url: docs/Ontology
 prev_name: Ontology
 ---
 

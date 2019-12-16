@@ -2,7 +2,7 @@
 title: liq Table of Contents
 description:
 permalink: /docs/toc
-next_url: /docs/Ontology
+next_url: docs/Ontology
 next_name: Ontology
 ---
 
