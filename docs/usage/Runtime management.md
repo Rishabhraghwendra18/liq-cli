@@ -1,15 +1,23 @@
-# Catalyst Runtime Management
+---
+title: Runtime management
+description: Manage environments, services, and data with liq.
+permalink: /docs/usage/Runtime management
+prev_url: /docs/usage/Developing with liq
+prev_name: Developing with liq
+next_url: /docs/usage/Policy management
+next_name: Policy management
+---
 
-## Audience & scope
+# General concepts
 
-This document addresses Catalyst conventions and tools for managing runtime and runtime environments. This is aimed both at system operations managers as well as developers. In the case of sysops, the primary concern with production and pre-production runtimes and environments. With regards to developers, the primary concern is test runtimes and environments.
+* *Services* enable runtime capabilities such as data access, REST-ful request handling, etc.
+* Services are provided by Projects. E.g., an application requiring a relational database may depend on a project which provides Postgres as a runtime Service.
+* An *Environment* defines a set of service providers and associated Service and Project defined configuration parameters.
+* liq runtime management encompasses both local (developer and QA) Environments as well as remote test and production Environments.
 
-General concepts and common concerns are addressed first. Issues particular to production and testing environments are addressed separately and aimed primarily at the sysop and developer audience respectively.
+For example, suppose:
 
-## General Concepts
-
-* Projects may provide runtime *services* which are described in the `package.json` under `_catServices`.
-* Projects may declare compatible service *providers*.
-* Compatible services are composed into a runtime *environment*.
-
-For example, package `mysql-runtime` might provide two services `mysql-gcp` and `mysql-local-hybrid`. These would both support interface class `mysql`. Package `foo-api` requires a `mysql` provider. We could create then create a dev environment using `mysql-local-hybrid` and a production environment using `mysql-gcp`.
+* Project `postgres-runtime` provides two Services `postgres-gcp` and `postgres-local-hybrid`.
+* Both services support interface class `postgresql`.
+* Project `foo-api` requires a `postgresql` provider.
+* Running `liq environments create` from the `foo-api` Project would discover the Service providers and we would select `mysql-local-hybrid` when creating a local "dev" environment and `mysql-gcp` when creating a "production" (or "beta" test) environent.
