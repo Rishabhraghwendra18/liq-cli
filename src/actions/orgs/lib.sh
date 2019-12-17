@@ -1,3 +1,20 @@
+# sources the current org settings, if any
+sourceCurrentOrg() {
+  local REL_DIR
+  if [[ -d org_settings ]]; then
+    REL_DIR="."
+  elif [[ -n "$BASE_DIR" ]]; then
+    REL_DIR="$BASE_DIR/.."
+  else
+    echoerrandexit "Cannot get current organization outside of project context."
+  fi
+
+  source "${REL_DIR}/org_settings/settings.sh"
+  if [[ -d "${REL_DIR}/org_settings_sensitive" ]]; then
+    source "${REL_DIR}/org_settings_sensitive/settings.sh"
+  fi
+}
+
 orgsCurrentOrg() {
   eval "$(setSimpleOptions REQUIRE REQUIRE_SENSITIVE:s -- "$@")"
 

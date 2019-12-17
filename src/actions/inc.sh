@@ -27,6 +27,9 @@ source ./projects/help.sh
 source ./projects/lib.sh
 source ./projects/qa-lib.sh
 
+source ./projects/issues/actions.sh
+source ./projects/issues/help.sh
+
 # deprecated
 source ./required-services/actions.sh
 source ./required-services/help.sh

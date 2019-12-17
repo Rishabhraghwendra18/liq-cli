@@ -39,7 +39,7 @@ _liq()
 				policies)
 					OPTS="document";;
         projects)
-          OPTS="build close init publish qa sync test services";;
+          OPTS="build close init issues publish qa sync test services";;
         remotes)
           OPTS="add delete set-main";;
         required-services) # deprecated
@@ -55,6 +55,8 @@ _liq()
           case "${ACTION}" in
             services)
               OPTS="add list delete show";;
+            issues)
+              OPTS="show";;
           esac ;; # projects-actions
         orgs)
           if [[ "${ACTION}" == staff ]] && (( $WORD_COUNT == 4 )); then

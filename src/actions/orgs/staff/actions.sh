@@ -5,7 +5,7 @@ orgs-staff() {
   if [[ $(type -t "${CMD}" || echo '') == 'function' ]]; then
     ${CMD} "$@"
   else
-    exitUnknownAction
+    exitUnknownHelpTopic "$ACTION" orgs staff
   fi
 }
 

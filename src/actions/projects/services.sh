@@ -4,7 +4,7 @@ projects-services() {
   if [[ $(type -t "projects-services-${ACTION}" || echo '') == 'function' ]]; then
     projects-services-${ACTION} "$@"
   else
-    exitUnknownAction
+    exitUnknownHelpTopic "$ACTION" projects services
   fi
 }
 

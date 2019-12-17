@@ -27,6 +27,6 @@ case "$GROUP" in
       requirements-${GROUP}
       ${GROUP}-${ACTION} "$@"
     else
-      exitUnknownAction
+      exitUnknownHelpTopic "$ACTION" "$GROUP"
     fi;;
 esac
