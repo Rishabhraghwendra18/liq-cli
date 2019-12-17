@@ -30,6 +30,7 @@
             |
             <a href="{{ page.next_url | relative_url }}" id="nav-prev">{{ page.next_name }} &gt;</a>
             {% endif %}
+            | <a href="https://github.com/Liquid-Labs/liq-cli/"><img src="{{ "/assets/imgs/GitHub-Mark-64px.png" | relative_url }}" alt="GitHub Project" /></a>
           </div>
           <h1>{{ page.title | default: site.title | default: site.github.repository_name }}</h1>
           <h2>{{ page.description | default: site.description | default: site.github.project_tagline }}</h2>
