@@ -758,13 +758,6 @@ colorerrbg() {
   (eval "$@" 2>&1>&3|sed 's/^\(.*\)$/'$'\e''[31m\1'$'\e''[m/'>&2)3>&1 &
 }
 
-exitUnknownHelpTopic() {
-  local BAD_SPEC="${1:-}"; shift
-  help $*
-  echo
-  echoerrandexit "No such command or group: $BAD_SPEC"
-}
-
 findFile() {
   local SEARCH_DIR="${1}"
   local FILE_NAME="${2}"
@@ -1144,6 +1137,7 @@ function log() {
 }
 CATALYST_COMMAND_GROUPS=(help data environments meta orgs orgs-staff projects required-services services work)
 
+# display help on help
 help-help() {
   PREFIX="${1:-}"
 
@@ -1153,6 +1147,8 @@ ${PREFIX}${cyan_u}help${reset} [--all|-a] [--summary-only|-s] [<group> [<action>
 EOF
 }
 
+# Display help information. Takes zero or more arguments specifying the topic. A topic must be a liq command group,
+# sub-group, or command. Most of the work is done by deferring help functions for the specified topic.
 help() {
   eval "$(setSimpleOptions ALL SUMMARY_ONLY -- "$@")" \
     || { echoerr "Bad options."; help-help; exit 1; }
@@ -1210,6 +1206,14 @@ handleSummary() {
   else
     return 1
   fi
+}
+
+# display a helpful error message for invalid topics.
+exitUnknownHelpTopic() {
+  local BAD_SPEC="${1:-}"; shift
+  help $*
+  echo
+  echoerrandexit "No such command or group: $BAD_SPEC"
 }
 function dataSQLCheckRunning() {
   eval "$(setSimpleOptions NO_CHECK -- "$@")"

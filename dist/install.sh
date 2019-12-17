@@ -378,13 +378,6 @@ colorerrbg() {
   (eval "$@" 2>&1>&3|sed 's/^\(.*\)$/'$'\e''[31m\1'$'\e''[m/'>&2)3>&1 &
 }
 
-exitUnknownHelpTopic() {
-  local BAD_SPEC="${1:-}"; shift
-  help $*
-  echo
-  echoerrandexit "No such command or group: $BAD_SPEC"
-}
-
 findFile() {
   local SEARCH_DIR="${1}"
   local FILE_NAME="${2}"
