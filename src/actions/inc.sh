@@ -13,9 +13,6 @@ source ./orgs/actions.sh
 source ./orgs/help.sh
 source ./orgs/lib.sh
 
-source ./orgs/issues/actions.sh
-source ./orgs/issues/help.sh
-
 source ./orgs/staff/actions.sh
 source ./orgs/staff/help.sh
 source ./orgs/staff/lib.sh
@@ -29,6 +26,9 @@ source ./projects/services.sh
 source ./projects/help.sh
 source ./projects/lib.sh
 source ./projects/qa-lib.sh
+
+source ./projects/issues/actions.sh
+source ./projects/issues/help.sh
 
 # deprecated
 source ./required-services/actions.sh
