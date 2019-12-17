@@ -3,21 +3,15 @@ CATALYST_COMMAND_GROUPS=(help data environments meta orgs orgs-staff projects re
 help-help() {
   PREFIX="${1:-}"
 
-  handleSummary "${PREFIX}${cyan_u}help${reset} [<group> [<action>]]: Displays help summary or—with group—details." || cat <<EOF
+  handleSummary "${PREFIX}${cyan_u}help${reset} [<group> [<sub-group|action>...]]: Displays summary of groups or information on the specified topic." || cat <<EOF
 ${PREFIX}${cyan_u}help${reset} [--all|-a] [--summary-only|-s] [<group> [<action>]]:
   Displays liq help. With no arguments, defaults to a summary listing of the available groups. The '--all' option will print the full help for each group, even with no args. If a group or action is specified, then only help for that group and or group+action is displayed. In this case, '--all' is the default and '--summary-only' will cause a one-line summary to be displayed.
-
-  Note, to display help for a sub-group, a '-' must be used between the parent and child group like: 'help orgs-staff'.
 EOF
 }
 
 help() {
   eval "$(setSimpleOptions ALL SUMMARY_ONLY -- "$@")" \
     || { echoerr "Bad options."; help-help; exit 1; }
-
-  local GROUP="${1:-}"
-  local ACTION="${2:-}"
-  local SUMMARY_ONLY
 
   if (( $# == 0 )); then
     # If displaying all, only display summary.
@@ -34,22 +28,21 @@ EOF
       echo
       help-${GROUP}
     done
-  elif (( $# == 1 )); then
-    if type -t help-${GROUP} | grep -q 'function'; then
-      help-${GROUP} "liq "
-    else
-      exitUnknownGroup
-    fi
-  elif (( $# == 2 )); then
-    if type -t help-${GROUP}-${ACTION} | grep -q 'function'; then
-      help-${GROUP}-${ACTION} "liq ${GROUP} "
-    else
-      exitUnknownAction
-    fi
   else
-    echo "Usage:"
-    echo "liq ${cyan_u}help${reset} [<group or resource> [<action>]"
-    echoerrandexit "To many arguments in help."
+    if ! type -t help-${1} | grep -q 'function'; then
+      exitUnknownHelpTopic "$1" ""
+    fi
+    local HELP_SPEC="${1}"; shift
+    while (( $# > 0)); do
+      if ! type -t help-${HELP_SPEC}-${1} | grep -q 'function'; then
+        exitUnknownHelpTopic "$1" "$HELP_SPEC"
+      fi
+      HELP_SPEC="${HELP_SPEC}-${1}"; shift
+    done
+
+    local CONTEXT="liq "
+    CONTEXT="liq $(echo "$HELP_SPEC" | sed -e 's/-[^-]*$//' | sed -e 's/-/ /g')"
+    help-${HELP_SPEC} "$CONTEXT"
   fi
 }
 

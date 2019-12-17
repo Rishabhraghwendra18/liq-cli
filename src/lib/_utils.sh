@@ -54,20 +54,11 @@ colorerrbg() {
   (eval "$@" 2>&1>&3|sed 's/^\(.*\)$/'$'\e''[31m\1'$'\e''[m/'>&2)3>&1 &
 }
 
-exitUnknownGroup() {
-  help --summary-only
-
-  echoerrandexit "No such resource or group '$GROUP'. See help above."
-}
-
-exitUnknownSubgroup() {
-  print_${GROUP}_help # TODO: change format to help-${group}
-  echoerrandexit "Unknown sub-group '$SUBGROUP'. See help above."
-}
-
-exitUnknownAction() {
-  help-${GROUP} # TODO: support per-action help.
-  echoerrandexit "Unknown action '$ACTION'. See help above."
+exitUnknownHelpTopic() {
+  local BAD_SPEC="${1:-}"; shift
+  help $*
+  echo
+  echoerrandexit "No such command or group: $BAD_SPEC"
 }
 
 findFile() {

@@ -758,20 +758,11 @@ colorerrbg() {
   (eval "$@" 2>&1>&3|sed 's/^\(.*\)$/'$'\e''[31m\1'$'\e''[m/'>&2)3>&1 &
 }
 
-exitUnknownGroup() {
-  help --summary-only
-
-  echoerrandexit "No such resource or group '$GROUP'. See help above."
-}
-
-exitUnknownSubgroup() {
-  print_${GROUP}_help # TODO: change format to help-${group}
-  echoerrandexit "Unknown sub-group '$SUBGROUP'. See help above."
-}
-
-exitUnknownAction() {
-  help-${GROUP} # TODO: support per-action help.
-  echoerrandexit "Unknown action '$ACTION'. See help above."
+exitUnknownHelpTopic() {
+  local BAD_SPEC="${1:-}"; shift
+  help $*
+  echo
+  echoerrandexit "No such command or group: $BAD_SPEC"
 }
 
 findFile() {
@@ -1156,21 +1147,15 @@ CATALYST_COMMAND_GROUPS=(help data environments meta orgs orgs-staff projects re
 help-help() {
   PREFIX="${1:-}"
 
-  handleSummary "${PREFIX}${cyan_u}help${reset} [<group> [<action>]]: Displays help summary or—with group—details." || cat <<EOF
+  handleSummary "${PREFIX}${cyan_u}help${reset} [<group> [<sub-group|action>...]]: Displays summary of groups or information on the specified topic." || cat <<EOF
 ${PREFIX}${cyan_u}help${reset} [--all|-a] [--summary-only|-s] [<group> [<action>]]:
   Displays liq help. With no arguments, defaults to a summary listing of the available groups. The '--all' option will print the full help for each group, even with no args. If a group or action is specified, then only help for that group and or group+action is displayed. In this case, '--all' is the default and '--summary-only' will cause a one-line summary to be displayed.
-
-  Note, to display help for a sub-group, a '-' must be used between the parent and child group like: 'help orgs-staff'.
 EOF
 }
 
 help() {
   eval "$(setSimpleOptions ALL SUMMARY_ONLY -- "$@")" \
     || { echoerr "Bad options."; help-help; exit 1; }
-
-  local GROUP="${1:-}"
-  local ACTION="${2:-}"
-  local SUMMARY_ONLY
 
   if (( $# == 0 )); then
     # If displaying all, only display summary.
@@ -1187,22 +1172,21 @@ EOF
       echo
       help-${GROUP}
     done
-  elif (( $# == 1 )); then
-    if type -t help-${GROUP} | grep -q 'function'; then
-      help-${GROUP} "liq "
-    else
-      exitUnknownGroup
-    fi
-  elif (( $# == 2 )); then
-    if type -t help-${GROUP}-${ACTION} | grep -q 'function'; then
-      help-${GROUP}-${ACTION} "liq ${GROUP} "
-    else
-      exitUnknownAction
-    fi
   else
-    echo "Usage:"
-    echo "liq ${cyan_u}help${reset} [<group or resource> [<action>]"
-    echoerrandexit "To many arguments in help."
+    if ! type -t help-${1} | grep -q 'function'; then
+      exitUnknownHelpTopic "$1" ""
+    fi
+    local HELP_SPEC="${1}"; shift
+    while (( $# > 0)); do
+      if ! type -t help-${HELP_SPEC}-${1} | grep -q 'function'; then
+        exitUnknownHelpTopic "$1" "$HELP_SPEC"
+      fi
+      HELP_SPEC="${HELP_SPEC}-${1}"; shift
+    done
+
+    local CONTEXT="liq "
+    CONTEXT="liq $(echo "$HELP_SPEC" | sed -e 's/-[^-]*$//' | sed -e 's/-/ /g')"
+    help-${HELP_SPEC} "$CONTEXT"
   fi
 }
 
@@ -2973,12 +2957,14 @@ requirements-projects() {
   :
 }
 
+# see: liq help projects build
 projects-build() {
   findBase
   cd "$BASE_DIR"
   projectsRunPackageScript build
 }
 
+# see: liq help projects close
 projects-close() {
   eval "$(setSimpleOptions FORCE -- "$@")"
 
@@ -3038,6 +3024,7 @@ projects-close() {
   # TODO: need to check whether the project is linked to other projects
 }
 
+# see: liq help projects create
 projects-create() {
   eval "$(setSimpleOptions NEW= SOURCE= FOLLOW NO_FORK:F VERSION= LICENSE= DESCRIPTION= PUBLIC: -- "$@")"
 
@@ -3124,6 +3111,7 @@ projects-create() {
   projectMoveStaged "$__PROJ_NAME" "$PROJ_STAGE"
 }
 
+# see: liq help projects deploy
 projects-deploy() {
   if [[ -z "${GOPATH:-}" ]]; then
     echoerr "'GOPATH' is not defined. Run 'liq go configure'."
@@ -3132,6 +3120,7 @@ projects-deploy() {
   colorerr "GOPATH=$GOPATH bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; gcloud app deploy'"
 }
 
+# see: liq help projects import
 projects-import() {
   local PROJ_SPEC __PROJ_NAME _PROJ_URL PROJ_STAGE
   eval "$(setSimpleOptions NO_FORK:F SET_NAME= SET_URL= -- "$@")"
@@ -3181,10 +3170,12 @@ projects-import() {
   echo "'$_PROJ_NAME' imported into playground."
 }
 
+# see: liq help projects publish
 projects-publish() {
   echoerrandexit "The 'publish' action is not yet implemented."
 }
 
+# see: liq help projects qa
 projects-qa() {
   eval "$(setSimpleOptions UPDATE^ OPTIONS=^ AUDIT LINT VERSION_CHECK -- "$@")" \
     || { contextHelp; echoerrandexit "Bad options."; }
@@ -3208,6 +3199,7 @@ projects-qa() {
   fi
 }
 
+# see: liq help projects sync
 projects-sync() {
   eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
@@ -3279,6 +3271,7 @@ projects-sync() {
   fi # on workbranach check
 }
 
+# see: liq help projects test
 projects-test() {
   eval "$(setSimpleOptions TYPES= NO_DATA_RESET:D GO_RUN= NO_START:S NO_SERVICE_CHECK:C -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
