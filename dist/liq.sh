@@ -2753,6 +2753,23 @@ ${PREFIX}${cyan_u}orgs${reset} <action>:
   ${underline}show${reset} [--sensitive] [<org nick>]: Displays info on the currently active or named org.
 EOF
 }
+# sources the current org settings, if any
+sourceCurrentOrg() {
+  local REL_DIR
+  if [[ -d org_settings ]]; then
+    REL_DIR="."
+  elif [[ -n "$BASE_DIR" ]]; then
+    REL_DIR="$BASE_DIR/.."
+  else
+    echoerrandexit "Cannot get current organization outside of project context."
+  fi
+
+  source "${REL_DIR}/org_settings/settings.sh"
+  if [[ -d "${REL_DIR}/org_settings_sensitive" ]]; then
+    source "${REL_DIR}/org_settings_sensitive/settings.sh"
+  fi
+}
+
 orgsCurrentOrg() {
   eval "$(setSimpleOptions REQUIRE REQUIRE_SENSITIVE:s -- "$@")"
 
@@ -2785,6 +2802,32 @@ orgsOrgList() {
   done
 }
 
+orgs-issues() {
+  local ACTION="${1}"; shift
+
+  if [[ $(type -t "orgs-issues-${ACTION}" || echo '') == 'function' ]]; then
+    orgs-issues-${ACTION} "$@"
+  else
+    exitUnknownHelpTopic "$ACTION" orgs issues
+  fi
+}
+
+# see 'liq help org issues show'
+orgs-issues-show() {
+  eval "$(setSimpleOptions MINE -- "$@")"
+
+  local URL
+  URL=$(cat "$BASE_DIR/package.json" | jq -r '.bugs.url' )
+
+  if [[ -n "$MINE" ]]; then
+    local MY_GITHUB_NAME
+    projectHubWhoami MY_GITHUB_NAME
+    open "${URL}/assigned/${MY_GITHUB_NAME}"
+  else
+    open "${URL}"
+  fi
+}
+
 orgs-staff() {
   local ACTION="${1}"; shift
   local CMD="orgs-staff-${ACTION}"
@@ -2792,7 +2835,7 @@ orgs-staff() {
   if [[ $(type -t "${CMD}" || echo '') == 'function' ]]; then
     ${CMD} "$@"
   else
-    exitUnknownAction
+    exitUnknownHelpTopic "$ACTION" orgs staff
   fi
 }
 
@@ -3307,7 +3350,7 @@ projects-services() {
   if [[ $(type -t "projects-services-${ACTION}" || echo '') == 'function' ]]; then
     projects-services-${ACTION} "$@"
   else
-    exitUnknownAction
+    exitUnknownHelpTopic "$ACTION" projects services
   fi
 }
 
@@ -5415,7 +5458,7 @@ case "$GROUP" in
       requirements-${GROUP}
       ${GROUP}-${ACTION} "$@"
     else
-      exitUnknownAction
+      exitUnknownHelpTopic "$ACTION" "$GROUP"
     fi;;
 esac
 

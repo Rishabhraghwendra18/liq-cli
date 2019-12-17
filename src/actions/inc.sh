@@ -13,6 +13,8 @@ source ./orgs/actions.sh
 source ./orgs/help.sh
 source ./orgs/lib.sh
 
+source ./orgs/issues/actions.sh
+
 source ./orgs/staff/actions.sh
 source ./orgs/staff/help.sh
 source ./orgs/staff/lib.sh
