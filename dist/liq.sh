@@ -1135,7 +1135,7 @@ function log() {
     file=${BASH_SOURCE[$i-1]}
     echo "${now} $(hostname) $0:${lineno} ${msg}"
 }
-CATALYST_COMMAND_GROUPS=(help data environments meta orgs orgs-staff projects required-services services work)
+CATALYST_COMMAND_GROUPS=(help data environments meta orgs orgs-staff projects projects-issues required-services services work)
 
 # display help on help
 help-help() {
@@ -2802,32 +2802,6 @@ orgsOrgList() {
   done
 }
 
-orgs-issues() {
-  local ACTION="${1}"; shift
-
-  if [[ $(type -t "orgs-issues-${ACTION}" || echo '') == 'function' ]]; then
-    orgs-issues-${ACTION} "$@"
-  else
-    exitUnknownHelpTopic "$ACTION" orgs issues
-  fi
-}
-
-# see 'liq help org issues show'
-orgs-issues-show() {
-  eval "$(setSimpleOptions MINE -- "$@")"
-
-  local URL
-  URL=$(cat "$BASE_DIR/package.json" | jq -r '.bugs.url' )
-
-  if [[ -n "$MINE" ]]; then
-    local MY_GITHUB_NAME
-    projectHubWhoami MY_GITHUB_NAME
-    open "${URL}/assigned/${MY_GITHUB_NAME}"
-  else
-    open "${URL}"
-  fi
-}
-
 orgs-staff() {
   local ACTION="${1}"; shift
   local CMD="orgs-staff-${ACTION}"
@@ -3877,6 +3851,48 @@ projectsVersionCheckDo() {
     CMD_OPTS="${CMD_OPTS} -u"
   fi
   npm-check ${CMD_OPTS} || true
+}
+
+projects-issues() {
+  local ACTION="${1}"; shift
+
+  if [[ $(type -t "projects-issues-${ACTION}" || echo '') == 'function' ]]; then
+    projects-issues-${ACTION} "$@"
+  else
+    exitUnknownHelpTopic "$ACTION" projects issues
+  fi
+}
+
+# see 'liq help org issues show'
+projects-issues-show() {
+  eval "$(setSimpleOptions MINE -- "$@")"
+
+  local URL
+  URL=$(cat "$BASE_DIR/package.json" | jq -r '.bugs.url' )
+
+  if [[ -n "$MINE" ]]; then
+    local MY_GITHUB_NAME
+    projectHubWhoami MY_GITHUB_NAME
+    open "${URL}/assigned/${MY_GITHUB_NAME}"
+  else
+    open "${URL}"
+  fi
+}
+help-projects-issues() {
+  local PREFIX="${1:-}"
+
+  handleSummary "${PREFIX}${cyan_u}projects issues${reset} <action>: Manage organization issues." || cat <<EOF
+${PREFIX}${cyan_u}projects issues${reset} <action>:
+$(help-projects-issues-show | sed -e 's/^/  /')
+EOF
+}
+
+help-projects-issues-show() {
+  cat <<EOF
+${underline}show${reset} [--mine|-m]:
+  Displays the open issues for the current project. With '--mine', will attempt to get the user's GitHub name
+  and show them their own issues.
+EOF
 }
 
 # deprecated

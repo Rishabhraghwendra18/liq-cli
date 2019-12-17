@@ -1,15 +1,15 @@
-orgs-issues() {
+projects-issues() {
   local ACTION="${1}"; shift
 
-  if [[ $(type -t "orgs-issues-${ACTION}" || echo '') == 'function' ]]; then
-    orgs-issues-${ACTION} "$@"
+  if [[ $(type -t "projects-issues-${ACTION}" || echo '') == 'function' ]]; then
+    projects-issues-${ACTION} "$@"
   else
-    exitUnknownHelpTopic "$ACTION" orgs issues
+    exitUnknownHelpTopic "$ACTION" projects issues
   fi
 }
 
 # see 'liq help org issues show'
-orgs-issues-show() {
+projects-issues-show() {
   eval "$(setSimpleOptions MINE -- "$@")"
 
   local URL
