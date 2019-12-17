@@ -24,13 +24,15 @@
             {% endif %}
             {% if page.prev_url and page.url != "/docs/toc" %}
             |
+            {% endif %}
+            {% if page.prev_url %}
             <a href="{{ page.prev_url | relative_url }}" id="nav-prev">&lt; {{ page.prev_name }}</a>
             {% endif %}
             {% if page.next_url %}
             |
             <a href="{{ page.next_url | relative_url }}" id="nav-prev">{{ page.next_name }} &gt;</a>
             {% endif %}
-            | <a href="https://github.com/Liquid-Labs/liq-cli/"><img src="{{ "/assets/imgs/GitHub-Mark-64px.png" | relative_url }}" alt="GitHub Project" /></a>
+            | <a stlye="height: 1.2em" href="https://github.com/Liquid-Labs/liq-cli/"><img src="{{ "/assets/imgs/GitHub-Mark-64px.png" | relative_url }}" alt="GitHub Project" /></a>
           </div>
           <h1>{{ page.title | default: site.title | default: site.github.repository_name }}</h1>
           <h2>{{ page.description | default: site.description | default: site.github.project_tagline }}</h2>
