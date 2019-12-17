@@ -22,7 +22,7 @@
             {% if page.url != "/docs/toc" %}
             <a href="{{ '/docs/toc' | relative_url }}" id="nav-prev">^ TOC</a>
             {% endif %}
-            {% if page.prev_url %}
+            {% if page.prev_url and page.url != "/docs/toc" %}
             |
             <a href="{{ page.prev_url | relative_url }}" id="nav-prev">&lt; {{ page.prev_name }}</a>
             {% endif %}
