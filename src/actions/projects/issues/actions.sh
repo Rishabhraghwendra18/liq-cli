@@ -12,6 +12,8 @@ projects-issues() {
 projects-issues-show() {
   eval "$(setSimpleOptions MINE -- "$@")"
 
+  findBase
+
   local URL
   URL=$(cat "$BASE_DIR/package.json" | jq -r '.bugs.url' )
 
