@@ -82,7 +82,7 @@ Support for target distros is currently limited. Full support for additional dis
 
 * MacOS is the primary/lead platform.
 * Some testing is done on Ubuntu.
-* Most Linux or BSD based distros should work, perhaps with some tweaks.
+* Most Linux or BSD based distros should work (perhaps with some tweaks).
 * At this point, Windows is entirely out of scope, though in theory Windows with CygWin or similar may work.
 
 # Contributions and bounties
