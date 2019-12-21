@@ -641,7 +641,40 @@ function _defineProperty$1(obj, key, value) {
 var defineProperty$1 = _defineProperty$1;
 
 var _class$1, _temp$3;
-var Staff = (_temp$3 = _class$1 =
+var PolicyCalendar = (_temp$3 = _class$1 =
+/*#__PURE__*/
+function (_TsvExt) {
+  inherits$1(PolicyCalendar, _TsvExt);
+
+  function PolicyCalendar(fileName) {
+    var _this;
+
+    classCallCheck$1(this, PolicyCalendar);
+
+    _this = possibleConstructorReturn$1(this, getPrototypeOf$1(PolicyCalendar).call(this, PolicyCalendar.headers, PolicyCalendar.keys, fileName));
+
+    defineProperty$1(assertThisInitialized$1(_this), "matchKey", function (line, key) {
+      return line[0] === key;
+    });
+
+    return _this;
+  }
+
+  createClass$1(PolicyCalendar, [{
+    key: "notUnique",
+    value: function notUnique(data, item) {
+      var i;
+      return -1 !== (i = data.findIndex(function (line) {
+        return line[0].toLowerCase() === item.itemName.toLowerCase();
+      })) && "Policy calendar item '".concat(item.itemName, "' already exists at entry ").concat(i + 1, ".");
+    }
+  }]);
+
+  return PolicyCalendar;
+}(TsvExt), defineProperty$1(_class$1, "headers", ['Item Name', 'Description', 'Frequency', 'Impact Weighting']), defineProperty$1(_class$1, "keys", ['itemName', 'description', 'frequency', 'impactWeighting']), _temp$3);
+
+var _class$2, _temp$4;
+var Staff = (_temp$4 = _class$2 =
 /*#__PURE__*/
 function (_TsvExt) {
   inherits$1(Staff, _TsvExt);
@@ -671,7 +704,7 @@ function (_TsvExt) {
   }]);
 
   return Staff;
-}(TsvExt), defineProperty$1(_class$1, "headers", ['Email', 'Family Name', 'Given Name', 'Start Date']), defineProperty$1(_class$1, "keys", ['email', 'familyName', 'givenName', 'startDate']), _temp$3);
+}(TsvExt), defineProperty$1(_class$2, "headers", ['Email', 'Family Name', 'Given Name', 'Start Date']), defineProperty$1(_class$2, "keys", ['email', 'familyName', 'givenName', 'startDate']), _temp$4);
 
-export { Staff, refreshDocuments };
+export { PolicyCalendar, Staff, refreshDocuments };
 //# sourceMappingURL=index.es.js.map

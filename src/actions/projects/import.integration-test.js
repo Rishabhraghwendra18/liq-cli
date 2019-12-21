@@ -25,7 +25,7 @@ describe(`Command 'liq projects import'`, () => {
         [testing.localRepoUrl, '@liquid-labs/lc-entities-model']])
       ("with '--no-fork %s' successfully clone project.", (importSpec, projectName) => {
     const result = shell.exec(`HOME=${testConfig.home} ${testing.LIQ} projects import --no-fork ${importSpec}`, execOpts)
-    const expectedOutput = new RegExp(`^'${projectName}' imported into playground.[\s\n]*$`)
+    const expectedOutput = new RegExp(`'${projectName}' imported into playground.[\s\n]*$`)
 
     expect(result.stderr).toEqual('')
     expect(result.stdout).toMatch(expectedOutput)

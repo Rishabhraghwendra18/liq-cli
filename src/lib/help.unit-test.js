@@ -26,7 +26,7 @@ describe(`Command 'liq'`, () => {
     console.error = jest.fn() // supresses err echo from shelljs
     const result = shell.exec(`${testing.LIQ} ${badGlobal}`, execOpts)
     const expectedErr = expect.stringMatching(
-      new RegExp(`No such resource or group '${badGlobal}'. See help above.\\s*`))
+      new RegExp(`No such command or group: ${badGlobal}\\s*`))
 
     expect(result.stdout).toMatch(expectedUsage)
     expect(result.stderr).toEqual(expectedErr)
