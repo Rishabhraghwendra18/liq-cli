@@ -646,6 +646,13 @@ var PolicyCalendar = (_temp$3 = _class$1 =
 function (_TsvExt) {
   inherits$1(PolicyCalendar, _TsvExt);
 
+  /**
+  * Item Name : org wide unique calendar item name.
+  * Description : Short description of calendar item.
+  * Frequency : One of triennial, biennial, annual, semiannual, triannual, quarterly, monthly, weekly.
+  * Impact Weighting : Roughly the number of man-hours necessary to complete a task.
+  * Span : Number of hours to alot for event. For 8+ hours, span is didvided by 8 and rounded up for span of days.
+  */
   function PolicyCalendar(fileName) {
     var _this;
 
@@ -668,10 +675,53 @@ function (_TsvExt) {
         return line[0].toLowerCase() === item.itemName.toLowerCase();
       })) && "Policy calendar item '".concat(item.itemName, "' already exists at entry ").concat(i + 1, ".");
     }
+  }, {
+    key: "schedule",
+    value: function schedule() {
+      var dayWeights = lib.initDayWeights();
+      this.reset();
+      var item;
+
+      while (item = this.next()) {
+        var monthsSets = void 0;
+
+        switch (item.frequency) {
+          case 'quarterly':
+            // TODO: switch to zero index
+            monthsSets = [[1, 4, 7, 10]];
+            break;
+
+          case 'triannual':
+            monthsSets = [[1, 5, 9], [2, 6, 10]];
+            break;
+
+          case 'semiannual':
+            monthsSets = [[1, 7], [2, 8], [3, 9], [4, 10]];
+            break;
+
+          default:
+            monthsSets = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]];
+            break;
+        }
+
+        var leastMonthsSet = lib.leastMonthsSet(dayWeights, monthsSets);
+        var leastWeekOfMonth = leastMonthsSet.reduce(function (combinedWeights, monthIdx) {
+          var weekIdx = (monthIdx - 1) * 4;
+          return combinedWeights.map(function (prev, weekOfMonthIdx) {
+            return prev + dayWeights[(monthIdx - 1) * 4 + weekIdx] + dayWeights[(monthIdx - 1) * 4 + 1 + idx] + dayWeights[(monthIdx - 1) * 4 + 2 + idx] + dayWeights[(monthIdx - 1) * 4 + 3 + idx];
+          });
+        }, [0, 0, 0, 0]).reduce(function (curr, weight, idx) {
+          return curr.weight < weight ? curr : {
+            weight: weight,
+            idx: idx
+          };
+        }).idx;
+      }
+    }
   }]);
 
   return PolicyCalendar;
-}(TsvExt), defineProperty$1(_class$1, "headers", ['Item Name', 'Description', 'Frequency', 'Impact Weighting']), defineProperty$1(_class$1, "keys", ['itemName', 'description', 'frequency', 'impactWeighting']), _temp$3);
+}(TsvExt), defineProperty$1(_class$1, "headers", ['Item Name', 'Description', 'Frequency', 'Impact Weighting', 'Span']), defineProperty$1(_class$1, "keys", ['itemName', 'description', 'frequency', 'impactWeighting', 'span']), _temp$3);
 
 var _class$2, _temp$4;
 var Staff = (_temp$4 = _class$2 =

@@ -7,7 +7,7 @@ describe(`PolicyCalendar`, () => {
 	})
 
 	test('parses test file', () => expect(testPolicyCalendar).toBeTruthy())
-	test('ignore blank lines', () => expect(testPolicyCalendar.length).toBe(1))
+	test('ignore blank lines', () => expect(testPolicyCalendar.length).toBe(4))
 	test(`properly sets fields`, () => {
 		testPolicyCalendar.reset()
 		const item = testPolicyCalendar.next()
