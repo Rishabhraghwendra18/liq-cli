@@ -1,5 +1,7 @@
 import * as lib from './schedulelib'
 
+const dayWeightsZero = lib.initDayWeights()
+
 test('initDayWeights produces the expected 40 x 4, zero filled 2-dim array structure', () => {
   const dayWeights = lib.initDayWeights()
   expect(dayWeights.length).toBe(40)
@@ -28,16 +30,23 @@ describe('combineMonthsWeight', () => {
 
 
 describe('leastMonthsSet', () => {
-  const dayWeightsZero = lib.initDayWeights()
-
   test('selects first month set when all equal; single sets',
-    () => { expect(lib.leastMonthsSet(dayWeightsZero, [[0],[1],[2]])).toEqual([0]) })
+    () => expect(lib.leastMonthsSet(dayWeightsZero, [[0],[1],[2]])).toEqual([0]) )
   test('selects first month set when all equal; multi sets',
-    () => { expect(lib.leastMonthsSet(dayWeightsZero, [[1,4],[2,5],[3,6]])).toEqual([1,4]) })
+    () => expect(lib.leastMonthsSet(dayWeightsZero, [[1,4],[2,5],[3,6]])).toEqual([1,4]) )
   test('selects second month when first month is weightier', () => {
     const dayWeights = lib.initDayWeights()
     dayWeights[0][3] = 1 // week 0, month 0, day 3 (Thurs); total 1
     expect(lib.leastMonthsSet(dayWeights, [[0], [1]])).toEqual([1])
     expect(lib.leastMonthsSet(dayWeights, [[0,2], [1,3]])).toEqual([1,3])
+  })
+})
+
+describe('leastWeekOfMonth', () => {
+  // test('selects first week when all equal', () => expect(lib.leastWeekOfMonth(dayWeightsZero, 7)).toBe(0))
+  test('selects second week when it is lightest', () => {
+    const dayWeights = lib.initDayWeights()
+    dayWeights[7*4 + 0] = [1,1,1,1]
+    expect(lib.leastWeekOfMonth(dayWeights, 7)).toBe(1)
   })
 })

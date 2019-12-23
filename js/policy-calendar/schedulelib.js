@@ -1,5 +1,9 @@
 const initDayWeights = () => new Array(4 * 10).fill(0).map(() => [0,0,0,0])
 
+/**
+ * Takes an array of numbers inidcating a set of (zero-indexed) months and combines all the weights to a single number,
+ * rperesenting the weight of the month-set.
+ */
 const combineMonthsWeight = (dayWeights, monthsSet) =>
   monthsSet.reduce(
     (acc, monthIdx) => {
@@ -13,6 +17,9 @@ const combineMonthsWeight = (dayWeights, monthsSet) =>
     0
   )
 
+/**
+ * Given a collection of month-sets, selects the least weigthed month-set.
+ */
 const leastMonthsSet = (dayWeights, monthsSets) => {
   return monthsSets[monthsSets.reduce(
     (currLeast, monthsSet, setIdx) => {
@@ -26,8 +33,21 @@ const leastMonthsSet = (dayWeights, monthsSets) => {
   ).idx]
 }
 
+/**
+ * Given a month, selects the index of the lightest week of that month.
+ */
+const leastWeekOfMonth = (dayWeights, month) =>
+  [0, 1, 2, 3].map(
+    (weekOfMonth) => dayWeights[month * 4 + weekOfMonth].reduce((total, dayWeight) => total + dayWeight, 0)
+  ).reduce(
+    (currLeast, weekWeight, idx) =>
+      currLeast === undefined || weekWeight < currLeast.weight ? { weight: weekWeight, idx: idx } : currLeast,
+    undefined
+  ).idx
+
 export {
   initDayWeights,
   combineMonthsWeight,
-  leastMonthsSet
+  leastMonthsSet,
+  leastWeekOfMonth
 }

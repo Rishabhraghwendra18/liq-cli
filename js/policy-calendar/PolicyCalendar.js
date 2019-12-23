@@ -22,6 +22,9 @@ const PolicyCalendar = class extends TsvExt {
            && `Policy calendar item '${item.itemName}' already exists at entry ${i + 1}.`
   }
 
+  /**
+   * Generates an iniital, balanced, concrete schedule based on the Policy calendar requirements.
+   */
   schedule() {
     const dayWeights = lib.initDayWeights()
 
@@ -42,22 +45,13 @@ const PolicyCalendar = class extends TsvExt {
 
       const leastMonthsSet = lib.leastMonthsSet(dayWeights, monthsSets)
 
-      const leastWeekOfMonth = leastMonthsSet.reduce(
-          (combinedWeights, monthIdx) => {
-            const weekIdx = (monthIdx - 1) * 4
-            return combinedWeights.map((prev, weekOfMonthIdx) =>
-                prev + dayWeights[(monthIdx - 1) * 4 + weekIdx]
-                  + dayWeights[(monthIdx - 1) * 4 + 1 + idx]
-                  + dayWeights[(monthIdx - 1) * 4 + 2 + idx]
-                  + dayWeights[(monthIdx - 1) * 4 + 3 + idx]
-              )
-          },
-          [0,0,0,0]
-        )
-        .reduce((curr, weight, idx) => curr.weight < weight ? curr : { weight: weight, idx: idx })
-        .idx
-    }
-  }
+      // For sub-annual items, we don't try to align weeks, just months, so earch occurance will be scheduled
+      // independently.
+      leastMonthsSet.forEach((month) => {
+        const leastWeekOfMonth = lib.leastWeekOfMonth(dayWeights, month)
+      })
+    } // while ...this.next()
+  } // schedule()
 
   matchKey = (line, key) => line[0] === key
 }
