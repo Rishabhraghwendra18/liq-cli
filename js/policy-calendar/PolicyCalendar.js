@@ -4,12 +4,14 @@ const PolicyCalendar = class extends TsvExt {
   /**
   * Item Name : org wide unique calendar item name.
   * Description : Short description of calendar item.
-  * Frequency : One of triennial, biennial, annual, semiannual, triannual, quarterly, monthly, weekly.
+  * Frequency : One of triennial, biennial, annual, semiannual, triannual, quarterly, bimonhtly, monthly, weekly.
   * Impact Weighting : Roughly the number of man-hours necessary to complete a task.
   * Span : Number of hours to alot for event. For 8+ hours, span is didvided by 8 and rounded up for span of days.
   */
   static headers = ['Item Name', 'Description', 'Frequency', 'Impact Weighting', 'Span']
   static keys = ['itemName', 'description', 'frequency', 'impactWeighting', 'span']
+  static BIENNIAL_SELECTOR = ['ODD', 'EVEN']
+  static TRIENNIAL_SELECTOR = ['ODD', 'EVEN', 'TRIPLETS']
 
 	constructor(fileName) {
     super(PolicyCalendar.headers, PolicyCalendar.keys, fileName)
@@ -27,12 +29,19 @@ const PolicyCalendar = class extends TsvExt {
    */
   schedule() {
     const dayWeights = lib.initDayWeights()
+    let biennialIdx = 0
+    let triennialIdx = 0
 
     this.reset()
     let item
     while ((item = this.next())) {
       let monthsSets
       switch (item.frequency) {
+        case 'weekly':
+        case 'monthly':
+          monthsSets = [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]];  break
+        case 'bimonthly':
+          monthsSets = [[0, 2, 4, 6, 8, 10], [1, 3, 5, 7, 9, 11]]; break
         case 'quarterly':
           monthsSets = [[0, 3, 6, 9]]; break
         case 'triannual':
@@ -49,6 +58,7 @@ const PolicyCalendar = class extends TsvExt {
       // independently.
       leastMonthsSet.forEach((month) => {
         const leastWeekOfMonth = lib.leastWeekOfMonth(dayWeights, month)
+        const policyEvent = lib.scheduleInWeek(dayWeights[month * 4 + leastWeekOfMonth], item)
       })
     } // while ...this.next()
   } // schedule()

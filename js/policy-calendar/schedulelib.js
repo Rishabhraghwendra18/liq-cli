@@ -45,6 +45,27 @@ const leastWeekOfMonth = (dayWeights, month) =>
     undefined
   ).idx
 
+const orderWeek = (weekWeights) => {
+  const testOrder = []
+  let minCut = -1
+  while (testOrder.length < 3) {
+    let resultWeight = -1
+    const idx = weekWeights.reduce((result, weight, idx) => {
+      if (weight > minCut && weight < resultWeight) {
+        resultWeight = weight
+        return idx
+      }
+      else return result
+    })
+    testOrder.push(idx)
+  }
+  return testOrder
+}
+
+const scheduleInWeek = (weekWeights, calendarItem) => {
+  if (!orderWeek(weekWeights).some(())
+}
+
 export {
   initDayWeights,
   combineMonthsWeight,
