@@ -8,8 +8,8 @@ const PolicyCalendar = class extends TsvExt {
   * Impact Weighting : Roughly the number of man-hours necessary to complete a task.
   * Span : Number of hours to alot for event. For 8+ hours, span is didvided by 8 and rounded up for span of days.
   */
-  static headers = ['Item Name', 'Description', 'Frequency', 'Impact Weighting', 'Span']
-  static keys = ['itemName', 'description', 'frequency', 'impactWeighting', 'span']
+  static headers = ['UUID', 'Item Name', 'Description', 'Frequency', 'Impact Weighting (hrs)', 'Time Span (days)', 'Absolute Condition', 'Policy Refs']
+  static keys = ['uuid', 'itemName', 'description', 'frequency', 'impactWeighting', 'timeSpan', 'absCond', 'policyRefs']
   static BIENNIAL_SELECTOR = ['ODD', 'EVEN']
   static TRIENNIAL_SELECTOR = ['ODD', 'EVEN', 'TRIPLETS']
 
