@@ -641,7 +641,99 @@ function _defineProperty$1(obj, key, value) {
 var defineProperty$1 = _defineProperty$1;
 
 var _class$1, _temp$3;
-var Staff = (_temp$3 = _class$1 =
+var PolicyCalendar = (_temp$3 = _class$1 =
+/*#__PURE__*/
+function (_TsvExt) {
+  inherits$1(PolicyCalendar, _TsvExt);
+
+  /**
+  * Item Name : org wide unique calendar item name.
+  * Description : Short description of calendar item.
+  * Frequency : One of triennial, biennial, annual, semiannual, triannual, quarterly, bimonhtly, monthly, weekly.
+  * Impact Weighting : Roughly the number of man-hours necessary to complete a task.
+  * Span : Number of hours to alot for event. For 8+ hours, span is didvided by 8 and rounded up for span of days.
+  */
+  function PolicyCalendar(fileName) {
+    var _this;
+
+    classCallCheck$1(this, PolicyCalendar);
+
+    _this = possibleConstructorReturn$1(this, getPrototypeOf$1(PolicyCalendar).call(this, PolicyCalendar.headers, PolicyCalendar.keys, fileName));
+
+    defineProperty$1(assertThisInitialized$1(_this), "matchKey", function (line, key) {
+      return line[0] === key;
+    });
+
+    return _this;
+  }
+
+  createClass$1(PolicyCalendar, [{
+    key: "notUnique",
+    value: function notUnique(data, item) {
+      var i;
+      return -1 !== (i = data.findIndex(function (line) {
+        return line[0].toLowerCase() === item.itemName.toLowerCase();
+      })) && "Policy calendar item '".concat(item.itemName, "' already exists at entry ").concat(i + 1, ".");
+    }
+    /**
+     * Generates an iniital, balanced, concrete schedule based on the Policy calendar requirements.
+     */
+
+  }, {
+    key: "schedule",
+    value: function schedule() {
+      var dayWeights = lib.initDayWeights();
+      this.reset();
+      var item;
+
+      while (item = this.next()) {
+        var monthsSets = void 0;
+
+        switch (item.frequency) {
+          case 'weekly':
+          case 'monthly':
+            monthsSets = [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]];
+            break;
+
+          case 'bimonthly':
+            monthsSets = [[0, 2, 4, 6, 8, 10], [1, 3, 5, 7, 9, 11]];
+            break;
+
+          case 'quarterly':
+            monthsSets = [[0, 3, 6, 9]];
+            break;
+
+          case 'triannual':
+            monthsSets = [[0, 4, 8], [1, 5, 9]];
+            break;
+
+          case 'semiannual':
+            monthsSets = [[0, 6], [1, 7], [2, 8], [3, 9]];
+            break;
+
+          default:
+            monthsSets = [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9]];
+            break;
+        }
+
+        var leastMonthsSet = lib.leastMonthsSet(dayWeights, monthsSets); // For sub-annual items, we don't try to align weeks, just months, so earch occurance will be scheduled
+        // independently.
+
+        leastMonthsSet.forEach(function (month) {
+          var leastWeekOfMonth = lib.leastWeekOfMonth(dayWeights, month);
+          var policyEvent = lib.scheduleInWeek(dayWeights[month * 4 + leastWeekOfMonth], item);
+        });
+      } // while ...this.next()
+
+    } // schedule()
+
+  }]);
+
+  return PolicyCalendar;
+}(TsvExt), defineProperty$1(_class$1, "headers", ['Item Name', 'Description', 'Frequency', 'Impact Weighting', 'Span']), defineProperty$1(_class$1, "keys", ['itemName', 'description', 'frequency', 'impactWeighting', 'span']), defineProperty$1(_class$1, "BIENNIAL_SELECTOR", ['ODD', 'EVEN']), defineProperty$1(_class$1, "TRIENNIAL_SELECTOR", ['ODD', 'EVEN', 'TRIPLETS']), _temp$3);
+
+var _class$2, _temp$4;
+var Staff = (_temp$4 = _class$2 =
 /*#__PURE__*/
 function (_TsvExt) {
   inherits$1(Staff, _TsvExt);
@@ -671,7 +763,7 @@ function (_TsvExt) {
   }]);
 
   return Staff;
-}(TsvExt), defineProperty$1(_class$1, "headers", ['Email', 'Family Name', 'Given Name', 'Start Date']), defineProperty$1(_class$1, "keys", ['email', 'familyName', 'givenName', 'startDate']), _temp$3);
+}(TsvExt), defineProperty$1(_class$2, "headers", ['Email', 'Family Name', 'Given Name', 'Start Date']), defineProperty$1(_class$2, "keys", ['email', 'familyName', 'givenName', 'startDate']), _temp$4);
 
-export { Staff, refreshDocuments };
+export { PolicyCalendar, Staff, refreshDocuments };
 //# sourceMappingURL=index.es.js.map

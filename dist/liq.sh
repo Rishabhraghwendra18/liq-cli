@@ -5039,7 +5039,7 @@ work-test() {
 }
 
 work-submit() {
-  eval "$(setSimpleOptions MESSAGE= NOT_CLEAN:C -- "$@")" \
+  eval "$(setSimpleOptions MESSAGE= NOT_CLEAN:C NO_CLOSE:X -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
@@ -5121,7 +5121,11 @@ ${SUBMIT_CERTS}
 EOF)
     # populate issues lists
     if [[ -n "$PROJ_ISSUES" ]]; then
-      DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
+      if [[ -z "$NO_CLOSE" ]];then
+        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
+      else
+        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* driven by $ISSUE"; done)"
+      fi
     fi
     if [[ -n "$OTHER_ISSUES" ]]; then
       DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
@@ -5167,8 +5171,10 @@ ${PREFIX}${cyan_u}work${reset} <action>:
     Synchronizes local project repos for all work. See 'liq help work sync' for details.
   ${underline}test${reset}: Runs tests for each involved project in the current unit of work. See
     'project test' for details on options for the 'test' action.
-  ${underline}submit${reset} [<projects>]: Submits pull request for the current unit of work. With no
-    projects specified, submits patches for all projects in the current unit of work.
+  ${underline}submit${reset} [--message|-m <summary message>][--not-clean|-C] [--no-close|-X][<projects>]:
+    Submits pull request for the current unit of work. With no projects specified, submits patches for all
+    projects in the current unit of work. By default, PR will claim to close related issues unless
+    '--no-close' is included.
 
 A 'unit of work' is essentially a set of work branches across all involved projects. The first project involved in a unit of work is considered the primary project, which will effect automated linking when involving other projects.
 

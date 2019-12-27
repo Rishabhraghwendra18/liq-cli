@@ -615,7 +615,7 @@ work-test() {
 }
 
 work-submit() {
-  eval "$(setSimpleOptions MESSAGE= NOT_CLEAN:C -- "$@")" \
+  eval "$(setSimpleOptions MESSAGE= NOT_CLEAN:C NO_CLOSE:X -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
@@ -697,7 +697,11 @@ ${SUBMIT_CERTS}
 EOF)
     # populate issues lists
     if [[ -n "$PROJ_ISSUES" ]]; then
-      DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
+      if [[ -z "$NO_CLOSE" ]];then
+        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
+      else
+        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* driven by $ISSUE"; done)"
+      fi
     fi
     if [[ -n "$OTHER_ISSUES" ]]; then
       DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
