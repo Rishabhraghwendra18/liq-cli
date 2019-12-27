@@ -700,7 +700,7 @@ EOF)
       if [[ -z "$NO_CLOSE" ]];then
         DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
       else
-        FESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* driven by $ISSUE"; done)"
+        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* driven by $ISSUE"; done)"
       fi
     fi
     if [[ -n "$OTHER_ISSUES" ]]; then
