@@ -62,9 +62,9 @@ const orderWeek = (weekWeights) => {
   return testOrder
 }
 
-const scheduleInWeek = (weekWeights, calendarItem) => {
+/*const scheduleInWeek = (weekWeights, calendarItem) => {
   if (!orderWeek(weekWeights).some(())
-}
+}*/
 
 export {
   initDayWeights,
