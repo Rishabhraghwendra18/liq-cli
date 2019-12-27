@@ -45,6 +45,10 @@ const leastWeekOfMonth = (dayWeights, month) =>
     undefined
   ).idx
 
+/**
+ * Given a set of week weights (1-d array), will return an array of the indexes of that array such that the indexes
+ * applied to the weights give a least to most result.
+ */
 const orderWeek = (weekWeights) => {
   const testOrder = []
   let minCut = -1
