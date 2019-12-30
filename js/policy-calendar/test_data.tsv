@@ -1,6 +1,0 @@
-UUID	Item Name	Description	Frequency	Impact Weighting (hrs)	Time Span (days)	Absolute Condition	Compliance Refs
-
-296A2F88-598A-4999-8187-920EAD0B919D	Annual thing.	Do that thing... you know, the one that needs to be done every year.	annual	3	2	ALWAYS	-
-4C27476C-C5D5-46E1-B21B-1221EE19DDF1	Monthly checkup.	Check this and that.	monthly	1	1	ALWAYS	Test Regulations ref 2.
-82BB9777-D818-433A-9768-434EA8DD3156	Quarterly audit.	Check up on how things are going.	quarterly	8 5	GEN_SEC_LEVEL > SEC_TRIVIAL	-
-C23CB316-E22B-43A3-A176-39E1229682D5	Quarterly gabfest.	Time to dish!	quarterly	3	1	GEN_SEC_LEVEL > SEC_TRIVIAL	-
