@@ -3059,7 +3059,7 @@ projects-create() {
     else
       echoerrandexit "Must specify project name for '--new' projects."
     fi
-  elif [[ "$_PROJ_NAME" == */* ]]; then
+  elif [[ "$__PROJ_NAME" == */* ]]; then
     echoerrandexit 'It appears that the project name includes the package scope. Scope is derived from the current org settings. Please specify just the "base name".'
   fi
 
