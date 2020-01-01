@@ -14,7 +14,7 @@ orgs-close() {
   if [[ -n "$FORCE" ]]; then OPTS='--force'; fi
   for ORG_PROJ in "$@"; do
     projectsSetPkgNameComponents "$ORG_PROJ"
-    projects-close "$OPTS" "${PKG_ORG_NAME}/${PKG_BASENAME}"
+    projects-close $OPTS "${PKG_ORG_NAME}/${PKG_BASENAME}"
     if [[ "${LIQ_ORG_DB}/${PKG_ORG_NAME}" -ef "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}/${PKG_BASENAME}" ]]; then
       rm "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
     fi

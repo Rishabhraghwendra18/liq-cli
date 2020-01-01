@@ -612,10 +612,11 @@ getCatPackagePaths() {
 
 requireCleanRepo() {
   local _IP="$1"
+  _IP="${_IP/@/}"
   # TODO: the '_WORK_BRANCH' here seem to be more of a check than a command to check that branch.
   local _WORK_BRANCH="${2:-}"
 
-  cd "${LIQ_PLAYGROUND}/$(orgsCurrentOrg --require)/${_IP}"
+  cd "${LIQ_PLAYGROUND}/${_IP}"
   ( test -n "$_WORK_BRANCH" \
       && git branch | grep -qE "^\* ${_WORK_BRANCH}" ) \
     || git diff-index --quiet HEAD -- \
