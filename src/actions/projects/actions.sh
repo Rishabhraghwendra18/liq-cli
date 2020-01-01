@@ -20,13 +20,12 @@ projects-close() {
     findBase
     cd "$BASE_DIR"
     PROJECT_NAME=$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name | @sh' | tr -d "'")
+    PROJECT_NAME="${PROJECT_NAME/@/}"
   fi
 
-  local CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg --require)"
 
   deleteLocal() {
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}" \
+    cd "${LIQ_PLAYGROUND}" \
       && rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
     # now check to see if we have an empty "org" dir
     local ORG_NAME
@@ -36,7 +35,7 @@ projects-close() {
     fi
   }
 
-  cd "$LIQ_PLAYGROUND/${CURR_ORG}"
+  cd "$LIQ_PLAYGROUND"
   if [[ -d "$PROJECT_NAME" ]]; then
     if [[ "$FORCE" == true ]]; then
       deleteLocal
@@ -75,6 +74,12 @@ projects-create() {
 
   # TODO: check that the upstream and workspace projects don't already exist
 
+  if [[ -n "$NEW" ]] && [[ -n "$SOURCE" ]]; then
+    echoerrandexit "The '--new' and '--source' options are not compatible. Please refer to:\nliq help projects create"
+  elif [[ -z "$NEW" ]] && [[ -z "$SOURCE" ]]; then
+    echoerrandexit "You must specify one of the '--new' or '--source' options when creating a project.Please refer to:\nliq help projects create"
+  fi
+
   __PROJ_NAME="${1:-}"
   if [[ -z "${__PROJ_NAME:-}" ]]; then
     if [[ -n "$SOURCE" ]]; then
@@ -83,17 +88,18 @@ projects-create() {
     else
       echoerrandexit "Must specify project name for '--new' projects."
     fi
-  elif [[ "$_PROJ_NAME" == */* ]]; then
-    echoerrandexit 'It appears that the project name includes the package scope. Scope is derived from the current org settings. Please specify just the "base name".'
+  else # check that project name includes org
+    projectsSetPkgNameComponents "${__PROJ_NAME}"
+    if [[ "$PKG_ORG_NAME" == '.' ]]; then
+      echoerrandexit "Must specify NPM org scope when creating new projects."
+    else
+      if [[ -e "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]]; then
+        echoerrandexit "Did not find base org repo for '$PKG_ORG_NAME'. Try:\nliq orgs import <base org pkg or URL>"
+      else
+        source "${LIQ_ORG_DB}/${PKG_ORG_NAME}/settings.sh"
+      fi
+    fi
   fi
-
-  if [[ -n "$NEW" ]] && [[ -n "$SOURCE" ]]; then
-    echoerrandexit "The '--new' and '--source' options are not compatible. Please refer to:\nliq help projects create"
-  elif [[ -z "$NEW" ]] && [[ -z "$SOURCE" ]]; then
-    echoerrandexit "You must specify one of the '--new' or '--source' options when creating a project.Please refer to:\nliq help projects create"
-  fi
-
-  source "${CURR_ORG_DIR}/public/settings.sh"
 
   local REPO_FRAG REPO_URL BUGS_URL README_URL
   REPO_FRAG="github.com/${ORG_GITHUB_NAME}/${__PROJ_NAME}"
@@ -102,6 +108,8 @@ projects-create() {
   HOMEPAGE="https://${REPO_FRAG}#readme"
 
   if [[ -n "$NEW" ]]; then
+    cd "$PROJ_STAGE"
+    git init .
     npm init "$NEW"
     # The init script is responsible for setting up package.json
   else
@@ -222,14 +230,14 @@ projects-publish() {
 
 # see: liq help projects qa
 projects-qa() {
-  eval "$(setSimpleOptions UPDATE^ OPTIONS=^ AUDIT LINT VERSION_CHECK -- "$@")" \
+  eval "$(setSimpleOptions UPDATE^ OPTIONS=^ AUDIT LINT LIQ_CHECK VERSION_CHECK -- "$@")" \
     || { contextHelp; echoerrandexit "Bad options."; }
 
   findBase
   cd "$BASE_DIR"
 
   local RESTRICTED=''
-  if [[ -n "$AUDIT" ]] || [[ -n "$LINT" ]] || [[ -n "$VERSION_CHECK" ]]; then
+  if [[ -n "$AUDIT" ]] || [[ -n "$LINT" ]] || [[ -n "$LIQ_CHECK" ]] || [[ -n "$VERSION_CHECK" ]]; then
     RESTRICTED=true
   fi
 
@@ -238,6 +246,9 @@ projects-qa() {
   fi
   if [[ -z "$RESTRICTED" ]] || [[ -n "$LINT" ]]; then
     projectsLint "$@" || true
+  fi
+  if [[ -z "$RESTRICTED" ]] || [[ -n "$LIQ_CHECK" ]]; then
+    projectsLiqCheck "$@" || true
   fi
   if [[ -z "$RESTRICTED" ]] || [[ -n "$VERSION_CHECK" ]]; then
     projectsVersionCheck "$@" || true

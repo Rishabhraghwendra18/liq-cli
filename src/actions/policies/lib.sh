@@ -5,13 +5,7 @@
 #
 # while read VAR; do ... ; done < <(policiesGetPolicyDirs)
 policiesGetPolicyDirs() {
-  {
-    local CURR_ORG REPO
-    CURR_ORG="$(orgsCurrentOrg --require-sensitive)"
-    for REPO in public sensitive; do
-      find "${LIQ_ORG_DB}/${CURR_ORG}/${REPO}/node_modules/@liquid-labs" -maxdepth 1 -type d -name "policy-*"
-    done
-  } | uniq
+  find "$(orgsPolicyRepo "$@")/node_modules/@liquid-labs" -maxdepth 1 -type d -name "policy-*"
 }
 
 policiesGetPolicyFiles() {

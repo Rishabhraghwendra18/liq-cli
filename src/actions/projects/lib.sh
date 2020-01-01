@@ -1,6 +1,6 @@
 projectCheckIfInPlayground() {
-  local PROJ_NAME="${1}"
-  if [[ -d "${LIQ_PLAYGROUND}/$(orgsCurrentOrg --require)/${PROJ_NAME}" ]]; then
+  local PROJ_NAME="${1/@/}"
+  if [[ -d "${LIQ_PLAYGROUND}/${PROJ_NAME}" ]]; then
     echo "'$PROJ_NAME' is already in the playground."
     return 0
   else
@@ -16,19 +16,17 @@ projectCheckGitAuth() {
 }
 
 projectsGetUpstreamUrl() {
-  local PROJ_NAME="${1}"
+  local PROJ_NAME="${1/@/}"
 
-  local CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg --require)"
-  cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJ_NAME}"
+  cd "${LIQ_PLAYGROUND}/${PROJ_NAME}"
   git config --get remote.upstream.url \
-		|| echoerrandexit "Failed to get upstream remote URL for ${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJ_NAME}"
+		|| echoerrandexit "Failed to get upstream remote URL for ${LIQ_PLAYGROUND}/${PROJ_NAME}"
 }
 
 # expects STAGING and PROJ_STAGE to be set declared by caller(s)
 projectResetStaging() {
   local PROJ_NAME="${1}"
-  STAGING="${LIQ_PLAYGROUND}/$(orgsCurrentOrg --require)/.staging"
+  STAGING="${LIQ_PLAYGROUND}/.staging"
   rm -rf "${STAGING}"
   mkdir -p "${STAGING}"
 
@@ -106,13 +104,13 @@ projectForkClone() {
 
 # Expects caller to have defined PROJ_NAME and PROJ_STAGE
 projectMoveStaged() {
-  local TRUNC_NAME CURR_ORG
+  local NPM_ORG
   local PROJ_NAME="${1}"
   local PROJ_STAGE="${2}"
-  TRUNC_NAME="$(dirname "$PROJ_NAME")"
-  CURR_ORG=$(orgsCurrentOrg --require)
-  mkdir -p "${LIQ_PLAYGROUND}/${CURR_ORG}/${TRUNC_NAME}"
-  mv "$PROJ_STAGE" "$LIQ_PLAYGROUND/${CURR_ORG}/${TRUNC_NAME}" \
+  NPM_ORG="$(dirname "$PROJ_NAME")"
+  NPM_ORG="${NPM_ORG/@/}"
+  mkdir -p "${LIQ_PLAYGROUND}/${NPM_ORG}"
+  mv "$PROJ_STAGE" "$LIQ_PLAYGROUND/${NPM_ORG}" \
     || echoerrandexit "Could not moved staged '$PROJ_NAME' to playground. See above for details."
 }
 
@@ -144,4 +142,10 @@ projectsRunPackageScript() {
     # failed lint), that's OK and the debug doesn't provide any useful info.
     "${CATALYST_SCRIPTS}" "${BASE_DIR}" $ACTION || true
   fi
+}
+
+# Accepts single NPM package name and exports 'PKG_ORG_NAME' and 'PKG_BASENAME'.
+projectsSetPkgNameComponents() {
+  PKG_ORG_NAME="$(dirname ${1/@/})"
+  PKG_BASENAME="$(basename "$1")"
 }

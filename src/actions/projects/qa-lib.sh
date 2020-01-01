@@ -22,6 +22,22 @@ projectsLint() {
   else projectsRunPackageScript lint-fix; fi
 }
 
+# Runs checks that 'package.json' conforms to Liquid Project standards. This is very much non-exhaustive.
+projectsLiqCheck() {
+  findBase
+  if ! [[ -f "${BASE_DIR}/package.json" ]]; then
+    echoerr "No 'package.json' found."
+    return 1
+  fi
+  local ORG_BASE
+
+  ORG_BASE="$(cat "${BASE_DIR}/package.json" | jq ".liquidDev.orgBase")"
+  if [[ -z "$ORG_BASE" ]]; then
+    # TODO: provide reference to docs.
+    echoerr "Did not find '.liquidDev.orgBase' in 'package.json'. Add this to your 'package.json' to define the NPM package name or URL pointing to the base, public org repository."
+  fi
+}
+
 projectsVersionCheck() {
   projectsRequireNpmCheck
   # we are temporarily disabling the config manegement options
