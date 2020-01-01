@@ -2,16 +2,6 @@ requirements-orgs() {
   findBase
 }
 
-# see `liq help orgs import`
-orgs-import() {
-  local PKG_NAME BASENAME ORG_NPM_NAME
-  projects-import --set-name PKG_NAME "$@"
-
-  mkdir -p "${LIQ_ORG_DB}"
-  projectsSetPkgNameComponents "$PKG_NAME"
-  ln -s "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}/${PKG_BASENAME}" "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
-}
-
 # see `liq help orgs close`
 orgs-close() {
   eval "$(setSimpleOptions FORCE -- "$@")"
@@ -140,6 +130,16 @@ orgs-create() {
     hub create --remote-name upstream --private -d "Policy settings for ${LEGAL_NAME}." "${GITHUB_NAME}/${PKG_BASENAME}-policy"
     commit-settings "policy" ""
   fi
+}
+
+# see `liq help orgs import`
+orgs-import() {
+  local PKG_NAME BASENAME ORG_NPM_NAME
+  projects-import --set-name PKG_NAME "$@"
+
+  mkdir -p "${LIQ_ORG_DB}"
+  projectsSetPkgNameComponents "$PKG_NAME"
+  ln -s "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}/${PKG_BASENAME}" "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
 }
 
 # see `liq help orgs list`
