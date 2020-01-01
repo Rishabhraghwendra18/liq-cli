@@ -13,13 +13,10 @@ orgs-close() {
   local ORG_PROJ TO_DELETE OPTS
   if [[ -n "$FORCE" ]]; then OPTS='--force'; fi
   for ORG_PROJ in "$@"; do
-    # skip options
-    if [[ "$ORG_PROJ" != '--'* ]]; then
-      projectsSetPkgNameComponents "$ORG_PROJ"
-      projects-close "$OPTS" "${PKG_ORG_NAME}/${PKG_BASENAME}"
-      if [[ "${LIQ_ORG_DB}/${PKG_ORG_NAME}" -ef "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}/${PKG_BASENAME}" ]]; then
-        rm "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
-      fi
+    projectsSetPkgNameComponents "$ORG_PROJ"
+    projects-close "$OPTS" "${PKG_ORG_NAME}/${PKG_BASENAME}"
+    if [[ "${LIQ_ORG_DB}/${PKG_ORG_NAME}" -ef "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}/${PKG_BASENAME}" ]]; then
+      rm "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
     fi
   done
 }
