@@ -89,8 +89,9 @@ projectForkClone() {
     cd $PROJ_STAGE || echoerrandexit "Did not find expected staging dir: $PROJ_STAGE"
     echo "Updating remotes..."
     git remote add upstream "$URL" || echoerrandexit "Problem setting upstream URL."
-    git fetch upstream
+    git fetch upstream || echoerrandexit "Could not fetch upstream data."
     git branch -u upstream/master master || echoerrandexit "Failed to configure upstream master."
+    git pull || echoerrandexit "Failed to pull from upstream master."
   } \
   || { \
     echo "none found; cloning source."

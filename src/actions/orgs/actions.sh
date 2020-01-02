@@ -14,8 +14,12 @@ orgs-close() {
   if [[ -n "$FORCE" ]]; then OPTS='--force'; fi
   for ORG_PROJ in "$@"; do
     projectsSetPkgNameComponents "$ORG_PROJ"
-    projects-close $OPTS "${PKG_ORG_NAME}/${PKG_BASENAME}"
+    local IS_BASE_ORG=false
     if [[ "${LIQ_ORG_DB}/${PKG_ORG_NAME}" -ef "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}/${PKG_BASENAME}" ]]; then
+      IS_BASE_ORG=true
+    fi
+    projects-close $OPTS "${PKG_ORG_NAME}/${PKG_BASENAME}"
+    if [[ "$IS_BASE_ORG" == true ]]; then
       rm "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
     fi
   done
@@ -65,7 +69,7 @@ orgs-create() {
   mkdir -p "${PKG_ORG_NAME}"
   cd "${PKG_ORG_NAME}"
 
-  if [[ -e "${PKG_BASENAME}" ]]; then
+  if [[ -L "${PKG_BASENAME}" ]]; then
     echoerrandexit "Duplicate or name conflict; found existing locol org package ($ORG_PKG)."
   fi
   mkdir "${PKG_BASENAME}"
@@ -136,6 +140,12 @@ orgs-import() {
 
   mkdir -p "${LIQ_ORG_DB}"
   projectsSetPkgNameComponents "$PKG_NAME"
+  if [[ -L "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]]; then
+    echowarn "Found likely remnant file: ${LIQ_ORG_DB}/${PKG_ORG_NAME}\nWill attempt to delete and continue. Refer to 'ls' output results below for more info."
+    ls -l "${LIQ_ORG_DB}"
+    rm "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
+    echo
+  fi
   ln -s "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}/${PKG_BASENAME}" "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
 }
 
