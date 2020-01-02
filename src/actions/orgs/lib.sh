@@ -23,20 +23,20 @@ orgsPolicyRepo() {
   echo "${LIQ_PLAYGROUND}/${ORG_POLICY_REPO/@/}"
 }
 
-# Sources the named base org settings or will infer org context. Will return an error if there is no local base org
-# project; the caller is responsible for giving the user an informative error message.
+# Sources the named base org settings or will infer org context. If the base org cannot be found, the execution will
+# halt and the user will be advised to import it.
 orgsSourceOrg() {
   local NPM_ORG="${1:-}"
 
   if [[ -z "$NPM_ORG" ]]; then
     findBase
     cd "${BASE_DIR}/.."
-    NPM_ORG="$(dirname "$PWD")"
+    NPM_ORG="$(basename "$PWD")"
   fi
 
   if [[ -e "$LIQ_ORG_DB/${NPM_ORG}" ]]; then
     source "$LIQ_ORG_DB/${NPM_ORG}/settings.sh"
   else
-    return 1
+    echoerrandexit "Did not find expected base org package. Try:\nliq orgs import <pkg || URL>"
   fi
 }
