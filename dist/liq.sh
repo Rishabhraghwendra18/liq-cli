@@ -3760,7 +3760,9 @@ projectsLiqCheck() {
   fi
   local ORG_BASE
 
-  ORG_BASE="$(cat "${BASE_DIR}/package.json" | jq ".liquidDev.orgBase")"
+  ORG_BASE="$(cat "${BASE_DIR}/package.json" | jq ".liquidDev.orgBase" | tr -d '"')"
+  # no idea why, but this is outputting 'null' on blanks, even though direct testing doesn't
+  ORG_BASE=${ORG_BASE/null/}
   if [[ -z "$ORG_BASE" ]]; then
     # TODO: provide reference to docs.
     echoerr "Did not find '.liquidDev.orgBase' in 'package.json'. Add this to your 'package.json' to define the NPM package name or URL pointing to the base, public org repository."
@@ -5347,6 +5349,7 @@ workSubmitChecks() {
     esac
   }
 
+  # We setup named pipes that we use to feed the embedded reads without them stepping on each other.
   local POLICY_DIRS=/tmp/policy_dirs
   rm -f $POLICY_DIRS
   policiesGetPolicyDirs > $POLICY_DIRS
