@@ -4543,7 +4543,7 @@ work-involve() {
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
 
-  list-add-item INVOLVED_PROJECTS "${PROJECT_NAME}"
+  list-add-item INVOLVED_PROJECTS "@${PROJECT_NAME}" # do include the '@' here for display
   workUpdateWorkDb
 
   local PRIMARY_PROJECT=$INVOLVED_PROJECTS
