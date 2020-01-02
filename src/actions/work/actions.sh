@@ -368,6 +368,8 @@ work-resume() {
   fi
 }
 
+work-join() { work-resume "$@"; }
+
 work-save() {
   eval "$(setSimpleOptions ALL MESSAGE= DESCRIPTION= NO_BACKUP:B BACKUP_ONLY -- "$@")"
 
