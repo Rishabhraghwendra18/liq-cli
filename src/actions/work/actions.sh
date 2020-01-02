@@ -142,10 +142,8 @@ work-involve() {
 }
 
 work-issues() {
-  local TMP
-  TMP=$(setSimpleOptions LIST ADD= REMOVE= -- "$@") \
+  eval "$(setSimpleOptions LIST ADD= REMOVE= -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
 
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "No current work selected; cannot list issues."
@@ -370,10 +368,10 @@ work-resume() {
   fi
 }
 
+work-join() { work-resume "$@"; }
+
 work-save() {
-  local TMP
-  TMP=$(setSimpleOptions ALL MESSAGE= DESCRIPTION= NO_BACKUP:B BACKUP_ONLY -- "$@")
-  eval "$TMP"
+  eval "$(setSimpleOptions ALL MESSAGE= DESCRIPTION= NO_BACKUP:B BACKUP_ONLY -- "$@")"
 
   if [[ "$BACKUP_ONLY" == true ]] && [[ "$NO_BACKUP" == true ]]; then
     echoerrandexit "Incompatible options: '--backup-only' and '--no-backup'."
@@ -397,9 +395,7 @@ work-save() {
 }
 
 work-stage() {
-  local TMP
-  TMP=$(setSimpleOptions ALL INTERACTIVE REVIEW DRY_RUN -- "$@")
-  eval "$TMP"
+  eval "$(setSimpleOptions ALL INTERACTIVE REVIEW DRY_RUN -- "$@")"
 
   local OPTIONS
   if [[ $ALL == true ]]; then OPTIONS="--all "; fi
@@ -513,9 +509,7 @@ work-status() {
 }
 
 work-start() {
-  local WORK_DESC WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS WORK_ISSUES ISSUE TMP
-  TMP=$(setSimpleOptions ISSUES= -- "$@")
-  eval "$TMP"
+  eval "$(setSimpleOptions ISSUES= -- "$@")"
 
   local CURR_PROJECT ISSUES_URL
   if [[ -n "$BASE_DIR" ]]; then
@@ -559,10 +553,8 @@ work-start() {
 }
 
 work-stop() {
-  local TMP
-  TMP=$(setSimpleOptions KEEP_CHECKOUT -- "$@") \
+  eval "$(setSimpleOptions KEEP_CHECKOUT -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
 
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     local CURR_WORK=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))

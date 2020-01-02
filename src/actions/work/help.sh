@@ -22,7 +22,9 @@ ${PREFIX}${cyan_u}work${reset} <action>:
   ${underline}stop${reset} [-k|--keep-checkout]: Stops working on the current unit of work. The
     master branch will be checked out for all involved projects unless
     '--keep-checkout' is used.
-  ${underline}resume${reset} [<name>]: Resumes work on an existing unit of work.
+  ${underline}resume${reset} [<name>]:
+    alias: ${underline}join${reset}
+    Resume/join work on an existing unit of work.
   ${underline}edit${reset}: Opens a local project editor for all involved repositories.
   ${underline}report${reset}: Reports status of files in the current unit of work.
   ${underline}diff-master${reset}: Shows committed changes since branch from 'master' for all

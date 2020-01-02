@@ -20,16 +20,16 @@ describe(`Command 'liq projects import'`, () => {
   test.each([
         // TODO: provide a case that's not part of an org
         // ['liq-cli', 'liq-cli'],
-        ['@liquid-labs/lc-entities-model', '@liquid-labs/lc-entities-model'],
-        ['https://github.com/Liquid-Labs/lc-entities-model', '@liquid-labs/lc-entities-model'],
-        [testing.localRepoUrl, '@liquid-labs/lc-entities-model']])
+        ['@liquid-labs/lc-entities-model', 'liquid-labs/lc-entities-model'],
+        ['https://github.com/Liquid-Labs/lc-entities-model', 'liquid-labs/lc-entities-model'],
+        [testing.localRepoUrl, 'liquid-labs/lc-entities-model']])
       ("with '--no-fork %s' successfully clone project.", (importSpec, projectName) => {
-    const result = shell.exec(`HOME=${testConfig.home} ${testing.LIQ} projects import --no-fork ${importSpec}`, execOpts)
-    const expectedOutput = new RegExp(`'${projectName}' imported into playground.[\s\n]*$`)
+    const result = shell.exec(`HOME=${testConfig.home} ${testing.LIQ} projects import --no-install --no-fork ${importSpec}`, execOpts)
+    const expectedOutput = new RegExp(`'@${projectName}' imported into playground.[\s\n]*$`)
 
     expect(result.stderr).toEqual('')
     expect(result.stdout).toMatch(expectedOutput)
     expect(result.code).toEqual(0);
-    ['README.md', '.git'].forEach((i) => expect(shell.test('-e', `${playground}/liquid_labs/${projectName}/${i}`)).toBe(true))
+    ['README.md', '.git'].forEach((i) => expect(shell.test('-e', `${playground}/${projectName}/${i}`)).toBe(true))
   })
 })

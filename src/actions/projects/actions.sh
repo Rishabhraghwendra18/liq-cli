@@ -20,13 +20,12 @@ projects-close() {
     findBase
     cd "$BASE_DIR"
     PROJECT_NAME=$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name | @sh' | tr -d "'")
-    PROJECT_NAME="${PROJECT_NAME/@/}"
   fi
-
+  PROJECT_NAME="${PROJECT_NAME/@/}"
 
   deleteLocal() {
     cd "${LIQ_PLAYGROUND}" \
-      && rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
+      && rm -rf "$PROJECT_NAME" && echo "Removed project '@${PROJECT_NAME}'."
     # now check to see if we have an empty "org" dir
     local ORG_NAME
     ORG_NAME=$(dirname "${PROJECT_NAME}")

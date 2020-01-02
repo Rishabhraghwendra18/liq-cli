@@ -1,21 +1,17 @@
-import { TsvExt } from '@liquid-labs/policies-model'
+/* global describe, beforeAll, expect, test */
+import { Staff } from './Staff'
 
-const Staff = class extends TsvExt {
-  static headers = ['Email', 'Family Name', 'Given Name', 'Start Date']
-  static keys = ['email', 'familyName', 'givenName', 'startDate']
+describe('Staff', () => {
+  let testStaff
+  beforeAll(() => {
+    testStaff = new Staff('./js/staff/test_data.tsv')
+  })
 
-  constructor(fileName) {
-    super(Staff.headers, Staff.keys, fileName)
-  }
-
-  notUnique(data, item) {
-    let i
-    return (i = data.findIndex((line) =>
-      line[0].toLowerCase() === item.email.toLowerCase())) !== -1
-           && `Staff member with email '${item.email}' already exists at entry ${i + 1}.`
-  }
-
-  matchKey = (line, key) => line[0] === key
-}
-
-export { Staff }
+  test('parses test file', () => expect(testStaff).toBeTruthy())
+  test('ignore blank lines', () => expect(testStaff.length).toBe(1))
+  test('properly sets fields', () => {
+    testStaff.reset()
+    const staff = testStaff.next()
+    expect(staff.email).toBe('foo@bar.com')
+  })
+})
