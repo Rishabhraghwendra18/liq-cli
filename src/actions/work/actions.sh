@@ -59,7 +59,7 @@ work-close() {
     git branch -qd "$WORK_BRANCH" \
       || ( echoerr "Could not delete local '${WORK_BRANCH}'. This can happen if the branch was renamed." \
           && false)
-    list-rm-item INVOLVED_PROJECTS "$PROJECT" # this cannot be done in a subshell
+    list-rm-item INVOLVED_PROJECTS "@${PROJECT}" # this cannot be done in a subshell
     workUpdateWorkDb
 		if [[ -z "$NO_SYNC" ]]; then
 			projects-sync
