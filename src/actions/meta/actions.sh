@@ -7,7 +7,7 @@ requirements-meta() {
 
 meta-init() {
   local TMP # see https://unix.stackexchange.com/a/88338/84520
-  TMP=$(setSimpleOptions ORG= PLAYGROUND= SILENT -- "$@") \
+  TMP=$(setSimpleOptions PLAYGROUND= SILENT -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
 
@@ -25,12 +25,6 @@ meta-init() {
     metaSetupLiqDb > /dev/null
   else
     metaSetupLiqDb
-  fi
-
-  if [[ -n "$ORG" ]]; then
-    orgs-affiliate --select "$ORG"
-  elif [[ -z "$SILENT" ]]; then
-    echo "Don't forget to create or affiliate with an organization."
   fi
 }
 

@@ -2484,7 +2484,7 @@ requirements-meta() {
 
 meta-init() {
   local TMP # see https://unix.stackexchange.com/a/88338/84520
-  TMP=$(setSimpleOptions ORG= PLAYGROUND= SILENT -- "$@") \
+  TMP=$(setSimpleOptions PLAYGROUND= SILENT -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
 
@@ -2502,12 +2502,6 @@ meta-init() {
     metaSetupLiqDb > /dev/null
   else
     metaSetupLiqDb
-  fi
-
-  if [[ -n "$ORG" ]]; then
-    orgs-affiliate --select "$ORG"
-  elif [[ -z "$SILENT" ]]; then
-    echo "Don't forget to create or affiliate with an organization."
   fi
 }
 
@@ -3006,13 +3000,12 @@ projects-close() {
     findBase
     cd "$BASE_DIR"
     PROJECT_NAME=$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name | @sh' | tr -d "'")
-    PROJECT_NAME="${PROJECT_NAME/@/}"
   fi
-
+  PROJECT_NAME="${PROJECT_NAME/@/}"
 
   deleteLocal() {
     cd "${LIQ_PLAYGROUND}" \
-      && rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
+      && rm -rf "$PROJECT_NAME" && echo "Removed project '@${PROJECT_NAME}'."
     # now check to see if we have an empty "org" dir
     local ORG_NAME
     ORG_NAME=$(dirname "${PROJECT_NAME}")
@@ -4851,6 +4844,8 @@ work-resume() {
   fi
 }
 
+work-join() { work-resume "$@"; }
+
 work-save() {
   eval "$(setSimpleOptions ALL MESSAGE= DESCRIPTION= NO_BACKUP:B BACKUP_ONLY -- "$@")"
 
@@ -5212,7 +5207,9 @@ ${PREFIX}${cyan_u}work${reset} <action>:
   ${underline}stop${reset} [-k|--keep-checkout]: Stops working on the current unit of work. The
     master branch will be checked out for all involved projects unless
     '--keep-checkout' is used.
-  ${underline}resume${reset} [<name>]: Resumes work on an existing unit of work.
+  ${underline}resume${reset} [<name>]:
+    alias: ${underline}join${reset}
+    Resume/join work on an existing unit of work.
   ${underline}edit${reset}: Opens a local project editor for all involved repositories.
   ${underline}report${reset}: Reports status of files in the current unit of work.
   ${underline}diff-master${reset}: Shows committed changes since branch from 'master' for all
