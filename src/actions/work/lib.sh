@@ -102,6 +102,7 @@ workSubmitChecks() {
     esac
   }
 
+  # We setup named pipes that we use to feed the embedded reads without them stepping on each other.
   local POLICY_DIRS=/tmp/policy_dirs
   rm -f $POLICY_DIRS
   policiesGetPolicyDirs > $POLICY_DIRS
