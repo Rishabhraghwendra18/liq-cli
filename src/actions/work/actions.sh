@@ -623,8 +623,6 @@ work-submit() {
   fi
 
   source "${LIQ_WORK_DB}/curr_work"
-  orgsSourceOrg
-  source "${ORG_POLICY_REPO}/settings.sh" # this is used in the submission checks
 
   if [[ -z "$MESSAGE" ]]; then
     MESSAGE="$WORK_DESC"
@@ -655,35 +653,40 @@ work-submit() {
     IP=$(workConvertDot "$IP")
     IP="${IP/@/}"
     cd "${LIQ_PLAYGROUND}/${IP}"
+    orgsSourceOrg
+    ( # we source the policy in a subshell because the vars are not reliably refreshed, and so we need them isolated.
+      # TODO: also, if the policy repo is the main repo and there are multiple orgs in[olved], this will overwrite
+      # basic org settings... is that a problem?
+      source "${LIQ_PLAYGROUND}/${ORG_POLICY_REPO/@/}/settings.sh" # this is used in the submission checks
 
-    local SUBMIT_CERTS
-    echo "Checking for submission controls..."
-    workSubmitChecks SUBMIT_CERTS
+      local SUBMIT_CERTS
+      echo "Checking for submission controls..."
+      workSubmitChecks SUBMIT_CERTS
 
-    echo "Creating PR for ${IP}..."
+      echo "Creating PR for ${IP}..."
 
-    local BUGS_URL
-    BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
+      local BUGS_URL
+      BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
 
-    local ISSUE=''
-    local PROJ_ISSUES=''
-    local OTHER_ISSUES=''
-    for ISSUE in $WORK_ISSUES; do
-      if [[ $ISSUE == $BUGS_URL* ]]; then
-        local NUMBER=${ISSUE/$BUGS_URL/}
-        NUMBER=${NUMBER/\//}
-        list-add-item PROJ_ISSUES "#${NUMBER}"
-      else
-        list-add-item OTHER_ISSUES "${ISSUE}"
-      fi
-    done
+      local ISSUE=''
+      local PROJ_ISSUES=''
+      local OTHER_ISSUES=''
+      for ISSUE in $WORK_ISSUES; do
+        if [[ $ISSUE == $BUGS_URL* ]]; then
+          local NUMBER=${ISSUE/$BUGS_URL/}
+          NUMBER=${NUMBER/\//}
+          list-add-item PROJ_ISSUES "#${NUMBER}"
+        else
+          list-add-item OTHER_ISSUES "${ISSUE}"
+        fi
+      done
 
-    local BASE_TARGET # this is the 'org' of the upsteram branch
-    BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
+      local BASE_TARGET # this is the 'org' of the upsteram branch
+      BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
 
-    local DESC
-    # recal, the first line is used in the 'summary' (title), the rest goes in the "description"
-    DESC=$(cat <<EOF
+      local DESC
+      # recal, the first line is used in the 'summary' (title), the rest goes in the "description"
+      DESC=$(cat <<EOF
 Merge ${WORK_BRANCH} to master
 
 ## Summary
@@ -696,18 +699,19 @@ ${SUBMIT_CERTS}
 
 ## Issues
 EOF)
-    # populate issues lists
-    if [[ -n "$PROJ_ISSUES" ]]; then
-      if [[ -z "$NO_CLOSE" ]];then
-        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
-      else
-        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* driven by $ISSUE"; done)"
+      # populate issues lists
+      if [[ -n "$PROJ_ISSUES" ]]; then
+        if [[ -z "$NO_CLOSE" ]];then
+          DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
+        else
+          DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* driven by $ISSUE"; done)"
+        fi
       fi
-    fi
-    if [[ -n "$OTHER_ISSUES" ]]; then
-      DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
-    fi
+      if [[ -n "$OTHER_ISSUES" ]]; then
+        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
+      fi
 
-    hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
+      hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
+    ) # end policy-subshell
   done
 }

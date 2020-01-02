@@ -77,7 +77,8 @@ EOF
 
 help-projects-import() {
   cat <<EOF
-${underline}import${reset} <package or URL>: Imports the indicated package into your playground.
+${underline}import${reset} [--no-install] <package or URL>: Imports the indicated package into your playground. The
+  newly imported package will be installed unless '--no-install' is given.
 EOF
 }
 

@@ -173,10 +173,11 @@ projects-deploy() {
   colorerr "GOPATH=$GOPATH bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; gcloud app deploy'"
 }
 
-# see: liq help projects import
+# see: liq help projects import; The '--set-name' and '--set-url' options are for internal use and each take a var name
+# which will be 'eval'-ed to contain the project name and URL.
 projects-import() {
   local PROJ_SPEC __PROJ_NAME _PROJ_URL PROJ_STAGE
-  eval "$(setSimpleOptions NO_FORK:F SET_NAME= SET_URL= -- "$@")"
+  eval "$(setSimpleOptions NO_FORK:F NO_INSTALL SET_NAME= SET_URL= -- "$@")"
 
   set-stuff() {
     # TODO: protect this eval
@@ -186,14 +187,19 @@ projects-import() {
 
   if [[ "$1" == *:* ]]; then # it's a URL
     _PROJ_URL="${1}"
+    # We have to grab the project from the repo in order to figure out it's (npm-based) name...
     if [[ -n "$NO_FORK" ]]; then
       projectClone "$_PROJ_URL"
     else
       projectForkClone "$_PROJ_URL"
     fi
-    if _PROJ_NAME=$(cat "$PROJ_STAGE/package.json" | jq --raw-output '.name' | tr -d "'"); then
+    _PROJ_NAME=$(cat "$PROJ_STAGE/package.json" | jq --raw-output '.name' | tr -d "'")
+    if [[ -n "$_PROJ_NAME" ]]; then
       set-stuff
-      if projectCheckIfInPlayground "$_PROJ_NAME"; then return 0; fi
+      if projectCheckIfInPlayground "$_PROJ_NAME"; then
+        echo "Project '$_PROJ_NAME' is already in the playground. No changes made."
+        return 0
+      fi
     else
       rm -rf "$PROJ_STAGE"
       echoerrandexit -F "The specified source is not a valid Liquid Dev package (no 'package.json'). Try:\nliq projects create --type=bare --origin='$_PROJ_URL' <project name>"
@@ -202,6 +208,7 @@ projects-import() {
     _PROJ_NAME="${1}"
     set-stuff
     if projectCheckIfInPlayground "$_PROJ_NAME"; then
+      echo "Project '$_PROJ_NAME' is already in the playground. No changes made."
       _PROJ_URL="$(projectsGetUpstreamUrl "$_PROJ_NAME")"
       set-stuff
       return 0
@@ -221,6 +228,12 @@ projects-import() {
   projectMoveStaged "$_PROJ_NAME" "$PROJ_STAGE"
 
   echo "'$_PROJ_NAME' imported into playground."
+  if [[ -z "$NO_INSTALL" ]]; then
+    cd "${LIQ_PLAYGROUND}/${_PROJ_NAME/@/}"
+    echo "Installing project..."
+    npm install || echoerrandexit "Installation failed."
+    echo "Install complete."
+  fi
 }
 
 # see: liq help projects publish
@@ -241,17 +254,21 @@ projects-qa() {
     RESTRICTED=true
   fi
 
+  local FIX_LIST
   if [[ -z "$RESTRICTED" ]] || [[ -n "$AUDIT" ]]; then
-    projectsNpmAudit "$@" || true
+    projectsNpmAudit "$@" || list-add-item FIX_LIST '--audit'
   fi
   if [[ -z "$RESTRICTED" ]] || [[ -n "$LINT" ]]; then
-    projectsLint "$@" || true
+    projectsLint "$@" || list-add-item FIX_LIST '--lint'
   fi
   if [[ -z "$RESTRICTED" ]] || [[ -n "$LIQ_CHECK" ]]; then
-    projectsLiqCheck "$@" || true
+    projectsLiqCheck "$@" || true # Check provides it's own instrucitons.
   fi
   if [[ -z "$RESTRICTED" ]] || [[ -n "$VERSION_CHECK" ]]; then
-    projectsVersionCheck "$@" || true
+    projectsVersionCheck "$@" || list-add-item FIX_LIST '--version-check'
+  fi
+  if [[ -n "$FIX_LIST" ]]; then
+    echowarn "To attempt automated fixes, try:\nliq projects qa --update $(list-join FIX_LIST ' ')"
   fi
 }
 

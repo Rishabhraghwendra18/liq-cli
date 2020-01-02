@@ -763,6 +763,7 @@ findFile() {
   local FILE_NAME="${2}"
   local RES_VAR="${3}"
   local FOUND_FILE
+  local START_DIR="$SEARCH_DIR"
 
   while SEARCH_DIR="$(cd "$SEARCH_DIR"; echo $PWD)" && [[ "${SEARCH_DIR}" != "/" ]]; do
     FOUND_FILE=`find -L "$SEARCH_DIR" -maxdepth 1 -mindepth 1 -name "${FILE_NAME}" -type f | grep "${FILE_NAME}" || true`
@@ -774,7 +775,7 @@ findFile() {
   done
 
   if [ -z "$FOUND_FILE" ]; then
-    echoerr "Could not find '${FILE_NAME}' config file in any parent directory."
+    echoerr "Could not find '${FILE_NAME}' in '$START_DIR' or any parent directory."
     return 1
   else
     eval $RES_VAR="$FOUND_FILE"
@@ -2601,14 +2602,17 @@ orgs-create() {
   }
 
   local SENSITIVE_REPO POLICY_REPO STAFF_REPO
+  # TODO: give option to use package or repo; these have different implications
   if [[ -z "$NO_SENSITIVE" ]]; then
-    SENSITIVE_REPO="${GITHUB_NAME}/${PKG_BASENAME}-sensitive"
+    SENSITIVE_REPO="${PKG_ORG_NAME}/${PKG_BASENAME}-sensitive"
   fi
   if [[ -z "$NO_STAFF" ]]; then
-    STAFF_REPO="${GITHUB_NAME}/${PKG_BASENAME}-staff"
+    STAFF_REPO="${PKG_ORG_NAME}/${PKG_BASENAME}-staff"
   fi
   if [[ -n "$PRIVATE_POLICY" ]]; then
-    POLICY_REPO="${GITHUB_NAME}/${PKG_BASENAME}-policy"
+    POLICY_REPO="${PKG_ORG_NAME}/${PKG_BASENAME}-policy"
+  else
+    POLICY_REPO="${PKG_ORG_NAME}/${PKG_BASENAME}"
   fi
   hub create --remote-name upstream -d "Public settings for ${LEGAL_NAME}." "${GITHUB_NAME}/${PKG_BASENAME}"
   commit-settings "base" $FIELDS $OPT_FIELDS SENSITIVE_REPO POLICY_REPO STAFF_REPO
@@ -2646,6 +2650,7 @@ orgs-import() {
   local PKG_NAME BASENAME ORG_NPM_NAME
   projects-import --set-name PKG_NAME "$@"
 
+  # TODO: check that the package is a 'base' org, and if not, skip and echowarn "This is not necessarily a problem."
   mkdir -p "${LIQ_ORG_DB}"
   projectsSetPkgNameComponents "$PKG_NAME"
   if [[ -L "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]]; then
@@ -2758,8 +2763,7 @@ orgsSourceOrg() {
 
   if [[ -z "$NPM_ORG" ]]; then
     findBase
-    cd "${BASE_DIR}/.."
-    NPM_ORG="$(basename "$PWD")"
+    NPM_ORG="$(cd "${BASE_DIR}/.."; basename "$PWD")"
   fi
 
   if [[ -e "$LIQ_ORG_DB/${NPM_ORG}" ]]; then
@@ -3116,10 +3120,11 @@ projects-deploy() {
   colorerr "GOPATH=$GOPATH bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; gcloud app deploy'"
 }
 
-# see: liq help projects import
+# see: liq help projects import; The '--set-name' and '--set-url' options are for internal use and each take a var name
+# which will be 'eval'-ed to contain the project name and URL.
 projects-import() {
   local PROJ_SPEC __PROJ_NAME _PROJ_URL PROJ_STAGE
-  eval "$(setSimpleOptions NO_FORK:F SET_NAME= SET_URL= -- "$@")"
+  eval "$(setSimpleOptions NO_FORK:F NO_INSTALL SET_NAME= SET_URL= -- "$@")"
 
   set-stuff() {
     # TODO: protect this eval
@@ -3129,14 +3134,19 @@ projects-import() {
 
   if [[ "$1" == *:* ]]; then # it's a URL
     _PROJ_URL="${1}"
+    # We have to grab the project from the repo in order to figure out it's (npm-based) name...
     if [[ -n "$NO_FORK" ]]; then
       projectClone "$_PROJ_URL"
     else
       projectForkClone "$_PROJ_URL"
     fi
-    if _PROJ_NAME=$(cat "$PROJ_STAGE/package.json" | jq --raw-output '.name' | tr -d "'"); then
+    _PROJ_NAME=$(cat "$PROJ_STAGE/package.json" | jq --raw-output '.name' | tr -d "'")
+    if [[ -n "$_PROJ_NAME" ]]; then
       set-stuff
-      if projectCheckIfInPlayground "$_PROJ_NAME"; then return 0; fi
+      if projectCheckIfInPlayground "$_PROJ_NAME"; then
+        echo "Project '$_PROJ_NAME' is already in the playground. No changes made."
+        return 0
+      fi
     else
       rm -rf "$PROJ_STAGE"
       echoerrandexit -F "The specified source is not a valid Liquid Dev package (no 'package.json'). Try:\nliq projects create --type=bare --origin='$_PROJ_URL' <project name>"
@@ -3145,6 +3155,7 @@ projects-import() {
     _PROJ_NAME="${1}"
     set-stuff
     if projectCheckIfInPlayground "$_PROJ_NAME"; then
+      echo "Project '$_PROJ_NAME' is already in the playground. No changes made."
       _PROJ_URL="$(projectsGetUpstreamUrl "$_PROJ_NAME")"
       set-stuff
       return 0
@@ -3164,6 +3175,12 @@ projects-import() {
   projectMoveStaged "$_PROJ_NAME" "$PROJ_STAGE"
 
   echo "'$_PROJ_NAME' imported into playground."
+  if [[ -z "$NO_INSTALL" ]]; then
+    cd "${LIQ_PLAYGROUND}/${_PROJ_NAME/@/}"
+    echo "Installing project..."
+    npm install || echoerrandexit "Installation failed."
+    echo "Install complete."
+  fi
 }
 
 # see: liq help projects publish
@@ -3184,17 +3201,21 @@ projects-qa() {
     RESTRICTED=true
   fi
 
+  local FIX_LIST
   if [[ -z "$RESTRICTED" ]] || [[ -n "$AUDIT" ]]; then
-    projectsNpmAudit "$@" || true
+    projectsNpmAudit "$@" || list-add-item FIX_LIST '--audit'
   fi
   if [[ -z "$RESTRICTED" ]] || [[ -n "$LINT" ]]; then
-    projectsLint "$@" || true
+    projectsLint "$@" || list-add-item FIX_LIST '--lint'
   fi
   if [[ -z "$RESTRICTED" ]] || [[ -n "$LIQ_CHECK" ]]; then
-    projectsLiqCheck "$@" || true
+    projectsLiqCheck "$@" || true # Check provides it's own instrucitons.
   fi
   if [[ -z "$RESTRICTED" ]] || [[ -n "$VERSION_CHECK" ]]; then
-    projectsVersionCheck "$@" || true
+    projectsVersionCheck "$@" || list-add-item FIX_LIST '--version-check'
+  fi
+  if [[ -n "$FIX_LIST" ]]; then
+    echowarn "To attempt automated fixes, try:\nliq project qa --update $(list-join FIX_LIST ' ')"
   fi
 }
 
@@ -3469,7 +3490,8 @@ EOF
 
 help-projects-import() {
   cat <<EOF
-${underline}import${reset} <package or URL>: Imports the indicated package into your playground.
+${underline}import${reset} [--no-install] <package or URL>: Imports the indicated package into your playground. The
+  newly imported package will be installed unless '--no-install' is given.
 EOF
 }
 
@@ -5043,8 +5065,6 @@ work-submit() {
   fi
 
   source "${LIQ_WORK_DB}/curr_work"
-  orgsSourceOrg
-  source "${ORG_POLICY_REPO}/settings.sh" # this is used in the submission checks
 
   if [[ -z "$MESSAGE" ]]; then
     MESSAGE="$WORK_DESC"
@@ -5075,35 +5095,40 @@ work-submit() {
     IP=$(workConvertDot "$IP")
     IP="${IP/@/}"
     cd "${LIQ_PLAYGROUND}/${IP}"
+    orgsSourceOrg
+    ( # we source the policy in a subshell because the vars are not reliably refreshed, and so we need them isolated.
+      # TODO: also, if the policy repo is the main repo and there are multiple orgs in[olved], this will overwrite
+      # basic org settings... is that a problem?
+      source "${LIQ_PLAYGROUND}/${ORG_POLICY_REPO/@/}/settings.sh" # this is used in the submission checks
 
-    local SUBMIT_CERTS
-    echo "Checking for submission controls..."
-    workSubmitChecks SUBMIT_CERTS
+      local SUBMIT_CERTS
+      echo "Checking for submission controls..."
+      workSubmitChecks SUBMIT_CERTS
 
-    echo "Creating PR for ${IP}..."
+      echo "Creating PR for ${IP}..."
 
-    local BUGS_URL
-    BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
+      local BUGS_URL
+      BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
 
-    local ISSUE=''
-    local PROJ_ISSUES=''
-    local OTHER_ISSUES=''
-    for ISSUE in $WORK_ISSUES; do
-      if [[ $ISSUE == $BUGS_URL* ]]; then
-        local NUMBER=${ISSUE/$BUGS_URL/}
-        NUMBER=${NUMBER/\//}
-        list-add-item PROJ_ISSUES "#${NUMBER}"
-      else
-        list-add-item OTHER_ISSUES "${ISSUE}"
-      fi
-    done
+      local ISSUE=''
+      local PROJ_ISSUES=''
+      local OTHER_ISSUES=''
+      for ISSUE in $WORK_ISSUES; do
+        if [[ $ISSUE == $BUGS_URL* ]]; then
+          local NUMBER=${ISSUE/$BUGS_URL/}
+          NUMBER=${NUMBER/\//}
+          list-add-item PROJ_ISSUES "#${NUMBER}"
+        else
+          list-add-item OTHER_ISSUES "${ISSUE}"
+        fi
+      done
 
-    local BASE_TARGET # this is the 'org' of the upsteram branch
-    BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
+      local BASE_TARGET # this is the 'org' of the upsteram branch
+      BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
 
-    local DESC
-    # recal, the first line is used in the 'summary' (title), the rest goes in the "description"
-    DESC=$(cat <<EOF
+      local DESC
+      # recal, the first line is used in the 'summary' (title), the rest goes in the "description"
+      DESC=$(cat <<EOF
 Merge ${WORK_BRANCH} to master
 
 ## Summary
@@ -5116,19 +5141,20 @@ ${SUBMIT_CERTS}
 
 ## Issues
 EOF)
-    # populate issues lists
-    if [[ -n "$PROJ_ISSUES" ]]; then
-      if [[ -z "$NO_CLOSE" ]];then
-        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
-      else
-        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* driven by $ISSUE"; done)"
+      # populate issues lists
+      if [[ -n "$PROJ_ISSUES" ]]; then
+        if [[ -z "$NO_CLOSE" ]];then
+          DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
+        else
+          DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* driven by $ISSUE"; done)"
+        fi
       fi
-    fi
-    if [[ -n "$OTHER_ISSUES" ]]; then
-      DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
-    fi
+      if [[ -n "$OTHER_ISSUES" ]]; then
+        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
+      fi
 
-    hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
+      hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
+    ) # end policy-subshell
   done
 }
 help-work() {

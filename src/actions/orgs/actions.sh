@@ -93,14 +93,17 @@ orgs-create() {
   }
 
   local SENSITIVE_REPO POLICY_REPO STAFF_REPO
+  # TODO: give option to use package or repo; these have different implications
   if [[ -z "$NO_SENSITIVE" ]]; then
-    SENSITIVE_REPO="${GITHUB_NAME}/${PKG_BASENAME}-sensitive"
+    SENSITIVE_REPO="${PKG_ORG_NAME}/${PKG_BASENAME}-sensitive"
   fi
   if [[ -z "$NO_STAFF" ]]; then
-    STAFF_REPO="${GITHUB_NAME}/${PKG_BASENAME}-staff"
+    STAFF_REPO="${PKG_ORG_NAME}/${PKG_BASENAME}-staff"
   fi
   if [[ -n "$PRIVATE_POLICY" ]]; then
-    POLICY_REPO="${GITHUB_NAME}/${PKG_BASENAME}-policy"
+    POLICY_REPO="${PKG_ORG_NAME}/${PKG_BASENAME}-policy"
+  else
+    POLICY_REPO="${PKG_ORG_NAME}/${PKG_BASENAME}"
   fi
   hub create --remote-name upstream -d "Public settings for ${LEGAL_NAME}." "${GITHUB_NAME}/${PKG_BASENAME}"
   commit-settings "base" $FIELDS $OPT_FIELDS SENSITIVE_REPO POLICY_REPO STAFF_REPO
@@ -138,6 +141,7 @@ orgs-import() {
   local PKG_NAME BASENAME ORG_NPM_NAME
   projects-import --set-name PKG_NAME "$@"
 
+  # TODO: check that the package is a 'base' org, and if not, skip and echowarn "This is not necessarily a problem."
   mkdir -p "${LIQ_ORG_DB}"
   projectsSetPkgNameComponents "$PKG_NAME"
   if [[ -L "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]]; then
