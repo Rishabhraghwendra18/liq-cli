@@ -49,6 +49,7 @@
     }
   },
   "liquidDev": {
+    "orgBase": "git@github.com:Liquid-Labs/Liquid-Labs.git",
     "changeControl": {
       "type": "code"
     }
