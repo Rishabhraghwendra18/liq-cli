@@ -59,6 +59,7 @@ findFile() {
   local FILE_NAME="${2}"
   local RES_VAR="${3}"
   local FOUND_FILE
+  local START_DIR="$SEARCH_DIR"
 
   while SEARCH_DIR="$(cd "$SEARCH_DIR"; echo $PWD)" && [[ "${SEARCH_DIR}" != "/" ]]; do
     FOUND_FILE=`find -L "$SEARCH_DIR" -maxdepth 1 -mindepth 1 -name "${FILE_NAME}" -type f | grep "${FILE_NAME}" || true`
@@ -70,7 +71,7 @@ findFile() {
   done
 
   if [ -z "$FOUND_FILE" ]; then
-    echoerr "Could not find '${FILE_NAME}' config file in any parent directory."
+    echoerr "Could not find '${FILE_NAME}' in '$START_DIR' or any parent directory."
     return 1
   else
     eval $RES_VAR="$FOUND_FILE"
@@ -288,10 +289,11 @@ getCatPackagePaths() {
 
 requireCleanRepo() {
   local _IP="$1"
+  _IP="${_IP/@/}"
   # TODO: the '_WORK_BRANCH' here seem to be more of a check than a command to check that branch.
   local _WORK_BRANCH="${2:-}"
 
-  cd "${LIQ_PLAYGROUND}/$(orgsCurrentOrg --require)/${_IP}"
+  cd "${LIQ_PLAYGROUND}/${_IP}"
   ( test -n "$_WORK_BRANCH" \
       && git branch | grep -qE "^\* ${_WORK_BRANCH}" ) \
     || git diff-index --quiet HEAD -- \

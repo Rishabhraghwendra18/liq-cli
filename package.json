@@ -37,7 +37,7 @@
     "@babel/cli": "^7.2.3",
     "@babel/core": "^7.2.2",
     "@babel/preset-env": "^7.3.1",
-    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.35",
+    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.36",
     "jest": "^25.0.0",
     "npm-run-all": "^4.1.5",
     "shelljs": "^0.8.3",
@@ -49,6 +49,7 @@
     }
   },
   "liquidDev": {
+    "orgBase": "git@github.com:Liquid-Labs/Liquid-Labs.git",
     "changeControl": {
       "type": "code"
     }

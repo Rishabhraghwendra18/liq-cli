@@ -1,4 +1,4 @@
-const initDayWeights = () => new Array(4 * 10).fill(0).map(() => [0,0,0,0])
+const initDayWeights = () => new Array(4 * 10).fill(0).map(() => [0, 0, 0, 0])
 
 /**
  * Takes an array of numbers inidcating a set of (zero-indexed) months and combines all the weights to a single number,
@@ -8,7 +8,7 @@ const combineMonthsWeight = (dayWeights, monthsSet) =>
   monthsSet.reduce(
     (acc, monthIdx) => {
       const week1Idx = monthIdx * 4
-      return [0,1,2,3].reduce(
+      return [0, 1, 2, 3].reduce(
         (acc, weekOfMonth) =>
           acc + dayWeights[week1Idx + weekOfMonth].reduce((acc, dayWeight) => acc + dayWeight, 0),
         acc
@@ -25,11 +25,11 @@ const leastMonthsSet = (dayWeights, monthsSets) => {
     (currLeast, monthsSet, setIdx) => {
       const monthsSetWeight = combineMonthsWeight(dayWeights, monthsSet)
 
-      return monthsSetWeight < currLeast.weight || currLeast.idx === -1 ?
-        {weight: monthsSetWeight, idx: setIdx} :
-        currLeast
+      return monthsSetWeight < currLeast.weight || currLeast.idx === -1
+        ? { weight : monthsSetWeight, idx : setIdx }
+        : currLeast
     },
-    {weight: 0, idx: -1}
+    { weight : 0, idx : -1 }
   ).idx]
 }
 
@@ -41,7 +41,7 @@ const leastWeekOfMonth = (dayWeights, month) =>
     (weekOfMonth) => dayWeights[month * 4 + weekOfMonth].reduce((total, dayWeight) => total + dayWeight, 0)
   ).reduce(
     (currLeast, weekWeight, idx) =>
-      currLeast === undefined || weekWeight < currLeast.weight ? { weight: weekWeight, idx: idx } : currLeast,
+      currLeast === undefined || weekWeight < currLeast.weight ? { weight : weekWeight, idx : idx } : currLeast,
     undefined
   ).idx
 
@@ -51,7 +51,7 @@ const leastWeekOfMonth = (dayWeights, month) =>
  */
 const orderWeek = (weekWeights) => {
   const testOrder = []
-  let minCut = -1
+  const minCut = -1
   while (testOrder.length < 3) {
     let resultWeight = -1
     const idx = weekWeights.reduce((result, weight, idx) => {
@@ -66,9 +66,9 @@ const orderWeek = (weekWeights) => {
   return testOrder
 }
 
-/*const scheduleInWeek = (weekWeights, calendarItem) => {
+/* const scheduleInWeek = (weekWeights, calendarItem) => {
   if (!orderWeek(weekWeights).some(())
-}*/
+} */
 
 export {
   initDayWeights,

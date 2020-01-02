@@ -4,14 +4,14 @@ const Staff = class extends TsvExt {
   static headers = ['Email', 'Family Name', 'Given Name', 'Start Date']
   static keys = ['email', 'familyName', 'givenName', 'startDate']
 
-	constructor(fileName) {
+  constructor(fileName) {
     super(Staff.headers, Staff.keys, fileName)
-	}
+  }
 
   notUnique(data, item) {
     let i
-    return -1 !== (i = data.findIndex((line) =>
-                                      line[0].toLowerCase() === item.email.toLowerCase()))
+    return (i = data.findIndex((line) =>
+      line[0].toLowerCase() === item.email.toLowerCase())) !== -1
            && `Staff member with email '${item.email}' already exists at entry ${i + 1}.`
   }
 

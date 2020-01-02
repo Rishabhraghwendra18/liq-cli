@@ -102,6 +102,7 @@ workSubmitChecks() {
     esac
   }
 
+  # We setup named pipes that we use to feed the embedded reads without them stepping on each other.
   local POLICY_DIRS=/tmp/policy_dirs
   rm -f $POLICY_DIRS
   policiesGetPolicyDirs > $POLICY_DIRS
@@ -221,13 +222,12 @@ workUserSelectOne() {
 workSwitchBranches() {
   # We expect that the name and existence of curr_work already checked.
   local _BRANCH_NAME="$1"
-  local CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg --require)"
   source "${LIQ_WORK_DB}/curr_work"
   local IP
   for IP in $INVOLVED_PROJECTS; do
+    IP="${IP/@/}"
     echo "Updating project '$IP' to work branch '${_BRANCH_NAME}'"
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
+    cd "${LIQ_PLAYGROUND}/${IP}"
     git checkout "${_BRANCH_NAME}" \
       || echoerrandexit "Error updating '${IP}' to work branch '${_BRANCH_NAME}'. See above for details."
   done

@@ -675,9 +675,9 @@ function (_TsvExt) {
     key: "notUnique",
     value: function notUnique(data, item) {
       var i;
-      return -1 !== (i = data.findIndex(function (line) {
+      return (i = data.findIndex(function (line) {
         return line[0].toLowerCase() === item.itemName.toLowerCase();
-      })) && "Policy calendar item '".concat(item.itemName, "' already exists at entry ").concat(i + 1, ".");
+      })) !== -1 && "Policy calendar item '".concat(item.itemName, "' already exists at entry ").concat(i + 1, ".");
     }
     /**
      * Generates an iniital, balanced, concrete schedule based on the Policy calendar requirements.
@@ -760,9 +760,9 @@ function (_TsvExt) {
     key: "notUnique",
     value: function notUnique(data, item) {
       var i;
-      return -1 !== (i = data.findIndex(function (line) {
+      return (i = data.findIndex(function (line) {
         return line[0].toLowerCase() === item.email.toLowerCase();
-      })) && "Staff member with email '".concat(item.email, "' already exists at entry ").concat(i + 1, ".");
+      })) !== -1 && "Staff member with email '".concat(item.email, "' already exists at entry ").concat(i + 1, ".");
     }
   }]);
 
