@@ -46,7 +46,8 @@ projects-close() {
     if ! git remote | grep -q '^upstream$'; then
       echoerrandexit "Did not find expected 'upstream' remote. Verify everything saved+pushed and try:\nliq projects close --force '${PROJECT_NAME}'"
     fi
-    requireCleanRepo "$PROJECT_NAME"
+    requireCleanRepo --check-all-branches "$PROJECT_NAME" # will exit process if not
+    deleteLocal # didn't exit? OK to delete
   else
     echoerrandexit "Did not find project '$PROJECT_NAME'" 1
   fi

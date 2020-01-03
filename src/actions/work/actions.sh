@@ -350,9 +350,8 @@ work-resume() {
 
   requireCleanRepos "${WORK_NAME}"
 
-  cd "${LIQ_WORK_DB}" && ln -s "${WORK_NAME}" curr_work
-  source "${LIQ_WORK_DB}"/curr_work
   workSwitchBranches "$WORK_NAME"
+  cd "${LIQ_WORK_DB}" && ln -s "${WORK_NAME}" curr_work  
 
   echo "Resumed '$WORK_NAME'."
 }

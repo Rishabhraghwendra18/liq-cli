@@ -1032,27 +1032,44 @@ getCatPackagePaths() {
 
 # Takes a project name and checks that the local repo is clean.
 requireCleanRepo() {
+  eval "$(setSimpleOptions CHECK_BRANCH= CHECK_ALL_BRANCHES -- "$@")"
+
   local _IP="$1"
   _IP="${_IP/@/}"
   # TODO: the '_WORK_BRANCH' here seem to be more of a check than a command to check that branch.
   _IP=${_IP/@/}
 
+  local BRANCHES_TO_CHECK
+  if [[ -n "$CHECK_ALL_BRANCHES" ]]; then
+    BRANCHES_TO_CHECK="$(git branch --list --format='%(refname:lstrip=-1)')"
+  elif [[ -n "$CHECK_BRANCH" ]]; then
+    list-from-csv BRANCHES_TO_CHECK "$CHECK_BRANCH"
+  fi
+
   cd "${LIQ_PLAYGROUND}/${_IP}"
 
   echo "Checking ${_IP}..."
   # credit: https://stackoverflow.com/a/8830922/929494
-  if git diff --quiet && git diff --cached --quiet; then
-    if (( $({ git status --porcelain 2>/dev/null| grep '^??' || true; } | wc -l) == 0 )); then
-      if [[ $(git rev-parse --verify master) == $(git rev-parse --verify upstream/master) ]]; then
-        deleteLocal
-      else
-        echoerrandexit "Not all changes have been pushed to master." 1
+  # look for uncommitted changes
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    echoerrandexit "Found uncommitted changes.\n$(git status --porcelain)"
+  fi
+  # check for untracked files
+  if (( $({ git status --porcelain 2>/dev/null| grep '^??' || true; } | wc -l) != 0 )); then
+    echoerrandexit "Found untracked files."
+  fi
+  # At this point, the local repo is clean. Now we look at any branches of interest to make sure they've been pushed.
+  if [[ -n "$BRANCHES_TO_CHECK" ]]; then
+    local BRANCH_TO_CHECK
+    for BRANCH_TO_CHECK in $BRANCHES_TO_CHECK; do
+      if [[ "$BRANCH_TO_CHECK" == master ]] \
+         && ! git merge-base --is-ancestor master upstream/master; then
+        echoerrandexit "Local master has not been pushed to upstream master."
       fi
-    else
-      echoerrandexit "Found untracked files." 1
-    fi
-  else
-    echoerrandexit "Found uncommitted changes.\n$(git status --porcelain)" 1
+      if ! git merge-base --is-ancestor "$BRANCH_TO_CHECK" "workspace/${BRANCH_TO_CHECK}"; then
+        echoerrandexit "Local branch '$BRANCH_TO_CHECK' has not been pushed to workspace."
+      fi
+    done
   fi
 }
 
@@ -3042,7 +3059,8 @@ projects-close() {
     if ! git remote | grep -q '^upstream$'; then
       echoerrandexit "Did not find expected 'upstream' remote. Verify everything saved+pushed and try:\nliq projects close --force '${PROJECT_NAME}'"
     fi
-    requireCleanRepo "$PROJECT_NAME"
+    requireCleanRepo --check-all-branches "$PROJECT_NAME" # will exit process if not
+    deleteLocal # didn't exit? OK to delete
   else
     echoerrandexit "Did not find project '$PROJECT_NAME'" 1
   fi
@@ -4850,9 +4868,8 @@ work-resume() {
 
   requireCleanRepos "${WORK_NAME}"
 
-  cd "${LIQ_WORK_DB}" && ln -s "${WORK_NAME}" curr_work
-  source "${LIQ_WORK_DB}"/curr_work
   workSwitchBranches "$WORK_NAME"
+  cd "${LIQ_WORK_DB}" && ln -s "${WORK_NAME}" curr_work  
 
   echo "Resumed '$WORK_NAME'."
 }
