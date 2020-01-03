@@ -1038,9 +1038,22 @@ requireCleanRepo() {
   _IP=${_IP/@/}
 
   cd "${LIQ_PLAYGROUND}/${_IP}"
-  # TODO: this dosen't confirm curr branch is backed up
-  { git diff-index --quiet HEAD -- && git diff --quiet HEAD --; } \
-    || echoerrandexit "Cannot continue, '${_IP}' has uncommitted changes. Try:\nliq work save"
+
+  echo "Checking ${_IP}..."
+  # credit: https://stackoverflow.com/a/8830922/929494
+  if git diff --quiet && git diff --cached --quiet; then
+    if (( $({ git status --porcelain 2>/dev/null| grep '^??' || true; } | wc -l) == 0 )); then
+      if [[ $(git rev-parse --verify master) == $(git rev-parse --verify upstream/master) ]]; then
+        deleteLocal
+      else
+        echoerrandexit "Not all changes have been pushed to master." 1
+      fi
+    else
+      echoerrandexit "Found untracked files." 1
+    fi
+  else
+    echoerrandexit "Found uncommitted changes.\n$(git status --porcelain)" 1
+  fi
 }
 
 # For each 'involved Project' in the indicated unit of work (default to current unit of work), checks that the repo is
@@ -3029,21 +3042,7 @@ projects-close() {
     if ! git remote | grep -q '^upstream$'; then
       echoerrandexit "Did not find expected 'upstream' remote. Verify everything saved+pushed and try:\nliq projects close --force '${PROJECT_NAME}'"
     fi
-    # Is everything comitted?
-    # credit: https://stackoverflow.com/a/8830922/929494
-    if git diff --quiet && git diff --cached --quiet; then
-      if (( $({ git status --porcelain 2>/dev/null| grep '^??' || true; } | wc -l) == 0 )); then
-        if [[ $(git rev-parse --verify master) == $(git rev-parse --verify upstream/master) ]]; then
-          deleteLocal
-        else
-          echoerrandexit "Not all changes have been pushed to master." 1
-        fi
-      else
-        echoerrandexit "Found untracked files." 1
-      fi
-    else
-      echoerrandexit "Found uncommitted changes.\n$(git status --porcelain)" 1
-    fi
+    requireCleanRepo "$PROJECT_NAME"
   else
     echoerrandexit "Did not find project '$PROJECT_NAME'" 1
   fi
