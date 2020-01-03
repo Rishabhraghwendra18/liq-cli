@@ -6,7 +6,7 @@
   "module": "dist/index.es.js",
   "scripts": {
     "prebuild": "command -v rollup-bash >/dev/null && rm -rf ./dist",
-    "build": "catalyst-scripts build && rollup-bash ./src/cli.sh ./dist/liq.sh && rollup-bash ./src/install.sh ./dist/install.sh",
+    "build": "mkdir -p dist && catalyst-scripts build && rollup-bash ./src/cli.sh ./dist/liq.sh && rollup-bash ./src/install.sh ./dist/install.sh",
     "watch": "watch 'npm run build' ./src",
     "pretest": "catalyst-scripts pretest && babel --source-maps inline src -d test-staging",
     "test": "catalyst-scripts test",

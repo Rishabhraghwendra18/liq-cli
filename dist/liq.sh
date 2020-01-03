@@ -802,6 +802,7 @@ findFile() {
   local FILE_NAME="${2}"
   local RES_VAR="${3}"
   local FOUND_FILE
+  local START_DIR="$SEARCH_DIR"
 
   while SEARCH_DIR="$(cd "$SEARCH_DIR"; echo $PWD)" && [[ "${SEARCH_DIR}" != "/" ]]; do
     FOUND_FILE=`find -L "$SEARCH_DIR" -maxdepth 1 -mindepth 1 -name "${FILE_NAME}" -type f | grep "${FILE_NAME}" || true`
@@ -813,7 +814,7 @@ findFile() {
   done
 
   if [ -z "$FOUND_FILE" ]; then
-    echoerr "Could not find '${FILE_NAME}' config file in any parent directory."
+    echoerr "Could not find '${FILE_NAME}' in '$START_DIR' or any parent directory."
     return 1
   else
     eval $RES_VAR="$FOUND_FILE"
@@ -1031,11 +1032,12 @@ getCatPackagePaths() {
 
 requireCleanRepo() {
   local _IP="$1"
+  _IP="${_IP/@/}"
   # TODO: the '_WORK_BRANCH' here seem to be more of a check than a command to check that branch.
   local _WORK_BRANCH="${2:-}"
   _IP=${_IP/@/}
 
-  cd "${LIQ_PLAYGROUND}/$(orgsCurrentOrg --require)/${_IP}"
+  cd "${LIQ_PLAYGROUND}/${_IP}"
   ( test -n "$_WORK_BRANCH" \
       && git branch | grep -qE "^\* ${_WORK_BRANCH}" ) \
     || git diff-index --quiet HEAD -- \
@@ -1111,7 +1113,6 @@ _ORG_ID_URL='https://console.cloud.google.com/iam-admin/settings'
 _BILLING_ACCT_URL='https://console.cloud.google.com/billing?folder=&organizationId='
 
 # Global variables.
-CURR_ORG_DIR="${LIQ_ORG_DB}/curr_org"
 CURR_ENV_FILE='' # set by 'requireEnvironment'
 CURR_ENV='' # set by 'requireEnvironment'
 # 'requireEnvironment' calls 'requirePackage'
@@ -2484,7 +2485,7 @@ requirements-meta() {
 
 meta-init() {
   local TMP # see https://unix.stackexchange.com/a/88338/84520
-  TMP=$(setSimpleOptions ORG= PLAYGROUND= SILENT -- "$@") \
+  TMP=$(setSimpleOptions PLAYGROUND= SILENT -- "$@") \
     || ( contextHelp; echoerrandexit "Bad options." )
   eval "$TMP"
 
@@ -2502,12 +2503,6 @@ meta-init() {
     metaSetupLiqDb > /dev/null
   else
     metaSetupLiqDb
-  fi
-
-  if [[ -n "$ORG" ]]; then
-    orgs-affiliate --select "$ORG"
-  elif [[ -z "$SILENT" ]]; then
-    echo "Don't forget to create or affiliate with an organization."
   fi
 }
 
@@ -2547,77 +2542,44 @@ EOF
 }
 
 requirements-orgs() {
-  findBase
+  :
 }
 
-# see `liq help orgs affiliate`
-orgs-affiliate() {
-  eval "$(setSimpleOptions LEAVE: SELECT SENSITIVE: -- "$@")"
+# see `liq help orgs close`
+orgs-close() {
+  eval "$(setSimpleOptions FORCE -- "$@")"
 
-  local ORG_URL="${1:-}"
-
-  if [[ -n "$LEAVE" ]]; then
-    if [[ -z "$ORG_URL" ]]; then # which is really the nick name
-      echoerrandexit "You must explicitly name the org when leaving. Try:\nliq orgs leave <org nick>"
-    elif [[ ! -d "${LIQ_ORG_DB}/${ORG_URL}" ]]; then
-      echoerrandexit "Did not find org with nick name '${ORG_URL}'. Try:\nliq orgs list"
-    fi
-    cd "${LIQ_ORG_DB}"
-    if [[ "$(orgsCurrentOrg)" == "$ORG_URL" ]]; then
-      rm -rf curr_org
-    fi
-    rm -rf "$ORG_URL"
-    echo "Local org info removed."
-    return
+  if (( $# < 1 )); then
+    echoerrandexit "Must specify 'org package' explicitly to close."
   fi
 
-  local CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg)"
-  mkdir -p "${LIQ_ORG_DB}"
-  cd "${LIQ_ORG_DB}"
-  if [[ -n "$ORG_URL" ]]; then
-    rm -rf .staging
-    git clone --origin upstream --quiet "${ORG_URL}/org_settings.git" .staging \
-      || { rm -rf .staging; echoerrandexit "Could not retrieve the public org repo."; }
-    source .staging/settings.sh
-    if [[ -d "${LIQ_ORG_DB}/${ORG_NICK_NAME}" ]]; then
-      echo "Public repo for '${ORG_NICK_NAME}' already present."
-      rm -rf .staging
-    else
-      mkdir -p "${LIQ_ORG_DB}/${ORG_NICK_NAME}"
-      mv .staging "${LIQ_ORG_DB}/${ORG_NICK_NAME}/public"
+  local ORG_PROJ TO_DELETE OPTS
+  if [[ -n "$FORCE" ]]; then OPTS='--force'; fi
+  for ORG_PROJ in "$@"; do
+    projectsSetPkgNameComponents "$ORG_PROJ"
+    local IS_BASE_ORG=false
+    if [[ "${LIQ_ORG_DB}/${PKG_ORG_NAME}" -ef "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}/${PKG_BASENAME}" ]]; then
+      IS_BASE_ORG=true
     fi
-  elif [[ -z "$ORG_URL" ]] && [[ -n "$REQUIRE_SENSITIVE" ]] && [[ -n "$CURR_ORG" ]]; then
-    # setup ORG_URL from CURR_ORG for the 'add sensitive to current' use case
-    source "${CURR_ORG}/public/settings.sh"
-    ORG_URL="git@github.com:${ORG_GITHUB_NAME}"
-  else
-    echoerrandexit "Incompatable command options."
-  fi
-
-  if [[ -n "${SENSITIVE}" ]]; then
-    git clone --origin upstream --quiet "${ORG_URL}/org_settings_sensitive.git" .staging \
-      || { rm -rf .staging; echoerrandexit "Could not retrieve the sensitive org repo."; }
-    mv .staging "${LIQ_ORG_DB}/${ORG_NICK_NAME}/sensitive"
-  fi
-
-  if [[ -n "${SELECT}" ]]; then orgs-select "$ORG_NICK_NAME"; fi
+    projects-close $OPTS "${PKG_ORG_NAME}/${PKG_BASENAME}"
+    if [[ "$IS_BASE_ORG" == true ]]; then
+      rm "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
+    fi
+  done
 }
 
 # see `liq help orgs create`
 orgs-create() {
-  local FIELDS="COMMON_NAME GITHUB_NAME LEGAL_NAME ADDRESS: NAICS"
-  local OPT_FIELDS="NPM_REGISTRY NPM_SCOPE DEFAULT_LICENSE"
+  local FIELDS="COMMON_NAME GITHUB_NAME LEGAL_NAME ADDRESS:"
+  local OPT_FIELDS="NAICS NPM_REGISTRY DEFAULT_LICENSE"
   local FIELDS_SENSITIVE="EIN"
-  eval "$(setSimpleOptions NO_AFFILIATE:S SELECT COMMON_NAME= GITHUB_NAME= LEGAL_NAME= ADDRESS= EIN= NAICS= NPM_REGISTRY:= NPM_SCOPE:= -- "$@")"
+  eval "$(setSimpleOptions COMMON_NAME= GITHUB_NAME= LEGAL_NAME= ADDRESS= NAICS= NPM_REGISTRY:r= DEFAULT_LICENSE= EIN= NO_SENSITIVE:X NO_STAFF:S PRIVATE_POLICY -- "$@")"
 
-  if [[ -n "$NO_AFFILIATE" ]] && [[ -n "$SELECT" ]]; then
-    echoerrandexit "The '--no-affiliate' and '--select' options are incompatible."
-  fi
+  local ORG_PKG="${1}"; shift
 
   # because some fields are optional, but may be set, we can't just rely on 'gather-answers' to skip interactive bit
   local FULLY_DEFINED=true
-  for FIELD in $FIELDS $FIELDS_SENSITIVE; do
+  for FIELD in $FIELDS; do
     FIELD=${FIELD/:/}
     [[ -n "${!FIELD}" ]] || FULLY_DEFINED=false
   done
@@ -2628,130 +2590,128 @@ orgs-create() {
     case "$FIELD" in
       "NPM_REGISTRY")
         echo "https://registry.npmjs.org/";;
-      "NPM_SCOPE")
-        echo "$GITHUB_NAME" | tr '[:upper:]' '[:lower:]';;
     esac
   }
 
   if [[ "$FULLY_DEFINED" == true ]]; then
     NPM_REGISTRY=$(defaulter NPM_REGISTRY)
-    NPM_SCOPE=$(defaulter NPM_SCOPE)
   else
-    gather-answers --defaulter=defaulter --verify "$FIELDS $OPT_FIELDS $FIELDS_SENSITIVE"
+    # TODO: we need to mark fields as optional for gather-answers or provide func equivalent
+    local GATHER_FIELDS
+    if [[ -n "$NO_SENSITIVE" ]]; then
+      GATHER_FIELDS="$FIELDS $OPT_FIELDS"
+    else
+      GATHER_FIELDS="$FIELDS $OPT_FIELDS $FIELDS_SENSITIVE"
+    fi
+    gather-answers --defaulter=defaulter --verify "$GATHER_FIELDS"
   fi
 
-  cd ${LIQ_DB}
-  mkdir -p orgs
-  cd orgs
-  local DIR_NAME
-  DIR_NAME="$(echo "$COMMON_NAME" | tr ' -' '_' | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]_')"
+  projectsSetPkgNameComponents "${ORG_PKG}"
 
-  if [[ -d "$DIR_NAME" ]]; then
-    echoerrandexit "Duplicate or name conflict; found existing org entry ($DIR_NAME)."
+  cd "${LIQ_PLAYGROUND}"
+  mkdir -p "${PKG_ORG_NAME}"
+  cd "${PKG_ORG_NAME}"
+
+  if [[ -L "${PKG_BASENAME}" ]]; then
+    echoerrandexit "Duplicate or name conflict; found existing locol org package ($ORG_PKG)."
   fi
+  mkdir "${PKG_BASENAME}"
+  cd "${PKG_BASENAME}"
 
-  mkdir "${DIR_NAME}"
-  local REPO
-  for REPO in public sensitive; do
-    cd "${LIQ_DB}/orgs/${DIR_NAME}"
-    mkdir "${REPO}"
-    cd "${REPO}"
-    git init .
-  done
+  commit-settings() {
+    local REPO_TYPE="${1}"; shift
+    local FIELD
 
-  prep-repo() {
-    cd "${LIQ_DB}/orgs/${DIR_NAME}/${1}"
+    echofmt "Initializing ${REPO_TYPE} repository..."
+    git init --quiet .
+
+    for FIELD in "$@"; do
+      FIELD=${FIELD/:/}
+      echo "ORG_${FIELD}='$(echo "${!FIELD}" | sed "s/'/'\"'\"'/g")'" >> settings.sh
+    done
+
     git add settings.sh
     git commit -m "initial org settings"
+    git push --set-upstream upstream master
   }
 
-  cd "${LIQ_DB}/orgs/${DIR_NAME}/public"
-  for FIELD in $FIELDS $OPT_FIELDS; do
-    FIELD=${FIELD/:/}
-    echo "ORG_${FIELD}='$(echo "${!FIELD}" | sed "s/'/'\"'\"'/g")'" >> settings.sh
-  done
-  echo "ORG_NICK_NAME='${DIR_NAME}'" >> settings.sh
-  prep-repo public
-  hub create -d "Public liq settings for ${LEGAL_NAME}." "${GITHUB_NAME}/org_settings"
-  git push --set-upstream origin master
-
-  cd "${LIQ_DB}/orgs/${DIR_NAME}/sensitive"
-  for FIELD in $FIELDS_SENSITIVE; do
-    FIELD=${FIELD/:/}
-    echo "ORG_${FIELD}='$(echo "${!FIELD}" | sed "s/'/'\"'\"'/g")'" >> settings.sh
-  done
-  prep-repo sensitive
-  hub create -p -d "Sensitive liq settings for ${LEGAL_NAME}." "${GITHUB_NAME}/org_settings_sensitive"
-  git push --set-upstream origin master
-
-  if [[ "$SELECT" == true ]]; then
-    orgs-select "$DIR_NAME"
+  local SENSITIVE_REPO POLICY_REPO STAFF_REPO
+  # TODO: give option to use package or repo; these have different implications
+  if [[ -z "$NO_SENSITIVE" ]]; then
+    SENSITIVE_REPO="${PKG_ORG_NAME}/${PKG_BASENAME}-sensitive"
   fi
-  if [[ "$NO_AFFILIATE" == true ]]; then
-    cd "${LIQ_DB}/orgs"
-    rm -rf "$DIR_NAME"
+  if [[ -z "$NO_STAFF" ]]; then
+    STAFF_REPO="${PKG_ORG_NAME}/${PKG_BASENAME}-staff"
   fi
+  if [[ -n "$PRIVATE_POLICY" ]]; then
+    POLICY_REPO="${PKG_ORG_NAME}/${PKG_BASENAME}-policy"
+  else
+    POLICY_REPO="${PKG_ORG_NAME}/${PKG_BASENAME}"
+  fi
+  hub create --remote-name upstream -d "Public settings for ${LEGAL_NAME}." "${GITHUB_NAME}/${PKG_BASENAME}"
+  commit-settings "base" $FIELDS $OPT_FIELDS SENSITIVE_REPO POLICY_REPO STAFF_REPO
+
+  if [[ -z "$NO_SENSITIVE" ]]; then
+    cd "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}"
+    mkdir "${PKG_BASENAME}-sensitive"
+    cd "${PKG_BASENAME}-sensitive"
+
+    hub create --remote-name upstream --private -d "Sensitive settings for ${LEGAL_NAME}." "${GITHUB_NAME}/${PKG_BASENAME}-sensitive"
+    commit-settings "sensitive" "$FIELDS_SENSITIVE"
+  fi
+
+  if [[ -z "$NO_STAFF" ]]; then
+    cd "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}"
+    mkdir "${PKG_BASENAME}-staff"
+    cd "${PKG_BASENAME}-staff"
+
+    hub create --remote-name upstream --private -d "Staff settings for ${LEGAL_NAME}." "${GITHUB_NAME}/${PKG_BASENAME}-staff"
+    commit-settings "staff" ""
+  fi
+
+  if [[ -n "$PRIVATE_POLICY" ]]; then
+    cd "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}"
+    mkdir "${PKG_BASENAME}-policy"
+    cd "${PKG_BASENAME}-policy"
+
+    hub create --remote-name upstream --private -d "Policy settings for ${LEGAL_NAME}." "${GITHUB_NAME}/${PKG_BASENAME}-policy"
+    commit-settings "policy" ""
+  fi
+}
+
+# see `liq help orgs import`
+orgs-import() {
+  local PKG_NAME BASENAME ORG_NPM_NAME
+  projects-import --set-name PKG_NAME "$@"
+
+  # TODO: check that the package is a 'base' org, and if not, skip and echowarn "This is not necessarily a problem."
+  mkdir -p "${LIQ_ORG_DB}"
+  projectsSetPkgNameComponents "$PKG_NAME"
+  if [[ -L "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]]; then
+    echowarn "Found likely remnant file: ${LIQ_ORG_DB}/${PKG_ORG_NAME}\nWill attempt to delete and continue. Refer to 'ls' output results below for more info."
+    ls -l "${LIQ_ORG_DB}"
+    rm "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
+    echo
+  fi
+  ln -s "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}/${PKG_BASENAME}" "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
 }
 
 # see `liq help orgs list`
 orgs-list() {
-  orgsOrgList "$@"
-}
-
-# see `liq help orgs select`
-orgs-select() {
-  eval "$(setSimpleOptions NONE -- "$@")"
-
-  if [[ -n "$NONE" ]]; then
-    rm "${CURR_ORG_DIR}"
-    return
-  fi
-
-  local ORG_NAME="${1:-}"
-  if [[ -z "$ORG_NAME" ]]; then
-    local ORGS
-    ORGS="$(orgsOrgList)"
-
-    if test -z "${ORGS}"; then
-      echoerrandexit "No org affiliations found. Try:\nliq orgs create\nor\nliq orgs affiliate <git url>"
-    fi
-
-    echo "Select org:"
-    selectOneCancel ORG_NAME ORGS
-    ORG_NAME="${ORG_NAME//[ *]/}"
-  fi
-
-  if [[ -d "${LIQ_ORG_DB}/${ORG_NAME}" ]]; then
-    if [[ -L $CURR_ORG_DIR ]]; then rm $CURR_ORG_DIR; fi
-    cd "${LIQ_ORG_DB}" && ln -s "./${ORG_NAME}" $(basename "${CURR_ORG_DIR}")
-    source "${CURR_ORG_DIR}/public/settings.sh"
-    if [[ -n "${ORG_NPM_SCOPE}" ]] && [[ -n "${ORG_NPM_REGISTRY}" ]]; then
-      addLineIfNotPresentInFile ~/.npmrc "@${ORG_NPM_SCOPE}:registry=${ORG_NPM_REGISTRY}"
-    fi
-  else
-    echoerrandexit "No such org '$ORG_NAME' defined."
-  fi
+  find "${LIQ_ORG_DB}" -maxdepth 1 -mindepth 1 -type d -exec basename '{}' \; | sort
 }
 
 # see `liq help orgs show`
 orgs-show() {
-  eval "$(setSimpleOptions SENSITIVE -- "$@")"
+  findBase
+  cd "${BASE_DIR}/.."
+  local NPM_ORG
+  NPM_ORG="$(basename "$PWD")"
 
-  local ORG_NAME="${1:-}"
-  if [[ -z "$ORG_NAME" ]]; then
-    ORG_NAME=$(orgsCurrentOrg)
-    if [[ -z "$ORG_NAME" ]]; then
-      echoerrandexit "No org name given and no org currently selected. Try one of:\nliq orgs show <org name>\nliq orgs select"
-    fi
-  fi
-
-  if [[ ! -d "${LIQ_ORG_DB}/${ORG_NAME}" ]]; then
-    echoerrandexit "No such org with local nick name '${ORG_NAME}'. Try:\nliq orgs list"
-  fi
-
-  cat "${LIQ_ORG_DB}/${ORG_NAME}/public/settings.sh"
-  if [[ -n "$SENSITIVE" ]]; then
-    cat "${LIQ_ORG_DB}/${ORG_NAME}/sensitive/settings.sh"
+  if [[ -e "${LIQ_ORG_DB}/${NPM_ORG}" ]]; then
+    cat "${LIQ_ORG_DB}/${NPM_ORG}/settings.sh"
+  else
+    echowarn "No base package found for '${NPM_ORG}'. Try:\nliq orgs import <base pkg|URL>"
   fi
 }
 help-orgs() {
@@ -2766,31 +2726,43 @@ ${PREFIX}${cyan_u}orgs${reset} <action>:
   * There is a 1-1 correspondance between the liq org, a GitHub organization (or individual), and—if publishing publicly—an npm package scope.
   * The GitHub organization (or individual) must exist prior to creating an org.
 
-  ${underline}affiliate${reset} [--sensitive] [--leave] [--select|-s] <org url>: Will attempt to retrieve
-    the standord org repo at '<org url>/org_settings'. '--sentisive' will also attempt to retrieve the
-    sensitive repo. '--select' will cause a successfully retrieved org to be activated. With '--leave',
-    provide the org nick instead of URL and the local repos will be removed. This will also de-select
-    the named org if it is the currently selected org.
-  ${underline}create${reset} [--no-affiliate|-A] [--select|-s]:
-    Interactively gathers any org info not specified via CLI options and creates a 'org-settings' and
-    'org-settings-sensitive' repos under the indicated GitHub org or user name. The following options
-    may be used to specify fields from the CLI. If all required options are specified (even if blank),
-    then the command will run non-interactively and optional fields will be set to default values
-    unless specified.
+  $(help-orgs-create | sed -e 's/^/  /')
 
-    The org fields are:
-    * --common-name
-    * --legal-name
-    * --address (use $'\n' for linebreaks)
-    * --github-name
-    * --ein
-    * --naics
-    * (optional) --npp-registry
-    * (optional) --npm-scope
+  $(help-orgs-import | sed -e 's/^/  /')
   ${underline}list${reset}: Lists the currently affiliated orgs.
-  ${underline}select${reset} [--none] [<org nick>]: Selects/changes currently active org. If no name is
-    given, then will enter interactive mode. '--none' de-activates the currently selected org.
   ${underline}show${reset} [--sensitive] [<org nick>]: Displays info on the currently active or named org.
+EOF
+}
+
+help-orgs-close() {
+  cat <<EOF
+${underline}close${reset} [--force] <name>...: Closes (deletes from playground) the named org-project after
+  checking that all changes are committed and pushed. '--force' will skip the 'up-to-date checks.
+EOF
+}
+
+help-orgs-create() {
+  cat <<EOF
+${underline}create${reset} [--no-sensitive] [--no-staff] [-private-policy] <base org-package>:
+  Interactively gathers any org info not specified via CLI options and creates the indicated repos under the indicated
+  GitHub org or user.
+
+  The following options may be used to specify fields from the CLI. If all required options are specified (even if
+  blank), then the command will run non-interactively and optional fields will be set to default values unless
+  specified:
+  * --common-name
+  * --legal-name
+  * --address (use $'\n' for linebreaks)
+  * --github-name
+  * (optional )--ein
+  * (optional) --naics
+  * (optional) --npm-registry
+EOF
+}
+
+help-orgs-import() {
+  cat <<EOF
+${underline}import${reset} <package or URL>: Imports the 'base' org package into your playground.
 EOF
 }
 # sources the current org settings, if any
@@ -2810,36 +2782,29 @@ sourceCurrentOrg() {
   fi
 }
 
-orgsCurrentOrg() {
-  eval "$(setSimpleOptions REQUIRE REQUIRE_SENSITIVE:s -- "$@")"
+# Retrieves the policy dir for the named NPM org or will infer from context. Org base and, when private, policy projects
+# must be locally available.
+orgsPolicyRepo() {
+  orgsSourceOrg "${1:-}"
 
-  if [[ -n "$REQUIRE_SENSITIVE" ]]; then
-    REQUIRE=true
-  fi
-
-  if [[ -L "${CURR_ORG_DIR}" ]]; then
-    if [[ -n "$REQUIRE_SENSITIVE" ]]; then
-      if [[ ! -d "${CURR_ORG_DIR}/sensitive" ]]; then
-        echoerrandexit "Command requires access to the sensitive org settings. Try:\nliq orgs import --sensitive"
-      fi
-    fi
-    CURR_ORG="$(readlink "${CURR_ORG_DIR}" | xargs basename)"
-  elif [[ -n "$REQUIRE" ]]; then
-    echoerrandexit "Command requires active org selection. Try:\nliq orgs select"
-  fi
-
-	echo "$CURR_ORG"
+  echo "${LIQ_PLAYGROUND}/${ORG_POLICY_REPO/@/}"
 }
 
-orgsOrgList() {
-  eval "$(setSimpleOptions LIST_ONLY -- "$@")"
+# Sources the named base org settings or will infer org context. If the base org cannot be found, the execution will
+# halt and the user will be advised to import it.
+orgsSourceOrg() {
+  local NPM_ORG="${1:-}"
 
-  local CURR_ORG ORG
-  CURR_ORG=$(orgsCurrentOrg)
+  if [[ -z "$NPM_ORG" ]]; then
+    findBase
+    NPM_ORG="$(cd "${BASE_DIR}/.."; basename "$PWD")"
+  fi
 
-  for ORG in $(find "${LIQ_ORG_DB}" -maxdepth 1 -mindepth 1 -type d -exec basename '{}' \; | sort); do
-    ( ( test -z "$LIST_ONLY" && test "$ORG" == "${CURR_ORG:-}" && echo -n '* ' ) || echo -n '  ' ) && echo "$ORG"
-  done
+  if [[ -e "$LIQ_ORG_DB/${NPM_ORG}" ]]; then
+    source "$LIQ_ORG_DB/${NPM_ORG}/settings.sh"
+  else
+    echoerrandexit "Did not find expected base org package. Try:\nliq orgs import <pkg || URL>"
+  fi
 }
 
 orgs-staff() {
@@ -2859,7 +2824,7 @@ orgs-staff-add() {
   FIELDS_SPEC="$(echo "$FIELDS_SPEC" | sed -e 's/ /= /g')="
   eval "$(setSimpleOptions $FIELDS_SPEC NO_CONFIRM:C -- "$@")"
 
-  source "${CURR_ORG_DIR}/public/settings.sh"
+  orgsStaffRepo
 
   local ALL_SPECIFIED FIELD
   ALL_SPECIFIED=true
@@ -2884,10 +2849,10 @@ orgs-staff-add() {
     gather-answers ${OPTS} "$FIELDS"
   fi
 
-  local STAFF_FILE="${CURR_ORG_DIR}/sensitive/staff.tsv"
+  local STAFF_FILE="${ORG_STAFF_REPO}/staff.tsv"
   [[ -f "$STAFF_FILE" ]] || touch "$STAFF_FILE"
 
-  trap - ERR
+  trap - ERR # TODO: document why this is here...
   NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "try {
       const { Staff } = require('${LIQ_DIST_DIR}');
       const staff = new Staff('${STAFF_FILE}');
@@ -2903,7 +2868,8 @@ orgs-staff-add() {
 
 orgs-staff-list() {
   eval "$(setSimpleOptions ENUMERATE -- "$@")"
-  local STAFF_FILE="${CURR_ORG_DIR}/sensitive/staff.tsv"
+  orgsStaffRepo
+  local STAFF_FILE="${ORG_STAFF_REPO}/staff.tsv"
   if [[ -z "$ENUMERATE" ]]; then
     column -s $'\t' -t "${STAFF_FILE}"
   else
@@ -2914,7 +2880,8 @@ orgs-staff-list() {
 
 orgs-staff-remove() {
   local EMAIL="${1}"
-  local STAFF_FILE="${CURR_ORG_DIR}/sensitive/staff.tsv"
+  orgsStaffRepo
+  local STAFF_FILE="${ORG_STAFF_REPO}/staff.tsv"
 
   trap - ERR
   NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "
@@ -2935,11 +2902,21 @@ ${PREFIX}${cyan_u}orgs staff${reset} <action>:
   ${underline}remove${reset}
 EOF
 }
+# Commits the org staff data.
 orgsStaffCommit() {
-  cd "${CURR_ORG_DIR}/sensitive" \
+  orgsStaffRepo
+  cd "${ORG_STAFF_REPO}" \
     && git add staff.tsv \
     && git commit -am "Added staff member '${EMAIL}'." \
     && git push
+}
+
+# Verifies the existence of and provides 'ORG_STAFF_REPO' as a global var (and the rest of the org vars as a side
+# effect). Will exit and report error if the base org project is not locally available or 'ORG_STAFF_REPO' is not
+# defined.
+orgsStaffRepo() {
+  orgsSourceOrg || echoerrandexit "Could not locate local base org project."
+  [[ -n "$ORG_STAFF_REPO" ]] || echoerrandexit "'ORG_STAFF_REPO' not defined in base org project."
 }
 
 requirements-policies() {
@@ -2948,10 +2925,9 @@ requirements-policies() {
 
 # see ./help.sh for behavior
 policies-document() {
-  local NODE_SCRIPT CURR_ORG TARGET_DIR
+  local TARGET_DIR NODE_SCRIPT
+  TARGET_DIR="$(orgsPolicyRepo "${1:-}")/policy"
   NODE_SCRIPT="$(dirname $(real_path ${BASH_SOURCE[0]}))/index.js"
-  CURR_ORG="$(orgsCurrentOrg --require-sensitive)"
-  TARGET_DIR="${LIQ_ORG_DB}/${CURR_ORG}/sensitive/policy"
 
   rm -rf "$TARGET_DIR"
   mkdir -p "$TARGET_DIR"
@@ -2960,14 +2936,9 @@ policies-document() {
 
 # see ./help.sh for behavior
 policies-update() {
-  local CURR_ORG POLICY REPO
-  CURR_ORG="$(orgsCurrentOrg --require-sensitive)"
-  for REPO in public sensitive; do
-    cd "${LIQ_ORG_DB}/${CURR_ORG}/${REPO}"
-
-    for POLICY in $(policiesGetPolicyProjects .); do
-      npm i "${POLICY}"
-    done
+  local POLICY
+  for POLICY in $(policiesGetPolicyProjects "$@"); do
+    npm i "${POLICY}"
   done
 }
 help-policies() {
@@ -2988,13 +2959,7 @@ EOF
 #
 # while read VAR; do ... ; done < <(policiesGetPolicyDirs)
 policiesGetPolicyDirs() {
-  {
-    local CURR_ORG REPO
-    CURR_ORG="$(orgsCurrentOrg --require-sensitive)"
-    for REPO in public sensitive; do
-      find "${LIQ_ORG_DB}/${CURR_ORG}/${REPO}/node_modules/@liquid-labs" -maxdepth 1 -type d -name "policy-*"
-    done
-  } | uniq
+  find "$(orgsPolicyRepo "$@")/node_modules/@liquid-labs" -maxdepth 1 -type d -name "policy-*"
 }
 
 policiesGetPolicyFiles() {
@@ -3037,13 +3002,11 @@ projects-close() {
     cd "$BASE_DIR"
     PROJECT_NAME=$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name | @sh' | tr -d "'")
   fi
-
-  local CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg --require)"
+  PROJECT_NAME="${PROJECT_NAME/@/}"
 
   deleteLocal() {
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}" \
-      && rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
+    cd "${LIQ_PLAYGROUND}" \
+      && rm -rf "$PROJECT_NAME" && echo "Removed project '@${PROJECT_NAME}'."
     # now check to see if we have an empty "org" dir
     local ORG_NAME
     ORG_NAME=$(dirname "${PROJECT_NAME}")
@@ -3052,7 +3015,7 @@ projects-close() {
     fi
   }
 
-  cd "$LIQ_PLAYGROUND/${CURR_ORG}"
+  cd "$LIQ_PLAYGROUND"
   if [[ -d "$PROJECT_NAME" ]]; then
     if [[ "$FORCE" == true ]]; then
       deleteLocal
@@ -3091,6 +3054,12 @@ projects-create() {
 
   # TODO: check that the upstream and workspace projects don't already exist
 
+  if [[ -n "$NEW" ]] && [[ -n "$SOURCE" ]]; then
+    echoerrandexit "The '--new' and '--source' options are not compatible. Please refer to:\nliq help projects create"
+  elif [[ -z "$NEW" ]] && [[ -z "$SOURCE" ]]; then
+    echoerrandexit "You must specify one of the '--new' or '--source' options when creating a project.Please refer to:\nliq help projects create"
+  fi
+
   __PROJ_NAME="${1:-}"
   if [[ -z "${__PROJ_NAME:-}" ]]; then
     if [[ -n "$SOURCE" ]]; then
@@ -3099,17 +3068,18 @@ projects-create() {
     else
       echoerrandexit "Must specify project name for '--new' projects."
     fi
-  elif [[ "$__PROJ_NAME" == */* ]]; then
-    echoerrandexit 'It appears that the project name includes the package scope. Scope is derived from the current org settings. Please specify just the "base name".'
+  else # check that project name includes org
+    projectsSetPkgNameComponents "${__PROJ_NAME}"
+    if [[ "$PKG_ORG_NAME" == '.' ]]; then
+      echoerrandexit "Must specify NPM org scope when creating new projects."
+    else
+      if [[ -e "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]]; then
+        echoerrandexit "Did not find base org repo for '$PKG_ORG_NAME'. Try:\nliq orgs import <base org pkg or URL>"
+      else
+        source "${LIQ_ORG_DB}/${PKG_ORG_NAME}/settings.sh"
+      fi
+    fi
   fi
-
-  if [[ -n "$NEW" ]] && [[ -n "$SOURCE" ]]; then
-    echoerrandexit "The '--new' and '--source' options are not compatible. Please refer to:\nliq help projects create"
-  elif [[ -z "$NEW" ]] && [[ -z "$SOURCE" ]]; then
-    echoerrandexit "You must specify one of the '--new' or '--source' options when creating a project.Please refer to:\nliq help projects create"
-  fi
-
-  source "${CURR_ORG_DIR}/public/settings.sh"
 
   local REPO_FRAG REPO_URL BUGS_URL README_URL
   REPO_FRAG="github.com/${ORG_GITHUB_NAME}/${__PROJ_NAME}"
@@ -3118,6 +3088,8 @@ projects-create() {
   HOMEPAGE="https://${REPO_FRAG}#readme"
 
   if [[ -n "$NEW" ]]; then
+    cd "$PROJ_STAGE"
+    git init .
     npm init "$NEW"
     # The init script is responsible for setting up package.json
   else
@@ -3181,10 +3153,11 @@ projects-deploy() {
   colorerr "GOPATH=$GOPATH bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; gcloud app deploy'"
 }
 
-# see: liq help projects import
+# see: liq help projects import; The '--set-name' and '--set-url' options are for internal use and each take a var name
+# which will be 'eval'-ed to contain the project name and URL.
 projects-import() {
   local PROJ_SPEC __PROJ_NAME _PROJ_URL PROJ_STAGE
-  eval "$(setSimpleOptions NO_FORK:F SET_NAME= SET_URL= -- "$@")"
+  eval "$(setSimpleOptions NO_FORK:F NO_INSTALL SET_NAME= SET_URL= -- "$@")"
 
   set-stuff() {
     # TODO: protect this eval
@@ -3194,14 +3167,19 @@ projects-import() {
 
   if [[ "$1" == *:* ]]; then # it's a URL
     _PROJ_URL="${1}"
+    # We have to grab the project from the repo in order to figure out it's (npm-based) name...
     if [[ -n "$NO_FORK" ]]; then
       projectClone "$_PROJ_URL"
     else
       projectForkClone "$_PROJ_URL"
     fi
-    if _PROJ_NAME=$(cat "$PROJ_STAGE/package.json" | jq --raw-output '.name' | tr -d "'"); then
+    _PROJ_NAME=$(cat "$PROJ_STAGE/package.json" | jq --raw-output '.name' | tr -d "'")
+    if [[ -n "$_PROJ_NAME" ]]; then
       set-stuff
-      if projectCheckIfInPlayground "$_PROJ_NAME"; then return 0; fi
+      if projectCheckIfInPlayground "$_PROJ_NAME"; then
+        echo "Project '$_PROJ_NAME' is already in the playground. No changes made."
+        return 0
+      fi
     else
       rm -rf "$PROJ_STAGE"
       echoerrandexit -F "The specified source is not a valid Liquid Dev package (no 'package.json'). Try:\nliq projects create --type=bare --origin='$_PROJ_URL' <project name>"
@@ -3210,6 +3188,7 @@ projects-import() {
     _PROJ_NAME="${1}"
     set-stuff
     if projectCheckIfInPlayground "$_PROJ_NAME"; then
+      echo "Project '$_PROJ_NAME' is already in the playground. No changes made."
       _PROJ_URL="$(projectsGetUpstreamUrl "$_PROJ_NAME")"
       set-stuff
       return 0
@@ -3229,6 +3208,12 @@ projects-import() {
   projectMoveStaged "$_PROJ_NAME" "$PROJ_STAGE"
 
   echo "'$_PROJ_NAME' imported into playground."
+  if [[ -z "$NO_INSTALL" ]]; then
+    cd "${LIQ_PLAYGROUND}/${_PROJ_NAME/@/}"
+    echo "Installing project..."
+    npm install || echoerrandexit "Installation failed."
+    echo "Install complete."
+  fi
 }
 
 # see: liq help projects publish
@@ -3238,25 +3223,32 @@ projects-publish() {
 
 # see: liq help projects qa
 projects-qa() {
-  eval "$(setSimpleOptions UPDATE^ OPTIONS=^ AUDIT LINT VERSION_CHECK -- "$@")" \
+  eval "$(setSimpleOptions UPDATE^ OPTIONS=^ AUDIT LINT LIQ_CHECK VERSION_CHECK -- "$@")" \
     || { contextHelp; echoerrandexit "Bad options."; }
 
   findBase
   cd "$BASE_DIR"
 
   local RESTRICTED=''
-  if [[ -n "$AUDIT" ]] || [[ -n "$LINT" ]] || [[ -n "$VERSION_CHECK" ]]; then
+  if [[ -n "$AUDIT" ]] || [[ -n "$LINT" ]] || [[ -n "$LIQ_CHECK" ]] || [[ -n "$VERSION_CHECK" ]]; then
     RESTRICTED=true
   fi
 
+  local FIX_LIST
   if [[ -z "$RESTRICTED" ]] || [[ -n "$AUDIT" ]]; then
-    projectsNpmAudit "$@" || true
+    projectsNpmAudit "$@" || list-add-item FIX_LIST '--audit'
   fi
   if [[ -z "$RESTRICTED" ]] || [[ -n "$LINT" ]]; then
-    projectsLint "$@" || true
+    projectsLint "$@" || list-add-item FIX_LIST '--lint'
+  fi
+  if [[ -z "$RESTRICTED" ]] || [[ -n "$LIQ_CHECK" ]]; then
+    projectsLiqCheck "$@" || true # Check provides it's own instrucitons.
   fi
   if [[ -z "$RESTRICTED" ]] || [[ -n "$VERSION_CHECK" ]]; then
-    projectsVersionCheck "$@" || true
+    projectsVersionCheck "$@" || list-add-item FIX_LIST '--version-check'
+  fi
+  if [[ -n "$FIX_LIST" ]]; then
+    echowarn "To attempt automated fixes, try:\nliq projects qa --update $(list-join FIX_LIST ' ')"
   fi
 }
 
@@ -3503,9 +3495,9 @@ EOF
 
 help-projects-close() {
   cat <<EOF
-${underline}close${reset} [<name>...]: Closes (deletes from playground) either the
-  current or named project after checking that all changes are committed and pushed. ${red_b}Alpha
-  note:${reset} The tool does not currently check whether the project is linked with other projects.
+${underline}close${reset} --force [<name>...]: Closes (deletes from playground) either the current or named
+  project after checking that all changes are committed and pushed. '--force' will skip the 'up-to-date
+  checks.
 EOF
 }
 
@@ -3553,11 +3545,8 @@ EOF
 
 help-projects-import() {
   cat <<EOF
-${underline}import${reset} [--url] <package or URL>: Imports the indicated package into your
-  playground. By default, the first arguments are understood as NPM package names and the URL
-  will be retrieved via 'npm view'. If the '--url' option is specified, then the arguments are
-  understood to be git repo URLs, which should contain a 'package.json' file in the repository
-  root.
+${underline}import${reset} [--no-install] <package or URL>: Imports the indicated package into your playground. The
+  newly imported package will be installed unless '--no-install' is given.
 EOF
 }
 
@@ -3602,8 +3591,8 @@ ${underline}test${reset} [-t|--types <types>][-D|--no-data-reset][-g|--go-run <t
 EOF
 }
 projectCheckIfInPlayground() {
-  local PROJ_NAME="${1}"
-  if [[ -d "${LIQ_PLAYGROUND}/$(orgsCurrentOrg --require)/${PROJ_NAME}" ]]; then
+  local PROJ_NAME="${1/@/}"
+  if [[ -d "${LIQ_PLAYGROUND}/${PROJ_NAME}" ]]; then
     echo "'$PROJ_NAME' is already in the playground."
     return 0
   else
@@ -3619,19 +3608,17 @@ projectCheckGitAuth() {
 }
 
 projectsGetUpstreamUrl() {
-  local PROJ_NAME="${1}"
+  local PROJ_NAME="${1/@/}"
 
-  local CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg --require)"
-  cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJ_NAME}"
+  cd "${LIQ_PLAYGROUND}/${PROJ_NAME}"
   git config --get remote.upstream.url \
-		|| echoerrandexit "Failed to get upstream remote URL for ${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJ_NAME}"
+		|| echoerrandexit "Failed to get upstream remote URL for ${LIQ_PLAYGROUND}/${PROJ_NAME}"
 }
 
 # expects STAGING and PROJ_STAGE to be set declared by caller(s)
 projectResetStaging() {
   local PROJ_NAME="${1}"
-  STAGING="${LIQ_PLAYGROUND}/$(orgsCurrentOrg --require)/.staging"
+  STAGING="${LIQ_PLAYGROUND}/.staging"
   rm -rf "${STAGING}"
   mkdir -p "${STAGING}"
 
@@ -3694,7 +3681,9 @@ projectForkClone() {
     cd $PROJ_STAGE || echoerrandexit "Did not find expected staging dir: $PROJ_STAGE"
     echo "Updating remotes..."
     git remote add upstream "$URL" || echoerrandexit "Problem setting upstream URL."
-    git branch -u upstream/master master
+    git fetch upstream || echoerrandexit "Could not fetch upstream data."
+    git branch -u upstream/master master || echoerrandexit "Failed to configure upstream master."
+    git pull || echoerrandexit "Failed to pull from upstream master."
   } \
   || { \
     echo "none found; cloning source."
@@ -3709,13 +3698,13 @@ projectForkClone() {
 
 # Expects caller to have defined PROJ_NAME and PROJ_STAGE
 projectMoveStaged() {
-  local TRUNC_NAME CURR_ORG
+  local NPM_ORG
   local PROJ_NAME="${1}"
   local PROJ_STAGE="${2}"
-  TRUNC_NAME="$(dirname "$PROJ_NAME")"
-  CURR_ORG=$(orgsCurrentOrg --require)
-  mkdir -p "${LIQ_PLAYGROUND}/${CURR_ORG}/${TRUNC_NAME}"
-  mv "$PROJ_STAGE" "$LIQ_PLAYGROUND/${CURR_ORG}/${TRUNC_NAME}" \
+  NPM_ORG="$(dirname "$PROJ_NAME")"
+  NPM_ORG="${NPM_ORG/@/}"
+  mkdir -p "${LIQ_PLAYGROUND}/${NPM_ORG}"
+  mv "$PROJ_STAGE" "$LIQ_PLAYGROUND/${NPM_ORG}" \
     || echoerrandexit "Could not moved staged '$PROJ_NAME' to playground. See above for details."
 }
 
@@ -3748,6 +3737,12 @@ projectsRunPackageScript() {
     "${CATALYST_SCRIPTS}" "${BASE_DIR}" $ACTION || true
   fi
 }
+
+# Accepts single NPM package name and exports 'PKG_ORG_NAME' and 'PKG_BASENAME'.
+projectsSetPkgNameComponents() {
+  PKG_ORG_NAME="$(dirname ${1/@/})"
+  PKG_BASENAME="$(basename "$1")"
+}
 _QA_OPTIONS_SPEC="UPDATE OPTIONS="
 
 ## Main lib functions
@@ -3770,6 +3765,24 @@ projectsLint() {
   if [[ -z "$UPDATE" ]]; then
     projectsRunPackageScript lint
   else projectsRunPackageScript lint-fix; fi
+}
+
+# Runs checks that 'package.json' conforms to Liquid Project standards. This is very much non-exhaustive.
+projectsLiqCheck() {
+  findBase
+  if ! [[ -f "${BASE_DIR}/package.json" ]]; then
+    echoerr "No 'package.json' found."
+    return 1
+  fi
+  local ORG_BASE
+
+  ORG_BASE="$(cat "${BASE_DIR}/package.json" | jq ".liquidDev.orgBase" | tr -d '"')"
+  # no idea why, but this is outputting 'null' on blanks, even though direct testing doesn't
+  ORG_BASE=${ORG_BASE/null/}
+  if [[ -z "$ORG_BASE" ]]; then
+    # TODO: provide reference to docs.
+    echoerr "Did not find '.liquidDev.orgBase' in 'package.json'. Add this to your 'package.json' to define the NPM package name or URL pointing to the base, public org repository."
+  fi
 }
 
 projectsVersionCheck() {
@@ -4515,13 +4528,13 @@ work-close() {
     PROJECTS="$INVOLVED_PROJECTS"
   fi
 
-  local PROJECT CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg --require)"
+  local PROJECT
   # first, do the checks
   for PROJECT in $PROJECTS; do
     PROJECT=$(workConvertDot "$PROJECT")
+    PROJECT="${PROJECT/@/}"
     local CURR_BRANCH
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT}"
+    cd "${LIQ_PLAYGROUND}/${PROJECT}"
     CURR_BRANCH=$(workCurrentWorkBranch)
 
     if [[ "$CURR_BRANCH" != "$WORK_BRANCH" ]]; then
@@ -4534,7 +4547,8 @@ work-close() {
   # now actually do the closures
   for PROJECT in $PROJECTS; do
     PROJECT=$(workConvertDot "$PROJECT")
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT}"
+    PROJECT="${PROJECT/@/}"
+    cd "${LIQ_PLAYGROUND}/${PROJECT}"
     local CURR_BRANCH
     CURR_BRANCH=$(git branch | (grep '*' || true) | awk '{print $2}')
 
@@ -4544,7 +4558,7 @@ work-close() {
     git branch -qd "$WORK_BRANCH" \
       || ( echoerr "Could not delete local '${WORK_BRANCH}'. This can happen if the branch was renamed." \
           && false)
-    list-rm-item INVOLVED_PROJECTS "$PROJECT" # this cannot be done in a subshell
+    list-rm-item INVOLVED_PROJECTS "@${PROJECT}" # this cannot be done in a subshell
     workUpdateWorkDb
 		if [[ -z "$NO_SYNC" ]]; then
 			projects-sync
@@ -4578,19 +4592,19 @@ work-ignore-rest() {
 }
 
 work-involve() {
-  local PROJECT_NAME WORK_DESC WORK_STARTED WORK_INITIATOR INVOLVED_PROJECTS CURR_ORG
+  local PROJECT_NAME WORK_DESC WORK_STARTED WORK_INITIATOR INVOLVED_PROJECTS
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "There is no active unit of work to involve. Try:\nliq work resume"
   fi
 
-  CURR_ORG="$(orgsCurrentOrg --require)"
-
   if (( $# == 0 )) && [[ -n "$BASE_DIR" ]]; then
     requirePackage
     PROJECT_NAME=$(echo "$PACKAGE" | jq --raw-output '.name | @sh' | tr -d "'")
+    PROJECT_NAME=${PROJECT_NAME/@/}
   else
     exactUserArgs PROJECT_NAME -- "$@"
-    test -d "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT_NAME}" \
+    PROJECT_NAME=${PROJECT_NAME/@/}
+    test -d "${LIQ_PLAYGROUND}/${PROJECT_NAME}" \
       || echoerrandexit "Invalid project name '$PROJECT_NAME'. Perhaps it needs to be imported? Try:\nliq playground import <git URL>"
   fi
 
@@ -4598,7 +4612,7 @@ work-involve() {
   local BRANCH_NAME=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
   requirePackage # used later if auto-linking
 
-  cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT_NAME}"
+  cd "${LIQ_PLAYGROUND}/${PROJECT_NAME}"
   if git branch | grep -qE "^\*? *${BRANCH_NAME}\$"; then
     echowarn "Found existing work branch '${BRANCH_NAME}' in project ${PROJECT_NAME}. We will use it. Please fix manually if this is unexpected."
     git checkout -q "${BRANCH_NAME}" || echoerrandexit "There was a problem checking out the work branch. ($?)"
@@ -4608,7 +4622,7 @@ work-involve() {
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
 
-  list-add-item INVOLVED_PROJECTS "${PROJECT_NAME}"
+  list-add-item INVOLVED_PROJECTS "@${PROJECT_NAME}" # do include the '@' here for display
   workUpdateWorkDb
 
   local PRIMARY_PROJECT=$INVOLVED_PROJECTS
@@ -4622,15 +4636,13 @@ work-involve() {
         # Currently disabled
         # projects-link "${PROJECT_NAME}:${NEW_PACKAGE_NAME}"
       fi
-    done < <(find "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT_NAME}" -name "package.json" -not -path "*node_modules/*")
+    done < <(find "${LIQ_PLAYGROUND}/${PROJECT_NAME}" -name "package.json" -not -path "*node_modules/*")
   fi
 }
 
 work-issues() {
-  local TMP
-  TMP=$(setSimpleOptions LIST ADD= REMOVE= -- "$@") \
+  eval "$(setSimpleOptions LIST ADD= REMOVE= -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
 
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "No current work selected; cannot list issues."
@@ -4675,9 +4687,6 @@ work-merge() {
   # TODO: https://github.com/Liquid-Labs/liq-cli/issues/57 support org-level config to default allow unforced merge
   eval "$(setSimpleOptions FORCE CLOSE PUSH_UPSTREAM -- "$@")"
 
-  local CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg --require)"
-
   if [[ "${PUSH_UPSTREAM}" == true ]] && [[ "$FORCE" != true ]]; then
     echoerrandexit "'work merge --push-upstream' is not allowed by default. You can use '--force', but generally you will either want to configure the project to enable non-forced upstream merges or try:\nliq work submit"
   fi
@@ -4717,7 +4726,8 @@ work-merge() {
 
   for TM in $TO_MERGE; do
     TM=$(workConvertDot "$TM")
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${TM}"
+    TM=${TM/@/}
+    cd "${LIQ_PLAYGROUND}/${TM}"
     local SHORT_STAT=`git diff --shortstat master ${WORK_BRANCH}`
     local INS_COUNT=`echo "${SHORT_STAT}" | egrep -Eio -e '\d+ insertion' | awk '{print $1}' || true`
     INS_COUNT=${INS_COUNT:-0}
@@ -4783,7 +4793,8 @@ work-qa() {
 
   source "${LIQ_WORK_DB}/curr_work"
   for PROJECT in $INVOLVED_PROJECTS; do
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT}"
+    PROJECT="${PROJECT/@/}"
+    cd "${LIQ_PLAYGROUND}/${PROJECT}"
     projects-qa "$@"
   done
 }
@@ -4856,10 +4867,10 @@ work-resume() {
   fi
 }
 
+work-join() { work-resume "$@"; }
+
 work-save() {
-  local TMP
-  TMP=$(setSimpleOptions ALL MESSAGE= DESCRIPTION= NO_BACKUP:B BACKUP_ONLY -- "$@")
-  eval "$TMP"
+  eval "$(setSimpleOptions ALL MESSAGE= DESCRIPTION= NO_BACKUP:B BACKUP_ONLY -- "$@")"
 
   if [[ "$BACKUP_ONLY" == true ]] && [[ "$NO_BACKUP" == true ]]; then
     echoerrandexit "Incompatible options: '--backup-only' and '--no-backup'."
@@ -4883,9 +4894,7 @@ work-save() {
 }
 
 work-stage() {
-  local TMP
-  TMP=$(setSimpleOptions ALL INTERACTIVE REVIEW DRY_RUN -- "$@")
-  eval "$TMP"
+  eval "$(setSimpleOptions ALL INTERACTIVE REVIEW DRY_RUN -- "$@")"
 
   local OPTIONS
   if [[ $ALL == true ]]; then OPTIONS="--all "; fi
@@ -4900,8 +4909,7 @@ work-status() {
   eval "$(setSimpleOptions SELECT PR_READY NO_FETCH:F -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
-  local WORK_NAME LOCAL_COMMITS REMOTE_COMMITS CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg --require)"
+  local WORK_NAME LOCAL_COMMITS REMOTE_COMMITS
   workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
 
   if [[ -z "$NO_FETCH" ]]; then
@@ -4941,9 +4949,10 @@ work-status() {
   fi
 
   for IP in $INVOLVED_PROJECTS; do
+    IP="${IP/@/}"
     echo
     echo "Repo status for $IP:"
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/$IP"
+    cd "${LIQ_PLAYGROUND}/$IP"
     TMP="$(git rev-list --left-right --count master...upstream/master)"
     LOCAL_COMMITS=$(echo $TMP | cut -d' ' -f1)
     REMOTE_COMMITS=$(echo $TMP | cut -d' ' -f2)
@@ -4999,9 +5008,7 @@ work-status() {
 }
 
 work-start() {
-  local WORK_DESC WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS WORK_ISSUES ISSUE TMP
-  TMP=$(setSimpleOptions ISSUES= -- "$@")
-  eval "$TMP"
+  eval "$(setSimpleOptions ISSUES= -- "$@")"
 
   local CURR_PROJECT ISSUES_URL
   if [[ -n "$BASE_DIR" ]]; then
@@ -5045,10 +5052,8 @@ work-start() {
 }
 
 work-stop() {
-  local TMP
-  TMP=$(setSimpleOptions KEEP_CHECKOUT -- "$@") \
+  eval "$(setSimpleOptions KEEP_CHECKOUT -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
 
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     local CURR_WORK=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
@@ -5087,15 +5092,15 @@ work-test() {
   eval "$(setSimpleOptions SELECT -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
-  local WORK_NAME CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg --require)"
+  local WORK_NAME
   workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
   source "${LIQ_WORK_DB}/${WORK_NAME}"
 
   local IP
   for IP in $INVOLVED_PROJECTS; do
+    IP="${IP/@/}"
     echo "Testing ${IP}..."
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
+    cd "${LIQ_PLAYGROUND}/${IP}"
     projects-test "$@"
   done
 }
@@ -5109,8 +5114,6 @@ work-submit() {
   fi
 
   source "${LIQ_WORK_DB}/curr_work"
-  orgsCurrentOrg --require-sensitive > /dev/null # just a check, don't need value
-  source "${LIQ_ORG_DB}/curr_org/sensitive/settings.sh" # this is used in the submission checks
 
   if [[ -z "$MESSAGE" ]]; then
     MESSAGE="$WORK_DESC"
@@ -5139,36 +5142,42 @@ work-submit() {
 
   for IP in $TO_SUBMIT; do
     IP=$(workConvertDot "$IP")
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
+    IP="${IP/@/}"
+    cd "${LIQ_PLAYGROUND}/${IP}"
+    orgsSourceOrg
+    ( # we source the policy in a subshell because the vars are not reliably refreshed, and so we need them isolated.
+      # TODO: also, if the policy repo is the main repo and there are multiple orgs in[olved], this will overwrite
+      # basic org settings... is that a problem?
+      source "${LIQ_PLAYGROUND}/${ORG_POLICY_REPO/@/}/settings.sh" # this is used in the submission checks
 
-    local SUBMIT_CERTS
-    echo "Checking for submission controls..."
-    workSubmitChecks SUBMIT_CERTS
+      local SUBMIT_CERTS
+      echo "Checking for submission controls..."
+      workSubmitChecks SUBMIT_CERTS
 
-    echo "Creating PR for ${IP}..."
+      echo "Creating PR for ${IP}..."
 
-    local BUGS_URL
-    BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
+      local BUGS_URL
+      BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
 
-    local ISSUE=''
-    local PROJ_ISSUES=''
-    local OTHER_ISSUES=''
-    for ISSUE in $WORK_ISSUES; do
-      if [[ $ISSUE == $BUGS_URL* ]]; then
-        local NUMBER=${ISSUE/$BUGS_URL/}
-        NUMBER=${NUMBER/\//}
-        list-add-item PROJ_ISSUES "#${NUMBER}"
-      else
-        list-add-item OTHER_ISSUES "${ISSUE}"
-      fi
-    done
+      local ISSUE=''
+      local PROJ_ISSUES=''
+      local OTHER_ISSUES=''
+      for ISSUE in $WORK_ISSUES; do
+        if [[ $ISSUE == $BUGS_URL* ]]; then
+          local NUMBER=${ISSUE/$BUGS_URL/}
+          NUMBER=${NUMBER/\//}
+          list-add-item PROJ_ISSUES "#${NUMBER}"
+        else
+          list-add-item OTHER_ISSUES "${ISSUE}"
+        fi
+      done
 
-    local BASE_TARGET # this is the 'org' of the upsteram branch
-    BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
+      local BASE_TARGET # this is the 'org' of the upsteram branch
+      BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
 
-    local DESC
-    # recal, the first line is used in the 'summary' (title), the rest goes in the "description"
-    DESC=$(cat <<EOF
+      local DESC
+      # recal, the first line is used in the 'summary' (title), the rest goes in the "description"
+      DESC=$(cat <<EOF
 Merge ${WORK_BRANCH} to master
 
 ## Summary
@@ -5181,19 +5190,20 @@ ${SUBMIT_CERTS}
 
 ## Issues
 EOF)
-    # populate issues lists
-    if [[ -n "$PROJ_ISSUES" ]]; then
-      if [[ -z "$NO_CLOSE" ]];then
-        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
-      else
-        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* driven by $ISSUE"; done)"
+      # populate issues lists
+      if [[ -n "$PROJ_ISSUES" ]]; then
+        if [[ -z "$NO_CLOSE" ]];then
+          DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
+        else
+          DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* driven by $ISSUE"; done)"
+        fi
       fi
-    fi
-    if [[ -n "$OTHER_ISSUES" ]]; then
-      DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
-    fi
+      if [[ -n "$OTHER_ISSUES" ]]; then
+        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
+      fi
 
-    hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
+      hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
+    ) # end policy-subshell
   done
 }
 help-work() {
@@ -5220,7 +5230,9 @@ ${PREFIX}${cyan_u}work${reset} <action>:
   ${underline}stop${reset} [-k|--keep-checkout]: Stops working on the current unit of work. The
     master branch will be checked out for all involved projects unless
     '--keep-checkout' is used.
-  ${underline}resume${reset} [<name>]: Resumes work on an existing unit of work.
+  ${underline}resume${reset} [<name>]:
+    alias: ${underline}join${reset}
+    Resume/join work on an existing unit of work.
   ${underline}edit${reset}: Opens a local project editor for all involved repositories.
   ${underline}report${reset}: Reports status of files in the current unit of work.
   ${underline}diff-master${reset}: Shows committed changes since branch from 'master' for all
@@ -5347,6 +5359,7 @@ workSubmitChecks() {
     esac
   }
 
+  # We setup named pipes that we use to feed the embedded reads without them stepping on each other.
   local POLICY_DIRS=/tmp/policy_dirs
   rm -f $POLICY_DIRS
   policiesGetPolicyDirs > $POLICY_DIRS
@@ -5466,15 +5479,26 @@ workUserSelectOne() {
 workSwitchBranches() {
   # We expect that the name and existence of curr_work already checked.
   local _BRANCH_NAME="$1"
-  local CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg --require)"
   source "${LIQ_WORK_DB}/curr_work"
   local IP
   for IP in $INVOLVED_PROJECTS; do
-    echo "Updating project '$IP' to work branch '${_BRANCH_NAME}'"
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
-    git checkout "${_BRANCH_NAME}" \
-      || echoerrandexit "Error updating '${IP}' to work branch '${_BRANCH_NAME}'. See above for details."
+    IP="${IP/@/}"
+    echo "Updating project '$IP' to branch '${_BRANCH_NAME}'"
+    cd "${LIQ_PLAYGROUND}/${IP}"
+    if git show-ref --verify --quiet "refs/heads/${_BRANCH_NAME}"; then
+      git checkout "${_BRANCH_NAME}" \
+        || echoerrandexit "Error updating '${IP}' to work branch '${_BRANCH_NAME}'. See above for details."
+    else # the branch is not locally availble, but lets check the workspace
+      echo "Work branch not locally available, checking workspace..."
+      git fetch --quiet workspace
+      if git show-ref --verify --quiet "refs/remotes/workspace/${_BRANCH_NAME}"; then
+        git checkout --track "workspace/${_BRANCH_NAME}" \
+          || echoerrandexit "Found branch on workspace, but there were problems checking it out."
+      else
+        echoerrandexit "Could not find the indicated work branch either localaly or on workspace. It is possible the work has been completed or dropped."
+        # TODO: long term, we want to be able to resurrect old branches, and we'd offer that as a 'try' option here.
+      fi
+    fi
   done
 }
 
