@@ -338,16 +338,12 @@ work-report() {
 }
 
 work-resume() {
-  if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
-    requireCleanRepos
-  fi
-
   local WORK_NAME
   workUserSelectOne WORK_NAME '' true "$@"
 
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     if [[ "${LIQ_WORK_DB}/curr_work" -ef "${LIQ_WORK_DB}/${WORK_NAME}" ]]; then
-      echowarn "'$CURR_WORK' is already the current unit of work."
+      echowarn "'$WORK_NAME' is already the current unit of work."
       exit 0
     fi
   fi
@@ -358,11 +354,7 @@ work-resume() {
   source "${LIQ_WORK_DB}"/curr_work
   workSwitchBranches "$WORK_NAME"
 
-  if [[ -n "$CURR_WORK" ]]; then
-    echo "Switched from '$CURR_WORK' to '$WORK_NAME'."
-  else
-    echo "Resumed '$WORK_NAME'."
-  fi
+  echo "Resumed '$WORK_NAME'."
 }
 
 work-join() { work-resume "$@"; }

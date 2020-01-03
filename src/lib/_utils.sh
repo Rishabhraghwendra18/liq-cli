@@ -287,30 +287,32 @@ getCatPackagePaths() {
   echo "$CAT_PACKAGE_PATHS"
 }
 
+# Takes a project name and checks that the local repo is clean.
 requireCleanRepo() {
   local _IP="$1"
   _IP="${_IP/@/}"
   # TODO: the '_WORK_BRANCH' here seem to be more of a check than a command to check that branch.
-  local _WORK_BRANCH="${2:-}"
   _IP=${_IP/@/}
 
   cd "${LIQ_PLAYGROUND}/${_IP}"
-  ( test -n "$_WORK_BRANCH" \
-      && git branch | grep -qE "^\* ${_WORK_BRANCH}" ) \
-    || git diff-index --quiet HEAD -- \
-    || echoerrandexit "Cannot perform action '${ACTION}'. '${_IP}' has uncommitted changes. Try:\nliq work save"
+  # TODO: this dosen't confirm curr branch is backed up
+  { git diff-index --quiet HEAD -- && git diff --quiet HEAD --; } \
+    || echoerrandexit "Cannot continue, '${_IP}' has uncommitted changes. Try:\nliq work save"
 }
 
+# For each 'involved Project' in the indicated unit of work (default to current unit of work), checks that the repo is
+# clean.
 requireCleanRepos() {
   local _WORK_NAME="${1:-curr_work}"
 
-  # we expect existence already ensured
-  source "${LIQ_WORK_DB}/${_WORK_NAME}"
+  ( # isolate the source
+    source "${LIQ_WORK_DB}/${_WORK_NAME}"
 
-  local IP
-  for IP in $INVOLVED_PROJECTS; do
-    requireCleanRepo "$IP" "$_WORK_NAME"
-  done
+    local IP
+    for IP in $INVOLVED_PROJECTS; do
+      requireCleanRepo "$IP"
+    done
+  )
 }
 
 defineParameters() {
