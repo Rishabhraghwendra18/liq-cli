@@ -4844,18 +4844,15 @@ work-resume() {
   local WORK_NAME
   workUserSelectOne WORK_NAME '' true "$@"
 
-  requireCleanRepos "${WORK_NAME}"
-
-  local CURR_WORK
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
-    CURR_WORK=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
-    if [[ "${CURR_WORK}" == "${WORK_NAME}" ]]; then
+    if [[ "${LIQ_WORK_DB}/curr_work" -ef "${LIQ_WORK_DB}/${WORK_NAME}" ]]; then
       echowarn "'$CURR_WORK' is already the current unit of work."
       exit 0
     fi
-    workSwitchBranches master
-    rm "${LIQ_WORK_DB}/curr_work"
   fi
+
+  requireCleanRepos "${WORK_NAME}"
+
   cd "${LIQ_WORK_DB}" && ln -s "${WORK_NAME}" curr_work
   source "${LIQ_WORK_DB}"/curr_work
   workSwitchBranches "$WORK_NAME"
@@ -5477,29 +5474,37 @@ workUserSelectOne() {
 }
 
 workSwitchBranches() {
-  # We expect that the name and existence of curr_work already checked.
   local _BRANCH_NAME="$1"
-  source "${LIQ_WORK_DB}/curr_work"
-  local IP
-  for IP in $INVOLVED_PROJECTS; do
-    IP="${IP/@/}"
-    echo "Updating project '$IP' to branch '${_BRANCH_NAME}'"
-    cd "${LIQ_PLAYGROUND}/${IP}"
-    if git show-ref --verify --quiet "refs/heads/${_BRANCH_NAME}"; then
-      git checkout "${_BRANCH_NAME}" \
-        || echoerrandexit "Error updating '${IP}' to work branch '${_BRANCH_NAME}'. See above for details."
-    else # the branch is not locally availble, but lets check the workspace
-      echo "Work branch not locally available, checking workspace..."
-      git fetch --quiet workspace
-      if git show-ref --verify --quiet "refs/remotes/workspace/${_BRANCH_NAME}"; then
-        git checkout --track "workspace/${_BRANCH_NAME}" \
-          || echoerrandexit "Found branch on workspace, but there were problems checking it out."
-      else
-        echoerrandexit "Could not find the indicated work branch either localaly or on workspace. It is possible the work has been completed or dropped."
-        # TODO: long term, we want to be able to resurrect old branches, and we'd offer that as a 'try' option here.
+  ( # the following source is probably OK, expected, and/or redundant in many cases, but just in case, we protect with
+    # a subshell
+    source "${LIQ_WORK_DB}/${_BRANCH_NAME}"
+    local IP
+    for IP in $INVOLVED_PROJECTS; do
+      IP="${IP/@/}"
+
+      if [[ ! -d "${LIQ_PLAYGROUND}/${IP}" ]]; then
+        echoerr "Project @${IP} is not locally available. Try:\nliq projects import ${IP}\nliq work resume ${WORK_NAME}"
+        continue
       fi
-    fi
-  done
+
+      echo "Updating project '$IP' to branch '${_BRANCH_NAME}'"
+      cd "${LIQ_PLAYGROUND}/${IP}"
+      if git show-ref --verify --quiet "refs/heads/${_BRANCH_NAME}"; then
+        git checkout "${_BRANCH_NAME}" \
+          || echoerrandexit "Error updating '${IP}' to work branch '${_BRANCH_NAME}'. See above for details."
+      else # the branch is not locally availble, but lets check the workspace
+        echo "Work branch not locally available, checking workspace..."
+        git fetch --quiet workspace
+        if git show-ref --verify --quiet "refs/remotes/workspace/${_BRANCH_NAME}"; then
+          git checkout --track "workspace/${_BRANCH_NAME}" \
+            || echoerrandexit "Found branch on workspace, but there were problems checking it out."
+        else
+          echoerrandexit "Could not find the indicated work branch either localaly or on workspace. It is possible the work has been completed or dropped."
+          # TODO: long term, we want to be able to resurrect old branches, and we'd offer that as a 'try' option here.
+        fi
+      fi
+    done
+  ) # source-isolating subshel
 }
 
 workProcessIssues() {

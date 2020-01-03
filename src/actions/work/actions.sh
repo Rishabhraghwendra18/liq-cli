@@ -345,18 +345,15 @@ work-resume() {
   local WORK_NAME
   workUserSelectOne WORK_NAME '' true "$@"
 
-  requireCleanRepos "${WORK_NAME}"
-
-  local CURR_WORK
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
-    CURR_WORK=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
-    if [[ "${CURR_WORK}" == "${WORK_NAME}" ]]; then
+    if [[ "${LIQ_WORK_DB}/curr_work" -ef "${LIQ_WORK_DB}/${WORK_NAME}" ]]; then
       echowarn "'$CURR_WORK' is already the current unit of work."
       exit 0
     fi
-    workSwitchBranches master
-    rm "${LIQ_WORK_DB}/curr_work"
   fi
+
+  requireCleanRepos "${WORK_NAME}"
+
   cd "${LIQ_WORK_DB}" && ln -s "${WORK_NAME}" curr_work
   source "${LIQ_WORK_DB}"/curr_work
   workSwitchBranches "$WORK_NAME"
