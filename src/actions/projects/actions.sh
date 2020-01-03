@@ -251,6 +251,8 @@ projects-sync() {
 
   [[ -n "${BASE_DIR:-}" ]] || findBase
 
+  if [[ -z "$NO_WORK_MASTER_MERGE" ]]; then requireCleanRepo; fi
+
   local CURR_BRANCH REMOTE_COMMITS MASTER_UPDATED
   CURR_BRANCH="$(workCurrentWorkBranch)"
 
@@ -308,10 +310,23 @@ projects-sync() {
     fi
     echo "Workspace workbranch synced."
 
-    if [[ -z "$NO_WORK_MASTER_MERGE" ]] && [[ "$MASTER_UPDATED" == true ]]; then
+    if [[ -z "$NO_WORK_MASTER_MERGE" ]] \
+         && ( [[ "$MASTER_UPDATED" == true ]] || ! git merge-base --is-ancestor master $CURR_BRANCH ); then
       echo "Merging master updates to work branch..."
-      git merge master || echoerrandexit "Could not merge master updates to workbranch."
-      echo "Master updates merged to workbranch."
+      git merge master --no-commit --no-ff || echoerrandexit "Could not merge master updates to workbranch."
+      if git diff-index --quite HEAD -- "${BASE_DIR}"; then
+        echowarn "Hmm... expected to see changes from master, but none appeared. It's possible the changes have already been incorporated/recreated without a merge, so this isn't necessarily an issue, but you may want to double check that everything is as expected."
+      else  
+        if ! git diff-index --quiet HEAD -- "${BASE_DIR}/dist"; then # there are changes in ./dist
+          # TODO: include project name in advice so it's good regardless of context
+          echowarn "Backing out merge updates to './dist'; rebuild to generate current distribution:\nliq projects build"
+          git checkout ./dist
+        fi
+        git add -A
+        git commit -m "Merge updates from master to workbranch."
+        work-save --backup-only
+        echo "Master updates merged to workbranch."
+      fi
     fi
   fi # on workbranach check
 }

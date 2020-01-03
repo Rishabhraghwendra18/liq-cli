@@ -71,19 +71,30 @@ list-add-uniq() {
   done
 }
 
-list-rm-item() {
-  local LIST_VAR="${1}"; shift
-  while (( $# > 0 )); do
-    local ITEM NEW_ITEMS
-    ITEM="${1}"; shift
-    ITEM=${ITEM//\/\\/}
-    ITEM=${ITEM//#/\\#}
-    ITEM=${ITEM//./\\.}
-    ITEM=${ITEM//[/\\[}
-    # echo "ITEM: $ITEM" >&2
-    NEW_ITEMS="$(echo "${!LIST_VAR}" | sed -e '\#^'$ITEM'$#d')"
-    eval $LIST_VAR='"'"$NEW_ITEMS"'"'
-  done
+# Echos the number of items in the list.
+#
+# Takes single argument, the list var name.
+#
+# Example:
+# list-add-item A B C
+# list-count MY_LIST # echos '3'
+list-count() {
+  if [[ -z "${!1}" ]]; then
+    echo -n "0"
+  else
+    echo -e "${!1}" | wc -l | tr -d '[:space:]'
+  fi
+}
+
+list-from-csv() {
+  local LIST_VAR="${1}"
+  local CSV="${2}"
+
+  while IFS=',' read -ra ADDR; do
+    for i in "${ADDR[@]}"; do
+      list-add-item "$LIST_VAR" "$i"
+    done
+  done <<< "$CSV"
 }
 
 list-get-index() {
@@ -116,6 +127,30 @@ list-get-item() {
   done <<< "${!LIST_VAR}"
 }
 
+# Joins a list with a given string and echos the result. We use 'echo -e' for the join string, so '\n', '\t', etc. will
+# work.
+#
+# Takes (1) the list variable name, (2) the join string
+#
+# Example:
+# list-add-item MY_LIST A B C
+# list-join MY_LIST '||' # echos 'A||B||C'
+list-join() {
+  local LIST_VAR="${1}"
+  local JOIN_STRING="${2}"
+
+  local CURR_INDEX=0
+  local COUNT
+  COUNT="$(list-count $LIST_VAR)"
+  while read -r ITEM; do
+    echo "$ITEM"
+    CURR_INDEX=$(($CURR_INDEX + 1))
+    if (( $CURR_INDEX < $COUNT )) ; then
+      echo -e "$JOIN_STRING"
+    fi
+  done <<< "${!LIST_VAR}"
+}
+
 list-replace-by-string() {
   local LIST_VAR="${1}"
   local TEST_ITEM="${2}"
@@ -134,23 +169,27 @@ list-replace-by-string() {
   eval $LIST_VAR='"'"$NEW_LIST"'"'
 }
 
-list-from-csv() {
-  local LIST_VAR="${1}"
-  local CSV="${2}"
-
-  while IFS=',' read -ra ADDR; do
-    for i in "${ADDR[@]}"; do
-      list-add-item "$LIST_VAR" "$i"
-    done
-  done <<< "$CSV"
-}
-
 list-quote() {
   local LIST_VAR="${1}"
 
   while read -r ITEM; do
     echo -n "'$(echo "$ITEM" | sed -e "s/'/'\"'\"'/")' "
   done <<< "${!LIST_VAR:-}"
+}
+
+list-rm-item() {
+  local LIST_VAR="${1}"; shift
+  while (( $# > 0 )); do
+    local ITEM NEW_ITEMS
+    ITEM="${1}"; shift
+    ITEM=${ITEM//\/\\/}
+    ITEM=${ITEM//#/\\#}
+    ITEM=${ITEM//./\\.}
+    ITEM=${ITEM//[/\\[}
+    # echo "ITEM: $ITEM" >&2
+    NEW_ITEMS="$(echo "${!LIST_VAR}" | sed -e '\#^'$ITEM'$#d')"
+    eval $LIST_VAR='"'"$NEW_ITEMS"'"'
+  done
 }
 
 if [[ $(uname) == 'Darwin' ]]; then
@@ -3227,6 +3266,8 @@ projects-sync() {
 
   [[ -n "${BASE_DIR:-}" ]] || findBase
 
+  if [[ -z "$NO_WORK_MASTER_MERGE" ]]; then requireCleanRepo; fi
+
   local CURR_BRANCH REMOTE_COMMITS MASTER_UPDATED
   CURR_BRANCH="$(workCurrentWorkBranch)"
 
@@ -3284,10 +3325,23 @@ projects-sync() {
     fi
     echo "Workspace workbranch synced."
 
-    if [[ -z "$NO_WORK_MASTER_MERGE" ]] && [[ "$MASTER_UPDATED" == true ]]; then
+    if [[ -z "$NO_WORK_MASTER_MERGE" ]] \
+         && ( [[ "$MASTER_UPDATED" == true ]] || ! git merge-base --is-ancestor master $CURR_BRANCH ); then
       echo "Merging master updates to work branch..."
-      git merge master || echoerrandexit "Could not merge master updates to workbranch."
-      echo "Master updates merged to workbranch."
+      git merge master --no-commit --no-ff || echoerrandexit "Could not merge master updates to workbranch."
+      if git diff-index --quite HEAD -- "${BASE_DIR}"; then
+        echowarn "Hmm... expected to see changes from master, but none appeared. It's possible the changes have already been incorporated/recreated without a merge, so this isn't necessarily an issue, but you may want to double check that everything is as expected."
+      else  
+        if ! git diff-index --quiet HEAD -- "${BASE_DIR}/dist"; then # there are changes in ./dist
+          # TODO: include project name in advice so it's good regardless of context
+          echowarn "Backing out merge updates to './dist'; rebuild to generate current distribution:\nliq projects build"
+          git checkout ./dist
+        fi
+        git add -A
+        git commit -m "Merge updates from master to workbranch."
+        work-save --backup-only
+        echo "Master updates merged to workbranch."
+      fi
     fi
   fi # on workbranach check
 }
