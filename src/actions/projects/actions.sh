@@ -267,7 +267,7 @@ projects-sync() {
   local PROJ_NAME
   PROJ_NAME="$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name' | tr -d "'")"
 
-  if [[ -z "$NO_WORK_MASTER_MERGE" ]]; then
+  if [[ -z "$NO_WORK_MASTER_MERGE" ]] && [[ -z "$FETCH_ONLY" ]]; then
     requireCleanRepo "$PROJ_NAME"
   fi
 
