@@ -250,8 +250,12 @@ projects-sync() {
     || ( contextHelp; echoerrandexit "Bad options." )
 
   [[ -n "${BASE_DIR:-}" ]] || findBase
+  local PROJ_NAME
+  PROJ_NAME="$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name' | tr -d "'")"
 
-  if [[ -z "$NO_WORK_MASTER_MERGE" ]]; then requireCleanRepo; fi
+  if [[ -z "$NO_WORK_MASTER_MERGE" ]]; then
+    requireCleanRepo "$PROJ_NAME"
+  fi
 
   local CURR_BRANCH REMOTE_COMMITS MASTER_UPDATED
   CURR_BRANCH="$(workCurrentWorkBranch)"
@@ -316,10 +320,9 @@ projects-sync() {
       git merge master --no-commit --no-ff || echoerrandexit "Could not merge master updates to workbranch."
       if git diff-index --quite HEAD -- "${BASE_DIR}"; then
         echowarn "Hmm... expected to see changes from master, but none appeared. It's possible the changes have already been incorporated/recreated without a merge, so this isn't necessarily an issue, but you may want to double check that everything is as expected."
-      else  
+      else
         if ! git diff-index --quiet HEAD -- "${BASE_DIR}/dist"; then # there are changes in ./dist
-          # TODO: include project name in advice so it's good regardless of context
-          echowarn "Backing out merge updates to './dist'; rebuild to generate current distribution:\nliq projects build"
+          echowarn "Backing out merge updates to './dist'; rebuild to generate current distribution:\nliq projects build $PROJ_NAME"
           git checkout ./dist
         fi
         git add -A
