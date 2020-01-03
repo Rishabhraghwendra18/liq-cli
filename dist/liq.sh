@@ -1030,7 +1030,10 @@ getCatPackagePaths() {
   echo "$CAT_PACKAGE_PATHS"
 }
 
-# Takes a project name and checks that the local repo is clean.
+# Takes a project name and checks that the local repo is clean. By specifyng '--check-branch' (which will take a comma
+# separated list of branch names) or '--check-all-branches', the function will also check that the current head of each
+# branch is present in the remote repo. The branch checks do not include a 'fetch', so local information may be out of
+# date.
 requireCleanRepo() {
   eval "$(setSimpleOptions CHECK_BRANCH= CHECK_ALL_BRANCHES -- "$@")"
 
@@ -1073,7 +1076,7 @@ requireCleanRepo() {
   fi
 }
 
-# For each 'involved Project' in the indicated unit of work (default to current unit of work), checks that the repo is
+# For each 'involved project' in the indicated unit of work (default to current unit of work), checks that the repo is
 # clean.
 requireCleanRepos() {
   local _WORK_NAME="${1:-curr_work}"
@@ -3059,7 +3062,7 @@ projects-close() {
     if ! git remote | grep -q '^upstream$'; then
       echoerrandexit "Did not find expected 'upstream' remote. Verify everything saved+pushed and try:\nliq projects close --force '${PROJECT_NAME}'"
     fi
-    requireCleanRepo --check-all-branches "$PROJECT_NAME" # will exit process if not
+    requireCleanRepo --check-all-branches "$PROJECT_NAME" # exits if not clean + branches saved to remotes
     deleteLocal # didn't exit? OK to delete
   else
     echoerrandexit "Did not find project '$PROJECT_NAME'" 1
@@ -4816,7 +4819,7 @@ work-qa() {
     cd "${LIQ_PLAYGROUND}/${PROJECT}"
     projects-qa "$@"
   done
-}
+} # work merge
 
 work-report() {
   local BRANCH_NAME
@@ -4869,7 +4872,7 @@ work-resume() {
   requireCleanRepos "${WORK_NAME}"
 
   workSwitchBranches "$WORK_NAME"
-  cd "${LIQ_WORK_DB}" && ln -s "${WORK_NAME}" curr_work  
+  cd "${LIQ_WORK_DB}" && ln -s "${WORK_NAME}" curr_work
 
   echo "Resumed '$WORK_NAME'."
 }

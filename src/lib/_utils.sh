@@ -287,7 +287,10 @@ getCatPackagePaths() {
   echo "$CAT_PACKAGE_PATHS"
 }
 
-# Takes a project name and checks that the local repo is clean.
+# Takes a project name and checks that the local repo is clean. By specifyng '--check-branch' (which will take a comma
+# separated list of branch names) or '--check-all-branches', the function will also check that the current head of each
+# branch is present in the remote repo. The branch checks do not include a 'fetch', so local information may be out of
+# date.
 requireCleanRepo() {
   eval "$(setSimpleOptions CHECK_BRANCH= CHECK_ALL_BRANCHES -- "$@")"
 
@@ -330,7 +333,7 @@ requireCleanRepo() {
   fi
 }
 
-# For each 'involved Project' in the indicated unit of work (default to current unit of work), checks that the repo is
+# For each 'involved project' in the indicated unit of work (default to current unit of work), checks that the repo is
 # clean.
 requireCleanRepos() {
   local _WORK_NAME="${1:-curr_work}"

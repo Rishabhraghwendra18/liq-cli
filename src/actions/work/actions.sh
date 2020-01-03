@@ -298,7 +298,7 @@ work-qa() {
     cd "${LIQ_PLAYGROUND}/${PROJECT}"
     projects-qa "$@"
   done
-}
+} # work merge
 
 work-report() {
   local BRANCH_NAME
@@ -351,7 +351,7 @@ work-resume() {
   requireCleanRepos "${WORK_NAME}"
 
   workSwitchBranches "$WORK_NAME"
-  cd "${LIQ_WORK_DB}" && ln -s "${WORK_NAME}" curr_work  
+  cd "${LIQ_WORK_DB}" && ln -s "${WORK_NAME}" curr_work
 
   echo "Resumed '$WORK_NAME'."
 }
