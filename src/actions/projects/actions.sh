@@ -21,13 +21,11 @@ projects-close() {
     cd "$BASE_DIR"
     PROJECT_NAME=$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name | @sh' | tr -d "'")
   fi
-
-  local CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg --require)"
+  PROJECT_NAME="${PROJECT_NAME/@/}"
 
   deleteLocal() {
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}" \
-      && rm -rf "$PROJECT_NAME" && echo "Removed project '$PROJECT_NAME'."
+    cd "${LIQ_PLAYGROUND}" \
+      && rm -rf "$PROJECT_NAME" && echo "Removed project '@${PROJECT_NAME}'."
     # now check to see if we have an empty "org" dir
     local ORG_NAME
     ORG_NAME=$(dirname "${PROJECT_NAME}")
@@ -36,7 +34,7 @@ projects-close() {
     fi
   }
 
-  cd "$LIQ_PLAYGROUND/${CURR_ORG}"
+  cd "$LIQ_PLAYGROUND"
   if [[ -d "$PROJECT_NAME" ]]; then
     if [[ "$FORCE" == true ]]; then
       deleteLocal
@@ -75,6 +73,12 @@ projects-create() {
 
   # TODO: check that the upstream and workspace projects don't already exist
 
+  if [[ -n "$NEW" ]] && [[ -n "$SOURCE" ]]; then
+    echoerrandexit "The '--new' and '--source' options are not compatible. Please refer to:\nliq help projects create"
+  elif [[ -z "$NEW" ]] && [[ -z "$SOURCE" ]]; then
+    echoerrandexit "You must specify one of the '--new' or '--source' options when creating a project.Please refer to:\nliq help projects create"
+  fi
+
   __PROJ_NAME="${1:-}"
   if [[ -z "${__PROJ_NAME:-}" ]]; then
     if [[ -n "$SOURCE" ]]; then
@@ -83,17 +87,18 @@ projects-create() {
     else
       echoerrandexit "Must specify project name for '--new' projects."
     fi
-  elif [[ "$__PROJ_NAME" == */* ]]; then
-    echoerrandexit 'It appears that the project name includes the package scope. Scope is derived from the current org settings. Please specify just the "base name".'
+  else # check that project name includes org
+    projectsSetPkgNameComponents "${__PROJ_NAME}"
+    if [[ "$PKG_ORG_NAME" == '.' ]]; then
+      echoerrandexit "Must specify NPM org scope when creating new projects."
+    else
+      if [[ -e "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]]; then
+        echoerrandexit "Did not find base org repo for '$PKG_ORG_NAME'. Try:\nliq orgs import <base org pkg or URL>"
+      else
+        source "${LIQ_ORG_DB}/${PKG_ORG_NAME}/settings.sh"
+      fi
+    fi
   fi
-
-  if [[ -n "$NEW" ]] && [[ -n "$SOURCE" ]]; then
-    echoerrandexit "The '--new' and '--source' options are not compatible. Please refer to:\nliq help projects create"
-  elif [[ -z "$NEW" ]] && [[ -z "$SOURCE" ]]; then
-    echoerrandexit "You must specify one of the '--new' or '--source' options when creating a project.Please refer to:\nliq help projects create"
-  fi
-
-  source "${CURR_ORG_DIR}/public/settings.sh"
 
   local REPO_FRAG REPO_URL BUGS_URL README_URL
   REPO_FRAG="github.com/${ORG_GITHUB_NAME}/${__PROJ_NAME}"
@@ -102,6 +107,8 @@ projects-create() {
   HOMEPAGE="https://${REPO_FRAG}#readme"
 
   if [[ -n "$NEW" ]]; then
+    cd "$PROJ_STAGE"
+    git init .
     npm init "$NEW"
     # The init script is responsible for setting up package.json
   else
@@ -165,10 +172,11 @@ projects-deploy() {
   colorerr "GOPATH=$GOPATH bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; gcloud app deploy'"
 }
 
-# see: liq help projects import
+# see: liq help projects import; The '--set-name' and '--set-url' options are for internal use and each take a var name
+# which will be 'eval'-ed to contain the project name and URL.
 projects-import() {
   local PROJ_SPEC __PROJ_NAME _PROJ_URL PROJ_STAGE
-  eval "$(setSimpleOptions NO_FORK:F SET_NAME= SET_URL= -- "$@")"
+  eval "$(setSimpleOptions NO_FORK:F NO_INSTALL SET_NAME= SET_URL= -- "$@")"
 
   set-stuff() {
     # TODO: protect this eval
@@ -178,14 +186,19 @@ projects-import() {
 
   if [[ "$1" == *:* ]]; then # it's a URL
     _PROJ_URL="${1}"
+    # We have to grab the project from the repo in order to figure out it's (npm-based) name...
     if [[ -n "$NO_FORK" ]]; then
       projectClone "$_PROJ_URL"
     else
       projectForkClone "$_PROJ_URL"
     fi
-    if _PROJ_NAME=$(cat "$PROJ_STAGE/package.json" | jq --raw-output '.name' | tr -d "'"); then
+    _PROJ_NAME=$(cat "$PROJ_STAGE/package.json" | jq --raw-output '.name' | tr -d "'")
+    if [[ -n "$_PROJ_NAME" ]]; then
       set-stuff
-      if projectCheckIfInPlayground "$_PROJ_NAME"; then return 0; fi
+      if projectCheckIfInPlayground "$_PROJ_NAME"; then
+        echo "Project '$_PROJ_NAME' is already in the playground. No changes made."
+        return 0
+      fi
     else
       rm -rf "$PROJ_STAGE"
       echoerrandexit -F "The specified source is not a valid Liquid Dev package (no 'package.json'). Try:\nliq projects create --type=bare --origin='$_PROJ_URL' <project name>"
@@ -194,6 +207,7 @@ projects-import() {
     _PROJ_NAME="${1}"
     set-stuff
     if projectCheckIfInPlayground "$_PROJ_NAME"; then
+      echo "Project '$_PROJ_NAME' is already in the playground. No changes made."
       _PROJ_URL="$(projectsGetUpstreamUrl "$_PROJ_NAME")"
       set-stuff
       return 0
@@ -213,6 +227,12 @@ projects-import() {
   projectMoveStaged "$_PROJ_NAME" "$PROJ_STAGE"
 
   echo "'$_PROJ_NAME' imported into playground."
+  if [[ -z "$NO_INSTALL" ]]; then
+    cd "${LIQ_PLAYGROUND}/${_PROJ_NAME/@/}"
+    echo "Installing project..."
+    npm install || echoerrandexit "Installation failed."
+    echo "Install complete."
+  fi
 }
 
 # see: liq help projects publish
@@ -222,25 +242,32 @@ projects-publish() {
 
 # see: liq help projects qa
 projects-qa() {
-  eval "$(setSimpleOptions UPDATE^ OPTIONS=^ AUDIT LINT VERSION_CHECK -- "$@")" \
+  eval "$(setSimpleOptions UPDATE^ OPTIONS=^ AUDIT LINT LIQ_CHECK VERSION_CHECK -- "$@")" \
     || { contextHelp; echoerrandexit "Bad options."; }
 
   findBase
   cd "$BASE_DIR"
 
   local RESTRICTED=''
-  if [[ -n "$AUDIT" ]] || [[ -n "$LINT" ]] || [[ -n "$VERSION_CHECK" ]]; then
+  if [[ -n "$AUDIT" ]] || [[ -n "$LINT" ]] || [[ -n "$LIQ_CHECK" ]] || [[ -n "$VERSION_CHECK" ]]; then
     RESTRICTED=true
   fi
 
+  local FIX_LIST
   if [[ -z "$RESTRICTED" ]] || [[ -n "$AUDIT" ]]; then
-    projectsNpmAudit "$@" || true
+    projectsNpmAudit "$@" || list-add-item FIX_LIST '--audit'
   fi
   if [[ -z "$RESTRICTED" ]] || [[ -n "$LINT" ]]; then
-    projectsLint "$@" || true
+    projectsLint "$@" || list-add-item FIX_LIST '--lint'
+  fi
+  if [[ -z "$RESTRICTED" ]] || [[ -n "$LIQ_CHECK" ]]; then
+    projectsLiqCheck "$@" || true # Check provides it's own instrucitons.
   fi
   if [[ -z "$RESTRICTED" ]] || [[ -n "$VERSION_CHECK" ]]; then
-    projectsVersionCheck "$@" || true
+    projectsVersionCheck "$@" || list-add-item FIX_LIST '--version-check'
+  fi
+  if [[ -n "$FIX_LIST" ]]; then
+    echowarn "To attempt automated fixes, try:\nliq projects qa --update $(list-join FIX_LIST ' ')"
   fi
 }
 

@@ -40,18 +40,19 @@ export const setup = () => {
   const home = `${tmpDir}/liq-cli-test-${setupSuffix}`
   const playground = `${home}/playground`
   // only valid if 'localCheckout' is called
-  const localRepoCheckout = `${playground}/liquid_labs/@liquid-labs/lc-entities-model`
+  const localRepoCheckout = `${playground}/liquid-labs/lc-entities-model`
   // const testOriginDir = `${home}/git-origin`
   // const testCheckoutDir = `${playground}/test-checkout`
 
   const metaInit = () => {
-    const result = shell.exec(`HOME=${home} ${LIQ} meta init -s -p ${playground} --org='git@github.com:Liquid-Labs'`, execOpts)
+    const result = shell.exec(`HOME=${home} ${LIQ} meta init -s -p ${playground}`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.code).toEqual(0)
   }
 
   const localCheckout = () => {
-    const result = shell.exec(`HOME=${home} ${LIQ} projects import --no-fork ${localRepoUrl}`, execOpts)
+    // the install makes testing harder because it's not quite
+    const result = shell.exec(`HOME=${home} ${LIQ} projects import --no-install --no-fork ${localRepoUrl}`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.code).toEqual(0)
   }
@@ -67,6 +68,6 @@ export const setup = () => {
     metaInit,
     localCheckout,
     // TODO: don't cleanup if errors? (and mention the fact)
-    cleanup: () => {}//shell.rm('-rf', home)
+    cleanup: () => { shell.rm('-rf', home) }
   }
 }

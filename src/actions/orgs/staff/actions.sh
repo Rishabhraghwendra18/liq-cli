@@ -15,7 +15,7 @@ orgs-staff-add() {
   FIELDS_SPEC="$(echo "$FIELDS_SPEC" | sed -e 's/ /= /g')="
   eval "$(setSimpleOptions $FIELDS_SPEC NO_CONFIRM:C -- "$@")"
 
-  source "${CURR_ORG_DIR}/public/settings.sh"
+  orgsStaffRepo
 
   local ALL_SPECIFIED FIELD
   ALL_SPECIFIED=true
@@ -40,10 +40,10 @@ orgs-staff-add() {
     gather-answers ${OPTS} "$FIELDS"
   fi
 
-  local STAFF_FILE="${CURR_ORG_DIR}/sensitive/staff.tsv"
+  local STAFF_FILE="${ORG_STAFF_REPO}/staff.tsv"
   [[ -f "$STAFF_FILE" ]] || touch "$STAFF_FILE"
 
-  trap - ERR
+  trap - ERR # TODO: document why this is here...
   NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "try {
       const { Staff } = require('${LIQ_DIST_DIR}');
       const staff = new Staff('${STAFF_FILE}');
@@ -59,7 +59,8 @@ orgs-staff-add() {
 
 orgs-staff-list() {
   eval "$(setSimpleOptions ENUMERATE -- "$@")"
-  local STAFF_FILE="${CURR_ORG_DIR}/sensitive/staff.tsv"
+  orgsStaffRepo
+  local STAFF_FILE="${ORG_STAFF_REPO}/staff.tsv"
   if [[ -z "$ENUMERATE" ]]; then
     column -s $'\t' -t "${STAFF_FILE}"
   else
@@ -70,7 +71,8 @@ orgs-staff-list() {
 
 orgs-staff-remove() {
   local EMAIL="${1}"
-  local STAFF_FILE="${CURR_ORG_DIR}/sensitive/staff.tsv"
+  orgsStaffRepo
+  local STAFF_FILE="${ORG_STAFF_REPO}/staff.tsv"
 
   trap - ERR
   NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "

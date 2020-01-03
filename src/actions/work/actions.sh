@@ -29,13 +29,13 @@ work-close() {
     PROJECTS="$INVOLVED_PROJECTS"
   fi
 
-  local PROJECT CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg --require)"
+  local PROJECT
   # first, do the checks
   for PROJECT in $PROJECTS; do
     PROJECT=$(workConvertDot "$PROJECT")
+    PROJECT="${PROJECT/@/}"
     local CURR_BRANCH
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT}"
+    cd "${LIQ_PLAYGROUND}/${PROJECT}"
     CURR_BRANCH=$(workCurrentWorkBranch)
 
     if [[ "$CURR_BRANCH" != "$WORK_BRANCH" ]]; then
@@ -48,7 +48,8 @@ work-close() {
   # now actually do the closures
   for PROJECT in $PROJECTS; do
     PROJECT=$(workConvertDot "$PROJECT")
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT}"
+    PROJECT="${PROJECT/@/}"
+    cd "${LIQ_PLAYGROUND}/${PROJECT}"
     local CURR_BRANCH
     CURR_BRANCH=$(git branch | (grep '*' || true) | awk '{print $2}')
 
@@ -58,7 +59,7 @@ work-close() {
     git branch -qd "$WORK_BRANCH" \
       || ( echoerr "Could not delete local '${WORK_BRANCH}'. This can happen if the branch was renamed." \
           && false)
-    list-rm-item INVOLVED_PROJECTS "$PROJECT" # this cannot be done in a subshell
+    list-rm-item INVOLVED_PROJECTS "@${PROJECT}" # this cannot be done in a subshell
     workUpdateWorkDb
 		if [[ -z "$NO_SYNC" ]]; then
 			projects-sync
@@ -92,19 +93,19 @@ work-ignore-rest() {
 }
 
 work-involve() {
-  local PROJECT_NAME WORK_DESC WORK_STARTED WORK_INITIATOR INVOLVED_PROJECTS CURR_ORG
+  local PROJECT_NAME WORK_DESC WORK_STARTED WORK_INITIATOR INVOLVED_PROJECTS
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "There is no active unit of work to involve. Try:\nliq work resume"
   fi
 
-  CURR_ORG="$(orgsCurrentOrg --require)"
-
   if (( $# == 0 )) && [[ -n "$BASE_DIR" ]]; then
     requirePackage
     PROJECT_NAME=$(echo "$PACKAGE" | jq --raw-output '.name | @sh' | tr -d "'")
+    PROJECT_NAME=${PROJECT_NAME/@/}
   else
     exactUserArgs PROJECT_NAME -- "$@"
-    test -d "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT_NAME}" \
+    PROJECT_NAME=${PROJECT_NAME/@/}
+    test -d "${LIQ_PLAYGROUND}/${PROJECT_NAME}" \
       || echoerrandexit "Invalid project name '$PROJECT_NAME'. Perhaps it needs to be imported? Try:\nliq playground import <git URL>"
   fi
 
@@ -112,7 +113,7 @@ work-involve() {
   local BRANCH_NAME=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
   requirePackage # used later if auto-linking
 
-  cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT_NAME}"
+  cd "${LIQ_PLAYGROUND}/${PROJECT_NAME}"
   if git branch | grep -qE "^\*? *${BRANCH_NAME}\$"; then
     echowarn "Found existing work branch '${BRANCH_NAME}' in project ${PROJECT_NAME}. We will use it. Please fix manually if this is unexpected."
     git checkout -q "${BRANCH_NAME}" || echoerrandexit "There was a problem checking out the work branch. ($?)"
@@ -122,7 +123,7 @@ work-involve() {
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
 
-  list-add-item INVOLVED_PROJECTS "${PROJECT_NAME}"
+  list-add-item INVOLVED_PROJECTS "@${PROJECT_NAME}" # do include the '@' here for display
   workUpdateWorkDb
 
   local PRIMARY_PROJECT=$INVOLVED_PROJECTS
@@ -136,15 +137,13 @@ work-involve() {
         # Currently disabled
         # projects-link "${PROJECT_NAME}:${NEW_PACKAGE_NAME}"
       fi
-    done < <(find "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT_NAME}" -name "package.json" -not -path "*node_modules/*")
+    done < <(find "${LIQ_PLAYGROUND}/${PROJECT_NAME}" -name "package.json" -not -path "*node_modules/*")
   fi
 }
 
 work-issues() {
-  local TMP
-  TMP=$(setSimpleOptions LIST ADD= REMOVE= -- "$@") \
+  eval "$(setSimpleOptions LIST ADD= REMOVE= -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
 
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "No current work selected; cannot list issues."
@@ -189,9 +188,6 @@ work-merge() {
   # TODO: https://github.com/Liquid-Labs/liq-cli/issues/57 support org-level config to default allow unforced merge
   eval "$(setSimpleOptions FORCE CLOSE PUSH_UPSTREAM -- "$@")"
 
-  local CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg --require)"
-
   if [[ "${PUSH_UPSTREAM}" == true ]] && [[ "$FORCE" != true ]]; then
     echoerrandexit "'work merge --push-upstream' is not allowed by default. You can use '--force', but generally you will either want to configure the project to enable non-forced upstream merges or try:\nliq work submit"
   fi
@@ -231,7 +227,8 @@ work-merge() {
 
   for TM in $TO_MERGE; do
     TM=$(workConvertDot "$TM")
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${TM}"
+    TM=${TM/@/}
+    cd "${LIQ_PLAYGROUND}/${TM}"
     local SHORT_STAT=`git diff --shortstat master ${WORK_BRANCH}`
     local INS_COUNT=`echo "${SHORT_STAT}" | egrep -Eio -e '\d+ insertion' | awk '{print $1}' || true`
     INS_COUNT=${INS_COUNT:-0}
@@ -297,7 +294,8 @@ work-qa() {
 
   source "${LIQ_WORK_DB}/curr_work"
   for PROJECT in $INVOLVED_PROJECTS; do
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${PROJECT}"
+    PROJECT="${PROJECT/@/}"
+    cd "${LIQ_PLAYGROUND}/${PROJECT}"
     projects-qa "$@"
   done
 }
@@ -370,10 +368,10 @@ work-resume() {
   fi
 }
 
+work-join() { work-resume "$@"; }
+
 work-save() {
-  local TMP
-  TMP=$(setSimpleOptions ALL MESSAGE= DESCRIPTION= NO_BACKUP:B BACKUP_ONLY -- "$@")
-  eval "$TMP"
+  eval "$(setSimpleOptions ALL MESSAGE= DESCRIPTION= NO_BACKUP:B BACKUP_ONLY -- "$@")"
 
   if [[ "$BACKUP_ONLY" == true ]] && [[ "$NO_BACKUP" == true ]]; then
     echoerrandexit "Incompatible options: '--backup-only' and '--no-backup'."
@@ -397,9 +395,7 @@ work-save() {
 }
 
 work-stage() {
-  local TMP
-  TMP=$(setSimpleOptions ALL INTERACTIVE REVIEW DRY_RUN -- "$@")
-  eval "$TMP"
+  eval "$(setSimpleOptions ALL INTERACTIVE REVIEW DRY_RUN -- "$@")"
 
   local OPTIONS
   if [[ $ALL == true ]]; then OPTIONS="--all "; fi
@@ -414,8 +410,7 @@ work-status() {
   eval "$(setSimpleOptions SELECT PR_READY NO_FETCH:F -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
-  local WORK_NAME LOCAL_COMMITS REMOTE_COMMITS CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg --require)"
+  local WORK_NAME LOCAL_COMMITS REMOTE_COMMITS
   workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
 
   if [[ -z "$NO_FETCH" ]]; then
@@ -455,9 +450,10 @@ work-status() {
   fi
 
   for IP in $INVOLVED_PROJECTS; do
+    IP="${IP/@/}"
     echo
     echo "Repo status for $IP:"
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/$IP"
+    cd "${LIQ_PLAYGROUND}/$IP"
     TMP="$(git rev-list --left-right --count master...upstream/master)"
     LOCAL_COMMITS=$(echo $TMP | cut -d' ' -f1)
     REMOTE_COMMITS=$(echo $TMP | cut -d' ' -f2)
@@ -513,9 +509,7 @@ work-status() {
 }
 
 work-start() {
-  local WORK_DESC WORK_STARTED WORK_INITIATOR WORK_BRANCH INVOLVED_PROJECTS WORK_ISSUES ISSUE TMP
-  TMP=$(setSimpleOptions ISSUES= -- "$@")
-  eval "$TMP"
+  eval "$(setSimpleOptions ISSUES= -- "$@")"
 
   local CURR_PROJECT ISSUES_URL
   if [[ -n "$BASE_DIR" ]]; then
@@ -559,10 +553,8 @@ work-start() {
 }
 
 work-stop() {
-  local TMP
-  TMP=$(setSimpleOptions KEEP_CHECKOUT -- "$@") \
+  eval "$(setSimpleOptions KEEP_CHECKOUT -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
 
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     local CURR_WORK=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
@@ -601,15 +593,15 @@ work-test() {
   eval "$(setSimpleOptions SELECT -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
-  local WORK_NAME CURR_ORG
-  CURR_ORG="$(orgsCurrentOrg --require)"
+  local WORK_NAME
   workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
   source "${LIQ_WORK_DB}/${WORK_NAME}"
 
   local IP
   for IP in $INVOLVED_PROJECTS; do
+    IP="${IP/@/}"
     echo "Testing ${IP}..."
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
+    cd "${LIQ_PLAYGROUND}/${IP}"
     projects-test "$@"
   done
 }
@@ -623,8 +615,6 @@ work-submit() {
   fi
 
   source "${LIQ_WORK_DB}/curr_work"
-  orgsCurrentOrg --require-sensitive > /dev/null # just a check, don't need value
-  source "${LIQ_ORG_DB}/curr_org/sensitive/settings.sh" # this is used in the submission checks
 
   if [[ -z "$MESSAGE" ]]; then
     MESSAGE="$WORK_DESC"
@@ -653,36 +643,42 @@ work-submit() {
 
   for IP in $TO_SUBMIT; do
     IP=$(workConvertDot "$IP")
-    cd "${LIQ_PLAYGROUND}/${CURR_ORG}/${IP}"
+    IP="${IP/@/}"
+    cd "${LIQ_PLAYGROUND}/${IP}"
+    orgsSourceOrg
+    ( # we source the policy in a subshell because the vars are not reliably refreshed, and so we need them isolated.
+      # TODO: also, if the policy repo is the main repo and there are multiple orgs in[olved], this will overwrite
+      # basic org settings... is that a problem?
+      source "${LIQ_PLAYGROUND}/${ORG_POLICY_REPO/@/}/settings.sh" # this is used in the submission checks
 
-    local SUBMIT_CERTS
-    echo "Checking for submission controls..."
-    workSubmitChecks SUBMIT_CERTS
+      local SUBMIT_CERTS
+      echo "Checking for submission controls..."
+      workSubmitChecks SUBMIT_CERTS
 
-    echo "Creating PR for ${IP}..."
+      echo "Creating PR for ${IP}..."
 
-    local BUGS_URL
-    BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
+      local BUGS_URL
+      BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
 
-    local ISSUE=''
-    local PROJ_ISSUES=''
-    local OTHER_ISSUES=''
-    for ISSUE in $WORK_ISSUES; do
-      if [[ $ISSUE == $BUGS_URL* ]]; then
-        local NUMBER=${ISSUE/$BUGS_URL/}
-        NUMBER=${NUMBER/\//}
-        list-add-item PROJ_ISSUES "#${NUMBER}"
-      else
-        list-add-item OTHER_ISSUES "${ISSUE}"
-      fi
-    done
+      local ISSUE=''
+      local PROJ_ISSUES=''
+      local OTHER_ISSUES=''
+      for ISSUE in $WORK_ISSUES; do
+        if [[ $ISSUE == $BUGS_URL* ]]; then
+          local NUMBER=${ISSUE/$BUGS_URL/}
+          NUMBER=${NUMBER/\//}
+          list-add-item PROJ_ISSUES "#${NUMBER}"
+        else
+          list-add-item OTHER_ISSUES "${ISSUE}"
+        fi
+      done
 
-    local BASE_TARGET # this is the 'org' of the upsteram branch
-    BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
+      local BASE_TARGET # this is the 'org' of the upsteram branch
+      BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
 
-    local DESC
-    # recal, the first line is used in the 'summary' (title), the rest goes in the "description"
-    DESC=$(cat <<EOF
+      local DESC
+      # recal, the first line is used in the 'summary' (title), the rest goes in the "description"
+      DESC=$(cat <<EOF
 Merge ${WORK_BRANCH} to master
 
 ## Summary
@@ -695,18 +691,19 @@ ${SUBMIT_CERTS}
 
 ## Issues
 EOF)
-    # populate issues lists
-    if [[ -n "$PROJ_ISSUES" ]]; then
-      if [[ -z "$NO_CLOSE" ]];then
-        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
-      else
-        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* driven by $ISSUE"; done)"
+      # populate issues lists
+      if [[ -n "$PROJ_ISSUES" ]]; then
+        if [[ -z "$NO_CLOSE" ]];then
+          DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
+        else
+          DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* driven by $ISSUE"; done)"
+        fi
       fi
-    fi
-    if [[ -n "$OTHER_ISSUES" ]]; then
-      DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
-    fi
+      if [[ -n "$OTHER_ISSUES" ]]; then
+        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
+      fi
 
-    hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
+      hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
+    ) # end policy-subshell
   done
 }
