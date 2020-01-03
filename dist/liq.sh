@@ -3339,7 +3339,7 @@ projects-sync() {
       else
         if ! git diff-index --quiet HEAD "${BASE_DIR}/dist" || ! git diff --quiet HEAD "${BASE_DIR}/dist"; then # there are changes in ./dist
           echowarn "Backing out merge updates to './dist'; rebuild to generate current distribution:\nliq projects build $PROJ_NAME"
-          git checkout ./dist
+          git checkout -f HEAD -- ./dist
         fi
         if git diff --quiet "${BASE_DIR}"; then # no conflicts
           git add -A
