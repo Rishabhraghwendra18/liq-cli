@@ -317,7 +317,7 @@ projects-sync() {
     if [[ -z "$NO_WORK_MASTER_MERGE" ]] \
          && ( [[ "$MASTER_UPDATED" == true ]] || ! git merge-base --is-ancestor master $CURR_BRANCH ); then
       echo "Merging master updates to work branch..."
-      git merge master --no-commit --no-ff || echoerrandexit "Could not merge master updates to workbranch."
+      git merge master --no-commit --no-ff || true # might fail with conflicts, and that's OK
       if git diff-index --quite HEAD -- "${BASE_DIR}" && git diff --quiet "${BASE_DIR}"; then
         echowarn "Hmm... expected to see changes from master, but none appeared. It's possible the changes have already been incorporated/recreated without a merge, so this isn't necessarily an issue, but you may want to double check that everything is as expected."
       else
