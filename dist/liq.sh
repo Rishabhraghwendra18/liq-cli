@@ -3334,10 +3334,10 @@ projects-sync() {
          && ( [[ "$MASTER_UPDATED" == true ]] || ! git merge-base --is-ancestor master $CURR_BRANCH ); then
       echo "Merging master updates to work branch..."
       git merge master --no-commit --no-ff || true # might fail with conflicts, and that's OK
-      if git diff-index --quite HEAD -- "${BASE_DIR}" && git diff --quiet "${BASE_DIR}"; then
+      if git diff-index --quite HEAD "${BASE_DIR}" && git diff --quiet "${BASE_DIR}"; then
         echowarn "Hmm... expected to see changes from master, but none appeared. It's possible the changes have already been incorporated/recreated without a merge, so this isn't necessarily an issue, but you may want to double check that everything is as expected."
       else
-        if ! git diff-index --quiet HEAD -- "${BASE_DIR}/dist" || ! git diff --quite "${BASE_DIR}/dist"; then # there are changes in ./dist
+        if ! git diff-index --quiet HEAD "${BASE_DIR}/dist" || ! git diff --quite "${BASE_DIR}/dist"; then # there are changes in ./dist
           echowarn "Backing out merge updates to './dist'; rebuild to generate current distribution:\nliq projects build $PROJ_NAME"
           git checkout ./dist
         fi
