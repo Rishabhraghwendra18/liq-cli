@@ -4923,16 +4923,17 @@ work-status() {
   local WORK_NAME LOCAL_COMMITS REMOTE_COMMITS
   workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
 
-  if [[ -z "$NO_FETCH" ]]; then
-    work-sync --fetch-only
-  fi
-
   if [[ "$PR_READY" == true ]]; then
+    git fetch workspace "${WORK_NAME}:remotes/workspace/${WORK_NAME}"
     TMP="$(git rev-list --left-right --count $WORK_NAME...workspace/$WORK_NAME)"
     LOCAL_COMMITS=$(echo $TMP | cut -d' ' -f1)
     REMOTE_COMMITS=$(echo $TMP | cut -d' ' -f2)
     (( $LOCAL_COMMITS == 0 )) && (( $REMOTE_COMMITS == 0 ))
     return $?
+  fi
+
+  if [[ -z "$NO_FETCH" ]]; then
+    work-sync --fetch-only
   fi
 
   echo "Branch name: $WORK_NAME"
