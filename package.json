@@ -6,7 +6,7 @@
   "module": "dist/index.es.js",
   "scripts": {
     "prebuild": "command -v rollup-bash >/dev/null && rm -rf ./dist",
-    "build": "catalyst-scripts build && rollup-bash ./src/cli.sh ./dist/liq.sh && rollup-bash ./src/install.sh ./dist/install.sh",
+    "build": "mkdir -p dist && catalyst-scripts build && rollup-bash ./src/cli.sh ./dist/liq.sh && rollup-bash ./src/install.sh ./dist/install.sh",
     "watch": "watch 'npm run build' ./src",
     "pretest": "catalyst-scripts pretest && babel --source-maps inline src -d test-staging",
     "test": "catalyst-scripts test",
@@ -28,7 +28,7 @@
   "homepage": "https://liquid-labs.github.io/liq-cli/",
   "dependencies": {
     "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.26",
-    "@liquid-labs/policies-model": "^1.0.0-beta.5"
+    "@liquid-labs/policies-model": "^1.0.0-beta.6"
   },
   "bin": {
     "liq": "./dist/liq.sh"

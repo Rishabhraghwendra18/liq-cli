@@ -1030,29 +1030,65 @@ getCatPackagePaths() {
   echo "$CAT_PACKAGE_PATHS"
 }
 
+# Takes a project name and checks that the local repo is clean. By specifyng '--check-branch' (which will take a comma
+# separated list of branch names) or '--check-all-branches', the function will also check that the current head of each
+# branch is present in the remote repo. The branch checks do not include a 'fetch', so local information may be out of
+# date.
 requireCleanRepo() {
+  eval "$(setSimpleOptions CHECK_BRANCH= CHECK_ALL_BRANCHES -- "$@")"
+
   local _IP="$1"
   _IP="${_IP/@/}"
   # TODO: the '_WORK_BRANCH' here seem to be more of a check than a command to check that branch.
-  local _WORK_BRANCH="${2:-}"
+  _IP=${_IP/@/}
+
+  local BRANCHES_TO_CHECK
+  if [[ -n "$CHECK_ALL_BRANCHES" ]]; then
+    BRANCHES_TO_CHECK="$(git branch --list --format='%(refname:lstrip=-1)')"
+  elif [[ -n "$CHECK_BRANCH" ]]; then
+    list-from-csv BRANCHES_TO_CHECK "$CHECK_BRANCH"
+  fi
 
   cd "${LIQ_PLAYGROUND}/${_IP}"
-  ( test -n "$_WORK_BRANCH" \
-      && git branch | grep -qE "^\* ${_WORK_BRANCH}" ) \
-    || git diff-index --quiet HEAD -- \
-    || echoerrandexit "Cannot perform action '${ACTION}'. '${_IP}' has uncommitted changes. Try:\nliq work save"
+
+  echo "Checking ${_IP}..."
+  # credit: https://stackoverflow.com/a/8830922/929494
+  # look for uncommitted changes
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    echoerrandexit "Found uncommitted changes.\n$(git status --porcelain)"
+  fi
+  # check for untracked files
+  if (( $({ git status --porcelain 2>/dev/null| grep '^??' || true; } | wc -l) != 0 )); then
+    echoerrandexit "Found untracked files."
+  fi
+  # At this point, the local repo is clean. Now we look at any branches of interest to make sure they've been pushed.
+  if [[ -n "$BRANCHES_TO_CHECK" ]]; then
+    local BRANCH_TO_CHECK
+    for BRANCH_TO_CHECK in $BRANCHES_TO_CHECK; do
+      if [[ "$BRANCH_TO_CHECK" == master ]] \
+         && ! git merge-base --is-ancestor master upstream/master; then
+        echoerrandexit "Local master has not been pushed to upstream master."
+      fi
+      if ! git merge-base --is-ancestor "$BRANCH_TO_CHECK" "workspace/${BRANCH_TO_CHECK}"; then
+        echoerrandexit "Local branch '$BRANCH_TO_CHECK' has not been pushed to workspace."
+      fi
+    done
+  fi
 }
 
+# For each 'involved project' in the indicated unit of work (default to current unit of work), checks that the repo is
+# clean.
 requireCleanRepos() {
   local _WORK_NAME="${1:-curr_work}"
 
-  # we expect existence already ensured
-  source "${LIQ_WORK_DB}/${_WORK_NAME}"
+  ( # isolate the source
+    source "${LIQ_WORK_DB}/${_WORK_NAME}"
 
-  local IP
-  for IP in $INVOLVED_PROJECTS; do
-    requireCleanRepo "$IP" "$_WORK_NAME"
-  done
+    local IP
+    for IP in $INVOLVED_PROJECTS; do
+      requireCleanRepo "$IP"
+    done
+  )
 }
 
 defineParameters() {
@@ -2930,7 +2966,8 @@ policies-document() {
 
   rm -rf "$TARGET_DIR"
   mkdir -p "$TARGET_DIR"
-  node -e "require('$NODE_SCRIPT').refreshDocuments('${TARGET_DIR}', process.argv.slice(1))" $(policiesGetPolicyFiles)
+  # argv[1] because the 0th arg is the 'node' executable.
+  node -e "require('$NODE_SCRIPT').refreshDocuments('${TARGET_DIR}', process.argv[1].split(\"\\n\"))" "$(policiesGetPolicyFiles)"
 }
 
 # see ./help.sh for behavior
@@ -3026,21 +3063,8 @@ projects-close() {
     if ! git remote | grep -q '^upstream$'; then
       echoerrandexit "Did not find expected 'upstream' remote. Verify everything saved+pushed and try:\nliq projects close --force '${PROJECT_NAME}'"
     fi
-    # Is everything comitted?
-    # credit: https://stackoverflow.com/a/8830922/929494
-    if git diff --quiet && git diff --cached --quiet; then
-      if (( $({ git status --porcelain 2>/dev/null| grep '^??' || true; } | wc -l) == 0 )); then
-        if [[ $(git rev-parse --verify master) == $(git rev-parse --verify upstream/master) ]]; then
-          deleteLocal
-        else
-          echoerrandexit "Not all changes have been pushed to master." 1
-        fi
-      else
-        echoerrandexit "Found untracked files." 1
-      fi
-    else
-      echoerrandexit "Found uncommitted changes.\n$(git status --porcelain)" 1
-    fi
+    requireCleanRepo --check-all-branches "$PROJECT_NAME" # exits if not clean + branches saved to remotes
+    deleteLocal # didn't exit? OK to delete
   else
     echoerrandexit "Did not find project '$PROJECT_NAME'" 1
   fi
@@ -3257,6 +3281,12 @@ projects-sync() {
     || ( contextHelp; echoerrandexit "Bad options." )
 
   [[ -n "${BASE_DIR:-}" ]] || findBase
+  local PROJ_NAME
+  PROJ_NAME="$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name' | tr -d "'")"
+
+  if [[ -z "$NO_WORK_MASTER_MERGE" ]] && [[ -z "$FETCH_ONLY" ]]; then
+    requireCleanRepo "$PROJ_NAME"
+  fi
 
   local CURR_BRANCH REMOTE_COMMITS MASTER_UPDATED
   CURR_BRANCH="$(workCurrentWorkBranch)"
@@ -3315,10 +3345,26 @@ projects-sync() {
     fi
     echo "Workspace workbranch synced."
 
-    if [[ -z "$NO_WORK_MASTER_MERGE" ]] && [[ "$MASTER_UPDATED" == true ]]; then
+    if [[ -z "$NO_WORK_MASTER_MERGE" ]] \
+         && ( [[ "$MASTER_UPDATED" == true ]] || ! git merge-base --is-ancestor master $CURR_BRANCH ); then
       echo "Merging master updates to work branch..."
-      git merge master || echoerrandexit "Could not merge master updates to workbranch."
-      echo "Master updates merged to workbranch."
+      git merge master --no-commit --no-ff || true # might fail with conflicts, and that's OK
+      if git diff-index --quiet HEAD "${BASE_DIR}" && git diff --quiet HEAD "${BASE_DIR}"; then
+        echowarn "Hmm... expected to see changes from master, but none appeared. It's possible the changes have already been incorporated/recreated without a merge, so this isn't necessarily an issue, but you may want to double check that everything is as expected."
+      else
+        if ! git diff-index --quiet HEAD "${BASE_DIR}/dist" || ! git diff --quiet HEAD "${BASE_DIR}/dist"; then # there are changes in ./dist
+          echowarn "Backing out merge updates to './dist'; rebuild to generate current distribution:\nliq projects build $PROJ_NAME"
+          git checkout -f HEAD -- ./dist
+        fi
+        if git diff --quiet "${BASE_DIR}"; then # no conflicts
+          git add -A
+          git commit -m "Merge updates from master to workbranch."
+          work-save --backup-only
+          echo "Master updates merged to workbranch."
+        else
+          echowarn "Merge was successful, but conflicts exist. Please resolve and then save changes:\nliq work save"
+        fi
+      fi
     fi
   fi # on workbranach check
 }
@@ -4774,7 +4820,7 @@ work-qa() {
     cd "${LIQ_PLAYGROUND}/${PROJECT}"
     projects-qa "$@"
   done
-}
+} # work merge
 
 work-report() {
   local BRANCH_NAME
@@ -4814,34 +4860,22 @@ work-report() {
 }
 
 work-resume() {
-  if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
-    requireCleanRepos
-  fi
-
   local WORK_NAME
   workUserSelectOne WORK_NAME '' true "$@"
 
-  requireCleanRepos "${WORK_NAME}"
-
-  local CURR_WORK
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
-    CURR_WORK=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
-    if [[ "${CURR_WORK}" == "${WORK_NAME}" ]]; then
-      echowarn "'$CURR_WORK' is already the current unit of work."
+    if [[ "${LIQ_WORK_DB}/curr_work" -ef "${LIQ_WORK_DB}/${WORK_NAME}" ]]; then
+      echowarn "'$WORK_NAME' is already the current unit of work."
       exit 0
     fi
-    workSwitchBranches master
-    rm "${LIQ_WORK_DB}/curr_work"
   fi
-  cd "${LIQ_WORK_DB}" && ln -s "${WORK_NAME}" curr_work
-  source "${LIQ_WORK_DB}"/curr_work
-  workSwitchBranches "$WORK_NAME"
 
-  if [[ -n "$CURR_WORK" ]]; then
-    echo "Switched from '$CURR_WORK' to '$WORK_NAME'."
-  else
-    echo "Resumed '$WORK_NAME'."
-  fi
+  requireCleanRepos "${WORK_NAME}"
+
+  workSwitchBranches "$WORK_NAME"
+  cd "${LIQ_WORK_DB}" && ln -s "${WORK_NAME}" curr_work
+
+  echo "Resumed '$WORK_NAME'."
 }
 
 work-join() { work-resume "$@"; }
@@ -4889,16 +4923,17 @@ work-status() {
   local WORK_NAME LOCAL_COMMITS REMOTE_COMMITS
   workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
 
-  if [[ -z "$NO_FETCH" ]]; then
-    work-sync --fetch-only
-  fi
-
   if [[ "$PR_READY" == true ]]; then
+    git fetch workspace "${WORK_NAME}:remotes/workspace/${WORK_NAME}"
     TMP="$(git rev-list --left-right --count $WORK_NAME...workspace/$WORK_NAME)"
     LOCAL_COMMITS=$(echo $TMP | cut -d' ' -f1)
     REMOTE_COMMITS=$(echo $TMP | cut -d' ' -f2)
     (( $LOCAL_COMMITS == 0 )) && (( $REMOTE_COMMITS == 0 ))
     return $?
+  fi
+
+  if [[ -z "$NO_FETCH" ]]; then
+    work-sync --fetch-only
   fi
 
   echo "Branch name: $WORK_NAME"
@@ -5454,29 +5489,37 @@ workUserSelectOne() {
 }
 
 workSwitchBranches() {
-  # We expect that the name and existence of curr_work already checked.
   local _BRANCH_NAME="$1"
-  source "${LIQ_WORK_DB}/curr_work"
-  local IP
-  for IP in $INVOLVED_PROJECTS; do
-    IP="${IP/@/}"
-    echo "Updating project '$IP' to branch '${_BRANCH_NAME}'"
-    cd "${LIQ_PLAYGROUND}/${IP}"
-    if git show-ref --verify --quiet "refs/heads/${_BRANCH_NAME}"; then
-      git checkout "${_BRANCH_NAME}" \
-        || echoerrandexit "Error updating '${IP}' to work branch '${_BRANCH_NAME}'. See above for details."
-    else # the branch is not locally availble, but lets check the workspace
-      echo "Work branch not locally available, checking workspace..."
-      git fetch --quiet workspace
-      if git show-ref --verify --quiet "refs/remotes/workspace/${_BRANCH_NAME}"; then
-        git checkout --track "workspace/${_BRANCH_NAME}" \
-          || echoerrandexit "Found branch on workspace, but there were problems checking it out."
-      else
-        echoerrandexit "Could not find the indicated work branch either localaly or on workspace. It is possible the work has been completed or dropped."
-        # TODO: long term, we want to be able to resurrect old branches, and we'd offer that as a 'try' option here.
+  ( # the following source is probably OK, expected, and/or redundant in many cases, but just in case, we protect with
+    # a subshell
+    source "${LIQ_WORK_DB}/${_BRANCH_NAME}"
+    local IP
+    for IP in $INVOLVED_PROJECTS; do
+      IP="${IP/@/}"
+
+      if [[ ! -d "${LIQ_PLAYGROUND}/${IP}" ]]; then
+        echoerr "Project @${IP} is not locally available. Try:\nliq projects import ${IP}\nliq work resume ${WORK_NAME}"
+        continue
       fi
-    fi
-  done
+
+      echo "Updating project '$IP' to branch '${_BRANCH_NAME}'"
+      cd "${LIQ_PLAYGROUND}/${IP}"
+      if git show-ref --verify --quiet "refs/heads/${_BRANCH_NAME}"; then
+        git checkout "${_BRANCH_NAME}" \
+          || echoerrandexit "Error updating '${IP}' to work branch '${_BRANCH_NAME}'. See above for details."
+      else # the branch is not locally availble, but lets check the workspace
+        echo "Work branch not locally available, checking workspace..."
+        git fetch --quiet workspace
+        if git show-ref --verify --quiet "refs/remotes/workspace/${_BRANCH_NAME}"; then
+          git checkout --track "workspace/${_BRANCH_NAME}" \
+            || echoerrandexit "Found branch on workspace, but there were problems checking it out."
+        else
+          echoerrandexit "Could not find the indicated work branch either localaly or on workspace. It is possible the work has been completed or dropped."
+          # TODO: long term, we want to be able to resurrect old branches, and we'd offer that as a 'try' option here.
+        fi
+      fi
+    done
+  ) # source-isolating subshel
 }
 
 workProcessIssues() {

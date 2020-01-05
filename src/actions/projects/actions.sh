@@ -46,21 +46,8 @@ projects-close() {
     if ! git remote | grep -q '^upstream$'; then
       echoerrandexit "Did not find expected 'upstream' remote. Verify everything saved+pushed and try:\nliq projects close --force '${PROJECT_NAME}'"
     fi
-    # Is everything comitted?
-    # credit: https://stackoverflow.com/a/8830922/929494
-    if git diff --quiet && git diff --cached --quiet; then
-      if (( $({ git status --porcelain 2>/dev/null| grep '^??' || true; } | wc -l) == 0 )); then
-        if [[ $(git rev-parse --verify master) == $(git rev-parse --verify upstream/master) ]]; then
-          deleteLocal
-        else
-          echoerrandexit "Not all changes have been pushed to master." 1
-        fi
-      else
-        echoerrandexit "Found untracked files." 1
-      fi
-    else
-      echoerrandexit "Found uncommitted changes.\n$(git status --porcelain)" 1
-    fi
+    requireCleanRepo --check-all-branches "$PROJECT_NAME" # exits if not clean + branches saved to remotes
+    deleteLocal # didn't exit? OK to delete
   else
     echoerrandexit "Did not find project '$PROJECT_NAME'" 1
   fi
@@ -277,6 +264,12 @@ projects-sync() {
     || ( contextHelp; echoerrandexit "Bad options." )
 
   [[ -n "${BASE_DIR:-}" ]] || findBase
+  local PROJ_NAME
+  PROJ_NAME="$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name' | tr -d "'")"
+
+  if [[ -z "$NO_WORK_MASTER_MERGE" ]] && [[ -z "$FETCH_ONLY" ]]; then
+    requireCleanRepo "$PROJ_NAME"
+  fi
 
   local CURR_BRANCH REMOTE_COMMITS MASTER_UPDATED
   CURR_BRANCH="$(workCurrentWorkBranch)"
@@ -335,10 +328,26 @@ projects-sync() {
     fi
     echo "Workspace workbranch synced."
 
-    if [[ -z "$NO_WORK_MASTER_MERGE" ]] && [[ "$MASTER_UPDATED" == true ]]; then
+    if [[ -z "$NO_WORK_MASTER_MERGE" ]] \
+         && ( [[ "$MASTER_UPDATED" == true ]] || ! git merge-base --is-ancestor master $CURR_BRANCH ); then
       echo "Merging master updates to work branch..."
-      git merge master || echoerrandexit "Could not merge master updates to workbranch."
-      echo "Master updates merged to workbranch."
+      git merge master --no-commit --no-ff || true # might fail with conflicts, and that's OK
+      if git diff-index --quiet HEAD "${BASE_DIR}" && git diff --quiet HEAD "${BASE_DIR}"; then
+        echowarn "Hmm... expected to see changes from master, but none appeared. It's possible the changes have already been incorporated/recreated without a merge, so this isn't necessarily an issue, but you may want to double check that everything is as expected."
+      else
+        if ! git diff-index --quiet HEAD "${BASE_DIR}/dist" || ! git diff --quiet HEAD "${BASE_DIR}/dist"; then # there are changes in ./dist
+          echowarn "Backing out merge updates to './dist'; rebuild to generate current distribution:\nliq projects build $PROJ_NAME"
+          git checkout -f HEAD -- ./dist
+        fi
+        if git diff --quiet "${BASE_DIR}"; then # no conflicts
+          git add -A
+          git commit -m "Merge updates from master to workbranch."
+          work-save --backup-only
+          echo "Master updates merged to workbranch."
+        else
+          echowarn "Merge was successful, but conflicts exist. Please resolve and then save changes:\nliq work save"
+        fi
+      fi
     fi
   fi # on workbranach check
 }

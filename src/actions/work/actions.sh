@@ -298,7 +298,7 @@ work-qa() {
     cd "${LIQ_PLAYGROUND}/${PROJECT}"
     projects-qa "$@"
   done
-}
+} # work merge
 
 work-report() {
   local BRANCH_NAME
@@ -338,34 +338,22 @@ work-report() {
 }
 
 work-resume() {
-  if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
-    requireCleanRepos
-  fi
-
   local WORK_NAME
   workUserSelectOne WORK_NAME '' true "$@"
 
-  requireCleanRepos "${WORK_NAME}"
-
-  local CURR_WORK
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
-    CURR_WORK=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
-    if [[ "${CURR_WORK}" == "${WORK_NAME}" ]]; then
-      echowarn "'$CURR_WORK' is already the current unit of work."
+    if [[ "${LIQ_WORK_DB}/curr_work" -ef "${LIQ_WORK_DB}/${WORK_NAME}" ]]; then
+      echowarn "'$WORK_NAME' is already the current unit of work."
       exit 0
     fi
-    workSwitchBranches master
-    rm "${LIQ_WORK_DB}/curr_work"
   fi
-  cd "${LIQ_WORK_DB}" && ln -s "${WORK_NAME}" curr_work
-  source "${LIQ_WORK_DB}"/curr_work
-  workSwitchBranches "$WORK_NAME"
 
-  if [[ -n "$CURR_WORK" ]]; then
-    echo "Switched from '$CURR_WORK' to '$WORK_NAME'."
-  else
-    echo "Resumed '$WORK_NAME'."
-  fi
+  requireCleanRepos "${WORK_NAME}"
+
+  workSwitchBranches "$WORK_NAME"
+  cd "${LIQ_WORK_DB}" && ln -s "${WORK_NAME}" curr_work
+
+  echo "Resumed '$WORK_NAME'."
 }
 
 work-join() { work-resume "$@"; }
@@ -413,16 +401,17 @@ work-status() {
   local WORK_NAME LOCAL_COMMITS REMOTE_COMMITS
   workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
 
-  if [[ -z "$NO_FETCH" ]]; then
-    work-sync --fetch-only
-  fi
-
   if [[ "$PR_READY" == true ]]; then
+    git fetch workspace "${WORK_NAME}:remotes/workspace/${WORK_NAME}"
     TMP="$(git rev-list --left-right --count $WORK_NAME...workspace/$WORK_NAME)"
     LOCAL_COMMITS=$(echo $TMP | cut -d' ' -f1)
     REMOTE_COMMITS=$(echo $TMP | cut -d' ' -f2)
     (( $LOCAL_COMMITS == 0 )) && (( $REMOTE_COMMITS == 0 ))
     return $?
+  fi
+
+  if [[ -z "$NO_FETCH" ]]; then
+    work-sync --fetch-only
   fi
 
   echo "Branch name: $WORK_NAME"

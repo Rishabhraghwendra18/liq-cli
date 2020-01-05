@@ -197,7 +197,7 @@ function () {
     key: "next",
     value: function next() {
       this.cursor += 1;
-      if (this.cursor > this.length) return null;else return item(this.keys, this.data[this.cursor], this.cursor);
+      if (this.cursor >= this.length) return null;else return item(this.keys, this.data[this.cursor], this.cursor);
     }
   }, {
     key: "add",
@@ -205,8 +205,10 @@ function () {
       var line = [];
       this.keys.forEach(function (key) {
         var field = item[key];
-        if (field === undefined) throw new Error("Item does not define key '".concat(key, "'."));
-        line.push(field);
+        if (field === undefined) throw new Error("Item does not define key '".concat(key, "'.")); // We convert a single '-' to 'null'. Primarily because Atom trims white space at the end of  lines (!). Fix that,
+        // and consider changing this.
+
+        line.push(field === '-' ? null : field);
       });
       var failDesc;
       if (this.notUnique && (failDesc = this.notUnique(this.data.slice(), item))) throw new Error(failDesc);
@@ -238,73 +240,6 @@ function () {
 
   return TsvExt;
 }(), _headers = new WeakMap(), _fileName = new WeakMap(), _keys = new WeakMap(), _data = new WeakMap(), _cursor = new WeakMap(), _temp);
-
-function _arrayWithHoles(arr) {
-  if (Array.isArray(arr)) return arr;
-}
-
-var arrayWithHoles = _arrayWithHoles;
-
-function _iterableToArrayLimit(arr, i) {
-  if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) {
-    return;
-  }
-
-  var _arr = [];
-  var _n = true;
-  var _d = false;
-  var _e = undefined;
-
-  try {
-    for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
-      _arr.push(_s.value);
-
-      if (i && _arr.length === i) break;
-    }
-  } catch (err) {
-    _d = true;
-    _e = err;
-  } finally {
-    try {
-      if (!_n && _i["return"] != null) _i["return"]();
-    } finally {
-      if (_d) throw _e;
-    }
-  }
-
-  return _arr;
-}
-
-var iterableToArrayLimit = _iterableToArrayLimit;
-
-function _nonIterableRest() {
-  throw new TypeError("Invalid attempt to destructure non-iterable instance");
-}
-
-var nonIterableRest = _nonIterableRest;
-
-function _slicedToArray(arr, i) {
-  return arrayWithHoles(arr) || iterableToArrayLimit(arr, i) || nonIterableRest();
-}
-
-var slicedToArray = _slicedToArray;
-
-function _defineProperty(obj, key, value) {
-  if (key in obj) {
-    Object.defineProperty(obj, key, {
-      value: value,
-      enumerable: true,
-      configurable: true,
-      writable: true
-    });
-  } else {
-    obj[key] = value;
-  }
-
-  return obj;
-}
-
-var defineProperty = _defineProperty;
 
 var _typeof_1 = createCommonjsModule(function (module) {
 function _typeof2(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof2 = function _typeof2(obj) { return typeof obj; }; } else { _typeof2 = function _typeof2(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof2(obj); }
@@ -387,243 +322,7 @@ function _inherits(subClass, superClass) {
 
 var inherits = _inherits;
 
-var _class, _temp$1;
-var Roles = (_temp$1 = _class =
-/*#__PURE__*/
-function (_TsvExt) {
-  inherits(Roles, _TsvExt);
-
-  function Roles(fileName) {
-    classCallCheck(this, Roles);
-
-    return possibleConstructorReturn(this, getPrototypeOf(Roles).call(this, Roles.keys, fileName));
-  }
-
-  return Roles;
-}(TsvExt), defineProperty(_class, "keys", ['name', 'application', 'superRole', 'description', 'notes']), _temp$1);
-
-var _temp$2, _docDir, _roles, _rolesFile, _terms;
-var Policies = (_temp$2 =
-/*#__PURE__*/
-function () {
-  function Policies() {
-    classCallCheck(this, Policies);
-
-    _docDir.set(this, {
-      writable: true,
-      value: void 0
-    });
-
-    _roles.set(this, {
-      writable: true,
-      value: void 0
-    });
-
-    _rolesFile.set(this, {
-      writable: true,
-      value: void 0
-    });
-
-    _terms.set(this, {
-      writable: true,
-      value: void 0
-    });
-
-    defineProperty(this, "sourceFiles", void 0);
-
-    this.sourceFiles = [];
-    this.rolesFile = 'roles.tsv';
-    this.terms = [];
-  }
-
-  createClass(Policies, [{
-    key: "addSourceFile",
-    value: function addSourceFile(fileName) {
-      this.sourceFiles.push(fileName);
-    }
-  }, {
-    key: "setRolesFile",
-    value: function setRolesFile(name) {
-      this.rolesFile = name;
-    }
-  }, {
-    key: "getRoles",
-    value: function getRoles() {
-      if (this.roles !== undefined) return this.roles;
-      var rolesFile = this.findFile(this.rolesFile);
-      this.roles = new Roles(rolesFile);
-      return this.roles;
-    }
-  }, {
-    key: "findFile",
-    value: function findFile(baseName) {
-      var re = new RegExp("/".concat(baseName, "$"));
-      var results = this.sourceFiles.filter(function (f) {
-        return f.match(re);
-      });
-      if (results.length > 1) throw new Error("Found multiple files matching '".concat(baseName, "'"));else if (results.length === 0) return null;else return results[0];
-    }
-  }, {
-    key: "addTerm",
-    value: function addTerm(term, definition) {
-      this.terms.push([term, definition]);
-    }
-  }, {
-    key: "setDocumentDir",
-    value: function setDocumentDir(dir) {
-      this.docDir = dir;
-    }
-  }, {
-    key: "generateDocuments",
-    value: function generateDocuments() {
-      var _this = this;
-
-      if (this.docDir === undefined) throw new Error('No document directory defined.');
-      if (!existsSync(this.docDir)) throw new Error("Target document dir '".concat(this.docDir, "' does not exist."));
-      var roles = this.getRoles();
-      roles.data.forEach(function (i) {
-        _this.addTerm(i['Role Name'], i['Job Description']);
-      });
-      var glossaryContent = "# Glossary\n\n<dl>";
-      this.terms.sort(function (a, b) {
-        return a[0].localeCompare(b[0]);
-      });
-      this.terms.forEach(function (_ref) {
-        var _ref2 = slicedToArray(_ref, 2),
-            term = _ref2[0],
-            def = _ref2[1];
-
-        return glossaryContent += "  <dt>".concat(term, "</dt>\n  <dd>").concat(def, "</dd>\n\n");
-      });
-      glossaryContent += "</dl>\n";
-      writeFileSync("".concat(this.docDir, "/Glossary.md"), glossaryContent);
-    }
-  }]);
-
-  return Policies;
-}(), _docDir = new WeakMap(), _roles = new WeakMap(), _rolesFile = new WeakMap(), _terms = new WeakMap(), _temp$2);
-
-var refreshDocuments = function refreshDocuments(destDir, inputFiles) {
-  var policies = new Policies();
-  inputFiles.forEach(function (f) {
-    return policies.addSourceFile(f);
-  });
-  policies.setDocumentDir(destDir);
-  policies.generateDocuments();
-};
-
-function _classCallCheck$1(instance, Constructor) {
-  if (!(instance instanceof Constructor)) {
-    throw new TypeError("Cannot call a class as a function");
-  }
-}
-
-var classCallCheck$1 = _classCallCheck$1;
-
-function _defineProperties$1(target, props) {
-  for (var i = 0; i < props.length; i++) {
-    var descriptor = props[i];
-    descriptor.enumerable = descriptor.enumerable || false;
-    descriptor.configurable = true;
-    if ("value" in descriptor) descriptor.writable = true;
-    Object.defineProperty(target, descriptor.key, descriptor);
-  }
-}
-
-function _createClass$1(Constructor, protoProps, staticProps) {
-  if (protoProps) _defineProperties$1(Constructor.prototype, protoProps);
-  if (staticProps) _defineProperties$1(Constructor, staticProps);
-  return Constructor;
-}
-
-var createClass$1 = _createClass$1;
-
-function createCommonjsModule$1(fn, module) {
-	return module = { exports: {} }, fn(module, module.exports), module.exports;
-}
-
-var _typeof_1$1 = createCommonjsModule$1(function (module) {
-function _typeof2(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof2 = function _typeof2(obj) { return typeof obj; }; } else { _typeof2 = function _typeof2(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof2(obj); }
-
-function _typeof(obj) {
-  if (typeof Symbol === "function" && _typeof2(Symbol.iterator) === "symbol") {
-    module.exports = _typeof = function _typeof(obj) {
-      return _typeof2(obj);
-    };
-  } else {
-    module.exports = _typeof = function _typeof(obj) {
-      return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : _typeof2(obj);
-    };
-  }
-
-  return _typeof(obj);
-}
-
-module.exports = _typeof;
-});
-
-function _assertThisInitialized$1(self) {
-  if (self === void 0) {
-    throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
-  }
-
-  return self;
-}
-
-var assertThisInitialized$1 = _assertThisInitialized$1;
-
-function _possibleConstructorReturn$1(self, call) {
-  if (call && (_typeof_1$1(call) === "object" || typeof call === "function")) {
-    return call;
-  }
-
-  return assertThisInitialized$1(self);
-}
-
-var possibleConstructorReturn$1 = _possibleConstructorReturn$1;
-
-var getPrototypeOf$1 = createCommonjsModule$1(function (module) {
-function _getPrototypeOf(o) {
-  module.exports = _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {
-    return o.__proto__ || Object.getPrototypeOf(o);
-  };
-  return _getPrototypeOf(o);
-}
-
-module.exports = _getPrototypeOf;
-});
-
-var setPrototypeOf$1 = createCommonjsModule$1(function (module) {
-function _setPrototypeOf(o, p) {
-  module.exports = _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {
-    o.__proto__ = p;
-    return o;
-  };
-
-  return _setPrototypeOf(o, p);
-}
-
-module.exports = _setPrototypeOf;
-});
-
-function _inherits$1(subClass, superClass) {
-  if (typeof superClass !== "function" && superClass !== null) {
-    throw new TypeError("Super expression must either be null or a function");
-  }
-
-  subClass.prototype = Object.create(superClass && superClass.prototype, {
-    constructor: {
-      value: subClass,
-      writable: true,
-      configurable: true
-    }
-  });
-  if (superClass) setPrototypeOf$1(subClass, superClass);
-}
-
-var inherits$1 = _inherits$1;
-
-function _defineProperty$1(obj, key, value) {
+function _defineProperty(obj, key, value) {
   if (key in obj) {
     Object.defineProperty(obj, key, {
       value: value,
@@ -638,13 +337,13 @@ function _defineProperty$1(obj, key, value) {
   return obj;
 }
 
-var defineProperty$1 = _defineProperty$1;
+var defineProperty = _defineProperty;
 
-var _class$1, _temp$3;
-var PolicyCalendar = (_temp$3 = _class$1 =
+var _class, _temp$1;
+var PolicyCalendar = (_temp$1 = _class =
 /*#__PURE__*/
 function (_TsvExt) {
-  inherits$1(PolicyCalendar, _TsvExt);
+  inherits(PolicyCalendar, _TsvExt);
 
   /**
   * Item Name : org wide unique calendar item name.
@@ -656,24 +355,24 @@ function (_TsvExt) {
   function PolicyCalendar(fileName) {
     var _this;
 
-    classCallCheck$1(this, PolicyCalendar);
+    classCallCheck(this, PolicyCalendar);
 
-    _this = possibleConstructorReturn$1(this, getPrototypeOf$1(PolicyCalendar).call(this, PolicyCalendar.headers, PolicyCalendar.keys, fileName));
+    _this = possibleConstructorReturn(this, getPrototypeOf(PolicyCalendar).call(this, PolicyCalendar.headers, PolicyCalendar.keys, fileName));
 
-    defineProperty$1(assertThisInitialized$1(_this), "matchKey", function (line, key) {
+    defineProperty(assertThisInitialized(_this), "matchKey", function (line, key) {
       return line[0] === key;
     });
 
     return _this;
   }
 
-  createClass$1(PolicyCalendar, [{
+  createClass(PolicyCalendar, [{
     key: "notUnique",
     value: function notUnique(data, item) {
       var i;
-      return (i = data.findIndex(function (line) {
+      return -1 !== (i = data.findIndex(function (line) {
         return line[0].toLowerCase() === item.itemName.toLowerCase();
-      })) !== -1 && "Policy calendar item '".concat(item.itemName, "' already exists at entry ").concat(i + 1, ".");
+      })) && "Policy calendar item '".concat(item.itemName, "' already exists at entry ").concat(i + 1, ".");
     }
     /**
      * Generates an iniital, balanced, concrete schedule based on the Policy calendar requirements.
@@ -730,40 +429,236 @@ function (_TsvExt) {
   }]);
 
   return PolicyCalendar;
-}(TsvExt), defineProperty$1(_class$1, "headers", ['Item Name', 'Description', 'Frequency', 'Impact Weighting', 'Span']), defineProperty$1(_class$1, "keys", ['itemName', 'description', 'frequency', 'impactWeighting', 'span']), defineProperty$1(_class$1, "BIENNIAL_SELECTOR", ['ODD', 'EVEN']), defineProperty$1(_class$1, "TRIENNIAL_SELECTOR", ['ODD', 'EVEN', 'TRIPLETS']), _temp$3);
+}(TsvExt), defineProperty(_class, "headers", ['UUID', 'Item Name', 'Description', 'Frequency', 'Impact Weighting (hrs)', 'Time Span (days)', 'Absolute Condition', 'Policy Refs']), defineProperty(_class, "keys", ['uuid', 'itemName', 'description', 'frequency', 'impactWeighting', 'timeSpan', 'absCond', 'policyRefs']), defineProperty(_class, "BIENNIAL_SELECTOR", ['ODD', 'EVEN']), defineProperty(_class, "TRIENNIAL_SELECTOR", ['ODD', 'EVEN', 'TRIPLETS']), _temp$1);
 
-var _class$2, _temp$4;
-var Staff = (_temp$4 = _class$2 =
+function _arrayWithHoles(arr) {
+  if (Array.isArray(arr)) return arr;
+}
+
+var arrayWithHoles = _arrayWithHoles;
+
+function _iterableToArrayLimit(arr, i) {
+  if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) {
+    return;
+  }
+
+  var _arr = [];
+  var _n = true;
+  var _d = false;
+  var _e = undefined;
+
+  try {
+    for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+      _arr.push(_s.value);
+
+      if (i && _arr.length === i) break;
+    }
+  } catch (err) {
+    _d = true;
+    _e = err;
+  } finally {
+    try {
+      if (!_n && _i["return"] != null) _i["return"]();
+    } finally {
+      if (_d) throw _e;
+    }
+  }
+
+  return _arr;
+}
+
+var iterableToArrayLimit = _iterableToArrayLimit;
+
+function _nonIterableRest() {
+  throw new TypeError("Invalid attempt to destructure non-iterable instance");
+}
+
+var nonIterableRest = _nonIterableRest;
+
+function _slicedToArray(arr, i) {
+  return arrayWithHoles(arr) || iterableToArrayLimit(arr, i) || nonIterableRest();
+}
+
+var slicedToArray = _slicedToArray;
+
+var _class$1, _temp$2;
+var Roles = (_temp$2 = _class$1 =
 /*#__PURE__*/
 function (_TsvExt) {
-  inherits$1(Staff, _TsvExt);
+  inherits(Roles, _TsvExt);
 
-  function Staff(fileName) {
+  function Roles(fileName) {
     var _this;
 
-    classCallCheck$1(this, Staff);
+    classCallCheck(this, Roles);
 
-    _this = possibleConstructorReturn$1(this, getPrototypeOf$1(Staff).call(this, Staff.headers, Staff.keys, fileName));
+    _this = possibleConstructorReturn(this, getPrototypeOf(Roles).call(this, Roles.headers, Roles.keys, fileName));
 
-    defineProperty$1(assertThisInitialized$1(_this), "matchKey", function (line, key) {
+    defineProperty(assertThisInitialized(_this), "matchKey", function (line, key) {
       return line[0] === key;
     });
 
     return _this;
   }
 
-  createClass$1(Staff, [{
+  createClass(Roles, [{
     key: "notUnique",
     value: function notUnique(data, item) {
       var i;
-      return (i = data.findIndex(function (line) {
+      return -1 !== (i = data.findIndex(function (line) {
+        return line[0].toLowerCase() === item.name.toLowerCase();
+      })) && "Role with name '".concat(item.name, "' already exists at entry ").concat(i, ".");
+    }
+  }]);
+
+  return Roles;
+}(TsvExt), defineProperty(_class$1, "headers", ['Name', 'Application', 'Super-role', 'Description', 'Notes']), defineProperty(_class$1, "keys", ['name', 'application', 'superRole', 'description', 'notes']), _temp$2);
+
+var _temp$3, _docDir, _roles, _rolesFile, _terms;
+var Policies = (_temp$3 =
+/*#__PURE__*/
+function () {
+  function Policies() {
+    classCallCheck(this, Policies);
+
+    _docDir.set(this, {
+      writable: true,
+      value: void 0
+    });
+
+    _roles.set(this, {
+      writable: true,
+      value: void 0
+    });
+
+    _rolesFile.set(this, {
+      writable: true,
+      value: void 0
+    });
+
+    _terms.set(this, {
+      writable: true,
+      value: void 0
+    });
+
+    defineProperty(this, "sourceFiles", void 0);
+
+    this.sourceFiles = [];
+    this.rolesFile = 'roles.tsv';
+    this.terms = [];
+  }
+
+  createClass(Policies, [{
+    key: "addSourceFile",
+    value: function addSourceFile(fileName) {
+      this.sourceFiles.push(fileName);
+    }
+  }, {
+    key: "setRolesFile",
+    value: function setRolesFile(name) {
+      this.rolesFile = name;
+    }
+  }, {
+    key: "getRoles",
+    value: function getRoles() {
+      if (this.roles !== undefined) return this.roles; // TODO: allom multiple role files to be merged
+
+      var rolesFile = this.findFile(this.rolesFile);
+      this.roles = new Roles(rolesFile);
+      return this.roles;
+    }
+  }, {
+    key: "findFile",
+    value: function findFile(baseName) {
+      var re = new RegExp("/".concat(baseName, "$"));
+      var results = this.sourceFiles.filter(function (f) {
+        return f.match(re);
+      });
+      if (results.length > 1) throw new Error("Found multiple files matching '".concat(baseName, "'"));else if (results.length === 0) return null;else return results[0];
+    }
+  }, {
+    key: "addTerm",
+    value: function addTerm(term, definition) {
+      this.terms.push([term, definition]);
+    }
+  }, {
+    key: "setDocumentDir",
+    value: function setDocumentDir(dir) {
+      this.docDir = dir;
+    }
+  }, {
+    key: "generateDocuments",
+    value: function generateDocuments() {
+      if (this.docDir === undefined) throw new Error('No document directory defined.');
+      if (!existsSync(this.docDir)) throw new Error("Target document dir '".concat(this.docDir, "' does not exist."));
+      var roles = this.getRoles();
+      roles.reset();
+      var i;
+
+      while (i = roles.next()) {
+        this.addTerm(i['name'], i['description']);
+      }
+
+      var glossaryContent = "# Glossary\n\n<dl>";
+      this.terms.sort(function (a, b) {
+        return a[0].localeCompare(b[0]);
+      });
+      this.terms.forEach(function (_ref) {
+        var _ref2 = slicedToArray(_ref, 2),
+            term = _ref2[0],
+            def = _ref2[1];
+
+        return glossaryContent += "  <dt>".concat(term, "</dt>\n  <dd>").concat(def, "</dd>\n\n");
+      });
+      glossaryContent += "</dl>\n";
+      writeFileSync("".concat(this.docDir, "/Glossary.md"), glossaryContent);
+    }
+  }]);
+
+  return Policies;
+}(), _docDir = new WeakMap(), _roles = new WeakMap(), _rolesFile = new WeakMap(), _terms = new WeakMap(), _temp$3);
+
+var _class$2, _temp$4;
+var Staff = (_temp$4 = _class$2 =
+/*#__PURE__*/
+function (_TsvExt) {
+  inherits(Staff, _TsvExt);
+
+  function Staff(fileName) {
+    var _this;
+
+    classCallCheck(this, Staff);
+
+    _this = possibleConstructorReturn(this, getPrototypeOf(Staff).call(this, Staff.headers, Staff.keys, fileName));
+
+    defineProperty(assertThisInitialized(_this), "matchKey", function (line, key) {
+      return line[0] === key;
+    });
+
+    return _this;
+  }
+
+  createClass(Staff, [{
+    key: "notUnique",
+    value: function notUnique(data, item) {
+      var i;
+      return -1 !== (i = data.findIndex(function (line) {
         return line[0].toLowerCase() === item.email.toLowerCase();
-      })) !== -1 && "Staff member with email '".concat(item.email, "' already exists at entry ").concat(i + 1, ".");
+      })) && "Staff member with email '".concat(item.email, "' already exists at entry ").concat(i + 1, ".");
     }
   }]);
 
   return Staff;
-}(TsvExt), defineProperty$1(_class$2, "headers", ['Email', 'Family Name', 'Given Name', 'Start Date']), defineProperty$1(_class$2, "keys", ['email', 'familyName', 'givenName', 'startDate']), _temp$4);
+}(TsvExt), defineProperty(_class$2, "headers", ['Email', 'Family Name', 'Given Name', 'Start Date']), defineProperty(_class$2, "keys", ['email', 'familyName', 'givenName', 'startDate']), _temp$4);
 
-export { PolicyCalendar, Staff, refreshDocuments };
+var refreshDocuments = function refreshDocuments(destDir, inputFiles) {
+  var policies = new Policies();
+  inputFiles.forEach(function (f) {
+    return policies.addSourceFile(f);
+  });
+  policies.setDocumentDir(destDir);
+  policies.generateDocuments();
+};
+
+export { refreshDocuments };
 //# sourceMappingURL=index.es.js.map
