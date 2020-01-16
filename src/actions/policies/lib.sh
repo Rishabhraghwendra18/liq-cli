@@ -8,11 +8,14 @@ policiesGetPolicyDirs() {
   find "$(orgsPolicyRepo "$@")/node_modules/@liquid-labs" -maxdepth 1 -type d -name "policy-*"
 }
 
+# Will search policy dirs for TSV files. '--find-options' will be passed verbatim to find (see code).
 policiesGetPolicyFiles() {
+  eval $(setSimpleOptions FIND_OPTIONS= -- "$@")
+
   local DIRS DIR
   DIRS="$(policiesGetPolicyDirs)"
   for DIR in $DIRS; do
-    find $DIR -name "*.tsv"
+    find $DIR $FIND_OPTIONS -name "*.tsv"
   done
 }
 

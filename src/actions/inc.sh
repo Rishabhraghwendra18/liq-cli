@@ -21,6 +21,8 @@ source ./policies/actions.sh
 source ./policies/help.sh
 source ./policies/lib.sh
 
+source ./policies/audits/inc.sh
+
 source ./projects/actions.sh
 source ./projects/services.sh
 source ./projects/help.sh

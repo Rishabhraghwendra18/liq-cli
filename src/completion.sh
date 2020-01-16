@@ -37,7 +37,7 @@ _liq()
         orgs)
           OPTS="affiliate create list show select staff";;
 				policies)
-					OPTS="document";;
+					OPTS="document audits";;
         projects)
           OPTS="build close init issues publish qa sync test services";;
         remotes)
@@ -51,13 +51,6 @@ _liq()
       esac
     else
       case "${GROUP}" in
-        projects)
-          case "${ACTION}" in
-            services)
-              OPTS="add list delete show";;
-            issues)
-              OPTS="show";;
-          esac ;; # projects-actions
         orgs)
           if [[ "${ACTION}" == staff ]] && (( $WORD_COUNT == 4 )); then
             OPTS="add list remove"
@@ -68,6 +61,19 @@ _liq()
                 return 0;;
             esac
           fi;;
+        policies)
+          if [[ "${ACTION}" == 'audits' ]] && (( $WORD_COUNT == 4 )); then
+            OPTS="start"
+          elif [[ ${COMP_WORDS[3]} == 'start' ]] && (( $WORD_COUNT == 5 )); then
+            OPTS="code network"
+          fi;;
+        projects)
+          case "${ACTION}" in
+            services)
+              OPTS="add list delete show";;
+            issues)
+              OPTS="show";;
+          esac ;; # projects-actions
         work)
           case "${ACTION}" in
             stage)

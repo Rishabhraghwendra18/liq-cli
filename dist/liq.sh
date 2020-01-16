@@ -1211,7 +1211,7 @@ function log() {
     file=${BASH_SOURCE[$i-1]}
     echo "${now} $(hostname) $0:${lineno} ${msg}"
 }
-CATALYST_COMMAND_GROUPS=(help data environments meta orgs orgs-staff projects projects-issues required-services services work)
+CATALYST_COMMAND_GROUPS=(help data environments meta orgs orgs-staff policies policies-audits projects projects-issues required-services services work)
 
 # display help on help
 help-help() {
@@ -2985,6 +2985,9 @@ ${PREFIX}${cyan_u}policies${reset} <action>:
   ${underline}document${reset}: Refreshes (or generates) org policy documentation based on current data.
   ${underline}update${reset}: Updates organization policies.
 
+${bold}Sub-resources${reset}:
+  * $( SUMMARY_ONLY=true; help-policies-audits )
+
 Policies defines all manner of organizational operations. They are "organizational code".
 EOF
 }
@@ -2998,11 +3001,14 @@ policiesGetPolicyDirs() {
   find "$(orgsPolicyRepo "$@")/node_modules/@liquid-labs" -maxdepth 1 -type d -name "policy-*"
 }
 
+# Will search policy dirs for TSV files. '--find-options' will be passed verbatim to find (see code).
 policiesGetPolicyFiles() {
+  eval $(setSimpleOptions FIND_OPTIONS= -- "$@")
+
   local DIRS DIR
   DIRS="$(policiesGetPolicyDirs)"
   for DIR in $DIRS; do
-    find $DIR -name "*.tsv"
+    find $DIR $FIND_OPTIONS -name "*.tsv"
   done
 }
 
@@ -3013,6 +3019,118 @@ policiesGetPolicyProjects() {
   for DIR in $(policiesGetPolicyDirs); do
     cat "${DIR}/package.json" | jq --raw-output '.name' | tr -d "'"
   done
+}
+
+policies-audits() {
+  local ACTION="${1}"; shift
+
+  if [[ $(type -t "policies-audits-${ACTION}" || echo '') == 'function' ]]; then
+    policies-audits-${ACTION} "$@"
+  else
+    exitUnknownHelpTopic "$ACTION" policies audits
+  fi
+}
+
+policies-audits-start() {
+  eval $(setSimpleOptions CHANGE_CONTROL FULL NO_CONFIRM:C -- "$@")
+
+  local SCOPE TIME AUTHOR FILE_NAME FILES
+  policy-audit-start-prep "$@"
+
+  FILES="$(policiesGetPolicyFiles --find-options "-path './policies/$DOMAIN/standards/*items.tsv'")"
+
+  # TODO: continue
+  echo "bookmark output; found:"
+  while read -e FILE; do
+    echo "$FILE"
+  done <<< "$FILES"
+  echoerrandexit "Not implemented."
+}
+# TODO: instead, create simple spec; generate 'completion' options and 'docs' from spec.
+
+help-policies-audits() {
+  handleSummary "${cyan_u}audits${reset} <action>: Manage audits." || cat <<EOF
+${cyan_u}policies audits${reset} <action>:
+$(help-policies-audits-start | sed -e 's/^/  /')
+EOF
+} #$'' HACK to reset Atom Beutifier
+
+help-policies-audits-start() {
+  cat <<EOF
+${underline}start${reset} [--change-control|-c] [--full|-f] [--no-confirm|-C] [<domain>] :
+  Initiates an audit. An audit scope is either 'change control' (default) or 'full', which may specified by the
+  optional --change-control and --full parameters.
+
+  Currently supported domains are 'code' and 'network'. If domain isn't specified, then the user will be given an
+  interactive list.
+
+  By default, a summary of the audit will be displayed to the user for confirmation. This can be supressed with
+  the '--no-confirm' option.
+EOF
+}
+# See 'liq help policy audit start' for description of proper input.
+# outer vars: CHANGE_CONTROL FULL DOMAIN
+function policy-audit-start-confirm-and-normalize-input-valid() {
+  if [[ -n $CHANGE_CONTROL ]] || [[ -n $FULL ]]; then
+    echoerrandexit "Specify only one of '--change-control' or '--full'."
+  fi
+
+  DOMAIN="${1:-}"
+
+  if [[ -z $DOMAIN ]]; then # do menu select
+    # TODO
+    echoerrandexit "Interactive domain not yet supported."
+  else
+    case "$DOMAIN" in
+      code|c)
+        DOMAIN='code';;
+      network|n)
+        DOMAIN='network';;
+      *)
+        echoerrandexit "Unrecognized domain reference: '$DOMAIN'. Try one of:\n* code\n*network";;
+    esac
+  fi
+}
+
+# Sets the outer vars SCOPE, TIME, AUTHOR, and FILE_NAME.
+# outer vars: FULL SCOPE TIME AUTHOR FILE_NAME
+function policy-audit-set-defaults() {
+  local FILE_SCOPE FILE_TIME FILE_AUTHOR
+  if [[ -n $FULL ]]; then
+    SCOPE='full'
+  else
+    SCOPE="change control"
+    FILE_SCOPE="change_control"
+  fi
+
+  TIME="$(date +%Y-%m-%d-%H%m.%S)"
+  FILE_TIME="$(echo $TIME | sed -e 's/.\d+$//')"
+  AUTHOR="$(git config user.email)"
+  FILE_AUTHOR=$(echo $TIME | sed -e 's/@.+$//')
+
+  FILE_NAME="${FILE_TIME}-${DOMAIN}-${SCOPE}-${FILE_AUTHOR}"
+}
+
+# Confirms audit settings unless explicitly told not to.
+# outer vars: NO_CONFIRM SCOPE DOMAIN AUTHOR
+function policy-audit-start-user-confirm-audit-settings() {
+  if [[ -z $NO_CONFIRM ]]; then
+    # TODO: update 'yes-no' to use 'echofmt' ?
+    echofmt reset "Starting audit with:\n\n* scope: ${bold}${SCOPE}${reset}\n* domain: ${bold}${DOMAIN}${reset}\n* author: ${bold}${AUTHOR}${reset}\n"
+    if ! yes-no "confirm? (y/N) " N; then
+      echowarn "Audit canceled."
+      exit 0
+    fi
+  fi
+}
+
+# TODO: link the references once we support.
+# Refer to input confirmation, defaults, and user confirmation functions.
+# outer vars: inherited
+function policy-audit-start-prep() {
+  policy-audit-start-confirm-and-normalize-input-valid "$@"
+  policy-audit-set-defaults
+  policy-audit-start-user-confirm-audit-settings
 }
 
 requirements-projects() {
@@ -5573,7 +5691,7 @@ case "$GROUP" in
       help $GROUP
       echoerrandexit "\nNo action argument provided. See valid actions above."
 		elif [[ $(type -t "requirements-${GROUP}" || echo '') != 'function' ]]; then
-			exitUnknownGroup
+			exitUnknownHelpTopic "$GROUP"
     fi
     ACTION="${1:-}"; shift
     if [[ $(type -t "${GROUP}-${ACTION}" || echo '') == 'function' ]]; then
