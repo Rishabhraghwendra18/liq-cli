@@ -75,6 +75,11 @@ work-close() {
   fi
 }
 
+# Helps get users find the right command.
+work-commit() {
+  echoerrandexit "Invalid action 'commit'. Try:\nliq work save ..."
+}
+
 work-edit() {
   # TODO: make editor configurable
   local EDITOR_CMD='atom'
