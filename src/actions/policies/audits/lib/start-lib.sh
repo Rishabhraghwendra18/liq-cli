@@ -112,7 +112,9 @@ EOF
 
 # Lib internal helper. Determines applicable questions and generates initial TSV record.
 function policies-audits-initialize-questions() {
-  FILES="$(policiesGetPolicyFiles --find-options "-path './policies/$DOMAIN/standards/*items.tsv'")"
+  echo "Gathering relevant policy statements..."
+  local FILES
+  FILES="$(policiesGetPolicyFiles --find-options "-path '*/policy/${DOMAIN}/standards/*items.tsv'")"
 
   # TODO: continue
   echo -e "\nbookmark output; found:"
