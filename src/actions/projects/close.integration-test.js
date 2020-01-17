@@ -8,6 +8,7 @@ const execOpts = {
 }
 
 describe(`Command 'liq projects close'`, () => {
+  const uncleanErrorCode = 10
   let setupConfig
   let playground
   beforeEach(() => {
@@ -27,9 +28,10 @@ describe(`Command 'liq projects close'`, () => {
       /Found uncommitted changes./ ],
     [ `should do nothing and emit warning if there are un-pushed changes.`,
       (setupConfig) => shell.exec(`cd ${setupConfig.localRepoCheckout} && ( echo 'hey' >> README.md && git add README.md && git commit --quiet -m "test commit" )`, execOpts),
-      /Not all changes have been pushed to master./ ]
+      /Local master has not been pushed to upstream master./ ]
   ]
 
+  const progressOutput = /^Checking liquid-labs\/lc-entities-model\.\.\.\s*/m
   test.each(closeFailureTests)(`%s`, (desc, setup, errMatch) => {
     console.error = jest.fn() // supresses err echo from shelljs
     const setupResult = setup(setupConfig)
@@ -38,18 +40,19 @@ describe(`Command 'liq projects close'`, () => {
 
     let result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} projects close`, execOpts)
     expect(result.stderr).toMatch(errMatch, "Bash output\n" + result.stderr)
-    expect(result.stdout).toEqual('')
-    expect(result.code).toEqual(1)
+    expect(result.stdout).toMatch(progressOutput)
+    expect(result.code).toEqual(uncleanErrorCode)
 
     result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} projects close @liquid-labs/lc-entities-model`, execOpts)
     expect(result.stderr).toMatch(errMatch)
-    expect(result.stdout).toEqual('')
-    expect(result.code).toEqual(1)
+    expect(result.stdout).toMatch(progressOutput)
+    expect(result.code).toEqual(uncleanErrorCode)
   })
 
   test(`should remove current project when no changes present`, () => {
     // console.error = jest.fn() // supresses err echo from shelljs
-    const expectedOutput = /^Removed project '@liquid-labs\/lc-entities-model'/
+    const expectedOutput =
+      /^Checking liquid-labs\/lc-entities-model\.\.\.\s*Removed project '@liquid-labs\/lc-entities-model'/m
     const result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} projects close`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.stdout).toMatch(expectedOutput)
@@ -59,7 +62,8 @@ describe(`Command 'liq projects close'`, () => {
 
   test(`should remove specified project when no changes present`, () => {
     console.error = jest.fn() // supresses err echo from shelljs
-    const expectedOutput = /^Removed project '@liquid-labs\/lc-entities-model'/
+    const expectedOutput =
+      /^Checking liquid-labs\/lc-entities-model\.\.\.\s*Removed project '@liquid-labs\/lc-entities-model'/m
     const result = shell.exec(`HOME=${setupConfig.home} ${testing.LIQ} projects close @liquid-labs/lc-entities-model`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.stdout).toMatch(expectedOutput)

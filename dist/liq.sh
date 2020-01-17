@@ -1069,7 +1069,9 @@ requireCleanRepo() {
          && ! git merge-base --is-ancestor master upstream/master; then
         echoerrandexit "Local master has not been pushed to upstream master."
       fi
-      if ! git merge-base --is-ancestor "$BRANCH_TO_CHECK" "workspace/${BRANCH_TO_CHECK}"; then
+      # if the repo was created without forking, then there's no separate workspace
+      if git remote | grep -e '^workspace$' \
+          && ! git merge-base --is-ancestor "$BRANCH_TO_CHECK" "workspace/${BRANCH_TO_CHECK}"; then
         echoerrandexit "Local branch '$BRANCH_TO_CHECK' has not been pushed to workspace."
       fi
     done
@@ -3127,8 +3129,9 @@ function policy-audit-start-prep() {
   policy-audit-start-user-confirm-audit-settings
 }
 
+# Determines and creates the RECORDS_FOLDER
+# outer vars: RECORDS_FOLDER
 function policies-audits-initialize-folder() {
-  local RECORDS_FOLDER
   RECORDS_FOLDER="$(orgsPolicyRepo)/records/${FILE_NAME}"
   if [[ -d "$RECORDS_FOLDER" ]]; then
     echoerrandexit "Looks like the audit has already started. You can't start more than one audit per clock-minute."
@@ -3137,6 +3140,7 @@ function policies-audits-initialize-folder() {
   mkdir -p "$RECORDS_FOLDER"
 }
 
+# Determines applicable questions and generates initial TSV record.
 function policies-audits-initialize-questions() {
   FILES="$(policiesGetPolicyFiles --find-options "-path './policies/$DOMAIN/standards/*items.tsv'")"
 
@@ -3153,6 +3157,7 @@ function policies-audits-initialize-questions() {
 # Initialize an audit. Refer to folder and questions initializers.
 # outer vars: FILE_NAME
 function policy-audit-initialize-records() {
+  local RECORDS_FOLDER
   policies-audits-initialize-folder
   policies-audits-initialize-questions
 }
