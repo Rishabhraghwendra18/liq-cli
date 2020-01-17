@@ -9,17 +9,11 @@ policies-audits() {
 }
 
 policies-audits-start() {
-  eval $(setSimpleOptions CHANGE_CONTROL FULL NO_CONFIRM:C -- "$@")
+  eval "$(setSimpleOptions CHANGE_CONTROL FULL NO_CONFIRM:C -- "$@")"
 
   local SCOPE TIME AUTHOR FILE_NAME FILES
   policy-audit-start-prep "$@"
+  policy-audit-initialize-records
 
-  FILES="$(policiesGetPolicyFiles --find-options "-path './policies/$DOMAIN/standards/*items.tsv'")"
-
-  # TODO: continue
-  echo "bookmark output; found:"
-  while read -e FILE; do
-    echo "$FILE"
-  done <<< "$FILES"
   echoerrandexit "Not implemented."
 }
