@@ -3036,7 +3036,7 @@ policies-audits() {
 policies-audits-start() {
   eval "$(setSimpleOptions CHANGE_CONTROL FULL NO_CONFIRM:C -- "$@")"
 
-  local SCOPE TIME AUTHOR FILE_NAME FILES
+  local SCOPE TIME OWNER FILE_NAME FILES
   policy-audit-start-prep "$@"
   policy-audit-initialize-records
 
@@ -3064,7 +3064,28 @@ ${underline}start${reset} [--change-control|-c] [--full|-f] [--no-confirm|-C] [<
   the '--no-confirm' option.
 EOF
 }
-# See 'liq help policy audit start' for description of proper input.
+# TODO: link the references once we support.
+# Performs all checks and sets up variables ahead of any state changes. Refer to input confirmation, defaults, and user confirmation functions.
+# outer vars: inherited
+function policy-audit-start-prep() {
+  policy-audit-start-confirm-and-normalize-input-valid "$@"
+  policy-audit-set-defaults
+  policy-audit-start-user-confirm-audit-settings
+}
+
+# TODO: link the references once we support.
+# Initialize an audit. Refer to folder and questions initializers.
+# outer vars: FILE_NAME
+function policy-audit-initialize-records() {
+  local RECORDS_FOLDER
+  policies-audits-initialize-folder
+  policies-audits-initialize-audits-json
+  policies-audits-initialize-questions
+}
+
+# Internal help functions.
+
+# Lib internal helper. See 'liq help policy audit start' for description of proper input.
 # outer vars: CHANGE_CONTROL FULL DOMAIN
 function policy-audit-start-confirm-and-normalize-input-valid() {
   if [[ -n $CHANGE_CONTROL ]] || [[ -n $FULL ]]; then
@@ -3088,10 +3109,10 @@ function policy-audit-start-confirm-and-normalize-input-valid() {
   fi
 }
 
-# Sets the outer vars SCOPE, TIME, AUTHOR, and FILE_NAME.
-# outer vars: FULL SCOPE TIME AUTHOR FILE_NAME
+# Lib internal helper. Sets the outer vars SCOPE, TIME, OWNER, and FILE_NAME.
+# outer vars: FULL SCOPE TIME OWNER FILE_NAME
 function policy-audit-set-defaults() {
-  local FILE_SCOPE FILE_TIME FILE_AUTHOR
+  local FILE_SCOPE FILE_TIME FILE_OWNER
   if [[ -n $FULL ]]; then
     SCOPE='full'
   else
@@ -3099,18 +3120,18 @@ function policy-audit-set-defaults() {
     FILE_SCOPE="change_control"
   fi
 
-  TIME="$(date +%Y-%m-%d-%H%M.%S)"
+  TIME="$(TZ=UTC date +%Y-%m-%d-%H%M.%S)"
   FILE_TIME="$(echo $TIME | sed 's/\.[[:digit:]]*$//')"
-  AUTHOR="$(git config user.email)"
-  FILE_AUTHOR=$(echo $AUTHOR | sed -e 's/@.+$//')
+  OWNER="$(git config user.email)"
+  FILE_OWNER=$(echo $OWNER | sed -e 's/@.+$//')
 
-  FILE_NAME="${FILE_TIME}-${DOMAIN}-${SCOPE}-${FILE_AUTHOR}"
+  FILE_NAME="${FILE_TIME}-${DOMAIN}-${SCOPE}-${FILE_OWNER}"
 }
 
-# Confirms audit settings unless explicitly told not to.
-# outer vars: NO_CONFIRM SCOPE DOMAIN AUTHOR TIME
+# Lib internal helper. Confirms audit settings unless explicitly told not to.
+# outer vars: NO_CONFIRM SCOPE DOMAIN OWNER TIME
 function policy-audit-start-user-confirm-audit-settings() {
-  echofmt reset "Starting audit with:\n\n* scope: ${bold}${SCOPE}${reset}\n* domain: ${bold}${DOMAIN}${reset}\n* author: ${bold}${AUTHOR}${reset}\n"
+  echofmt reset "Starting audit with:\n\n* scope: ${bold}${SCOPE}${reset}\n* domain: ${bold}${DOMAIN}${reset}\n* owner: ${bold}${OWNER}${reset}\n"
   if [[ -z $NO_CONFIRM ]]; then
     # TODO: update 'yes-no' to use 'echofmt'? also fix echofmt to take '--color'
     if ! yes-no "confirm? (y/N) " N; then
@@ -3120,46 +3141,52 @@ function policy-audit-start-user-confirm-audit-settings() {
   fi
 }
 
-# TODO: link the references once we support.
-# Refer to input confirmation, defaults, and user confirmation functions.
-# outer vars: inherited
-function policy-audit-start-prep() {
-  policy-audit-start-confirm-and-normalize-input-valid "$@"
-  policy-audit-set-defaults
-  policy-audit-start-user-confirm-audit-settings
-}
-
-# Determines and creates the RECORDS_FOLDER
+# Lib internal helper. Determines and creates the RECORDS_FOLDER
 # outer vars: RECORDS_FOLDER
 function policies-audits-initialize-folder() {
   RECORDS_FOLDER="$(orgsPolicyRepo)/records/${FILE_NAME}"
-  if [[ -d "$RECORDS_FOLDER" ]]; then
+  if [[ -d "${RECORDS_FOLDER}" ]]; then
     echoerrandexit "Looks like the audit has already started. You can't start more than one audit per clock-minute."
   fi
   echo "Creating records folder..."
   mkdir -p "$RECORDS_FOLDER"
 }
 
-# Determines applicable questions and generates initial TSV record.
+# Lib internal helper. Initializes the 'audit.json' data record.
+# outer vars: RECORDS_FOLDER TIME DOMAIN SCOPE OWNER
+function policies-audits-initialize-audits-json() {
+  local AUDIT_SH="${RECORDS_FOLDER}/audit.sh"
+  local PARAMETERS_SH="${RECORDS_FOLDER}/parameters.sh"
+  local DESCRIPTION
+  DESCRIPTION="$(tr '[:lower:]' '[:upper:]' <<< ${SCOPE:0:1})${SCOPE:1} ${DOMAIN} audit started on ${TIME:0:10} at ${TIME:11:4} UTC by ${OWNER}."
+
+  if [[ -f "${AUDIT_SH}" ]]; then
+    echoerrandexit "Found existing 'audit.json' file while trying to initalize audit. Bailing out..."
+  fi
+
+  echofmt reset "Initializing audit data records..."
+  # TODO: extract and use 'double-quote-escape' for description
+  cat <<EOF > "${AUDIT_SH}"
+START="${TIME}"
+DESCRIPTION="${DESCRIPTION}"
+DOMAIN="${DOMAIN}"
+SCOPE="${SCOPE}"
+OWNER="${OWNER}"
+EOF
+  touch "${PARAMETERS_SH}"
+}
+
+# Lib internal helper. Determines applicable questions and generates initial TSV record.
 function policies-audits-initialize-questions() {
   FILES="$(policiesGetPolicyFiles --find-options "-path './policies/$DOMAIN/standards/*items.tsv'")"
 
   # TODO: continue
-  echo "bookmark output; found:"
+  echo -e "\nbookmark output; found:"
   while read -e FILE; do
     echo "$FILE"
   done <<< "$FILES"
 
   echoerrandexit "Implement..."
-}
-
-# TODO: link the references once we support.
-# Initialize an audit. Refer to folder and questions initializers.
-# outer vars: FILE_NAME
-function policy-audit-initialize-records() {
-  local RECORDS_FOLDER
-  policies-audits-initialize-folder
-  policies-audits-initialize-questions
 }
 
 requirements-projects() {
