@@ -77,7 +77,8 @@ work-close() {
 
 # Helps get users find the right command.
 work-commit() {
-  echoerrandexit "Invalid action 'commit'. Try:\nliq work save ..."
+  # The command generator is a bit hackish; do we have a library that handles the quotes correctly?
+  echoerrandexit "Invalid action 'commit'; do you want to 'save'?\nRefer to:\nliq help work save\nor try:\nliq work save $(for i in "$@"; do if [[ "$i" == *' '* ]]; then echo -n "'$i' "; else echo -n "$i "; fi; done)"
 }
 
 work-edit() {
