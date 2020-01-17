@@ -119,7 +119,7 @@ function policies-audits-initialize-questions() {
   # TODO: continue
   echo -e "\nbookmark output; found:"
   while read -e FILE; do
-    echo "$FILE"
+    npx liq-standards-filter-abs --settings "$(orgsPolicyRepo)/settings.sh" "$FILE"
   done <<< "$FILES"
 
   echoerrandexit "Implement..."
