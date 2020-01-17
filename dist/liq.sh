@@ -3177,16 +3177,23 @@ EOF
 }
 
 # Lib internal helper. Determines applicable questions and generates initial TSV record.
+# outer vars: RECORDS_FOLDER
 function policies-audits-initialize-questions() {
   echo "Gathering relevant policy statements..."
   local FILES
   FILES="$(policiesGetPolicyFiles --find-options "-path '*/policy/${DOMAIN}/standards/*items.tsv'")"
 
-  # TODO: continue
-  echo -e "\nbookmark output; found:"
   while read -e FILE; do
-    npx liq-standards-filter-abs --settings "$(orgsPolicyRepo)/settings.sh" "$FILE"
+    echo "FILE: $FILE"
+    npx liq-standards-filter-abs --settings "$(orgsPolicyRepo)/settings.sh" "$FILE" >> "${RECORDS_FOLDER}/_combined.tsv"
   done <<< "$FILES"
+
+  local STATEMENT
+  while read -e STATEMENT; do
+    echo "$STATEMENT" | awk -F '\t' '{print $6}'
+  done < "${RECORDS_FOLDER}/_combined.tsv"
+
+  # TODO: continue
 
   echoerrandexit "Implement..."
 }
