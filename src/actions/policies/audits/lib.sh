@@ -63,8 +63,9 @@ function policy-audit-start-prep() {
   policy-audit-start-user-confirm-audit-settings
 }
 
+# Determines and creates the RECORDS_FOLDER
+# outer vars: RECORDS_FOLDER
 function policies-audits-initialize-folder() {
-  local RECORDS_FOLDER
   RECORDS_FOLDER="$(orgsPolicyRepo)/records/${FILE_NAME}"
   if [[ -d "$RECORDS_FOLDER" ]]; then
     echoerrandexit "Looks like the audit has already started. You can't start more than one audit per clock-minute."
@@ -73,6 +74,7 @@ function policies-audits-initialize-folder() {
   mkdir -p "$RECORDS_FOLDER"
 }
 
+# Determines applicable questions and generates initial TSV record.
 function policies-audits-initialize-questions() {
   FILES="$(policiesGetPolicyFiles --find-options "-path './policies/$DOMAIN/standards/*items.tsv'")"
 
@@ -89,6 +91,7 @@ function policies-audits-initialize-questions() {
 # Initialize an audit. Refer to folder and questions initializers.
 # outer vars: FILE_NAME
 function policy-audit-initialize-records() {
+  local RECORDS_FOLDER
   policies-audits-initialize-folder
   policies-audits-initialize-questions
 }
