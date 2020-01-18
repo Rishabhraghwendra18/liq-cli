@@ -3034,7 +3034,7 @@ policies-audits() {
 }
 
 policies-audits-start() {
-  eval "$(setSimpleOptions CHANGE_CONTROL FULL NO_CONFIRM:C -- "$@")"
+  eval "$(setSimpleOptions SCOPE= NO_CONFIRM:C -- "$@")"
 
   local SCOPE TIME OWNER FILE_NAME FILES
   policy-audit-start-prep "$@"
@@ -3053,9 +3053,8 @@ EOF
 
 help-policies-audits-start() {
   cat <<EOF
-${underline}start${reset} [--change-control|-c] [--full|-f] [--no-confirm|-C] [<domain>] :
-  Initiates an audit. An audit scope is either 'change control' (default) or 'full', which may specified by the
-  optional --change-control and --full parameters.
+${underline}start${reset} [--scope|-s <scope>] [--no-confirm|-C] [<domain>] :
+  Initiates an audit. An audit scope is either 'change' (default), 'process' or 'full'.
 
   Currently supported domains are 'code' and 'network'. If domain isn't specified, then the user will be given an
   interactive list.
@@ -3068,8 +3067,8 @@ EOF
 # Performs all checks and sets up variables ahead of any state changes. Refer to input confirmation, defaults, and user confirmation functions.
 # outer vars: inherited
 function policy-audit-start-prep() {
-  policy-audit-start-confirm-and-normalize-input-valid "$@"
-  policy-audit-set-defaults
+  policy-audit-start-confirm-and-normalize-input "$@"
+  policy-audit-derive-vars
   policy-audit-start-user-confirm-audit-settings
 }
 
@@ -3086,39 +3085,28 @@ function policy-audit-initialize-records() {
 # Internal help functions.
 
 # Lib internal helper. See 'liq help policy audit start' for description of proper input.
-# outer vars: CHANGE_CONTROL FULL DOMAIN
-function policy-audit-start-confirm-and-normalize-input-valid() {
-  if [[ -n $CHANGE_CONTROL ]] || [[ -n $FULL ]]; then
-    echoerrandexit "Specify only one of '--change-control' or '--full'."
-  fi
-
+# outer vars: CHANGE_CONTROL FULL DOMAIN SCOPE
+function policy-audit-start-confirm-and-normalize-input() {
   DOMAIN="${1:-}"
+
+  if [[ -z $SCOPE ]]; then
+    SCOPE='change'
+  elif [[ $SCOPE != 'change' ]] && [[ $SCOPE != 'full' ]] && [[ $SCOPE != 'process' ]]; then
+    echoerrandexit "Invalid scope '$SCOPE'. Scope may be 'change', 'process', or 'full'."
+  fi
 
   if [[ -z $DOMAIN ]]; then # do menu select
     # TODO
     echoerrandexit "Interactive domain not yet supported."
-  else
-    case "$DOMAIN" in
-      code|c)
-        DOMAIN='code';;
-      network|n)
-        DOMAIN='network';;
-      *)
-        echoerrandexit "Unrecognized domain reference: '$DOMAIN'. Try one of:\n* code\n*network";;
-    esac
+  elif [[ $DOMAIN != 'code' ]] && [[ $DOMAIN != 'network' ]]; then
+    echoerrandexit "Unrecognized domain reference: '$DOMAIN'. Try one of:\n* code\n*network"
   fi
 }
 
 # Lib internal helper. Sets the outer vars SCOPE, TIME, OWNER, and FILE_NAME.
 # outer vars: FULL SCOPE TIME OWNER FILE_NAME
-function policy-audit-set-defaults() {
-  local FILE_SCOPE FILE_TIME FILE_OWNER
-  if [[ -n $FULL ]]; then
-    SCOPE='full'
-  else
-    SCOPE="change control"
-    FILE_SCOPE="change_control"
-  fi
+function policy-audit-derive-vars() {
+  local FILE_TIME FILE_OWNER
 
   TIME="$(TZ=UTC date +%Y-%m-%d-%H%M.%S)"
   FILE_TIME="$(echo $TIME | sed 's/\.[[:digit:]]*$//')"
@@ -3184,14 +3172,63 @@ function policies-audits-initialize-questions() {
   FILES="$(policiesGetPolicyFiles --find-options "-path '*/policy/${DOMAIN}/standards/*items.tsv'")"
 
   while read -e FILE; do
-    echo "FILE: $FILE"
     npx liq-standards-filter-abs --settings "$(orgsPolicyRepo)/settings.sh" "$FILE" >> "${RECORDS_FOLDER}/_combined.tsv"
   done <<< "$FILES"
 
-  local STATEMENT
-  while read -e STATEMENT; do
-    echo "$STATEMENT" | awk -F '\t' '{print $6}'
-  done < "${RECORDS_FOLDER}/_combined.tsv"
+  local STATEMENTS LINE
+  if [[ $SCOPE == 'full' ]]; then # all statments included
+    STATEMENTS="$(while read -e LINE; do echo "$LINE" | awk -F '\t' '{print $3}'; done \
+                  < "${RECORDS_FOLDER}/_combined.tsv")"
+  elif [[ $SCOPE == 'process' ]]; then # only IS_PROCESS_AUDIT statements included
+    STATEMENTS="$(while read -e LINE; do
+                    echo "$LINE" | awk -F '\t' '{ if ($6 == "IS_PROCESS_AUDIT") print $3 }'
+                  done < "${RECORDS_FOLDER}/_combined.tsv")"
+  else # it's a change audit and we want to ask about the nature of the change
+    local ALWAYS=1
+    local IS_FULL_AUDIT=0
+    local IS_PROCESS_AUDIT=0
+    local PARAMS PARAM AND_CONDITIONS CONDITION
+    echofmt reset "\nYou will now be asked a series of questions in order to determine the nature of the change. This will determine which policy statements need to be reviewed."
+    read -n 1 -s -r -p "Press any key to continue... "
+    echo; echo
+
+    exec 10< "${RECORDS_FOLDER}/_combined.tsv"
+    while read -u 10 -e LINE; do
+      local INCLUDE=true
+      # we read each set of 'and' conditions
+      AND_CONDITIONS="$(echo "$LINE" | awk -F '\t' '{print $6}' | tr ',' '\n' | tr -d ' ')"
+      IFS=$'\n' #
+      for CONDITION in $AND_CONDITIONS; do # evaluate each condition sequentially until failure or end
+        PARAMS="$(echo "$CONDITION" | tr -C '[:alpha:]_' '\n')"
+        for PARAM in $PARAMS; do # define undefined params of clause
+          if [[ -z "${!PARAM:-}" ]]; then
+            function set-yes() { eval $PARAM=1; }
+            function set-no() { eval $PARAM=0; }
+            local PROMPT
+            PROMPT="${PARAM:0:1}$(echo ${PARAM:1} | tr '[:upper:]' '[:lower:]' | tr '_' ' ')? (y/n) "
+            yes-no "$PROMPT" "" set-yes set-no
+            echo
+          fi
+        done # define clause params
+        if ! env -i -S "$(for PARAM in $PARAMS; do echo "$PARAM=${!PARAM} "; done)" perl -e '
+            use strict; use warnings;
+            my $condition="$ARGV[0]";
+            while (my ($k, $v) = each %ENV) { $condition =~ s/$k/$v/g; }
+            $condition =~ /[0-9<>=]+/ or die "Invalid audit condition: $condition";
+            eval "$condition" or exit 1;' $CONDITION; then
+          INCLUDE=false
+          break # stop processing conditions
+        fi
+      done # evaluate each condition
+      unset IFS
+      if [[ $INCLUDE == true ]]; then
+        list-add-item STATEMENTS "$(echo "$LINE" | awk -F '\t' '{print $3}')"
+      fi
+    done
+    exec 10<&-
+  fi
+
+  echo "$STATEMENTS"
 
   # TODO: continue
 

@@ -9,9 +9,8 @@ EOF
 
 help-policies-audits-start() {
   cat <<EOF
-${underline}start${reset} [--change-control|-c] [--full|-f] [--no-confirm|-C] [<domain>] :
-  Initiates an audit. An audit scope is either 'change control' (default) or 'full', which may specified by the
-  optional --change-control and --full parameters.
+${underline}start${reset} [--scope|-s <scope>] [--no-confirm|-C] [<domain>] :
+  Initiates an audit. An audit scope is either 'change' (default), 'process' or 'full'.
 
   Currently supported domains are 'code' and 'network'. If domain isn't specified, then the user will be given an
   interactive list.

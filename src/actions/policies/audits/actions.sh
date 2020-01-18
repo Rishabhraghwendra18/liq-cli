@@ -9,7 +9,7 @@ policies-audits() {
 }
 
 policies-audits-start() {
-  eval "$(setSimpleOptions CHANGE_CONTROL FULL NO_CONFIRM:C -- "$@")"
+  eval "$(setSimpleOptions SCOPE= NO_CONFIRM:C -- "$@")"
 
   local SCOPE TIME OWNER FILE_NAME FILES
   policy-audit-start-prep "$@"
