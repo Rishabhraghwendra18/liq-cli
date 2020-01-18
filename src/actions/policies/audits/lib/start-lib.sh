@@ -163,9 +163,13 @@ function policies-audits-initialize-questions() {
     exec 10<&-
   fi
 
-  echo "$STATEMENTS"
+  local STATEMENT
+  echo -e "Statement\tReviewer\tAffirmed\tComments" > "${RECORDS_FOLDER}/reviews.tsv"
+  while read -e STATEMENT; do
+    echo -e "$STATEMENT\t\t\t" >> "${RECORDS_FOLDER}/reviews.tsv"
+  done <<< "$STATEMENTS"
 
   # TODO: continue
-
+  cat "${RECORDS_FOLDER}/reviews.tsv"
   echoerrandexit "Implement..."
 }
