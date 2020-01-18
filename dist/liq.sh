@@ -3189,7 +3189,7 @@ function policies-audits-initialize-questions() {
     local IS_PROCESS_AUDIT=0
     local PARAMS PARAM AND_CONDITIONS CONDITION
     echofmt reset "\nYou will now be asked a series of questions in order to determine the nature of the change. This will determine which policy statements need to be reviewed."
-    read -n 1 -s -r -p "Press any key to continue... "
+    read -n 1 -s -r -p "Press any key to continue..."
     echo; echo
 
     exec 10< "${RECORDS_FOLDER}/_combined.tsv"
