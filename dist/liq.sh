@@ -3063,6 +3063,21 @@ ${underline}start${reset} [--scope|-s <scope>] [--no-confirm|-C] [<domain>] :
   the '--no-confirm' option.
 EOF
 }
+policies-audits-add-log-entry() {
+  local MESSAGE="${1}"
+
+  if [[ -z "${RECORDS_FOLDER}" ]]; then
+    echoerrandexit "Could not update log; 'RECORDS_FOLDER' not set."
+  fi
+
+  local USER
+  USER="$(git config user.email)"
+  if [[ -z "$USER" ]]; then
+    echoerrandexit "Must set git 'user.email' for use by audit log."
+  fi
+
+  echo "$(date +%Y%m%d%H%M) UTC ${USER} : ${MESSAGE}" >> "${RECORDS_FOLDER}/history.log"
+}
 # TODO: link the references once we support.
 # Performs all checks and sets up variables ahead of any state changes. Refer to input confirmation, defaults, and user confirmation functions.
 # outer vars: inherited
@@ -3106,14 +3121,13 @@ function policy-audit-start-confirm-and-normalize-input() {
 # Lib internal helper. Sets the outer vars SCOPE, TIME, OWNER, and FILE_NAME.
 # outer vars: FULL SCOPE TIME OWNER FILE_NAME
 function policy-audit-derive-vars() {
-  local FILE_TIME FILE_OWNER
+  local FILE_OWNER
 
-  TIME="$(TZ=UTC date +%Y-%m-%d-%H%M.%S)"
-  FILE_TIME="$(echo $TIME | sed 's/\.[[:digit:]]*$//')"
+  TIME="$(date -u +%Y%m%d%H%M)"
   OWNER="$(git config user.email)"
-  FILE_OWNER=$(echo $OWNER | sed -e 's/@.+$//')
+  FILE_OWNER=$(echo "${OWNER}" | sed -e 's/@.+$//')
 
-  FILE_NAME="${FILE_TIME}-${DOMAIN}-${SCOPE}-${FILE_OWNER}"
+  FILE_NAME="${TIME}-${DOMAIN}-${SCOPE}-${FILE_OWNER}"
 }
 
 # Lib internal helper. Confirms audit settings unless explicitly told not to.
@@ -3162,6 +3176,7 @@ SCOPE="${SCOPE}"
 OWNER="${OWNER}"
 EOF
   touch "${PARAMETERS_SH}"
+  echo "${TIME} UTC ${OWNER} : initiated audit" > "${RECORDS_FOLDER}/history.log"
 }
 
 # Lib internal helper. Determines applicable questions and generates initial TSV record.
@@ -3193,6 +3208,7 @@ function policies-audits-initialize-questions() {
     echo; echo
 
     exec 10< "${RECORDS_FOLDER}/_combined.tsv"
+    local PARAM_SETTINGS
     while read -u 10 -e LINE; do
       local INCLUDE=true
       # we read each set of 'and' conditions
@@ -3208,6 +3224,7 @@ function policies-audits-initialize-questions() {
             PROMPT="${PARAM:0:1}$(echo ${PARAM:1} | tr '[:upper:]' '[:lower:]' | tr '_' ' ')? (y/n) "
             yes-no "$PROMPT" "" set-yes set-no
             echo
+            PARAM_SETTINGS="${PARAM_SETTINGS} ${PARAM}='${!PARAM}'"
           fi
         done # define clause params
         if ! env -i -S "$(for PARAM in $PARAMS; do echo "$PARAM=${!PARAM} "; done)" perl -e '
@@ -3233,6 +3250,8 @@ function policies-audits-initialize-questions() {
   while read -e STATEMENT; do
     echo -e "$STATEMENT\t\t\t" >> "${RECORDS_FOLDER}/reviews.tsv"
   done <<< "$STATEMENTS"
+
+  policies-audits-add-log-entry "Initialization complete. Audit parameters:${PARAM_SETTINGS}"
 
   # TODO: continue
   cat "${RECORDS_FOLDER}/reviews.tsv"
