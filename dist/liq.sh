@@ -3193,7 +3193,7 @@ policies-audits-add-log-entry() {
     echoerrandexit "Must set git 'user.email' for use by audit log."
   fi
 
-  echo "$(policies-audits-now) UTC ${USER} ${MESSAGE}" >> "${RECORDS_FOLDER}/history.log"
+  echo "$(policies-audits-now) UTC ${USER} ${MESSAGE}" >> "${RECORDS_FOLDER}/refs/history.log"
 }
 
 # Signs the log. Takes the records folder as first argument.
@@ -3210,7 +3210,7 @@ policies-audits-sign-log() {
     -u ${USER} \
     --detach-sig \
     --armor \
-    "${RECORDS_FOLDER}/history.log"
+    "${RECORDS_FOLDER}/refs/history.log"
 }
 
 # Gets all entries since the indicated time (see policies-audits-now for format). Takes records folder and the key time as the first and second arguments.
@@ -3220,7 +3220,7 @@ policies-audits-summarize-since() {
 
   local ENTRY_TIME LINE LINE_NO
   LINE_NO=1
-  for ENTRY_TIME in $(awk '{print $1}' "${RECORDS_FOLDER}/history.log"); do
+  for ENTRY_TIME in $(awk '{print $1}' "${RECORDS_FOLDER}/refs/history.log"); do
     if (( $ENTRY_TIME < $SINCE )); then
       LINE_NO=$(( $LINE_NO + 1 ))
     else
@@ -3233,7 +3233,7 @@ policies-audits-summarize-since() {
   while read -e LINE; do
     echo "$LINE" | fold -sw 82 | sed -e '1s/^/* /' -e '2,$s/^/  /'
     LINE_NO=$(( $LINE_NO + 1 ))
-  done <<< "$(tail +${LINE_NO} "${RECORDS_FOLDER}/history.log")"
+  done <<< "$(tail +${LINE_NO} "${RECORDS_FOLDER}/refs/history.log")"
   echo
 }
 # TODO: link the references once we support.
@@ -3318,10 +3318,12 @@ function policy-audit-start-user-confirm-audit-settings() {
 # outer vars: RECORDS_FOLDER
 function policies-audits-initialize-folder() {
   if [[ -d "${RECORDS_FOLDER}" ]]; then
-    echoerrandexit "Looks like the audit has already started. You can't start more than one audit per clock-minute."
+    echoerrandexit "Looks like the audit has already started. You can't start more than one audit per second."
   fi
   echo "Creating records folder..."
-  mkdir -p "$RECORDS_FOLDER"
+  mkdir -p "${RECORDS_FOLDER}"
+  mkdir "${RECORDS_FOLDER}/refs"
+  mkdir "${RECORDS_FOLDER}/sigs"
 }
 
 # Lib internal helper. Initializes the 'audit.json' data record.
@@ -3346,7 +3348,7 @@ SCOPE="${SCOPE}"
 OWNER="${OWNER}"
 EOF
   touch "${PARAMETERS_SH}"
-  echo "${TIME} UTC ${OWNER} : initiated audit" > "${RECORDS_FOLDER}/history.log"
+  echo "${TIME} UTC ${OWNER} : initiated audit" > "${RECORDS_FOLDER}/refs/history.log"
 }
 
 # Lib internal helper. Determines applicable questions and generates initial TSV record.
@@ -3358,7 +3360,7 @@ function policies-audits-initialize-questions() {
   policies-audits-add-log-entry "${ACTION_SUMMARY}"
 }
 
-# Lib internal helper. Creates the '_combined.tsv' file containing the list of policy items included based on org (absolute) parameters.
+# Lib internal helper. Creates the 'ref/combined.tsv' file containing the list of policy items included based on org (absolute) parameters.
 # outer vars: DOMAIN RECORDS_FOLDER
 policies-audits-create-combined-tsv() {
   echo "Gathering relevant policy statements..."
@@ -3366,11 +3368,11 @@ policies-audits-create-combined-tsv() {
   FILES="$(policiesGetPolicyFiles --find-options "-path '*/policy/${DOMAIN}/standards/*items.tsv'")"
 
   while read -e FILE; do
-    npx liq-standards-filter-abs --settings "$(orgsPolicyRepo)/settings.sh" "$FILE" >> "${RECORDS_FOLDER}/_combined.tsv"
+    npx liq-standards-filter-abs --settings "$(orgsPolicyRepo)/settings.sh" "$FILE" >> "${RECORDS_FOLDER}/refs/combined.tsv"
   done <<< "$FILES"
 }
 
-# Lib internal helper. Analyzes '_combined.tsv' against parameter setting to generate the final list of statements included in the audit. This may involve an interactive question / answer loop (with change audits). Echoes a summary of actions (including any parameter values used) suitable for logging.
+# Lib internal helper. Analyzes 'ref/combined.tsv' against parameter setting to generate the final list of statements included in the audit. This may involve an interactive question / answer loop (with change audits). Echoes a summary of actions (including any parameter values used) suitable for logging.
 # outer vars: SCOPE RECORDS_FOLDER
 policies-audits-create-final-audit-statements() {
   local SUMMAR_VAR="${1}"
@@ -3378,12 +3380,12 @@ policies-audits-create-final-audit-statements() {
   local STATEMENTS LINE
   if [[ $SCOPE == 'full' ]]; then # all statments included
     STATEMENTS="$(while read -e LINE; do echo "$LINE" | awk -F '\t' '{print $3}'; done \
-                  < "${RECORDS_FOLDER}/_combined.tsv")"
+                  < "${RECORDS_FOLDER}/refs/combined.tsv")"
     eval "$SUMMARY_VAR='Initialized audit statements using with all policy standards.'"
   elif [[ $SCOPE == 'process' ]]; then # only IS_PROCESS_AUDIT statements included
     STATEMENTS="$(while read -e LINE; do
                     echo "$LINE" | awk -F '\t' '{ if ($6 == "IS_PROCESS_AUDIT") print $3 }'
-                  done < "${RECORDS_FOLDER}/_combined.tsv")"
+                  done < "${RECORDS_FOLDER}/refs/combined.tsv")"
     eval "$SUMMARY_VAR='Initialized audit statements using with all process audit standards.'"
   else # it's a change audit and we want to ask about the nature of the change
     local ALWAYS=1
@@ -3394,7 +3396,7 @@ policies-audits-create-final-audit-statements() {
     read -n 1 -s -r -p "Press any key to continue..."
     echo; echo
 
-    exec 10< "${RECORDS_FOLDER}/_combined.tsv"
+    exec 10< "${RECORDS_FOLDER}/refs/combined.tsv"
     while read -u 10 -e LINE; do
       local INCLUDE=true
       # we read each set of 'and' conditions
