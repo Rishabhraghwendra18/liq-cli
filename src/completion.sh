@@ -9,7 +9,7 @@ _liq()
     local OPTS # the options, set by this func, for completion
     local GLOBAL_ACTIONS="help"
     # Using 'GROUPS' was causing errors; set by some magic.
-    local ACTION_GROUPS="data environments orgs policies projects remotes required-services services work"
+    local ACTION_GROUPS="data environments meta orgs policies projects remotes required-services services work"
     COMPREPLY=()
     local WORD_COUNT=${#COMP_WORDS[@]}
     # TODO: instead of simple 'CUR/PREV', use the above to see where in the
@@ -33,7 +33,7 @@ _liq()
         environments)
           OPTS="add delete deselect list select set show update";;
         meta)
-          OPTS="init bash-config";;
+          OPTS="init bash-config keys";;
         orgs)
           OPTS="affiliate create list show select staff";;
 				policies)
@@ -51,6 +51,10 @@ _liq()
       esac
     else
       case "${GROUP}" in
+        meta)
+          if [[ "${ACTION}" == 'keys' ]] && (( $WORD_COUNT == 4 )); then
+            OPTS="create"
+          fi;;
         orgs)
           if [[ "${ACTION}" == staff ]] && (( $WORD_COUNT == 4 )); then
             OPTS="add list remove"

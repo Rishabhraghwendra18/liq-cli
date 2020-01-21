@@ -6,10 +6,8 @@ requirements-meta() {
 }
 
 meta-init() {
-  local TMP # see https://unix.stackexchange.com/a/88338/84520
-  TMP=$(setSimpleOptions PLAYGROUND= SILENT -- "$@") \
-    || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
+  eval "$(setSimpleOptions PLAYGROUND= SILENT -- "$@")" \
+    || { contextHelp; echoerrandexit "Bad options."; }
 
   if [[ -z "$PLAYGROUND" ]]; then
     # TODO: require-answer-matching (or something) to force absolute path here

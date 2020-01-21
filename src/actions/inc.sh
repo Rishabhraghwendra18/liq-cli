@@ -5,9 +5,7 @@ source ./data/help.sh
 source ./environments/actions.sh
 source ./environments/help.sh
 
-source ./meta/actions.sh
-source ./meta/help.sh
-source ./meta/lib.sh
+source ./meta/inc.sh
 
 source ./orgs/actions.sh
 source ./orgs/help.sh
