@@ -16,7 +16,7 @@ policies-audits-add-log-entry() {
     echoerrandexit "Must set git 'user.email' for use by audit log."
   fi
 
-  echo "$(policies-audits-now) UTC ${USER} ${MESSAGE}" >> "${RECORDS_FOLDER}/history.log"
+  echo "$(policies-audits-now) UTC ${USER} ${MESSAGE}" >> "${RECORDS_FOLDER}/refs/history.log"
 }
 
 # Signs the log. Takes the records folder as first argument.
@@ -33,7 +33,7 @@ policies-audits-sign-log() {
     -u ${USER} \
     --detach-sig \
     --armor \
-    "${RECORDS_FOLDER}/history.log"
+    "${RECORDS_FOLDER}/refs/history.log"
 }
 
 # Gets all entries since the indicated time (see policies-audits-now for format). Takes records folder and the key time as the first and second arguments.
@@ -43,7 +43,7 @@ policies-audits-summarize-since() {
 
   local ENTRY_TIME LINE LINE_NO
   LINE_NO=1
-  for ENTRY_TIME in $(awk '{print $1}' "${RECORDS_FOLDER}/history.log"); do
+  for ENTRY_TIME in $(awk '{print $1}' "${RECORDS_FOLDER}/refs/history.log"); do
     if (( $ENTRY_TIME < $SINCE )); then
       LINE_NO=$(( $LINE_NO + 1 ))
     else
@@ -56,6 +56,6 @@ policies-audits-summarize-since() {
   while read -e LINE; do
     echo "$LINE" | fold -sw 82 | sed -e '1s/^/* /' -e '2,$s/^/  /'
     LINE_NO=$(( $LINE_NO + 1 ))
-  done <<< "$(tail +${LINE_NO} "${RECORDS_FOLDER}/history.log")"
+  done <<< "$(tail +${LINE_NO} "${RECORDS_FOLDER}/refs/history.log")"
   echo
 }
