@@ -26,8 +26,10 @@ policies-audits-sign-log() {
   USER="$(git config user.email)"
   SIGNED_AT=$(policies-audits-now)
 
+  echo "Signing current log file..."
+
   mkdir -p "${RECORDS_FOLDER}/sigs"
-  gpg2 --output "${RECORDS_FOLDER}/sigs/history-${TIME}-zane.sig" \
+  gpg2 --output "${RECORDS_FOLDER}/sigs/history-${SIGNED_AT}-zane.sig" \
     -u ${USER} \
     --detach-sig \
     --armor \
