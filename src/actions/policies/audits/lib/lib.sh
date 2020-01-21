@@ -24,7 +24,7 @@ function policies-audits-finalize-session() {
   (
     cd "${RECORDS_FOLDER}"
     work-stage .
-    work-submit -m "${MESSAGE}"
+    work-save -m "${MESSAGE}"
     work-submit --no-close
     work-resume --pop
   )
