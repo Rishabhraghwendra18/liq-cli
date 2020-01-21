@@ -18,13 +18,17 @@ ${PREFIX}${cyan_u}work${reset} <action>:
     work. The '--no-link' option will suppress this behavior.
   ${underline}issues${reset} [--list|--add|--remove]: Manages issues associated with the current unit of work.
     TODO: this should be re-worked as sub-group.
-  ${underline}start${reset} <name>: Creates a new unit of work and adds the current repository (if any) to it.
+  ${underline}start${reset} [--issues <# or URL>] [--push] <name>:
+    Creates a new unit of work and adds the current repository (if any) to it. You must specify at least one issue.
+    Use a comma separated list to specify mutliple issues. The '--push' option will record the current unit of work
+    which can then be recovered with 'liq work resume --pop'.
   ${underline}stop${reset} [-k|--keep-checkout]: Stops working on the current unit of work. The
     master branch will be checked out for all involved projects unless
     '--keep-checkout' is used.
-  ${underline}resume${reset} [<name>]:
+  ${underline}resume${reset} [--pop] [<name>]:
     alias: ${underline}join${reset}
-    Resume/join work on an existing unit of work.
+    Resume work or join an existing unit of work. If the '--pop' option is specified, then arguments will be
+    ignored and the last 'pushed' unit of work (see 'liq work start --push') will be resumed.
   ${underline}edit${reset}: Opens a local project editor for all involved repositories.
   ${underline}report${reset}: Reports status of files in the current unit of work.
   ${underline}diff-master${reset}: Shows committed changes since branch from 'master' for all
