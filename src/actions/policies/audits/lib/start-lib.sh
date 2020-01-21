@@ -80,7 +80,7 @@ function policy-audit-start-user-confirm-audit-settings() {
 # outer vars: RECORDS_FOLDER
 function policies-audits-initialize-folder() {
   if [[ -d "${RECORDS_FOLDER}" ]]; then
-    echoerrandexit "Looks like the audit has already started. You can't start more than one audit per clock-minute."
+    echoerrandexit "Looks like the audit has already started. You can't start more than one audit per second."
   fi
   echo "Creating records folder..."
   mkdir -p "${RECORDS_FOLDER}"
