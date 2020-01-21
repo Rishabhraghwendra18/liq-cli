@@ -5313,7 +5313,7 @@ work-resume() {
   workSwitchBranches "$WORK_NAME"
   (
     cd "${LIQ_WORK_DB}"
-    rf -f curr_work
+    rm -f curr_work
     ln -s "${WORK_NAME}" curr_work
   )
 
