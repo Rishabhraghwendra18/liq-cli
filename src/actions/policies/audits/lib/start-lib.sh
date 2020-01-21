@@ -50,8 +50,8 @@ function policy-audit-start-confirm-and-normalize-input() {
   fi
 }
 
-# Lib internal helper. Sets the outer vars SCOPE, TIME, OWNER, and RECORDS_FOLDER
-# outer vars: FULL SCOPE TIME OWNER RECORDS_FOLDER
+# Lib internal helper. Sets the outer vars SCOPE, TIME, OWNER, and AUDIT_PATH
+# outer vars: FULL SCOPE TIME OWNER AUDIT_PATH
 function policy-audit-derive-vars() {
   local FILE_OWNER FILE_NAME
 
@@ -60,7 +60,7 @@ function policy-audit-derive-vars() {
   FILE_OWNER=$(echo "${OWNER}" | sed -e 's/@.*$//')
 
   FILE_NAME="${TIME}-${DOMAIN}-${SCOPE}-${FILE_OWNER}"
-  RECORDS_FOLDER="$(orgsPolicyRepo)/records/${FILE_NAME}"
+  AUDIT_PATH="$(orgsPolicyRepo)/${AUDITS_ACTIVE_PATH}/${FILE_NAME}"
 }
 
 # Lib internal helper. Confirms audit settings unless explicitly told not to.
@@ -76,23 +76,23 @@ function policy-audit-start-user-confirm-audit-settings() {
   fi
 }
 
-# Lib internal helper. Determines and creates the RECORDS_FOLDER
-# outer vars: RECORDS_FOLDER
+# Lib internal helper. Determines and creates the AUDIT_PATH
+# outer vars: AUDIT_PATH
 function policies-audits-initialize-folder() {
-  if [[ -d "${RECORDS_FOLDER}" ]]; then
+  if [[ -d "${AUDIT_PATH}" ]]; then
     echoerrandexit "Looks like the audit has already started. You can't start more than one audit per second."
   fi
   echo "Creating records folder..."
-  mkdir -p "${RECORDS_FOLDER}"
-  mkdir "${RECORDS_FOLDER}/refs"
-  mkdir "${RECORDS_FOLDER}/sigs"
+  mkdir -p "${AUDIT_PATH}"
+  mkdir "${AUDIT_PATH}/refs"
+  mkdir "${AUDIT_PATH}/sigs"
 }
 
 # Lib internal helper. Initializes the 'audit.json' data record.
-# outer vars: RECORDS_FOLDER TIME DOMAIN SCOPE OWNER
+# outer vars: AUDIT_PATH TIME DOMAIN SCOPE OWNER
 function policies-audits-initialize-audits-json() {
-  local AUDIT_SH="${RECORDS_FOLDER}/audit.sh"
-  local PARAMETERS_SH="${RECORDS_FOLDER}/parameters.sh"
+  local AUDIT_SH="${AUDIT_PATH}/audit.sh"
+  local PARAMETERS_SH="${AUDIT_PATH}/parameters.sh"
   local DESCRIPTION
   DESCRIPTION=$(policies-audits-describe)
 
@@ -110,7 +110,7 @@ SCOPE="${SCOPE}"
 OWNER="${OWNER}"
 EOF
   touch "${PARAMETERS_SH}"
-  echo "${TIME} UTC ${OWNER} : initiated audit" > "${RECORDS_FOLDER}/refs/history.log"
+  echo "${TIME} UTC ${OWNER} : initiated audit" > "${AUDIT_PATH}/refs/history.log"
 }
 
 # Lib internal helper. Determines applicable questions and generates initial TSV record.
@@ -123,31 +123,31 @@ function policies-audits-initialize-questions() {
 }
 
 # Lib internal helper. Creates the 'ref/combined.tsv' file containing the list of policy items included based on org (absolute) parameters.
-# outer vars: DOMAIN RECORDS_FOLDER
+# outer vars: DOMAIN AUDIT_PATH
 policies-audits-create-combined-tsv() {
   echo "Gathering relevant policy statements..."
   local FILES
   FILES="$(policiesGetPolicyFiles --find-options "-path '*/policy/${DOMAIN}/standards/*items.tsv'")"
 
   while read -e FILE; do
-    npx liq-standards-filter-abs --settings "$(orgsPolicyRepo)/settings.sh" "$FILE" >> "${RECORDS_FOLDER}/refs/combined.tsv"
+    npx liq-standards-filter-abs --settings "$(orgsPolicyRepo)/settings.sh" "$FILE" >> "${AUDIT_PATH}/refs/combined.tsv"
   done <<< "$FILES"
 }
 
 # Lib internal helper. Analyzes 'ref/combined.tsv' against parameter setting to generate the final list of statements included in the audit. This may involve an interactive question / answer loop (with change audits). Echoes a summary of actions (including any parameter values used) suitable for logging.
-# outer vars: SCOPE RECORDS_FOLDER
+# outer vars: SCOPE AUDIT_PATH
 policies-audits-create-final-audit-statements() {
   local SUMMAR_VAR="${1}"
 
   local STATEMENTS LINE
   if [[ $SCOPE == 'full' ]]; then # all statments included
     STATEMENTS="$(while read -e LINE; do echo "$LINE" | awk -F '\t' '{print $3}'; done \
-                  < "${RECORDS_FOLDER}/refs/combined.tsv")"
+                  < "${AUDIT_PATH}/refs/combined.tsv")"
     eval "$SUMMARY_VAR='Initialized audit statements using with all policy standards.'"
   elif [[ $SCOPE == 'process' ]]; then # only IS_PROCESS_AUDIT statements included
     STATEMENTS="$(while read -e LINE; do
                     echo "$LINE" | awk -F '\t' '{ if ($6 == "IS_PROCESS_AUDIT") print $3 }'
-                  done < "${RECORDS_FOLDER}/refs/combined.tsv")"
+                  done < "${AUDIT_PATH}/refs/combined.tsv")"
     eval "$SUMMARY_VAR='Initialized audit statements using with all process audit standards.'"
   else # it's a change audit and we want to ask about the nature of the change
     local ALWAYS=1
@@ -158,7 +158,7 @@ policies-audits-create-final-audit-statements() {
     read -n 1 -s -r -p "Press any key to continue..."
     echo; echo
 
-    exec 10< "${RECORDS_FOLDER}/refs/combined.tsv"
+    exec 10< "${AUDIT_PATH}/refs/combined.tsv"
     while read -u 10 -e LINE; do
       local INCLUDE=true
       # we read each set of 'and' conditions
@@ -198,8 +198,8 @@ policies-audits-create-final-audit-statements() {
   fi
 
   local STATEMENT
-  echo -e "Statement\tReviewer\tAffirmed\tComments" > "${RECORDS_FOLDER}/reviews.tsv"
+  echo -e "Statement\tReviewer\tAffirmed\tComments" > "${AUDIT_PATH}/reviews.tsv"
   while read -e STATEMENT; do
-    echo -e "$STATEMENT\t\t\t" >> "${RECORDS_FOLDER}/reviews.tsv"
+    echo -e "$STATEMENT\t\t\t" >> "${AUDIT_PATH}/reviews.tsv"
   done <<< "$STATEMENTS"
 }

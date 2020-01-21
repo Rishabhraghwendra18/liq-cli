@@ -1171,6 +1171,15 @@ ORIGIN_URL='' # can be set externally to avoid interactive questions on 'project
 STD_ENV_PURPOSES=dev$'\n'test$'\n'pre-production$'\n'production
 STD_IFACE_CLASSES=http$'\n'html$'\n'rest$'\n'sql
 STD_PLATFORM_TYPES=local$'\n'gcp$'\n'aws
+
+# Standard locations, relative to org repo.
+RECORDS_PATH="records"
+AUDITS_PATH="${RECORDS_PATH}/audits"
+AUDITS_ACTIVE_PATH="${AUDITS_PATH}/active"
+AUDITS_COMPLETE_PATH="${AUDITS_PATH}/complete"
+KEYS_PATH="${RECORDS_PATH}/keys"
+KEYS_ACTIVE_PATH="${KEYS_PATH}/active"
+KEYS_EXPIRED_PATH="${KEYS_PATH}/expired"
 set -o errtrace # inherits trap on ERR in function and subshell
 
 trap 'traperror $? $LINENO $BASH_LINENO "$BASH_COMMAND" $(printf "::%s" ${FUNCNAME[@]:-})' ERR
@@ -3116,11 +3125,11 @@ policies-audits() {
 policies-audits-start() {
   eval "$(setSimpleOptions SCOPE= NO_CONFIRM:C -- "$@")"
 
-  local SCOPE TIME OWNER RECORDS_FOLDER FILES
+  local SCOPE TIME OWNER AUDIT_PATH FILES
   policy-audit-start-prep "$@"
   policies-audits-setup-work
   policy-audit-initialize-records
-  policies-audits-finalize-session "${RECORDS_FOLDER}" "${TIME}" "$(policies-audits-describe)"
+  policies-audits-finalize-session "${AUDIT_PATH}" "${TIME}" "$(policies-audits-describe)"
 }
 # TODO: instead, create simple spec; generate 'completion' options and 'docs' from spec.
 
@@ -3161,17 +3170,17 @@ function policies-audits-describe() {
 
 # Finalizes the session by signing the log, committing the updates, and summarizing the session. Takes the records folder, key time, and commit message as first, second, and third arguments.
 function policies-audits-finalize-session() {
-  local RECORDS_FOLDER="${1}"
+  local AUDIT_PATH="${1}"
   local TIME="${2}"
   local MESSAGE="${3}"
 
-  policies-audits-sign-log "${RECORDS_FOLDER}"
+  policies-audits-sign-log "${AUDIT_PATH}"
   (
-    cd "${RECORDS_FOLDER}"
+    cd "${AUDIT_PATH}"
     work-stage .
     work-save -m "${MESSAGE}"
     work-submit --no-close
-    policies-audits-summarize-since "${RECORDS_FOLDER}" ${TIME}
+    policies-audits-summarize-since "${AUDIT_PATH}" ${TIME}
     work-resume --pop
   )
 }
@@ -3179,12 +3188,12 @@ function policies-audits-finalize-session() {
 policies-audits-now() { date -u +%Y%m%d%H%M%S; }
 
 # Adds log entry. Takes a single argument, the message to add to the log entry.
-# outer vars: RECORDS_FOLDER
+# outer vars: AUDIT_PATH
 policies-audits-add-log-entry() {
   local MESSAGE="${1}"
 
-  if [[ -z "${RECORDS_FOLDER}" ]]; then
-    echoerrandexit "Could not update log; 'RECORDS_FOLDER' not set."
+  if [[ -z "${AUDIT_PATH}" ]]; then
+    echoerrandexit "Could not update log; 'AUDIT_PATH' not set."
   fi
 
   local USER
@@ -3193,34 +3202,34 @@ policies-audits-add-log-entry() {
     echoerrandexit "Must set git 'user.email' for use by audit log."
   fi
 
-  echo "$(policies-audits-now) UTC ${USER} ${MESSAGE}" >> "${RECORDS_FOLDER}/refs/history.log"
+  echo "$(policies-audits-now) UTC ${USER} ${MESSAGE}" >> "${AUDIT_PATH}/refs/history.log"
 }
 
 # Signs the log. Takes the records folder as first argument.
 policies-audits-sign-log() {
-  local RECORDS_FOLDER="${1}"
+  local AUDIT_PATH="${1}"
   local USER SIGNED_AT
   USER="$(git config user.email)"
   SIGNED_AT=$(policies-audits-now)
 
   echo "Signing current log file..."
 
-  mkdir -p "${RECORDS_FOLDER}/sigs"
-  gpg2 --output "${RECORDS_FOLDER}/sigs/history-${SIGNED_AT}-zane.sig" \
+  mkdir -p "${AUDIT_PATH}/sigs"
+  gpg2 --output "${AUDIT_PATH}/sigs/history-${SIGNED_AT}-zane.sig" \
     -u ${USER} \
     --detach-sig \
     --armor \
-    "${RECORDS_FOLDER}/refs/history.log"
+    "${AUDIT_PATH}/refs/history.log"
 }
 
 # Gets all entries since the indicated time (see policies-audits-now for format). Takes records folder and the key time as the first and second arguments.
 policies-audits-summarize-since() {
-  local RECORDS_FOLDER="${1}"
+  local AUDIT_PATH="${1}"
   local SINCE="${2}"
 
   local ENTRY_TIME LINE LINE_NO
   LINE_NO=1
-  for ENTRY_TIME in $(awk '{print $1}' "${RECORDS_FOLDER}/refs/history.log"); do
+  for ENTRY_TIME in $(awk '{print $1}' "${AUDIT_PATH}/refs/history.log"); do
     if (( $ENTRY_TIME < $SINCE )); then
       LINE_NO=$(( $LINE_NO + 1 ))
     else
@@ -3233,7 +3242,7 @@ policies-audits-summarize-since() {
   while read -e LINE; do
     echo "$LINE" | fold -sw 82 | sed -e '1s/^/* /' -e '2,$s/^/  /'
     LINE_NO=$(( $LINE_NO + 1 ))
-  done <<< "$(tail +${LINE_NO} "${RECORDS_FOLDER}/refs/history.log")"
+  done <<< "$(tail +${LINE_NO} "${AUDIT_PATH}/refs/history.log")"
   echo
 }
 # TODO: link the references once we support.
@@ -3288,8 +3297,8 @@ function policy-audit-start-confirm-and-normalize-input() {
   fi
 }
 
-# Lib internal helper. Sets the outer vars SCOPE, TIME, OWNER, and RECORDS_FOLDER
-# outer vars: FULL SCOPE TIME OWNER RECORDS_FOLDER
+# Lib internal helper. Sets the outer vars SCOPE, TIME, OWNER, and AUDIT_PATH
+# outer vars: FULL SCOPE TIME OWNER AUDIT_PATH
 function policy-audit-derive-vars() {
   local FILE_OWNER FILE_NAME
 
@@ -3298,7 +3307,7 @@ function policy-audit-derive-vars() {
   FILE_OWNER=$(echo "${OWNER}" | sed -e 's/@.*$//')
 
   FILE_NAME="${TIME}-${DOMAIN}-${SCOPE}-${FILE_OWNER}"
-  RECORDS_FOLDER="$(orgsPolicyRepo)/records/${FILE_NAME}"
+  AUDIT_PATH="$(orgsPolicyRepo)/${AUDITS_ACTIVE_PATH}/${FILE_NAME}"
 }
 
 # Lib internal helper. Confirms audit settings unless explicitly told not to.
@@ -3314,23 +3323,23 @@ function policy-audit-start-user-confirm-audit-settings() {
   fi
 }
 
-# Lib internal helper. Determines and creates the RECORDS_FOLDER
-# outer vars: RECORDS_FOLDER
+# Lib internal helper. Determines and creates the AUDIT_PATH
+# outer vars: AUDIT_PATH
 function policies-audits-initialize-folder() {
-  if [[ -d "${RECORDS_FOLDER}" ]]; then
+  if [[ -d "${AUDIT_PATH}" ]]; then
     echoerrandexit "Looks like the audit has already started. You can't start more than one audit per second."
   fi
   echo "Creating records folder..."
-  mkdir -p "${RECORDS_FOLDER}"
-  mkdir "${RECORDS_FOLDER}/refs"
-  mkdir "${RECORDS_FOLDER}/sigs"
+  mkdir -p "${AUDIT_PATH}"
+  mkdir "${AUDIT_PATH}/refs"
+  mkdir "${AUDIT_PATH}/sigs"
 }
 
 # Lib internal helper. Initializes the 'audit.json' data record.
-# outer vars: RECORDS_FOLDER TIME DOMAIN SCOPE OWNER
+# outer vars: AUDIT_PATH TIME DOMAIN SCOPE OWNER
 function policies-audits-initialize-audits-json() {
-  local AUDIT_SH="${RECORDS_FOLDER}/audit.sh"
-  local PARAMETERS_SH="${RECORDS_FOLDER}/parameters.sh"
+  local AUDIT_SH="${AUDIT_PATH}/audit.sh"
+  local PARAMETERS_SH="${AUDIT_PATH}/parameters.sh"
   local DESCRIPTION
   DESCRIPTION=$(policies-audits-describe)
 
@@ -3348,7 +3357,7 @@ SCOPE="${SCOPE}"
 OWNER="${OWNER}"
 EOF
   touch "${PARAMETERS_SH}"
-  echo "${TIME} UTC ${OWNER} : initiated audit" > "${RECORDS_FOLDER}/refs/history.log"
+  echo "${TIME} UTC ${OWNER} : initiated audit" > "${AUDIT_PATH}/refs/history.log"
 }
 
 # Lib internal helper. Determines applicable questions and generates initial TSV record.
@@ -3361,31 +3370,31 @@ function policies-audits-initialize-questions() {
 }
 
 # Lib internal helper. Creates the 'ref/combined.tsv' file containing the list of policy items included based on org (absolute) parameters.
-# outer vars: DOMAIN RECORDS_FOLDER
+# outer vars: DOMAIN AUDIT_PATH
 policies-audits-create-combined-tsv() {
   echo "Gathering relevant policy statements..."
   local FILES
   FILES="$(policiesGetPolicyFiles --find-options "-path '*/policy/${DOMAIN}/standards/*items.tsv'")"
 
   while read -e FILE; do
-    npx liq-standards-filter-abs --settings "$(orgsPolicyRepo)/settings.sh" "$FILE" >> "${RECORDS_FOLDER}/refs/combined.tsv"
+    npx liq-standards-filter-abs --settings "$(orgsPolicyRepo)/settings.sh" "$FILE" >> "${AUDIT_PATH}/refs/combined.tsv"
   done <<< "$FILES"
 }
 
 # Lib internal helper. Analyzes 'ref/combined.tsv' against parameter setting to generate the final list of statements included in the audit. This may involve an interactive question / answer loop (with change audits). Echoes a summary of actions (including any parameter values used) suitable for logging.
-# outer vars: SCOPE RECORDS_FOLDER
+# outer vars: SCOPE AUDIT_PATH
 policies-audits-create-final-audit-statements() {
   local SUMMAR_VAR="${1}"
 
   local STATEMENTS LINE
   if [[ $SCOPE == 'full' ]]; then # all statments included
     STATEMENTS="$(while read -e LINE; do echo "$LINE" | awk -F '\t' '{print $3}'; done \
-                  < "${RECORDS_FOLDER}/refs/combined.tsv")"
+                  < "${AUDIT_PATH}/refs/combined.tsv")"
     eval "$SUMMARY_VAR='Initialized audit statements using with all policy standards.'"
   elif [[ $SCOPE == 'process' ]]; then # only IS_PROCESS_AUDIT statements included
     STATEMENTS="$(while read -e LINE; do
                     echo "$LINE" | awk -F '\t' '{ if ($6 == "IS_PROCESS_AUDIT") print $3 }'
-                  done < "${RECORDS_FOLDER}/refs/combined.tsv")"
+                  done < "${AUDIT_PATH}/refs/combined.tsv")"
     eval "$SUMMARY_VAR='Initialized audit statements using with all process audit standards.'"
   else # it's a change audit and we want to ask about the nature of the change
     local ALWAYS=1
@@ -3396,7 +3405,7 @@ policies-audits-create-final-audit-statements() {
     read -n 1 -s -r -p "Press any key to continue..."
     echo; echo
 
-    exec 10< "${RECORDS_FOLDER}/refs/combined.tsv"
+    exec 10< "${AUDIT_PATH}/refs/combined.tsv"
     while read -u 10 -e LINE; do
       local INCLUDE=true
       # we read each set of 'and' conditions
@@ -3436,9 +3445,9 @@ policies-audits-create-final-audit-statements() {
   fi
 
   local STATEMENT
-  echo -e "Statement\tReviewer\tAffirmed\tComments" > "${RECORDS_FOLDER}/reviews.tsv"
+  echo -e "Statement\tReviewer\tAffirmed\tComments" > "${AUDIT_PATH}/reviews.tsv"
   while read -e STATEMENT; do
-    echo -e "$STATEMENT\t\t\t" >> "${RECORDS_FOLDER}/reviews.tsv"
+    echo -e "$STATEMENT\t\t\t" >> "${AUDIT_PATH}/reviews.tsv"
   done <<< "$STATEMENTS"
 }
 

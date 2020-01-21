@@ -11,9 +11,9 @@ policies-audits() {
 policies-audits-start() {
   eval "$(setSimpleOptions SCOPE= NO_CONFIRM:C -- "$@")"
 
-  local SCOPE TIME OWNER RECORDS_FOLDER FILES
+  local SCOPE TIME OWNER AUDIT_PATH FILES
   policy-audit-start-prep "$@"
   policies-audits-setup-work
   policy-audit-initialize-records
-  policies-audits-finalize-session "${RECORDS_FOLDER}" "${TIME}" "$(policies-audits-describe)"
+  policies-audits-finalize-session "${AUDIT_PATH}" "${TIME}" "$(policies-audits-describe)"
 }
