@@ -3263,6 +3263,17 @@ EOF
 # Lib internal helper. Determines applicable questions and generates initial TSV record.
 # outer vars: RECORDS_FOLDER
 function policies-audits-initialize-questions() {
+  policies-audits-create-combined-tsv
+  policies-audits-create-final-audit-statements
+
+  # TODO: continue
+  cat "${RECORDS_FOLDER}/reviews.tsv"
+  echoerrandexit "Implement..."
+}
+
+# Lib internal helper. Creates the '_combined.tsv' file containing the list of policy items included based on org (absolute) parameters.
+# outer vars: DOMAIN RECORDS_FOLDER
+policies-audits-create-combined-tsv() {
   echo "Gathering relevant policy statements..."
   local FILES
   FILES="$(policiesGetPolicyFiles --find-options "-path '*/policy/${DOMAIN}/standards/*items.tsv'")"
@@ -3270,7 +3281,11 @@ function policies-audits-initialize-questions() {
   while read -e FILE; do
     npx liq-standards-filter-abs --settings "$(orgsPolicyRepo)/settings.sh" "$FILE" >> "${RECORDS_FOLDER}/_combined.tsv"
   done <<< "$FILES"
+}
 
+# Lib internal helper. Analyzes '_combined.tsv' against parameter setting to generate the final list of statements included in the audit. This may involve an interactive question / answer loop (with change audits). This will also generate a log entry summarizing the user actions and noting the parameter values used to create the audit.
+# outer vars: SCOPE RECORDS_FOLDER
+policies-audits-create-final-audit-statements() {
   local STATEMENTS LINE
   if [[ $SCOPE == 'full' ]]; then # all statments included
     STATEMENTS="$(while read -e LINE; do echo "$LINE" | awk -F '\t' '{print $3}'; done \
@@ -3283,13 +3298,12 @@ function policies-audits-initialize-questions() {
     local ALWAYS=1
     local IS_FULL_AUDIT=0
     local IS_PROCESS_AUDIT=0
-    local PARAMS PARAM AND_CONDITIONS CONDITION
+    local PARAMS PARAM PARAM_SETTINGS AND_CONDITIONS CONDITION
     echofmt reset "\nYou will now be asked a series of questions in order to determine the nature of the change. This will determine which policy statements need to be reviewed."
     read -n 1 -s -r -p "Press any key to continue..."
     echo; echo
 
     exec 10< "${RECORDS_FOLDER}/_combined.tsv"
-    local PARAM_SETTINGS
     while read -u 10 -e LINE; do
       local INCLUDE=true
       # we read each set of 'and' conditions
@@ -3333,10 +3347,6 @@ function policies-audits-initialize-questions() {
   done <<< "$STATEMENTS"
 
   policies-audits-add-log-entry "Initialization complete. Audit parameters:${PARAM_SETTINGS}"
-
-  # TODO: continue
-  cat "${RECORDS_FOLDER}/reviews.tsv"
-  echoerrandexit "Implement..."
 }
 
 requirements-projects() {
