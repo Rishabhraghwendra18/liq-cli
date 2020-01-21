@@ -2,6 +2,7 @@
 # Performs all checks and sets up variables ahead of any state changes. Refer to input confirmation, defaults, and user confirmation functions.
 # outer vars: inherited
 function policy-audit-start-prep() {
+  meta-keys-user-has-key
   policy-audit-start-confirm-and-normalize-input "$@"
   policy-audit-derive-vars
   policy-audit-start-user-confirm-audit-settings

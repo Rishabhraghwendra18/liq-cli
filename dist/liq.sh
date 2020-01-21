@@ -2521,10 +2521,8 @@ requirements-meta() {
 }
 
 meta-init() {
-  local TMP # see https://unix.stackexchange.com/a/88338/84520
-  TMP=$(setSimpleOptions PLAYGROUND= SILENT -- "$@") \
-    || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
+  eval "$(setSimpleOptions PLAYGROUND= SILENT -- "$@")" \
+    || { contextHelp; echoerrandexit "Bad options."; }
 
   if [[ -z "$PLAYGROUND" ]]; then
     # TODO: require-answer-matching (or something) to force absolute path here
@@ -2551,10 +2549,15 @@ help-meta() {
 
   handleSummary "${PREFIX}${cyan_u}meta${reset} <action>: Handles liq self-config and meta operations." \
    || cat <<EOF
+The meta group manages local liq configurations and non-liq user resources.
+
 ${PREFIX}${cyan_u}meta${reset} <action>:
    ${underline}init${reset} [--silent|-s] [--playground|-p <absolute path>]: Creates the Liquid
      Development DB (a local directory) and playground.
    ${underline}bash-config${reset}: Prints bash configuration. Try: eval \`liq meta bash-config\`
+
+   ${bold}Sub-resources${reset}:
+     * $( SUMMARY_ONLY=true; help-meta-keys )
 EOF
 }
 metaSetupLiqDb() {
@@ -2576,6 +2579,83 @@ metaSetupLiqDb() {
 LIQ_PLAYGROUND="$LIQ_PLAYGROUND"
 EOF
   echo "${green}success${reset}"
+}
+meta-keys() {
+  local ACTION="${1}"; shift
+
+  if [[ $(type -t "meta-keys-${ACTION}" || echo '') == 'function' ]]; then
+    meta-keys-${ACTION} "$@"
+  else
+    exitUnknownHelpTopic "$ACTION" meta keys
+  fi
+}
+
+meta-keys-create() {
+  eval "$(setSimpleOptions IMPORT USER= FULL_NAME= -- "$@")"
+
+  if [[ -z "$USER" ]]; then
+    USER="$(git config user.email)"
+    if [[ -z "$USER" ]]; then
+      echoerrandexit "Must set git 'user.email' or specify '--user' to create key."
+    fi
+  fi
+
+  if [[ -z "${FULL_NAME}" ]]; then
+    FULL_NAME="$(git config user.email)"
+    if [[ -z "$FULL_NAME" ]]; then
+      echoerrandexit "Must set git 'user.name' or specify '--full-name' to create key."
+    fi
+  fi
+
+  # Does the key already exist?
+  if gpg2 --list-secret-keys "$USER" 2> /dev/null; then
+    echoerrandexit "Key for '${USER}' already exists in default secret keyring. Bailing out..."
+  fi
+
+  local BITS=4096
+  local ALGO=rsa
+  local EXPIRY_YEARS=5
+  gpg2 --batch --gen-key <<<"%echo Generating ${ALGO}${BITS} key for '${USER}'; expires in ${EXPIRY_YEARS} years.
+Key-Type: RSA
+Key-Length: 4096
+Name-Real: ${FULL_NAME}
+Name-Comment: General purpose key.
+Name-Email: ${USER}
+Expire-Date: ${EXPIRY_YEARS}y
+%ask-passphrase
+%commit"
+}
+# TODO: instead, create simple spec; generate 'completion' options and 'docs' from spec.
+
+help-meta-keys() {
+  handleSummary "${cyan_u}keys${reset} <action>: Manage user keys." || cat <<EOF
+${cyan_u}meta keys${reset} <action>:
+$(help-meta-keys-create | sed -e 's/^/  /')
+EOF
+} #$'' HACK to reset Atom Beutifier
+
+help-meta-keys-create() {
+  cat <<EOF
+${underline}create${reset} [--import|-i] [--user|-u <email>] [--full-name|-f <full name>] :
+  Creates a PGP key appropriate for use with liq. The user (email) and their full name will be extracted from the
+  git config 'user.email' and 'user.name' if not specified. In general, you should configure the git parameters
+  because that's what will be used by other liq funcitons.
+EOF
+}
+meta-keys-user-has-key() {
+  local USER
+  USER="$(git config user.email)"
+  if [[ -z "$USER" ]]; then
+    echoerrandexit "git 'user.email' not set; needed for digital signing."
+  fi
+
+  if ! command -v gpg2 > /dev/null; then
+    echoerrandexit "'gpg2' not found in path; please install. This is needed for digital signing."
+  fi
+
+  if ! gpg2 --list-secret-keys "$USER" > /dev/null; then
+    echoerrandexit "No PGP key found for '$USER'. Either update git 'user.email' configuration, or add a key. To add a key, use:\nliq meta keys create"
+  fi
 }
 
 requirements-orgs() {
@@ -2983,14 +3063,14 @@ help-policies() {
   local PREFIX="${1:-}"
 
   handleSummary "${PREFIX}${cyan_u}policies${reset} <action>: Manages organization policies." || cat <<EOF
+Policies defines all manner of organizational operations. They are "organizational code".
+
 ${PREFIX}${cyan_u}policies${reset} <action>:
   ${underline}document${reset}: Refreshes (or generates) org policy documentation based on current data.
   ${underline}update${reset}: Updates organization policies.
 
 ${bold}Sub-resources${reset}:
   * $( SUMMARY_ONLY=true; help-policies-audits )
-
-Policies defines all manner of organizational operations. They are "organizational code".
 EOF
 }
 # Retrieves the policy directories from the current org. Currenly requires sensitive until we think through the
@@ -3082,6 +3162,7 @@ policies-audits-add-log-entry() {
 # Performs all checks and sets up variables ahead of any state changes. Refer to input confirmation, defaults, and user confirmation functions.
 # outer vars: inherited
 function policy-audit-start-prep() {
+  meta-keys-user-has-key
   policy-audit-start-confirm-and-normalize-input "$@"
   policy-audit-derive-vars
   policy-audit-start-user-confirm-audit-settings
@@ -3125,7 +3206,7 @@ function policy-audit-derive-vars() {
 
   TIME="$(date -u +%Y%m%d%H%M)"
   OWNER="$(git config user.email)"
-  FILE_OWNER=$(echo "${OWNER}" | sed -e 's/@.+$//')
+  FILE_OWNER=$(echo "${OWNER}" | sed -e 's/@.*$//')
 
   FILE_NAME="${TIME}-${DOMAIN}-${SCOPE}-${FILE_OWNER}"
 }
