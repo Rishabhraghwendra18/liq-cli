@@ -19,7 +19,7 @@ work-diff-master() {
 }
 
 work-close() {
-  eval "$(setSimpleOptions TEST NO_SYNC -- "$@")"
+  eval "$(setSimpleOptions POP TEST NO_SYNC -- "$@")"
   source "${LIQ_WORK_DB}/curr_work"
 
   local PROJECTS
@@ -72,6 +72,10 @@ work-close() {
   if [[ -z "${INVOLVED_PROJECTS}" ]]; then
     rm "${LIQ_WORK_DB}/curr_work"
     rm "${LIQ_WORK_DB}/${WORK_BRANCH}"
+
+    if [[ -n "$POP" ]]; then
+      work-resume --pop
+    fi
   fi
 }
 
@@ -356,16 +360,23 @@ work-resume() {
         exit 0
       fi
     fi
-  else
+  elif [[ -f "${LIQ_WORK_DB}/prev_work00" ]]; then
     local PREV_WORK
     PREV_WORK="$(ls ${LIQ_WORK_DB}/prev_work?? | sort --reverse | head -n 1)"
     mv "$PREV_WORK" "${LIQ_WORK_DB}/curr_work"
+    WORK_NAME="$(source ${LIQ_WORK_DB}/curr_work; echo "$WORK_BRANCH")"
+  else
+    echoerrandexit "No previous unit of work found."
   fi
 
   requireCleanRepos "${WORK_NAME}"
 
   workSwitchBranches "$WORK_NAME"
-  cd "${LIQ_WORK_DB}" && ln -s "${WORK_NAME}" curr_work
+  (
+    cd "${LIQ_WORK_DB}"
+    rf -f curr_work
+    ln -s "${WORK_NAME}" curr_work
+  )
 
   echo "Resumed '$WORK_NAME'."
 }
@@ -513,9 +524,11 @@ work-status() {
 }
 
 work-start() {
+  findBase
+
   eval "$(setSimpleOptions ISSUES= PUSH -- "$@")"
 
-  local CURR_PROJECT ISSUES_URL
+  local CURR_PROJECT ISSUES_URL BUGS_URL WORK_ISSUES
   if [[ -n "$BASE_DIR" ]]; then
     CURR_PROJECT=$(cat "$BASE_DIR/package.json" | jq --raw-output '.name' | tr -d "'")
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
@@ -530,7 +543,7 @@ work-start() {
   local WORK_DESC_SPEC='^[[:alnum:]][[:alnum:] -]+$'
   # TODO: require a minimum length of 5 alphanumeric characters.
   echo "$WORK_DESC" | grep -qE "$WORK_DESC_SPEC" \
-    || echoerrandexit "Work description must begin with a letter or number, contain only letters, numbers, dashes and spaces, and have at least 2 characters (/$WORK_DESC_SPEC/)."
+    || echoerrandexit "Work description must begin with a letter or number, contain only letters, numbers, dashes and spaces, and have at least 2 characters (/$WORK_DESC_SPEC/). Got: \n${WORK_DESC}"
 
   WORK_STARTED=$(date "+%Y.%m.%d")
   WORK_INITIATOR=$(whoami)
@@ -547,9 +560,11 @@ work-start() {
     if [[ -n "$PUSH" ]]; then
       local PREV_WORK LAST NEXT
       LAST='-1' # starts us at 0 after the undconditional +1
-      for PREV_WORK in $(ls ${LIQ_WORK_DB}/prev_work?? | sort); do
-        LAST=${i:$((${#i} - 2))}
-      done
+      if [[ -f ${LIQ_WORK_DB}/prev_work00 ]]; then
+        for PREV_WORK in $(ls ${LIQ_WORK_DB}/prev_work?? | sort); do
+          LAST=${i:$((${#i} - 2))}
+        done
+      fi
       NEXT=$(( $LAST + 1 ))
       if (( $NEXT > 99 )); then
         echoerrandexit "There are already 100 'pushed' units of work; limit reached."
