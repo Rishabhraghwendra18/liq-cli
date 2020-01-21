@@ -14,15 +14,17 @@ function policies-audits-describe() {
   fi
 }
 
-# Finalizes the session by signing the log, committing the updates, and summarizing the session. Takes the records folder and key time as first and second arguments.
+# Finalizes the session by signing the log, committing the updates, and summarizing the session. Takes the records folder, key time, and commit message as first, second, and third arguments.
 function policies-audits-finalize-session() {
   local RECORDS_FOLDER="${1}"
   local TIME="${2}"
+  local MESSAGE="${3}"
 
   policies-audits-sign-log "${RECORDS_FOLDER}"
   (
     cd "${RECORDS_FOLDER}"
     work-stage .
+    work-submit -m "${MESSAGE}"
     work-submit --no-close
     work-resume --pop
   )

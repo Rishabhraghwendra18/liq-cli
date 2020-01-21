@@ -15,5 +15,5 @@ policies-audits-start() {
   policy-audit-start-prep "$@"
   policies-audits-setup-work
   policy-audit-initialize-records
-  policies-audits-finalize-session "${RECORDS_FOLDER}" "${TIME}"
+  policies-audits-finalize-session "${RECORDS_FOLDER}" "${TIME}" "$(policies-audits-describe)"
 }

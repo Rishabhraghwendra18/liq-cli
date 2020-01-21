@@ -115,7 +115,9 @@ EOF
 # outer vars: inherited
 function policies-audits-initialize-questions() {
   policies-audits-create-combined-tsv
-  policies-audits-add-log-entry "$(policies-audits-create-final-audit-statements)"
+  local ACTION_SUMMARY
+  policies-audits-create-final-audit-statements ACTION_SUMMARY
+  policies-audits-add-log-entry "${ACTION_SUMMARY}"
 }
 
 # Lib internal helper. Creates the '_combined.tsv' file containing the list of policy items included based on org (absolute) parameters.
@@ -133,16 +135,18 @@ policies-audits-create-combined-tsv() {
 # Lib internal helper. Analyzes '_combined.tsv' against parameter setting to generate the final list of statements included in the audit. This may involve an interactive question / answer loop (with change audits). Echoes a summary of actions (including any parameter values used) suitable for logging.
 # outer vars: SCOPE RECORDS_FOLDER
 policies-audits-create-final-audit-statements() {
+  local SUMMAR_VAR="${1}"
+
   local STATEMENTS LINE
   if [[ $SCOPE == 'full' ]]; then # all statments included
     STATEMENTS="$(while read -e LINE; do echo "$LINE" | awk -F '\t' '{print $3}'; done \
                   < "${RECORDS_FOLDER}/_combined.tsv")"
-    echo "Initialized audit statements using with all policy standards."
+    eval "$SUMMARY_VAR='Initialized audit statements using with all policy standards.'"
   elif [[ $SCOPE == 'process' ]]; then # only IS_PROCESS_AUDIT statements included
     STATEMENTS="$(while read -e LINE; do
                     echo "$LINE" | awk -F '\t' '{ if ($6 == "IS_PROCESS_AUDIT") print $3 }'
                   done < "${RECORDS_FOLDER}/_combined.tsv")"
-    echo "Initialized audit statements using with all process audit standards."
+    eval "$SUMMARY_VAR='Initialized audit statements using with all process audit standards.'"
   else # it's a change audit and we want to ask about the nature of the change
     local ALWAYS=1
     local IS_FULL_AUDIT=0
@@ -188,7 +192,7 @@ policies-audits-create-final-audit-statements() {
     done
     exec 10<&-
 
-    echo "Initialized audit statements using parameters:${PARAM_SETTINGS}"
+    eval "$SUMMAR_VAR='Initialized audit statements using parameters:${PARAM_SETTINGS}.'"
   fi
 
   local STATEMENT

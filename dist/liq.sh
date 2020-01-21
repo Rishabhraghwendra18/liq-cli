@@ -3120,7 +3120,7 @@ policies-audits-start() {
   policy-audit-start-prep "$@"
   policies-audits-setup-work
   policy-audit-initialize-records
-  policies-audits-finalize-session "${RECORDS_FOLDER}" "${TIME}"
+  policies-audits-finalize-session "${RECORDS_FOLDER}" "${TIME}" "$(policies-audits-describe)"
 }
 # TODO: instead, create simple spec; generate 'completion' options and 'docs' from spec.
 
@@ -3159,15 +3159,17 @@ function policies-audits-describe() {
   fi
 }
 
-# Finalizes the session by signing the log, committing the updates, and summarizing the session. Takes the records folder and key time as first and second arguments.
+# Finalizes the session by signing the log, committing the updates, and summarizing the session. Takes the records folder, key time, and commit message as first, second, and third arguments.
 function policies-audits-finalize-session() {
   local RECORDS_FOLDER="${1}"
   local TIME="${2}"
+  local MESSAGE="${3}"
 
   policies-audits-sign-log "${RECORDS_FOLDER}"
   (
     cd "${RECORDS_FOLDER}"
     work-stage .
+    work-submit -m "${MESSAGE}"
     work-submit --no-close
     work-resume --pop
   )
@@ -3349,7 +3351,9 @@ EOF
 # outer vars: inherited
 function policies-audits-initialize-questions() {
   policies-audits-create-combined-tsv
-  policies-audits-add-log-entry "$(policies-audits-create-final-audit-statements)"
+  local ACTION_SUMMARY
+  policies-audits-create-final-audit-statements ACTION_SUMMARY
+  policies-audits-add-log-entry "${ACTION_SUMMARY}"
 }
 
 # Lib internal helper. Creates the '_combined.tsv' file containing the list of policy items included based on org (absolute) parameters.
@@ -3367,16 +3371,18 @@ policies-audits-create-combined-tsv() {
 # Lib internal helper. Analyzes '_combined.tsv' against parameter setting to generate the final list of statements included in the audit. This may involve an interactive question / answer loop (with change audits). Echoes a summary of actions (including any parameter values used) suitable for logging.
 # outer vars: SCOPE RECORDS_FOLDER
 policies-audits-create-final-audit-statements() {
+  local SUMMAR_VAR="${1}"
+
   local STATEMENTS LINE
   if [[ $SCOPE == 'full' ]]; then # all statments included
     STATEMENTS="$(while read -e LINE; do echo "$LINE" | awk -F '\t' '{print $3}'; done \
                   < "${RECORDS_FOLDER}/_combined.tsv")"
-    echo "Initialized audit statements using with all policy standards."
+    eval "$SUMMARY_VAR='Initialized audit statements using with all policy standards.'"
   elif [[ $SCOPE == 'process' ]]; then # only IS_PROCESS_AUDIT statements included
     STATEMENTS="$(while read -e LINE; do
                     echo "$LINE" | awk -F '\t' '{ if ($6 == "IS_PROCESS_AUDIT") print $3 }'
                   done < "${RECORDS_FOLDER}/_combined.tsv")"
-    echo "Initialized audit statements using with all process audit standards."
+    eval "$SUMMARY_VAR='Initialized audit statements using with all process audit standards.'"
   else # it's a change audit and we want to ask about the nature of the change
     local ALWAYS=1
     local IS_FULL_AUDIT=0
@@ -3422,7 +3428,7 @@ policies-audits-create-final-audit-statements() {
     done
     exec 10<&-
 
-    echo "Initialized audit statements using parameters:${PARAM_SETTINGS}"
+    eval "$SUMMAR_VAR='Initialized audit statements using parameters:${PARAM_SETTINGS}.'"
   fi
 
   local STATEMENT
