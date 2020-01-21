@@ -8,11 +8,22 @@ function policy-audit-start-prep() {
   policy-audit-start-user-confirm-audit-settings
 }
 
+function policies-audits-setup-work() {
+  (
+    local MY_GITHUB_NAME ISSUE_URL ISSUE_NUMBER
+    projectHubWhoami MY_GITHUB_NAME
+    cd $(orgsPolicyRepo) # TODO: create separately specified records repo
+    ISSUE_URL="$(hub issue create -m "$(policies-audits-describe)" -a "$MY_GITHUB_NAME" -l audit)"
+    ISSUE_NUMBER="$(basename "$ISSUE_URL")"
+
+    work-start --push -i $ISSUE_NUMBER "$(policies-audits-describe --short)"
+  )
+}
+
 # TODO: link the references once we support.
 # Initialize an audit. Refer to folder and questions initializers.
-# outer vars: FILE_NAME
+# outer vars: TIME inherited
 function policy-audit-initialize-records() {
-  local RECORDS_FOLDER
   policies-audits-initialize-folder
   policies-audits-initialize-audits-json
   policies-audits-initialize-questions
@@ -39,16 +50,17 @@ function policy-audit-start-confirm-and-normalize-input() {
   fi
 }
 
-# Lib internal helper. Sets the outer vars SCOPE, TIME, OWNER, and FILE_NAME.
-# outer vars: FULL SCOPE TIME OWNER FILE_NAME
+# Lib internal helper. Sets the outer vars SCOPE, TIME, OWNER, and RECORDS_FOLDER
+# outer vars: FULL SCOPE TIME OWNER RECORDS_FOLDER
 function policy-audit-derive-vars() {
-  local FILE_OWNER
+  local FILE_OWNER FILE_NAME
 
-  TIME="$(date -u +%Y%m%d%H%M)"
+  TIME="$(policies-audits-now)"
   OWNER="$(git config user.email)"
   FILE_OWNER=$(echo "${OWNER}" | sed -e 's/@.*$//')
 
   FILE_NAME="${TIME}-${DOMAIN}-${SCOPE}-${FILE_OWNER}"
+  RECORDS_FOLDER="$(orgsPolicyRepo)/records/${FILE_NAME}"
 }
 
 # Lib internal helper. Confirms audit settings unless explicitly told not to.
@@ -67,7 +79,6 @@ function policy-audit-start-user-confirm-audit-settings() {
 # Lib internal helper. Determines and creates the RECORDS_FOLDER
 # outer vars: RECORDS_FOLDER
 function policies-audits-initialize-folder() {
-  RECORDS_FOLDER="$(orgsPolicyRepo)/records/${FILE_NAME}"
   if [[ -d "${RECORDS_FOLDER}" ]]; then
     echoerrandexit "Looks like the audit has already started. You can't start more than one audit per clock-minute."
   fi
@@ -81,7 +92,7 @@ function policies-audits-initialize-audits-json() {
   local AUDIT_SH="${RECORDS_FOLDER}/audit.sh"
   local PARAMETERS_SH="${RECORDS_FOLDER}/parameters.sh"
   local DESCRIPTION
-  DESCRIPTION="$(tr '[:lower:]' '[:upper:]' <<< ${SCOPE:0:1})${SCOPE:1} ${DOMAIN} audit started on ${TIME:0:10} at ${TIME:11:4} UTC by ${OWNER}."
+  DESCRIPTION=$(policies-audits-describe)
 
   if [[ -f "${AUDIT_SH}" ]]; then
     echoerrandexit "Found existing 'audit.json' file while trying to initalize audit. Bailing out..."
@@ -101,14 +112,10 @@ EOF
 }
 
 # Lib internal helper. Determines applicable questions and generates initial TSV record.
-# outer vars: RECORDS_FOLDER
+# outer vars: inherited
 function policies-audits-initialize-questions() {
   policies-audits-create-combined-tsv
-  policies-audits-create-final-audit-statements
-
-  # TODO: continue
-  cat "${RECORDS_FOLDER}/reviews.tsv"
-  echoerrandexit "Implement..."
+  policies-audits-add-log-entry "$(policies-audits-create-final-audit-statements)"
 }
 
 # Lib internal helper. Creates the '_combined.tsv' file containing the list of policy items included based on org (absolute) parameters.
@@ -123,17 +130,19 @@ policies-audits-create-combined-tsv() {
   done <<< "$FILES"
 }
 
-# Lib internal helper. Analyzes '_combined.tsv' against parameter setting to generate the final list of statements included in the audit. This may involve an interactive question / answer loop (with change audits). This will also generate a log entry summarizing the user actions and noting the parameter values used to create the audit.
+# Lib internal helper. Analyzes '_combined.tsv' against parameter setting to generate the final list of statements included in the audit. This may involve an interactive question / answer loop (with change audits). Echoes a summary of actions (including any parameter values used) suitable for logging.
 # outer vars: SCOPE RECORDS_FOLDER
 policies-audits-create-final-audit-statements() {
   local STATEMENTS LINE
   if [[ $SCOPE == 'full' ]]; then # all statments included
     STATEMENTS="$(while read -e LINE; do echo "$LINE" | awk -F '\t' '{print $3}'; done \
                   < "${RECORDS_FOLDER}/_combined.tsv")"
+    echo "Initialized audit statements using with all policy standards."
   elif [[ $SCOPE == 'process' ]]; then # only IS_PROCESS_AUDIT statements included
     STATEMENTS="$(while read -e LINE; do
                     echo "$LINE" | awk -F '\t' '{ if ($6 == "IS_PROCESS_AUDIT") print $3 }'
                   done < "${RECORDS_FOLDER}/_combined.tsv")"
+    echo "Initialized audit statements using with all process audit standards."
   else # it's a change audit and we want to ask about the nature of the change
     local ALWAYS=1
     local IS_FULL_AUDIT=0
@@ -178,6 +187,8 @@ policies-audits-create-final-audit-statements() {
       fi
     done
     exec 10<&-
+
+    echo "Initialized audit statements using parameters:${PARAM_SETTINGS}"
   fi
 
   local STATEMENT
@@ -185,6 +196,4 @@ policies-audits-create-final-audit-statements() {
   while read -e STATEMENT; do
     echo -e "$STATEMENT\t\t\t" >> "${RECORDS_FOLDER}/reviews.tsv"
   done <<< "$STATEMENTS"
-
-  policies-audits-add-log-entry "Initialization complete. Audit parameters:${PARAM_SETTINGS}"
 }

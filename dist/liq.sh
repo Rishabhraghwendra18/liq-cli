@@ -3116,11 +3116,11 @@ policies-audits() {
 policies-audits-start() {
   eval "$(setSimpleOptions SCOPE= NO_CONFIRM:C -- "$@")"
 
-  local SCOPE TIME OWNER FILE_NAME FILES
+  local SCOPE TIME OWNER RECORDS_FOLDER FILES
   policy-audit-start-prep "$@"
+  policies-audits-setup-work
   policy-audit-initialize-records
-
-  echoerrandexit "Not implemented."
+  policies-audits-finalize-session "${RECORDS_FOLDER}" "${TIME}"
 }
 # TODO: instead, create simple spec; generate 'completion' options and 'docs' from spec.
 
@@ -3143,6 +3143,41 @@ ${underline}start${reset} [--scope|-s <scope>] [--no-confirm|-C] [<domain>] :
   the '--no-confirm' option.
 EOF
 }
+# Generates a human readable description string based on audit parameters. The '--short' option guarantees a name compatible with branch naming conventions and suitable for use with 'liq work start'.
+# outer vars: SCOPE DOMAIN TIME OWNER
+function policies-audits-describe() {
+  eval "$(setSimpleOptions SHORT SET_SCOPE:c= SET_DOMAIN:d= SET_TIME:t= SET_OWNER:o= -- "$@")"
+  [[ -n $SET_SCOPE ]] || SET_SCOPE="$SCOPE"
+  [[ -n $SET_DOMAIN ]] || SET_DOMAIN="$DOMAIN"
+  [[ -n $SET_TIME ]] || SET_TIME="$TIME"
+  [[ -n $SET_OWNER ]] || SET_OWNER="$OWNER"
+
+  if [[ -z $SHORT ]]; then
+    echo "$(tr '[:lower:]' '[:upper:]' <<< ${SET_SCOPE:0:1})${SET_SCOPE:1} ${SET_DOMAIN} audit starting $(date -ujf %Y%m%d%H%M%S ${SET_TIME} +"%Y-%m-%d %H:%M UTC") by ${SET_OWNER}."
+  else
+    echo "$(tr '[:lower:]' '[:upper:]' <<< ${SET_SCOPE:0:1})${SET_SCOPE:1} ${SET_DOMAIN} audit $(date -ujf %Y%m%d%H%M%S ${SET_TIME} +"%Y-%m-%d %H%M UTC")"
+  fi
+}
+
+# Finalizes the session by signing the log, committing the updates, and summarizing the session. Takes the records folder and key time as first and second arguments.
+function policies-audits-finalize-session() {
+  local RECORDS_FOLDER="${1}"
+  local TIME="${2}"
+
+  policies-audits-sign-log "${RECORDS_FOLDER}"
+  (
+    cd "${RECORDS_FOLDER}"
+    work-stage .
+    work-submit --no-close
+    work-resume --pop
+  )
+  policies-audits-summarize-since "${RECORDS_FOLDER}" ${TIME}
+}
+# Gets the current time (resolution: 1 second) in UTC for use by log functions.
+policies-audits-now() { date -u +%Y%m%d%H%M%S; }
+
+# Adds log entry. Takes a single argument, the message to add to the log entry.
+# outer vars: RECORDS_FOLDER
 policies-audits-add-log-entry() {
   local MESSAGE="${1}"
 
@@ -3156,7 +3191,46 @@ policies-audits-add-log-entry() {
     echoerrandexit "Must set git 'user.email' for use by audit log."
   fi
 
-  echo "$(date +%Y%m%d%H%M) UTC ${USER} : ${MESSAGE}" >> "${RECORDS_FOLDER}/history.log"
+  echo "$(policies-audits-now) UTC ${USER} ${MESSAGE}" >> "${RECORDS_FOLDER}/history.log"
+}
+
+# Signs the log. Takes the records folder as first argument.
+policies-audits-sign-log() {
+  local RECORDS_FOLDER="${1}"
+  local USER SIGNED_AT
+  USER="$(git config user.email)"
+  SIGNED_AT=$(policies-audits-now)
+
+  mkdir -p "${RECORDS_FOLDER}/sigs"
+  gpg2 --output "${RECORDS_FOLDER}/sigs/history-${TIME}-zane.sig" \
+    -u ${USER} \
+    --detach-sig \
+    --armor \
+    "${RECORDS_FOLDER}/history.log"
+}
+
+# Gets all entries since the indicated time (see policies-audits-now for format). Takes records folder and the key time as the first and second arguments.
+policies-audits-summarize-since() {
+  local RECORDS_FOLDER="${1}"
+  local SINCE="${2}"
+
+  local ENTRY_TIME LINE LINE_NO
+  LINE_NO=1
+  for ENTRY_TIME in $(awk '{print $1}' "${RECORDS_FOLDER}/history.log"); do
+    if (( $ENTRY_TIME < $SINCE )); then
+      LINE_NO=$(( $LINE_NO + 1 ))
+    else
+      break
+    fi
+  done
+
+  echofmt reset "Summary of actions:"
+  # for each line in history log, turn into a word-wrapped bullet point
+  while read -e LINE; do
+    echo "$LINE" | fold -sw 82 | sed -e '1s/^/* /' -e '2,$s/^/  /'
+    LINE_NO=$(( $LINE_NO + 1 ))
+  done <<< "$(tail +${LINE_NO} "${RECORDS_FOLDER}/history.log")"
+  echo
 }
 # TODO: link the references once we support.
 # Performs all checks and sets up variables ahead of any state changes. Refer to input confirmation, defaults, and user confirmation functions.
@@ -3168,11 +3242,22 @@ function policy-audit-start-prep() {
   policy-audit-start-user-confirm-audit-settings
 }
 
+function policies-audits-setup-work() {
+  (
+    local MY_GITHUB_NAME ISSUE_URL ISSUE_NUMBER
+    projectHubWhoami MY_GITHUB_NAME
+    cd $(orgsPolicyRepo) # TODO: create separately specified records repo
+    ISSUE_URL="$(hub issue create -m "$(policies-audits-describe)" -a "$MY_GITHUB_NAME" -l audit)"
+    ISSUE_NUMBER="$(basename "$ISSUE_URL")"
+
+    work-start --push -i $ISSUE_NUMBER "$(policies-audits-describe --short)"
+  )
+}
+
 # TODO: link the references once we support.
 # Initialize an audit. Refer to folder and questions initializers.
-# outer vars: FILE_NAME
+# outer vars: TIME inherited
 function policy-audit-initialize-records() {
-  local RECORDS_FOLDER
   policies-audits-initialize-folder
   policies-audits-initialize-audits-json
   policies-audits-initialize-questions
@@ -3199,16 +3284,17 @@ function policy-audit-start-confirm-and-normalize-input() {
   fi
 }
 
-# Lib internal helper. Sets the outer vars SCOPE, TIME, OWNER, and FILE_NAME.
-# outer vars: FULL SCOPE TIME OWNER FILE_NAME
+# Lib internal helper. Sets the outer vars SCOPE, TIME, OWNER, and RECORDS_FOLDER
+# outer vars: FULL SCOPE TIME OWNER RECORDS_FOLDER
 function policy-audit-derive-vars() {
-  local FILE_OWNER
+  local FILE_OWNER FILE_NAME
 
-  TIME="$(date -u +%Y%m%d%H%M)"
+  TIME="$(policies-audits-now)"
   OWNER="$(git config user.email)"
   FILE_OWNER=$(echo "${OWNER}" | sed -e 's/@.*$//')
 
   FILE_NAME="${TIME}-${DOMAIN}-${SCOPE}-${FILE_OWNER}"
+  RECORDS_FOLDER="$(orgsPolicyRepo)/records/${FILE_NAME}"
 }
 
 # Lib internal helper. Confirms audit settings unless explicitly told not to.
@@ -3227,7 +3313,6 @@ function policy-audit-start-user-confirm-audit-settings() {
 # Lib internal helper. Determines and creates the RECORDS_FOLDER
 # outer vars: RECORDS_FOLDER
 function policies-audits-initialize-folder() {
-  RECORDS_FOLDER="$(orgsPolicyRepo)/records/${FILE_NAME}"
   if [[ -d "${RECORDS_FOLDER}" ]]; then
     echoerrandexit "Looks like the audit has already started. You can't start more than one audit per clock-minute."
   fi
@@ -3241,7 +3326,7 @@ function policies-audits-initialize-audits-json() {
   local AUDIT_SH="${RECORDS_FOLDER}/audit.sh"
   local PARAMETERS_SH="${RECORDS_FOLDER}/parameters.sh"
   local DESCRIPTION
-  DESCRIPTION="$(tr '[:lower:]' '[:upper:]' <<< ${SCOPE:0:1})${SCOPE:1} ${DOMAIN} audit started on ${TIME:0:10} at ${TIME:11:4} UTC by ${OWNER}."
+  DESCRIPTION=$(policies-audits-describe)
 
   if [[ -f "${AUDIT_SH}" ]]; then
     echoerrandexit "Found existing 'audit.json' file while trying to initalize audit. Bailing out..."
@@ -3261,14 +3346,10 @@ EOF
 }
 
 # Lib internal helper. Determines applicable questions and generates initial TSV record.
-# outer vars: RECORDS_FOLDER
+# outer vars: inherited
 function policies-audits-initialize-questions() {
   policies-audits-create-combined-tsv
-  policies-audits-create-final-audit-statements
-
-  # TODO: continue
-  cat "${RECORDS_FOLDER}/reviews.tsv"
-  echoerrandexit "Implement..."
+  policies-audits-add-log-entry "$(policies-audits-create-final-audit-statements)"
 }
 
 # Lib internal helper. Creates the '_combined.tsv' file containing the list of policy items included based on org (absolute) parameters.
@@ -3283,17 +3364,19 @@ policies-audits-create-combined-tsv() {
   done <<< "$FILES"
 }
 
-# Lib internal helper. Analyzes '_combined.tsv' against parameter setting to generate the final list of statements included in the audit. This may involve an interactive question / answer loop (with change audits). This will also generate a log entry summarizing the user actions and noting the parameter values used to create the audit.
+# Lib internal helper. Analyzes '_combined.tsv' against parameter setting to generate the final list of statements included in the audit. This may involve an interactive question / answer loop (with change audits). Echoes a summary of actions (including any parameter values used) suitable for logging.
 # outer vars: SCOPE RECORDS_FOLDER
 policies-audits-create-final-audit-statements() {
   local STATEMENTS LINE
   if [[ $SCOPE == 'full' ]]; then # all statments included
     STATEMENTS="$(while read -e LINE; do echo "$LINE" | awk -F '\t' '{print $3}'; done \
                   < "${RECORDS_FOLDER}/_combined.tsv")"
+    echo "Initialized audit statements using with all policy standards."
   elif [[ $SCOPE == 'process' ]]; then # only IS_PROCESS_AUDIT statements included
     STATEMENTS="$(while read -e LINE; do
                     echo "$LINE" | awk -F '\t' '{ if ($6 == "IS_PROCESS_AUDIT") print $3 }'
                   done < "${RECORDS_FOLDER}/_combined.tsv")"
+    echo "Initialized audit statements using with all process audit standards."
   else # it's a change audit and we want to ask about the nature of the change
     local ALWAYS=1
     local IS_FULL_AUDIT=0
@@ -3338,6 +3421,8 @@ policies-audits-create-final-audit-statements() {
       fi
     done
     exec 10<&-
+
+    echo "Initialized audit statements using parameters:${PARAM_SETTINGS}"
   fi
 
   local STATEMENT
@@ -3345,8 +3430,6 @@ policies-audits-create-final-audit-statements() {
   while read -e STATEMENT; do
     echo -e "$STATEMENT\t\t\t" >> "${RECORDS_FOLDER}/reviews.tsv"
   done <<< "$STATEMENTS"
-
-  policies-audits-add-log-entry "Initialization complete. Audit parameters:${PARAM_SETTINGS}"
 }
 
 requirements-projects() {
@@ -4875,7 +4958,7 @@ work-diff-master() {
 }
 
 work-close() {
-  eval "$(setSimpleOptions TEST NO_SYNC -- "$@")"
+  eval "$(setSimpleOptions POP TEST NO_SYNC -- "$@")"
   source "${LIQ_WORK_DB}/curr_work"
 
   local PROJECTS
@@ -4928,6 +5011,10 @@ work-close() {
   if [[ -z "${INVOLVED_PROJECTS}" ]]; then
     rm "${LIQ_WORK_DB}/curr_work"
     rm "${LIQ_WORK_DB}/${WORK_BRANCH}"
+
+    if [[ -n "$POP" ]]; then
+      work-resume --pop
+    fi
   fi
 }
 
@@ -5199,25 +5286,41 @@ work-report() {
   tput sgr0 # TODO: put this in the exit trap, too, I think.
 }
 
+# See 'liq help work resume'
 work-resume() {
+  eval "$(setSimpleOptions POP -- "$@")"
   local WORK_NAME
-  workUserSelectOne WORK_NAME '' true "$@"
+  if [[ -z "$POP" ]]; then
+    workUserSelectOne WORK_NAME '' true "$@"
 
-  if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
-    if [[ "${LIQ_WORK_DB}/curr_work" -ef "${LIQ_WORK_DB}/${WORK_NAME}" ]]; then
-      echowarn "'$WORK_NAME' is already the current unit of work."
-      exit 0
+    if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
+      if [[ "${LIQ_WORK_DB}/curr_work" -ef "${LIQ_WORK_DB}/${WORK_NAME}" ]]; then
+        echowarn "'$WORK_NAME' is already the current unit of work."
+        exit 0
+      fi
     fi
+  elif [[ -f "${LIQ_WORK_DB}/prev_work00" ]]; then
+    local PREV_WORK
+    PREV_WORK="$(ls ${LIQ_WORK_DB}/prev_work?? | sort --reverse | head -n 1)"
+    mv "$PREV_WORK" "${LIQ_WORK_DB}/curr_work"
+    WORK_NAME="$(source ${LIQ_WORK_DB}/curr_work; echo "$WORK_BRANCH")"
+  else
+    echoerrandexit "No previous unit of work found."
   fi
 
   requireCleanRepos "${WORK_NAME}"
 
   workSwitchBranches "$WORK_NAME"
-  cd "${LIQ_WORK_DB}" && ln -s "${WORK_NAME}" curr_work
+  (
+    cd "${LIQ_WORK_DB}"
+    rf -f curr_work
+    ln -s "${WORK_NAME}" curr_work
+  )
 
   echo "Resumed '$WORK_NAME'."
 }
 
+# Alias for 'work-resume'
 work-join() { work-resume "$@"; }
 
 work-save() {
@@ -5360,9 +5463,11 @@ work-status() {
 }
 
 work-start() {
-  eval "$(setSimpleOptions ISSUES= -- "$@")"
+  findBase
 
-  local CURR_PROJECT ISSUES_URL
+  eval "$(setSimpleOptions ISSUES= PUSH -- "$@")"
+
+  local CURR_PROJECT ISSUES_URL BUGS_URL WORK_ISSUES
   if [[ -n "$BASE_DIR" ]]; then
     CURR_PROJECT=$(cat "$BASE_DIR/package.json" | jq --raw-output '.name' | tr -d "'")
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
@@ -5377,7 +5482,7 @@ work-start() {
   local WORK_DESC_SPEC='^[[:alnum:]][[:alnum:] -]+$'
   # TODO: require a minimum length of 5 alphanumeric characters.
   echo "$WORK_DESC" | grep -qE "$WORK_DESC_SPEC" \
-    || echoerrandexit "Work description must begin with a letter or number, contain only letters, numbers, dashes and spaces, and have at least 2 characters (/$WORK_DESC_SPEC/)."
+    || echoerrandexit "Work description must begin with a letter or number, contain only letters, numbers, dashes and spaces, and have at least 2 characters (/$WORK_DESC_SPEC/). Got: \n${WORK_DESC}"
 
   WORK_STARTED=$(date "+%Y.%m.%d")
   WORK_INITIATOR=$(whoami)
@@ -5391,7 +5496,22 @@ work-start() {
   # https://github.com/Liquid-Labs/liq-cli/issues/14
 
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
-    rm "${LIQ_WORK_DB}/curr_work"
+    if [[ -n "$PUSH" ]]; then
+      local PREV_WORK LAST NEXT
+      LAST='-1' # starts us at 0 after the undconditional +1
+      if [[ -f ${LIQ_WORK_DB}/prev_work00 ]]; then
+        for PREV_WORK in $(ls ${LIQ_WORK_DB}/prev_work?? | sort); do
+          LAST=${i:$((${#i} - 2))}
+        done
+      fi
+      NEXT=$(( $LAST + 1 ))
+      if (( $NEXT > 99 )); then
+        echoerrandexit "There are already 100 'pushed' units of work; limit reached."
+      fi
+      mv "${LIQ_WORK_DB}/curr_work" "${LIQ_WORK_DB}/prev_work$(printf '%02d' "${NEXT}")"
+    else
+      rm "${LIQ_WORK_DB}/curr_work"
+    fi
   fi
   touch "${LIQ_WORK_DB}/${WORK_BRANCH}"
   cd ${LIQ_WORK_DB} && ln -s "${WORK_BRANCH}" curr_work
@@ -5487,6 +5607,7 @@ work-submit() {
       requireCleanRepo "${IP}"
     fi
     # TODO: This is incorrect, we need to check IP; https://github.com/Liquid-Labs/liq-cli/issues/121
+    # TODO: might also be redundant with 'requireCleanRepo'...
     if ! work-status --pr-ready; then
       echoerrandexit "Local work branch not in sync with remote work branch. Try:\nliq work save --backup-only"
     fi
@@ -5528,7 +5649,7 @@ work-submit() {
       BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
 
       local DESC
-      # recal, the first line is used in the 'summary' (title), the rest goes in the "description"
+      # recall, the first line is used in the 'summary' (title), the rest goes in the "description"
       DESC=$(cat <<EOF
 Merge ${WORK_BRANCH} to master
 
@@ -5578,13 +5699,17 @@ ${PREFIX}${cyan_u}work${reset} <action>:
     work. The '--no-link' option will suppress this behavior.
   ${underline}issues${reset} [--list|--add|--remove]: Manages issues associated with the current unit of work.
     TODO: this should be re-worked as sub-group.
-  ${underline}start${reset} <name>: Creates a new unit of work and adds the current repository (if any) to it.
+  ${underline}start${reset} [--issues <# or URL>] [--push] <name>:
+    Creates a new unit of work and adds the current repository (if any) to it. You must specify at least one issue.
+    Use a comma separated list to specify mutliple issues. The '--push' option will record the current unit of work
+    which can then be recovered with 'liq work resume --pop'.
   ${underline}stop${reset} [-k|--keep-checkout]: Stops working on the current unit of work. The
     master branch will be checked out for all involved projects unless
     '--keep-checkout' is used.
-  ${underline}resume${reset} [<name>]:
+  ${underline}resume${reset} [--pop] [<name>]:
     alias: ${underline}join${reset}
-    Resume/join work on an existing unit of work.
+    Resume work or join an existing unit of work. If the '--pop' option is specified, then arguments will be
+    ignored and the last 'pushed' unit of work (see 'liq work start --push') will be resumed.
   ${underline}edit${reset}: Opens a local project editor for all involved repositories.
   ${underline}report${reset}: Reports status of files in the current unit of work.
   ${underline}diff-master${reset}: Shows committed changes since branch from 'master' for all
