@@ -26,7 +26,7 @@ function policies-audits-finalize-session() {
     work-stage .
     work-save -m "${MESSAGE}"
     work-submit --no-close
+    policies-audits-summarize-since "${RECORDS_FOLDER}" ${TIME}
     work-resume --pop
   )
-  policies-audits-summarize-since "${RECORDS_FOLDER}" ${TIME}
 }

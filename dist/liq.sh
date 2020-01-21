@@ -3171,9 +3171,9 @@ function policies-audits-finalize-session() {
     work-stage .
     work-save -m "${MESSAGE}"
     work-submit --no-close
+    policies-audits-summarize-since "${RECORDS_FOLDER}" ${TIME}
     work-resume --pop
   )
-  policies-audits-summarize-since "${RECORDS_FOLDER}" ${TIME}
 }
 # Gets the current time (resolution: 1 second) in UTC for use by log functions.
 policies-audits-now() { date -u +%Y%m%d%H%M%S; }
