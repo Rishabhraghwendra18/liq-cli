@@ -1069,7 +1069,9 @@ requireCleanRepo() {
          && ! git merge-base --is-ancestor master upstream/master; then
         echoerrandexit "Local master has not been pushed to upstream master."
       fi
-      if ! git merge-base --is-ancestor "$BRANCH_TO_CHECK" "workspace/${BRANCH_TO_CHECK}"; then
+      # if the repo was created without forking, then there's no separate workspace
+      if git remote | grep -e '^workspace$' \
+          && ! git merge-base --is-ancestor "$BRANCH_TO_CHECK" "workspace/${BRANCH_TO_CHECK}"; then
         echoerrandexit "Local branch '$BRANCH_TO_CHECK' has not been pushed to workspace."
       fi
     done
@@ -1169,6 +1171,15 @@ ORIGIN_URL='' # can be set externally to avoid interactive questions on 'project
 STD_ENV_PURPOSES=dev$'\n'test$'\n'pre-production$'\n'production
 STD_IFACE_CLASSES=http$'\n'html$'\n'rest$'\n'sql
 STD_PLATFORM_TYPES=local$'\n'gcp$'\n'aws
+
+# Standard locations, relative to org repo.
+RECORDS_PATH="records"
+AUDITS_PATH="${RECORDS_PATH}/audits"
+AUDITS_ACTIVE_PATH="${AUDITS_PATH}/active"
+AUDITS_COMPLETE_PATH="${AUDITS_PATH}/complete"
+KEYS_PATH="${RECORDS_PATH}/keys"
+KEYS_ACTIVE_PATH="${KEYS_PATH}/active"
+KEYS_EXPIRED_PATH="${KEYS_PATH}/expired"
 set -o errtrace # inherits trap on ERR in function and subshell
 
 trap 'traperror $? $LINENO $BASH_LINENO "$BASH_COMMAND" $(printf "::%s" ${FUNCNAME[@]:-})' ERR
@@ -1211,7 +1222,7 @@ function log() {
     file=${BASH_SOURCE[$i-1]}
     echo "${now} $(hostname) $0:${lineno} ${msg}"
 }
-CATALYST_COMMAND_GROUPS=(help data environments meta orgs orgs-staff projects projects-issues required-services services work)
+CATALYST_COMMAND_GROUPS=(help data environments meta orgs orgs-staff policies policies-audits projects projects-issues required-services services work)
 
 # display help on help
 help-help() {
@@ -2519,10 +2530,8 @@ requirements-meta() {
 }
 
 meta-init() {
-  local TMP # see https://unix.stackexchange.com/a/88338/84520
-  TMP=$(setSimpleOptions PLAYGROUND= SILENT -- "$@") \
-    || ( contextHelp; echoerrandexit "Bad options." )
-  eval "$TMP"
+  eval "$(setSimpleOptions PLAYGROUND= SILENT -- "$@")" \
+    || { contextHelp; echoerrandexit "Bad options."; }
 
   if [[ -z "$PLAYGROUND" ]]; then
     # TODO: require-answer-matching (or something) to force absolute path here
@@ -2549,10 +2558,15 @@ help-meta() {
 
   handleSummary "${PREFIX}${cyan_u}meta${reset} <action>: Handles liq self-config and meta operations." \
    || cat <<EOF
+The meta group manages local liq configurations and non-liq user resources.
+
 ${PREFIX}${cyan_u}meta${reset} <action>:
    ${underline}init${reset} [--silent|-s] [--playground|-p <absolute path>]: Creates the Liquid
      Development DB (a local directory) and playground.
    ${underline}bash-config${reset}: Prints bash configuration. Try: eval \`liq meta bash-config\`
+
+   ${bold}Sub-resources${reset}:
+     * $( SUMMARY_ONLY=true; help-meta-keys )
 EOF
 }
 metaSetupLiqDb() {
@@ -2574,6 +2588,83 @@ metaSetupLiqDb() {
 LIQ_PLAYGROUND="$LIQ_PLAYGROUND"
 EOF
   echo "${green}success${reset}"
+}
+meta-keys() {
+  local ACTION="${1}"; shift
+
+  if [[ $(type -t "meta-keys-${ACTION}" || echo '') == 'function' ]]; then
+    meta-keys-${ACTION} "$@"
+  else
+    exitUnknownHelpTopic "$ACTION" meta keys
+  fi
+}
+
+meta-keys-create() {
+  eval "$(setSimpleOptions IMPORT USER= FULL_NAME= -- "$@")"
+
+  if [[ -z "$USER" ]]; then
+    USER="$(git config user.email)"
+    if [[ -z "$USER" ]]; then
+      echoerrandexit "Must set git 'user.email' or specify '--user' to create key."
+    fi
+  fi
+
+  if [[ -z "${FULL_NAME}" ]]; then
+    FULL_NAME="$(git config user.email)"
+    if [[ -z "$FULL_NAME" ]]; then
+      echoerrandexit "Must set git 'user.name' or specify '--full-name' to create key."
+    fi
+  fi
+
+  # Does the key already exist?
+  if gpg2 --list-secret-keys "$USER" 2> /dev/null; then
+    echoerrandexit "Key for '${USER}' already exists in default secret keyring. Bailing out..."
+  fi
+
+  local BITS=4096
+  local ALGO=rsa
+  local EXPIRY_YEARS=5
+  gpg2 --batch --gen-key <<<"%echo Generating ${ALGO}${BITS} key for '${USER}'; expires in ${EXPIRY_YEARS} years.
+Key-Type: RSA
+Key-Length: 4096
+Name-Real: ${FULL_NAME}
+Name-Comment: General purpose key.
+Name-Email: ${USER}
+Expire-Date: ${EXPIRY_YEARS}y
+%ask-passphrase
+%commit"
+}
+# TODO: instead, create simple spec; generate 'completion' options and 'docs' from spec.
+
+help-meta-keys() {
+  handleSummary "${cyan_u}keys${reset} <action>: Manage user keys." || cat <<EOF
+${cyan_u}meta keys${reset} <action>:
+$(help-meta-keys-create | sed -e 's/^/  /')
+EOF
+} #$'' HACK to reset Atom Beutifier
+
+help-meta-keys-create() {
+  cat <<EOF
+${underline}create${reset} [--import|-i] [--user|-u <email>] [--full-name|-f <full name>] :
+  Creates a PGP key appropriate for use with liq. The user (email) and their full name will be extracted from the
+  git config 'user.email' and 'user.name' if not specified. In general, you should configure the git parameters
+  because that's what will be used by other liq funcitons.
+EOF
+}
+meta-keys-user-has-key() {
+  local USER
+  USER="$(git config user.email)"
+  if [[ -z "$USER" ]]; then
+    echoerrandexit "git 'user.email' not set; needed for digital signing."
+  fi
+
+  if ! command -v gpg2 > /dev/null; then
+    echoerrandexit "'gpg2' not found in path; please install. This is needed for digital signing."
+  fi
+
+  if ! gpg2 --list-secret-keys "$USER" > /dev/null; then
+    echoerrandexit "No PGP key found for '$USER'. Either update git 'user.email' configuration, or add a key. To add a key, use:\nliq meta keys create"
+  fi
 }
 
 requirements-orgs() {
@@ -2981,11 +3072,14 @@ help-policies() {
   local PREFIX="${1:-}"
 
   handleSummary "${PREFIX}${cyan_u}policies${reset} <action>: Manages organization policies." || cat <<EOF
+Policies defines all manner of organizational operations. They are "organizational code".
+
 ${PREFIX}${cyan_u}policies${reset} <action>:
   ${underline}document${reset}: Refreshes (or generates) org policy documentation based on current data.
   ${underline}update${reset}: Updates organization policies.
 
-Policies defines all manner of organizational operations. They are "organizational code".
+${bold}Sub-resources${reset}:
+  * $( SUMMARY_ONLY=true; help-policies-audits )
 EOF
 }
 # Retrieves the policy directories from the current org. Currenly requires sensitive until we think through the
@@ -2998,11 +3092,14 @@ policiesGetPolicyDirs() {
   find "$(orgsPolicyRepo "$@")/node_modules/@liquid-labs" -maxdepth 1 -type d -name "policy-*"
 }
 
+# Will search policy dirs for TSV files. '--find-options' will be passed verbatim to find (see code). This function uses eval and it is unsafe to incorporate raw user input into the '--find-options' parameter.
 policiesGetPolicyFiles() {
-  local DIRS DIR
-  DIRS="$(policiesGetPolicyDirs)"
-  for DIR in $DIRS; do
-    find $DIR -name "*.tsv"
+  eval "$(setSimpleOptions FIND_OPTIONS= -- "$@")"
+
+  local DIR
+  for DIR in $(policiesGetPolicyDirs); do
+    # Not sure why the eval is necessary, but it is... (MacOS/Bash 3.x, 2020-01)
+    eval find $DIR $FIND_OPTIONS -name '*.tsv'
   done
 }
 
@@ -3013,6 +3110,355 @@ policiesGetPolicyProjects() {
   for DIR in $(policiesGetPolicyDirs); do
     cat "${DIR}/package.json" | jq --raw-output '.name' | tr -d "'"
   done
+}
+
+policies-audits() {
+  local ACTION="${1}"; shift
+
+  if [[ $(type -t "policies-audits-${ACTION}" || echo '') == 'function' ]]; then
+    policies-audits-${ACTION} "$@"
+  else
+    exitUnknownHelpTopic "$ACTION" policies audits
+  fi
+}
+
+policies-audits-process() {
+  echoerrandexit "Audit processing not yet implemented."
+}
+
+policies-audits-start() {
+  eval "$(setSimpleOptions SCOPE= NO_CONFIRM:C -- "$@")"
+
+  local SCOPE TIME OWNER AUDIT_PATH FILES
+  policy-audit-start-prep "$@"
+  policies-audits-setup-work
+  policy-audit-initialize-records
+
+  echofmt reset "Would you like to begin processing the audit now? If not, the session will and your previous work will be resumed."
+  if yes-no "Begin processing? (y/N)" N; then
+    policies-audits-process
+  else
+    policies-audits-finalize-session "${AUDIT_PATH}" "${TIME}" "$(policies-audits-describe)"
+  fi
+}
+# TODO: instead, create simple spec; generate 'completion' options and 'docs' from spec.
+
+help-policies-audits() {
+  handleSummary "${cyan_u}audits${reset} <action>: Manage audits." || cat <<EOF
+${cyan_u}policies audits${reset} <action>:
+$(help-policies-audits-start | sed -e 's/^/  /')
+EOF
+} #$'' HACK to reset Atom Beutifier
+
+help-policies-audits-start() {
+  cat <<EOF
+${underline}start${reset} [--scope|-s <scope>] [--no-confirm|-C] [<domain>] :
+  Initiates an audit. An audit scope is either 'change' (default), 'process' or 'full'.
+
+  Currently supported domains are 'code' and 'network'. If domain isn't specified, then the user will be given an
+  interactive list.
+
+  By default, a summary of the audit will be displayed to the user for confirmation. This can be supressed with
+  the '--no-confirm' option.
+EOF
+}
+# Generates a human readable description string based on audit parameters. The '--short' option guarantees a name compatible with branch naming conventions and suitable for use with 'liq work start'.
+# outer vars: SCOPE DOMAIN TIME OWNER
+function policies-audits-describe() {
+  eval "$(setSimpleOptions SHORT SET_SCOPE:c= SET_DOMAIN:d= SET_TIME:t= SET_OWNER:o= -- "$@")"
+  [[ -n $SET_SCOPE ]] || SET_SCOPE="$SCOPE"
+  [[ -n $SET_DOMAIN ]] || SET_DOMAIN="$DOMAIN"
+  [[ -n $SET_TIME ]] || SET_TIME="$TIME"
+  [[ -n $SET_OWNER ]] || SET_OWNER="$OWNER"
+
+  if [[ -z $SHORT ]]; then
+    echo "$(tr '[:lower:]' '[:upper:]' <<< ${SET_SCOPE:0:1})${SET_SCOPE:1} ${SET_DOMAIN} audit starting $(date -ujf %Y%m%d%H%M%S ${SET_TIME} +"%Y-%m-%d %H:%M UTC") by ${SET_OWNER}."
+  else
+    echo "$(tr '[:lower:]' '[:upper:]' <<< ${SET_SCOPE:0:1})${SET_SCOPE:1} ${SET_DOMAIN} audit $(date -ujf %Y%m%d%H%M%S ${SET_TIME} +"%Y-%m-%d %H%M UTC")"
+  fi
+}
+
+# Finalizes the session by signing the log, committing the updates, and summarizing the session. Takes the records folder, key time, and commit message as first, second, and third arguments.
+function policies-audits-finalize-session() {
+  local AUDIT_PATH="${1}"
+  local TIME="${2}"
+  local MESSAGE="${3}"
+
+  policies-audits-sign-log "${AUDIT_PATH}"
+  (
+    cd "${AUDIT_PATH}"
+    work-stage .
+    work-save -m "${MESSAGE}"
+    work-submit --no-close
+    policies-audits-summarize-since "${AUDIT_PATH}" ${TIME}
+    work-resume --pop
+  )
+}
+# Gets the current time (resolution: 1 second) in UTC for use by log functions.
+policies-audits-now() { date -u +%Y%m%d%H%M%S; }
+
+# Adds log entry. Takes a single argument, the message to add to the log entry.
+# outer vars: AUDIT_PATH
+policies-audits-add-log-entry() {
+  local MESSAGE="${1}"
+
+  if [[ -z "${AUDIT_PATH}" ]]; then
+    echoerrandexit "Could not update log; 'AUDIT_PATH' not set."
+  fi
+
+  local USER
+  USER="$(git config user.email)"
+  if [[ -z "$USER" ]]; then
+    echoerrandexit "Must set git 'user.email' for use by audit log."
+  fi
+
+  echo "$(policies-audits-now) UTC ${USER} ${MESSAGE}" >> "${AUDIT_PATH}/refs/history.log"
+}
+
+# Signs the log. Takes the records folder as first argument.
+policies-audits-sign-log() {
+  local AUDIT_PATH="${1}"
+  local USER SIGNED_AT
+  USER="$(git config user.email)"
+  SIGNED_AT=$(policies-audits-now)
+
+  echo "Signing current log file..."
+
+  mkdir -p "${AUDIT_PATH}/sigs"
+  gpg2 --output "${AUDIT_PATH}/sigs/history-${SIGNED_AT}-zane.sig" \
+    -u ${USER} \
+    --detach-sig \
+    --armor \
+    "${AUDIT_PATH}/refs/history.log"
+}
+
+# Gets all entries since the indicated time (see policies-audits-now for format). Takes records folder and the key time as the first and second arguments.
+policies-audits-summarize-since() {
+  local AUDIT_PATH="${1}"
+  local SINCE="${2}"
+
+  local ENTRY_TIME LINE LINE_NO
+  LINE_NO=1
+  for ENTRY_TIME in $(awk '{print $1}' "${AUDIT_PATH}/refs/history.log"); do
+    if (( $ENTRY_TIME < $SINCE )); then
+      LINE_NO=$(( $LINE_NO + 1 ))
+    else
+      break
+    fi
+  done
+
+  echofmt reset "Summary of actions:"
+  # for each line in history log, turn into a word-wrapped bullet point
+  while read -e LINE; do
+    echo "$LINE" | fold -sw 82 | sed -e '1s/^/* /' -e '2,$s/^/  /'
+    LINE_NO=$(( $LINE_NO + 1 ))
+  done <<< "$(tail +${LINE_NO} "${AUDIT_PATH}/refs/history.log")"
+  echo
+}
+# TODO: link the references once we support.
+# Performs all checks and sets up variables ahead of any state changes. Refer to input confirmation, defaults, and user confirmation functions.
+# outer vars: inherited
+function policy-audit-start-prep() {
+  meta-keys-user-has-key
+  policy-audit-start-confirm-and-normalize-input "$@"
+  policy-audit-derive-vars
+  policy-audit-start-user-confirm-audit-settings
+}
+
+function policies-audits-setup-work() {
+  (
+    local MY_GITHUB_NAME ISSUE_URL ISSUE_NUMBER
+    projectHubWhoami MY_GITHUB_NAME
+    cd $(orgsPolicyRepo) # TODO: create separately specified records repo
+    ISSUE_URL="$(hub issue create -m "$(policies-audits-describe)" -a "$MY_GITHUB_NAME" -l audit)"
+    ISSUE_NUMBER="$(basename "$ISSUE_URL")"
+
+    work-start --push -i $ISSUE_NUMBER "$(policies-audits-describe --short)"
+  )
+}
+
+# TODO: link the references once we support.
+# Initialize an audit. Refer to folder and questions initializers.
+# outer vars: TIME inherited
+function policy-audit-initialize-records() {
+  policies-audits-initialize-folder
+  policies-audits-initialize-audits-json
+  policies-audits-initialize-questions
+}
+
+# Internal help functions.
+
+# Lib internal helper. See 'liq help policy audit start' for description of proper input.
+# outer vars: CHANGE_CONTROL FULL DOMAIN SCOPE
+function policy-audit-start-confirm-and-normalize-input() {
+  DOMAIN="${1:-}"
+
+  if [[ -z $SCOPE ]]; then
+    SCOPE='change'
+  elif [[ $SCOPE != 'change' ]] && [[ $SCOPE != 'full' ]] && [[ $SCOPE != 'process' ]]; then
+    echoerrandexit "Invalid scope '$SCOPE'. Scope may be 'change', 'process', or 'full'."
+  fi
+
+  if [[ -z $DOMAIN ]]; then # do menu select
+    # TODO
+    echoerrandexit "Interactive domain not yet supported."
+  elif [[ $DOMAIN != 'code' ]] && [[ $DOMAIN != 'network' ]]; then
+    echoerrandexit "Unrecognized domain reference: '$DOMAIN'. Try one of:\n* code\n*network"
+  fi
+}
+
+# Lib internal helper. Sets the outer vars SCOPE, TIME, OWNER, and AUDIT_PATH
+# outer vars: FULL SCOPE TIME OWNER AUDIT_PATH
+function policy-audit-derive-vars() {
+  local FILE_OWNER FILE_NAME
+
+  TIME="$(policies-audits-now)"
+  OWNER="$(git config user.email)"
+  FILE_OWNER=$(echo "${OWNER}" | sed -e 's/@.*$//')
+
+  FILE_NAME="${TIME}-${DOMAIN}-${SCOPE}-${FILE_OWNER}"
+  AUDIT_PATH="$(orgsPolicyRepo)/${AUDITS_ACTIVE_PATH}/${FILE_NAME}"
+}
+
+# Lib internal helper. Confirms audit settings unless explicitly told not to.
+# outer vars: NO_CONFIRM SCOPE DOMAIN OWNER TIME
+function policy-audit-start-user-confirm-audit-settings() {
+  echofmt reset "Starting audit with:\n\n* scope: ${bold}${SCOPE}${reset}\n* domain: ${bold}${DOMAIN}${reset}\n* owner: ${bold}${OWNER}${reset}\n"
+  if [[ -z $NO_CONFIRM ]]; then
+    # TODO: update 'yes-no' to use 'echofmt'? also fix echofmt to take '--color'
+    if ! yes-no "confirm? (y/N) " N; then
+      echowarn "Audit canceled."
+      exit 0
+    fi
+  fi
+}
+
+# Lib internal helper. Determines and creates the AUDIT_PATH
+# outer vars: AUDIT_PATH
+function policies-audits-initialize-folder() {
+  if [[ -d "${AUDIT_PATH}" ]]; then
+    echoerrandexit "Looks like the audit has already started. You can't start more than one audit per second."
+  fi
+  echo "Creating records folder..."
+  mkdir -p "${AUDIT_PATH}"
+  mkdir "${AUDIT_PATH}/refs"
+  mkdir "${AUDIT_PATH}/sigs"
+}
+
+# Lib internal helper. Initializes the 'audit.json' data record.
+# outer vars: AUDIT_PATH TIME DOMAIN SCOPE OWNER
+function policies-audits-initialize-audits-json() {
+  local AUDIT_SH="${AUDIT_PATH}/audit.sh"
+  local PARAMETERS_SH="${AUDIT_PATH}/parameters.sh"
+  local DESCRIPTION
+  DESCRIPTION=$(policies-audits-describe)
+
+  if [[ -f "${AUDIT_SH}" ]]; then
+    echoerrandexit "Found existing 'audit.json' file while trying to initalize audit. Bailing out..."
+  fi
+
+  echofmt reset "Initializing audit data records..."
+  # TODO: extract and use 'double-quote-escape' for description
+  cat <<EOF > "${AUDIT_SH}"
+START="${TIME}"
+DESCRIPTION="${DESCRIPTION}"
+DOMAIN="${DOMAIN}"
+SCOPE="${SCOPE}"
+OWNER="${OWNER}"
+EOF
+  touch "${PARAMETERS_SH}"
+  echo "${TIME} UTC ${OWNER} : initiated audit" > "${AUDIT_PATH}/refs/history.log"
+}
+
+# Lib internal helper. Determines applicable questions and generates initial TSV record.
+# outer vars: inherited
+function policies-audits-initialize-questions() {
+  policies-audits-create-combined-tsv
+  local ACTION_SUMMARY
+  policies-audits-create-final-audit-statements ACTION_SUMMARY
+  policies-audits-add-log-entry "${ACTION_SUMMARY}"
+}
+
+# Lib internal helper. Creates the 'ref/combined.tsv' file containing the list of policy items included based on org (absolute) parameters.
+# outer vars: DOMAIN AUDIT_PATH
+policies-audits-create-combined-tsv() {
+  echo "Gathering relevant policy statements..."
+  local FILES
+  FILES="$(policiesGetPolicyFiles --find-options "-path '*/policy/${DOMAIN}/standards/*items.tsv'")"
+
+  while read -e FILE; do
+    npx liq-standards-filter-abs --settings "$(orgsPolicyRepo)/settings.sh" "$FILE" >> "${AUDIT_PATH}/refs/combined.tsv"
+  done <<< "$FILES"
+}
+
+# Lib internal helper. Analyzes 'ref/combined.tsv' against parameter setting to generate the final list of statements included in the audit. This may involve an interactive question / answer loop (with change audits). Echoes a summary of actions (including any parameter values used) suitable for logging.
+# outer vars: SCOPE AUDIT_PATH
+policies-audits-create-final-audit-statements() {
+  local SUMMAR_VAR="${1}"
+
+  local STATEMENTS LINE
+  if [[ $SCOPE == 'full' ]]; then # all statments included
+    STATEMENTS="$(while read -e LINE; do echo "$LINE" | awk -F '\t' '{print $3}'; done \
+                  < "${AUDIT_PATH}/refs/combined.tsv")"
+    eval "$SUMMARY_VAR='Initialized audit statements using with all policy standards.'"
+  elif [[ $SCOPE == 'process' ]]; then # only IS_PROCESS_AUDIT statements included
+    STATEMENTS="$(while read -e LINE; do
+                    echo "$LINE" | awk -F '\t' '{ if ($6 == "IS_PROCESS_AUDIT") print $3 }'
+                  done < "${AUDIT_PATH}/refs/combined.tsv")"
+    eval "$SUMMARY_VAR='Initialized audit statements using with all process audit standards.'"
+  else # it's a change audit and we want to ask about the nature of the change
+    local ALWAYS=1
+    local IS_FULL_AUDIT=0
+    local IS_PROCESS_AUDIT=0
+    local PARAMS PARAM PARAM_SETTINGS AND_CONDITIONS CONDITION
+    echofmt reset "\nYou will now be asked a series of questions in order to determine the nature of the change. This will determine which policy statements need to be reviewed."
+    read -n 1 -s -r -p "Press any key to continue..."
+    echo; echo
+
+    exec 10< "${AUDIT_PATH}/refs/combined.tsv"
+    while read -u 10 -e LINE; do
+      local INCLUDE=true
+      # we read each set of 'and' conditions
+      AND_CONDITIONS="$(echo "$LINE" | awk -F '\t' '{print $6}' | tr ',' '\n' | tr -d ' ')"
+      IFS=$'\n' #
+      for CONDITION in $AND_CONDITIONS; do # evaluate each condition sequentially until failure or end
+        PARAMS="$(echo "$CONDITION" | tr -C '[:alpha:]_' '\n')"
+        for PARAM in $PARAMS; do # define undefined params of clause
+          if [[ -z "${!PARAM:-}" ]]; then
+            function set-yes() { eval $PARAM=1; }
+            function set-no() { eval $PARAM=0; }
+            local PROMPT
+            PROMPT="${PARAM:0:1}$(echo ${PARAM:1} | tr '[:upper:]' '[:lower:]' | tr '_' ' ')? (y/n) "
+            yes-no "$PROMPT" "" set-yes set-no
+            echo
+            PARAM_SETTINGS="${PARAM_SETTINGS} ${PARAM}='${!PARAM}'"
+          fi
+        done # define clause params
+        if ! env -i -S "$(for PARAM in $PARAMS; do echo "$PARAM=${!PARAM} "; done)" perl -e '
+            use strict; use warnings;
+            my $condition="$ARGV[0]";
+            while (my ($k, $v) = each %ENV) { $condition =~ s/$k/$v/g; }
+            $condition =~ /[0-9<>=]+/ or die "Invalid audit condition: $condition";
+            eval "$condition" or exit 1;' $CONDITION; then
+          INCLUDE=false
+          break # stop processing conditions
+        fi
+      done # evaluate each condition
+      unset IFS
+      if [[ $INCLUDE == true ]]; then
+        list-add-item STATEMENTS "$(echo "$LINE" | awk -F '\t' '{print $3}')"
+      fi
+    done
+    exec 10<&-
+
+    eval "$SUMMAR_VAR='Initialized audit statements using parameters:${PARAM_SETTINGS}.'"
+  fi
+
+  local STATEMENT
+  echo -e "Statement\tReviewer\tAffirmed\tComments" > "${AUDIT_PATH}/reviews.tsv"
+  while read -e STATEMENT; do
+    echo -e "$STATEMENT\t\t\t" >> "${AUDIT_PATH}/reviews.tsv"
+  done <<< "$STATEMENTS"
 }
 
 requirements-projects() {
@@ -4541,7 +4987,7 @@ work-diff-master() {
 }
 
 work-close() {
-  eval "$(setSimpleOptions TEST NO_SYNC -- "$@")"
+  eval "$(setSimpleOptions POP TEST NO_SYNC -- "$@")"
   source "${LIQ_WORK_DB}/curr_work"
 
   local PROJECTS
@@ -4594,7 +5040,17 @@ work-close() {
   if [[ -z "${INVOLVED_PROJECTS}" ]]; then
     rm "${LIQ_WORK_DB}/curr_work"
     rm "${LIQ_WORK_DB}/${WORK_BRANCH}"
+
+    if [[ -n "$POP" ]]; then
+      work-resume --pop
+    fi
   fi
+}
+
+# Helps get users find the right command.
+work-commit() {
+  # The command generator is a bit hackish; do we have a library that handles the quotes correctly?
+  echoerrandexit "Invalid action 'commit'; do you want to 'save'?\nRefer to:\nliq help work save\nor try:\nliq work save $(for i in "$@"; do if [[ "$i" == *' '* ]]; then echo -n "'$i' "; else echo -n "$i "; fi; done)"
 }
 
 work-edit() {
@@ -4859,25 +5315,41 @@ work-report() {
   tput sgr0 # TODO: put this in the exit trap, too, I think.
 }
 
+# See 'liq help work resume'
 work-resume() {
+  eval "$(setSimpleOptions POP -- "$@")"
   local WORK_NAME
-  workUserSelectOne WORK_NAME '' true "$@"
+  if [[ -z "$POP" ]]; then
+    workUserSelectOne WORK_NAME '' true "$@"
 
-  if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
-    if [[ "${LIQ_WORK_DB}/curr_work" -ef "${LIQ_WORK_DB}/${WORK_NAME}" ]]; then
-      echowarn "'$WORK_NAME' is already the current unit of work."
-      exit 0
+    if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
+      if [[ "${LIQ_WORK_DB}/curr_work" -ef "${LIQ_WORK_DB}/${WORK_NAME}" ]]; then
+        echowarn "'$WORK_NAME' is already the current unit of work."
+        exit 0
+      fi
     fi
+  elif [[ -f "${LIQ_WORK_DB}/prev_work00" ]]; then
+    local PREV_WORK
+    PREV_WORK="$(ls ${LIQ_WORK_DB}/prev_work?? | sort --reverse | head -n 1)"
+    mv "$PREV_WORK" "${LIQ_WORK_DB}/curr_work"
+    WORK_NAME="$(source ${LIQ_WORK_DB}/curr_work; echo "$WORK_BRANCH")"
+  else
+    echoerrandexit "No previous unit of work found."
   fi
 
   requireCleanRepos "${WORK_NAME}"
 
   workSwitchBranches "$WORK_NAME"
-  cd "${LIQ_WORK_DB}" && ln -s "${WORK_NAME}" curr_work
+  (
+    cd "${LIQ_WORK_DB}"
+    rm -f curr_work
+    ln -s "${WORK_NAME}" curr_work
+  )
 
   echo "Resumed '$WORK_NAME'."
 }
 
+# Alias for 'work-resume'
 work-join() { work-resume "$@"; }
 
 work-save() {
@@ -5020,9 +5492,11 @@ work-status() {
 }
 
 work-start() {
-  eval "$(setSimpleOptions ISSUES= -- "$@")"
+  findBase
 
-  local CURR_PROJECT ISSUES_URL
+  eval "$(setSimpleOptions ISSUES= PUSH -- "$@")"
+
+  local CURR_PROJECT ISSUES_URL BUGS_URL WORK_ISSUES
   if [[ -n "$BASE_DIR" ]]; then
     CURR_PROJECT=$(cat "$BASE_DIR/package.json" | jq --raw-output '.name' | tr -d "'")
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
@@ -5037,7 +5511,7 @@ work-start() {
   local WORK_DESC_SPEC='^[[:alnum:]][[:alnum:] -]+$'
   # TODO: require a minimum length of 5 alphanumeric characters.
   echo "$WORK_DESC" | grep -qE "$WORK_DESC_SPEC" \
-    || echoerrandexit "Work description must begin with a letter or number, contain only letters, numbers, dashes and spaces, and have at least 2 characters (/$WORK_DESC_SPEC/)."
+    || echoerrandexit "Work description must begin with a letter or number, contain only letters, numbers, dashes and spaces, and have at least 2 characters (/$WORK_DESC_SPEC/). Got: \n${WORK_DESC}"
 
   WORK_STARTED=$(date "+%Y.%m.%d")
   WORK_INITIATOR=$(whoami)
@@ -5051,7 +5525,22 @@ work-start() {
   # https://github.com/Liquid-Labs/liq-cli/issues/14
 
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
-    rm "${LIQ_WORK_DB}/curr_work"
+    if [[ -n "$PUSH" ]]; then
+      local PREV_WORK LAST NEXT
+      LAST='-1' # starts us at 0 after the undconditional +1
+      if [[ -f ${LIQ_WORK_DB}/prev_work00 ]]; then
+        for PREV_WORK in $(ls ${LIQ_WORK_DB}/prev_work?? | sort); do
+          LAST=${i:$((${#i} - 2))}
+        done
+      fi
+      NEXT=$(( $LAST + 1 ))
+      if (( $NEXT > 99 )); then
+        echoerrandexit "There are already 100 'pushed' units of work; limit reached."
+      fi
+      mv "${LIQ_WORK_DB}/curr_work" "${LIQ_WORK_DB}/prev_work$(printf '%02d' "${NEXT}")"
+    else
+      rm "${LIQ_WORK_DB}/curr_work"
+    fi
   fi
   touch "${LIQ_WORK_DB}/${WORK_BRANCH}"
   cd ${LIQ_WORK_DB} && ln -s "${WORK_BRANCH}" curr_work
@@ -5147,6 +5636,7 @@ work-submit() {
       requireCleanRepo "${IP}"
     fi
     # TODO: This is incorrect, we need to check IP; https://github.com/Liquid-Labs/liq-cli/issues/121
+    # TODO: might also be redundant with 'requireCleanRepo'...
     if ! work-status --pr-ready; then
       echoerrandexit "Local work branch not in sync with remote work branch. Try:\nliq work save --backup-only"
     fi
@@ -5188,7 +5678,7 @@ work-submit() {
       BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
 
       local DESC
-      # recal, the first line is used in the 'summary' (title), the rest goes in the "description"
+      # recall, the first line is used in the 'summary' (title), the rest goes in the "description"
       DESC=$(cat <<EOF
 Merge ${WORK_BRANCH} to master
 
@@ -5238,13 +5728,17 @@ ${PREFIX}${cyan_u}work${reset} <action>:
     work. The '--no-link' option will suppress this behavior.
   ${underline}issues${reset} [--list|--add|--remove]: Manages issues associated with the current unit of work.
     TODO: this should be re-worked as sub-group.
-  ${underline}start${reset} <name>: Creates a new unit of work and adds the current repository (if any) to it.
+  ${underline}start${reset} [--issues <# or URL>] [--push] <name>:
+    Creates a new unit of work and adds the current repository (if any) to it. You must specify at least one issue.
+    Use a comma separated list to specify mutliple issues. The '--push' option will record the current unit of work
+    which can then be recovered with 'liq work resume --pop'.
   ${underline}stop${reset} [-k|--keep-checkout]: Stops working on the current unit of work. The
     master branch will be checked out for all involved projects unless
     '--keep-checkout' is used.
-  ${underline}resume${reset} [<name>]:
+  ${underline}resume${reset} [--pop] [<name>]:
     alias: ${underline}join${reset}
-    Resume/join work on an existing unit of work.
+    Resume work or join an existing unit of work. If the '--pop' option is specified, then arguments will be
+    ignored and the last 'pushed' unit of work (see 'liq work start --push') will be resumed.
   ${underline}edit${reset}: Opens a local project editor for all involved repositories.
   ${underline}report${reset}: Reports status of files in the current unit of work.
   ${underline}diff-master${reset}: Shows committed changes since branch from 'master' for all
@@ -5573,7 +6067,7 @@ case "$GROUP" in
       help $GROUP
       echoerrandexit "\nNo action argument provided. See valid actions above."
 		elif [[ $(type -t "requirements-${GROUP}" || echo '') != 'function' ]]; then
-			exitUnknownGroup
+			exitUnknownHelpTopic "$GROUP"
     fi
     ACTION="${1:-}"; shift
     if [[ $(type -t "${GROUP}-${ACTION}" || echo '') == 'function' ]]; then

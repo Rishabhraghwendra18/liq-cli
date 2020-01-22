@@ -9,7 +9,7 @@ _liq()
     local OPTS # the options, set by this func, for completion
     local GLOBAL_ACTIONS="help"
     # Using 'GROUPS' was causing errors; set by some magic.
-    local ACTION_GROUPS="data environments orgs policies projects remotes required-services services work"
+    local ACTION_GROUPS="data environments meta orgs policies projects remotes required-services services work"
     COMPREPLY=()
     local WORD_COUNT=${#COMP_WORDS[@]}
     # TODO: instead of simple 'CUR/PREV', use the above to see where in the
@@ -33,11 +33,11 @@ _liq()
         environments)
           OPTS="add delete deselect list select set show update";;
         meta)
-          OPTS="init bash-config";;
+          OPTS="init bash-config keys";;
         orgs)
           OPTS="affiliate create list show select staff";;
 				policies)
-					OPTS="document";;
+					OPTS="document audits";;
         projects)
           OPTS="build close init issues publish qa sync test services";;
         remotes)
@@ -51,13 +51,10 @@ _liq()
       esac
     else
       case "${GROUP}" in
-        projects)
-          case "${ACTION}" in
-            services)
-              OPTS="add list delete show";;
-            issues)
-              OPTS="show";;
-          esac ;; # projects-actions
+        meta)
+          if [[ "${ACTION}" == 'keys' ]] && (( $WORD_COUNT == 4 )); then
+            OPTS="create"
+          fi;;
         orgs)
           if [[ "${ACTION}" == staff ]] && (( $WORD_COUNT == 4 )); then
             OPTS="add list remove"
@@ -68,6 +65,19 @@ _liq()
                 return 0;;
             esac
           fi;;
+        policies)
+          if [[ "${ACTION}" == 'audits' ]] && (( $WORD_COUNT == 4 )); then
+            OPTS="start"
+          elif [[ ${COMP_WORDS[3]} == 'start' ]] && (( $WORD_COUNT == 5 )); then
+            OPTS="code network"
+          fi;;
+        projects)
+          case "${ACTION}" in
+            services)
+              OPTS="add list delete show";;
+            issues)
+              OPTS="show";;
+          esac ;; # projects-actions
         work)
           case "${ACTION}" in
             stage)

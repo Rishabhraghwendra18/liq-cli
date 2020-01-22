@@ -12,7 +12,7 @@ case "$GROUP" in
       help $GROUP
       echoerrandexit "\nNo action argument provided. See valid actions above."
 		elif [[ $(type -t "requirements-${GROUP}" || echo '') != 'function' ]]; then
-			exitUnknownGroup
+			exitUnknownHelpTopic "$GROUP"
     fi
     ACTION="${1:-}"; shift
     if [[ $(type -t "${GROUP}-${ACTION}" || echo '') == 'function' ]]; then

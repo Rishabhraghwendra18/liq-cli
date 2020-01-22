@@ -19,7 +19,7 @@ work-diff-master() {
 }
 
 work-close() {
-  eval "$(setSimpleOptions TEST NO_SYNC -- "$@")"
+  eval "$(setSimpleOptions POP TEST NO_SYNC -- "$@")"
   source "${LIQ_WORK_DB}/curr_work"
 
   local PROJECTS
@@ -72,7 +72,17 @@ work-close() {
   if [[ -z "${INVOLVED_PROJECTS}" ]]; then
     rm "${LIQ_WORK_DB}/curr_work"
     rm "${LIQ_WORK_DB}/${WORK_BRANCH}"
+
+    if [[ -n "$POP" ]]; then
+      work-resume --pop
+    fi
   fi
+}
+
+# Helps get users find the right command.
+work-commit() {
+  # The command generator is a bit hackish; do we have a library that handles the quotes correctly?
+  echoerrandexit "Invalid action 'commit'; do you want to 'save'?\nRefer to:\nliq help work save\nor try:\nliq work save $(for i in "$@"; do if [[ "$i" == *' '* ]]; then echo -n "'$i' "; else echo -n "$i "; fi; done)"
 }
 
 work-edit() {
@@ -337,25 +347,41 @@ work-report() {
   tput sgr0 # TODO: put this in the exit trap, too, I think.
 }
 
+# See 'liq help work resume'
 work-resume() {
+  eval "$(setSimpleOptions POP -- "$@")"
   local WORK_NAME
-  workUserSelectOne WORK_NAME '' true "$@"
+  if [[ -z "$POP" ]]; then
+    workUserSelectOne WORK_NAME '' true "$@"
 
-  if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
-    if [[ "${LIQ_WORK_DB}/curr_work" -ef "${LIQ_WORK_DB}/${WORK_NAME}" ]]; then
-      echowarn "'$WORK_NAME' is already the current unit of work."
-      exit 0
+    if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
+      if [[ "${LIQ_WORK_DB}/curr_work" -ef "${LIQ_WORK_DB}/${WORK_NAME}" ]]; then
+        echowarn "'$WORK_NAME' is already the current unit of work."
+        exit 0
+      fi
     fi
+  elif [[ -f "${LIQ_WORK_DB}/prev_work00" ]]; then
+    local PREV_WORK
+    PREV_WORK="$(ls ${LIQ_WORK_DB}/prev_work?? | sort --reverse | head -n 1)"
+    mv "$PREV_WORK" "${LIQ_WORK_DB}/curr_work"
+    WORK_NAME="$(source ${LIQ_WORK_DB}/curr_work; echo "$WORK_BRANCH")"
+  else
+    echoerrandexit "No previous unit of work found."
   fi
 
   requireCleanRepos "${WORK_NAME}"
 
   workSwitchBranches "$WORK_NAME"
-  cd "${LIQ_WORK_DB}" && ln -s "${WORK_NAME}" curr_work
+  (
+    cd "${LIQ_WORK_DB}"
+    rm -f curr_work
+    ln -s "${WORK_NAME}" curr_work
+  )
 
   echo "Resumed '$WORK_NAME'."
 }
 
+# Alias for 'work-resume'
 work-join() { work-resume "$@"; }
 
 work-save() {
@@ -498,9 +524,11 @@ work-status() {
 }
 
 work-start() {
-  eval "$(setSimpleOptions ISSUES= -- "$@")"
+  findBase
 
-  local CURR_PROJECT ISSUES_URL
+  eval "$(setSimpleOptions ISSUES= PUSH -- "$@")"
+
+  local CURR_PROJECT ISSUES_URL BUGS_URL WORK_ISSUES
   if [[ -n "$BASE_DIR" ]]; then
     CURR_PROJECT=$(cat "$BASE_DIR/package.json" | jq --raw-output '.name' | tr -d "'")
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
@@ -515,7 +543,7 @@ work-start() {
   local WORK_DESC_SPEC='^[[:alnum:]][[:alnum:] -]+$'
   # TODO: require a minimum length of 5 alphanumeric characters.
   echo "$WORK_DESC" | grep -qE "$WORK_DESC_SPEC" \
-    || echoerrandexit "Work description must begin with a letter or number, contain only letters, numbers, dashes and spaces, and have at least 2 characters (/$WORK_DESC_SPEC/)."
+    || echoerrandexit "Work description must begin with a letter or number, contain only letters, numbers, dashes and spaces, and have at least 2 characters (/$WORK_DESC_SPEC/). Got: \n${WORK_DESC}"
 
   WORK_STARTED=$(date "+%Y.%m.%d")
   WORK_INITIATOR=$(whoami)
@@ -529,7 +557,22 @@ work-start() {
   # https://github.com/Liquid-Labs/liq-cli/issues/14
 
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
-    rm "${LIQ_WORK_DB}/curr_work"
+    if [[ -n "$PUSH" ]]; then
+      local PREV_WORK LAST NEXT
+      LAST='-1' # starts us at 0 after the undconditional +1
+      if [[ -f ${LIQ_WORK_DB}/prev_work00 ]]; then
+        for PREV_WORK in $(ls ${LIQ_WORK_DB}/prev_work?? | sort); do
+          LAST=${i:$((${#i} - 2))}
+        done
+      fi
+      NEXT=$(( $LAST + 1 ))
+      if (( $NEXT > 99 )); then
+        echoerrandexit "There are already 100 'pushed' units of work; limit reached."
+      fi
+      mv "${LIQ_WORK_DB}/curr_work" "${LIQ_WORK_DB}/prev_work$(printf '%02d' "${NEXT}")"
+    else
+      rm "${LIQ_WORK_DB}/curr_work"
+    fi
   fi
   touch "${LIQ_WORK_DB}/${WORK_BRANCH}"
   cd ${LIQ_WORK_DB} && ln -s "${WORK_BRANCH}" curr_work
@@ -625,6 +668,7 @@ work-submit() {
       requireCleanRepo "${IP}"
     fi
     # TODO: This is incorrect, we need to check IP; https://github.com/Liquid-Labs/liq-cli/issues/121
+    # TODO: might also be redundant with 'requireCleanRepo'...
     if ! work-status --pr-ready; then
       echoerrandexit "Local work branch not in sync with remote work branch. Try:\nliq work save --backup-only"
     fi
@@ -666,7 +710,7 @@ work-submit() {
       BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
 
       local DESC
-      # recal, the first line is used in the 'summary' (title), the rest goes in the "description"
+      # recall, the first line is used in the 'summary' (title), the rest goes in the "description"
       DESC=$(cat <<EOF
 Merge ${WORK_BRANCH} to master
 

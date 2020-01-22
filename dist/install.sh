@@ -689,7 +689,9 @@ requireCleanRepo() {
          && ! git merge-base --is-ancestor master upstream/master; then
         echoerrandexit "Local master has not been pushed to upstream master."
       fi
-      if ! git merge-base --is-ancestor "$BRANCH_TO_CHECK" "workspace/${BRANCH_TO_CHECK}"; then
+      # if the repo was created without forking, then there's no separate workspace
+      if git remote | grep -e '^workspace$' \
+          && ! git merge-base --is-ancestor "$BRANCH_TO_CHECK" "workspace/${BRANCH_TO_CHECK}"; then
         echoerrandexit "Local branch '$BRANCH_TO_CHECK' has not been pushed to workspace."
       fi
     done

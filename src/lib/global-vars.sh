@@ -38,3 +38,12 @@ ORIGIN_URL='' # can be set externally to avoid interactive questions on 'project
 STD_ENV_PURPOSES=dev$'\n'test$'\n'pre-production$'\n'production
 STD_IFACE_CLASSES=http$'\n'html$'\n'rest$'\n'sql
 STD_PLATFORM_TYPES=local$'\n'gcp$'\n'aws
+
+# Standard locations, relative to org repo.
+RECORDS_PATH="records"
+AUDITS_PATH="${RECORDS_PATH}/audits"
+AUDITS_ACTIVE_PATH="${AUDITS_PATH}/active"
+AUDITS_COMPLETE_PATH="${AUDITS_PATH}/complete"
+KEYS_PATH="${RECORDS_PATH}/keys"
+KEYS_ACTIVE_PATH="${KEYS_PATH}/active"
+KEYS_EXPIRED_PATH="${KEYS_PATH}/expired"

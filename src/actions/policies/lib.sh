@@ -8,11 +8,14 @@ policiesGetPolicyDirs() {
   find "$(orgsPolicyRepo "$@")/node_modules/@liquid-labs" -maxdepth 1 -type d -name "policy-*"
 }
 
+# Will search policy dirs for TSV files. '--find-options' will be passed verbatim to find (see code). This function uses eval and it is unsafe to incorporate raw user input into the '--find-options' parameter.
 policiesGetPolicyFiles() {
-  local DIRS DIR
-  DIRS="$(policiesGetPolicyDirs)"
-  for DIR in $DIRS; do
-    find $DIR -name "*.tsv"
+  eval "$(setSimpleOptions FIND_OPTIONS= -- "$@")"
+
+  local DIR
+  for DIR in $(policiesGetPolicyDirs); do
+    # Not sure why the eval is necessary, but it is... (MacOS/Bash 3.x, 2020-01)
+    eval find $DIR $FIND_OPTIONS -name '*.tsv'
   done
 }
 

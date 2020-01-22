@@ -28,7 +28,7 @@
   "homepage": "https://liquid-labs.github.io/liq-cli/",
   "dependencies": {
     "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.26",
-    "@liquid-labs/policies-model": "^1.0.0-beta.6"
+    "@liquid-labs/policies-model": "^1.0.0-beta.7"
   },
   "bin": {
     "liq": "./dist/liq.sh"
