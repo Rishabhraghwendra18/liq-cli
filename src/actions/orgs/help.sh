@@ -46,6 +46,8 @@ EOF
 
 help-orgs-import() {
   cat <<EOF
-${underline}import${reset} <package or URL>: Imports the 'base' org package into your playground.
+${underline}import${reset} [--import-refs:r] <package or URL>: Imports the 'base' org package into your playground. The
+  '--import-refs' option will attempt to import any referenced repos. The access rights on referenced repos might be
+  different than the base repo and could fail, in which case the script will attempt to move on to the next, if any.
 EOF
 }

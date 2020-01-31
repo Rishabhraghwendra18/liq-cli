@@ -138,19 +138,33 @@ orgs-create() {
 
 # see `liq help orgs import`
 orgs-import() {
+  eval "$(setSimpleOptions IMPORT_REFS:r -- "$@")"
   local PKG_NAME BASENAME ORG_NPM_NAME
   projects-import --set-name PKG_NAME "$@"
+  # TODO: we can refine our logic here by indicating whether project is already imported or not.
 
   # TODO: check that the package is a 'base' org, and if not, skip and echowarn "This is not necessarily a problem."
   mkdir -p "${LIQ_ORG_DB}"
   projectsSetPkgNameComponents "$PKG_NAME"
-  if [[ -L "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]]; then
-    echowarn "Found likely remnant file: ${LIQ_ORG_DB}/${PKG_ORG_NAME}\nWill attempt to delete and continue. Refer to 'ls' output results below for more info."
+  # If '--import-refs', then not surprising to find extant company.
+  if [[ -L "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]] && [[ -z $IMPORT_REFS ]]; then
+    echowarn "Found possible remnant file:\n${LIQ_ORG_DB}/${PKG_ORG_NAME}\n\nWill attempt to delete and continue. Refer to 'ls' output results below for more info."
     ls -l "${LIQ_ORG_DB}"
     rm "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
     echo
   fi
-  ln -s "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}/${PKG_BASENAME}" "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
+  [[ -L "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]] \
+    || ln -s "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}/${PKG_BASENAME}" "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
+
+  if [[ -n "$IMPORT_REFS" ]]; then
+    local REF_REPO
+    orgsSourceOrg "$(dirname "$PKG_NAME")"
+    for REF_REPO in ORG_POLICY_REPO ORG_SENSITIVE_REPO ORG_STAFF_REPO; do
+      if [[ -n ${!REF_REPO:-} ]]; then
+        projects-import ${!REF_REPO}
+      fi
+    done
+  fi
 }
 
 # see `liq help orgs list`
