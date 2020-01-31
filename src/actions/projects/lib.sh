@@ -82,7 +82,7 @@ projectForkClone() {
   cd "$STAGING"
 
   echo -n "Checking for existing fork at '${FORK_URL}'... "
-  git clone --quiet --origin workspace "${FORK_URL}" \
+  git clone --quiet --origin workspace "${FORK_URL}" 2> /dev/null \
   && { \
     # Be sure and exit on errors to avoid a failure here and then executing the || branch
     echo "found existing fork."
@@ -99,8 +99,8 @@ projectForkClone() {
     git clone --quiet --origin upstream "${URL}" || echoerrandexit "Could not clone source."
     cd $PROJ_STAGE
     echo "Creating fork..."
-    hub fork --remote-name workspace
-    git branch -u upstream/master master
+    hub fork --remote-name workspace > /dev/null
+    git branch --quiet -u upstream/master master
   }
 }
 
