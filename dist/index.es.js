@@ -431,56 +431,6 @@ function (_TsvExt) {
   return PolicyCalendar;
 }(TsvExt), defineProperty(_class, "headers", ['UUID', 'Item Name', 'Description', 'Frequency', 'Impact Weighting (hrs)', 'Time Span (days)', 'Absolute Condition', 'Policy Refs']), defineProperty(_class, "keys", ['uuid', 'itemName', 'description', 'frequency', 'impactWeighting', 'timeSpan', 'absCond', 'policyRefs']), defineProperty(_class, "BIENNIAL_SELECTOR", ['ODD', 'EVEN']), defineProperty(_class, "TRIENNIAL_SELECTOR", ['ODD', 'EVEN', 'TRIPLETS']), _temp$1);
 
-function _arrayWithHoles(arr) {
-  if (Array.isArray(arr)) return arr;
-}
-
-var arrayWithHoles = _arrayWithHoles;
-
-function _iterableToArrayLimit(arr, i) {
-  if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) {
-    return;
-  }
-
-  var _arr = [];
-  var _n = true;
-  var _d = false;
-  var _e = undefined;
-
-  try {
-    for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
-      _arr.push(_s.value);
-
-      if (i && _arr.length === i) break;
-    }
-  } catch (err) {
-    _d = true;
-    _e = err;
-  } finally {
-    try {
-      if (!_n && _i["return"] != null) _i["return"]();
-    } finally {
-      if (_d) throw _e;
-    }
-  }
-
-  return _arr;
-}
-
-var iterableToArrayLimit = _iterableToArrayLimit;
-
-function _nonIterableRest() {
-  throw new TypeError("Invalid attempt to destructure non-iterable instance");
-}
-
-var nonIterableRest = _nonIterableRest;
-
-function _slicedToArray(arr, i) {
-  return arrayWithHoles(arr) || iterableToArrayLimit(arr, i) || nonIterableRest();
-}
-
-var slicedToArray = _slicedToArray;
-
 var _class$1, _temp$2;
 var Roles = (_temp$2 = _class$1 =
 /*#__PURE__*/
@@ -577,11 +527,6 @@ function () {
       if (results.length > 1) throw new Error("Found multiple files matching '".concat(baseName, "'"));else if (results.length === 0) return null;else return results[0];
     }
   }, {
-    key: "addTerm",
-    value: function addTerm(term, definition) {
-      this.terms.push([term, definition]);
-    }
-  }, {
     key: "setDocumentDir",
     value: function setDocumentDir(dir) {
       this.docDir = dir;
@@ -592,26 +537,9 @@ function () {
       if (this.docDir === undefined) throw new Error('No document directory defined.');
       if (!existsSync(this.docDir)) throw new Error("Target document dir '".concat(this.docDir, "' does not exist."));
       var roles = this.getRoles();
-      roles.reset();
-      var i;
-
-      while (i = roles.next()) {
-        this.addTerm(i['name'], i['description']);
-      }
-
-      var glossaryContent = "# Glossary\n\n<dl>";
-      this.terms.sort(function (a, b) {
-        return a[0].localeCompare(b[0]);
-      });
-      this.terms.forEach(function (_ref) {
-        var _ref2 = slicedToArray(_ref, 2),
-            term = _ref2[0],
-            def = _ref2[1];
-
-        return glossaryContent += "  <dt>".concat(term, "</dt>\n  <dd>").concat(def, "</dd>\n\n");
-      });
-      glossaryContent += "</dl>\n";
-      writeFileSync("".concat(this.docDir, "/Glossary.md"), glossaryContent);
+      var glossary = new Glossary();
+      glossary.addTermsFromIterator(roles);
+      writeFileSync("".concat(this.docDir, "/Glossary.md"), glossary.generateContent());
     }
   }]);
 

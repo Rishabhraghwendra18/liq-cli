@@ -1,6 +1,6 @@
 {
   "name": "@liquid-labs/liq-cli",
-  "version": "1.0.0-prototype.9",
+  "version": "1.0.0-prototype.10",
   "description": "A process aware development, testing, and deployment management tool.",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
@@ -28,7 +28,7 @@
   "homepage": "https://liquid-labs.github.io/liq-cli/",
   "dependencies": {
     "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.26",
-    "@liquid-labs/policies-model": "^1.0.0-beta.7"
+    "@liquid-labs/policies-model": "^1.0.0-beta.11"
   },
   "bin": {
     "liq": "./dist/liq.sh"

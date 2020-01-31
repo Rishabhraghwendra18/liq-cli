@@ -31,6 +31,8 @@ orgsSourceOrg() {
   if [[ -z "$NPM_ORG" ]]; then
     findBase
     NPM_ORG="$(cd "${BASE_DIR}/.."; basename "$PWD")"
+  else
+    NPM_ORG=${NPM_ORG/@/}
   fi
 
   if [[ -e "$LIQ_ORG_DB/${NPM_ORG}" ]]; then

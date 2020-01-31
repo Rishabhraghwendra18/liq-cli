@@ -171,8 +171,28 @@ projects-import() {
     if [[ -n "$SET_URL" ]]; then eval "$SET_URL='$_PROJ_URL'"; fi
   }
 
+  fork_check() {
+    local GIT_URL="${1:-}"
+    local PRIVATE GIT_OWNER GIT REPO
+    echo "URL: $GIT_URL"
+
+    if [[ -z "$NO_FORK" ]]; then
+      GIT_URL="$(echo "$GIT_URL" | sed -e 's/[^:]*://' -e 's/\.git$//')"
+      echo "URL2: $GIT_URL"
+      GIT_OWNER="$(basename "$(dirname "$GIT_URL")")"
+      GIT_REPO="$(basename "$GIT_URL")"
+
+      echo hub api -X GET "/repos/${GIT_OWNER}/${GIT_REPO}"
+      PRIVATE="$(hub api -X GET "/repos/${GIT_OWNER}/${GIT_REPO}" | jq '.private')"
+      if [[ "${PRIVATE}" == 'true' ]]; then
+        NO_FORK='true'
+      fi
+    fi
+  }
+
   if [[ "$1" == *:* ]]; then # it's a URL
     _PROJ_URL="${1}"
+    fork_check "${_PROJ_URL}"
     # We have to grab the project from the repo in order to figure out it's (npm-based) name...
     if [[ -n "$NO_FORK" ]]; then
       projectClone "$_PROJ_URL"
@@ -204,6 +224,7 @@ projects-import() {
       || echoerrandexit "Did not find expected NPM package '${_PROJ_NAME}'. Did you forget the '--url' option?"
     set-stuff
     _PROJ_URL=${_PROJ_URL##git+}
+    fork_check "$_PROJ_URL"
     if [[ -n "$NO_FORK" ]]; then
       projectClone "$_PROJ_URL"
     else

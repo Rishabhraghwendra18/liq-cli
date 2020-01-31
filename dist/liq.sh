@@ -2807,19 +2807,33 @@ orgs-create() {
 
 # see `liq help orgs import`
 orgs-import() {
+  eval "$(setSimpleOptions IMPORT_REFS:r -- "$@")"
   local PKG_NAME BASENAME ORG_NPM_NAME
   projects-import --set-name PKG_NAME "$@"
+  # TODO: we can refine our logic here by indicating whether project is already imported or not.
 
   # TODO: check that the package is a 'base' org, and if not, skip and echowarn "This is not necessarily a problem."
   mkdir -p "${LIQ_ORG_DB}"
   projectsSetPkgNameComponents "$PKG_NAME"
-  if [[ -L "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]]; then
-    echowarn "Found likely remnant file: ${LIQ_ORG_DB}/${PKG_ORG_NAME}\nWill attempt to delete and continue. Refer to 'ls' output results below for more info."
+  # If '--import-refs', then not surprising to find extant company.
+  if [[ -L "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]] && [[ -z $IMPORT_REFS ]]; then
+    echowarn "Found possible remnant file:\n${LIQ_ORG_DB}/${PKG_ORG_NAME}\n\nWill attempt to delete and continue. Refer to 'ls' output results below for more info."
     ls -l "${LIQ_ORG_DB}"
     rm "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
     echo
   fi
-  ln -s "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}/${PKG_BASENAME}" "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
+  [[ -L "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]] \
+    || ln -s "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}/${PKG_BASENAME}" "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
+
+  if [[ -n "$IMPORT_REFS" ]]; then
+    local REF_REPO
+    orgsSourceOrg "$(dirname "$PKG_NAME")"
+    for REF_REPO in ORG_POLICY_REPO ORG_SENSITIVE_REPO ORG_STAFF_REPO; do
+      if [[ -n ${!REF_REPO:-} ]]; then
+        projects-import ${!REF_REPO}
+      fi
+    done
+  fi
 }
 
 # see `liq help orgs list`
@@ -2888,7 +2902,9 @@ EOF
 
 help-orgs-import() {
   cat <<EOF
-${underline}import${reset} <package or URL>: Imports the 'base' org package into your playground.
+${underline}import${reset} [--import-refs:r] <package or URL>: Imports the 'base' org package into your playground. The
+  '--import-refs' option will attempt to import any referenced repos. The access rights on referenced repos might be
+  different than the base repo and could fail, in which case the script will attempt to move on to the next, if any.
 EOF
 }
 # sources the current org settings, if any
@@ -2924,6 +2940,8 @@ orgsSourceOrg() {
   if [[ -z "$NPM_ORG" ]]; then
     findBase
     NPM_ORG="$(cd "${BASE_DIR}/.."; basename "$PWD")"
+  else
+    NPM_ORG=${NPM_ORG/@/}
   fi
 
   if [[ -e "$LIQ_ORG_DB/${NPM_ORG}" ]]; then
@@ -3634,8 +3652,28 @@ projects-import() {
     if [[ -n "$SET_URL" ]]; then eval "$SET_URL='$_PROJ_URL'"; fi
   }
 
+  fork_check() {
+    local GIT_URL="${1:-}"
+    local PRIVATE GIT_OWNER GIT REPO
+    echo "URL: $GIT_URL"
+
+    if [[ -z "$NO_FORK" ]]; then
+      GIT_URL="$(echo "$GIT_URL" | sed -e 's/[^:]*://' -e 's/\.git$//')"
+      echo "URL2: $GIT_URL"
+      GIT_OWNER="$(basename "$(dirname "$GIT_URL")")"
+      GIT_REPO="$(basename "$GIT_URL")"
+
+      echo hub api -X GET "/repos/${GIT_OWNER}/${GIT_REPO}"
+      PRIVATE="$(hub api -X GET "/repos/${GIT_OWNER}/${GIT_REPO}" | jq '.private')"
+      if [[ "${PRIVATE}" == 'true' ]]; then
+        NO_FORK='true'
+      fi
+    fi
+  }
+
   if [[ "$1" == *:* ]]; then # it's a URL
     _PROJ_URL="${1}"
+    fork_check "${_PROJ_URL}"
     # We have to grab the project from the repo in order to figure out it's (npm-based) name...
     if [[ -n "$NO_FORK" ]]; then
       projectClone "$_PROJ_URL"
@@ -3667,6 +3705,7 @@ projects-import() {
       || echoerrandexit "Did not find expected NPM package '${_PROJ_NAME}'. Did you forget the '--url' option?"
     set-stuff
     _PROJ_URL=${_PROJ_URL##git+}
+    fork_check "$_PROJ_URL"
     if [[ -n "$NO_FORK" ]]; then
       projectClone "$_PROJ_URL"
     else
@@ -4143,7 +4182,7 @@ projectForkClone() {
   cd "$STAGING"
 
   echo -n "Checking for existing fork at '${FORK_URL}'... "
-  git clone --quiet --origin workspace "${FORK_URL}" \
+  git clone --quiet --origin workspace "${FORK_URL}" 2> /dev/null \
   && { \
     # Be sure and exit on errors to avoid a failure here and then executing the || branch
     echo "found existing fork."
@@ -4160,8 +4199,8 @@ projectForkClone() {
     git clone --quiet --origin upstream "${URL}" || echoerrandexit "Could not clone source."
     cd $PROJ_STAGE
     echo "Creating fork..."
-    hub fork --remote-name workspace
-    git branch -u upstream/master master
+    hub fork --remote-name workspace > /dev/null
+    git branch --quiet -u upstream/master master
   }
 }
 
@@ -5389,7 +5428,7 @@ work-stage() {
 }
 
 work-status() {
-  eval "$(setSimpleOptions SELECT PR_READY NO_FETCH:F -- "$@")" \
+  eval "$(setSimpleOptions SELECT PR_READY: NO_FETCH:F LIST_PROJECTS:p LIST_ISSUES:i -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
   local WORK_NAME LOCAL_COMMITS REMOTE_COMMITS
@@ -5404,13 +5443,21 @@ work-status() {
     return $?
   fi
 
+  source "${LIQ_WORK_DB}/${WORK_NAME}"
+  if [[ -n "$LIST_PROJECTS" ]]; then
+    echo "$INVOLVED_PROJECTS"
+    return $?
+  elif [[ -n "$LIST_ISSUES" ]]; then
+    echo "$WORK_ISSUES"
+    return $?
+  fi
+
   if [[ -z "$NO_FETCH" ]]; then
     work-sync --fetch-only
   fi
 
   echo "Branch name: $WORK_NAME"
   echo
-  source "${LIQ_WORK_DB}/${WORK_NAME}"
   if [[ -z "$INVOLVED_PROJECTS" ]]; then
     "Involved projects: <none>"
   else
@@ -5490,6 +5537,8 @@ work-status() {
     git status --short
   done
 }
+# alias TODO: I think I might like 'show' better after all
+work-show() { work-status "$@"; }
 
 work-start() {
   findBase
@@ -5607,7 +5656,7 @@ work-test() {
 }
 
 work-submit() {
-  eval "$(setSimpleOptions MESSAGE= NOT_CLEAN:C NO_CLOSE:X -- "$@")" \
+  eval "$(setSimpleOptions MESSAGE= NOT_CLEAN:C NO_CLOSE:X NO_BROWSE:B -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
@@ -5704,7 +5753,11 @@ EOF)
         DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
       fi
 
-      hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
+      local PULL_OPTS="--push --base=${BASE_TARGET}:master "
+      if [[ -z "$NO_BROWSE" ]]; then
+        PULL_OPTS="$PULL_OPTS --browse"
+      fi
+      hub pull-request $PULL_OPTS -m "${DESC}"
     ) # end policy-subshell
   done
 }
@@ -5719,9 +5772,7 @@ ${PREFIX}${cyan_u}work${reset} <action>:
     have been made directly through 'git' and you want to push them.
   ${underline}stage${reset} [-a|--all] [-i|--interactive] [-r|--review] [-d|--dry-run] [<path spec>...]:
     Stages files for save.
-  ${underline}status${reset} [-s|--select] [<name>]: Shows details for the current or named unit of work.
-    Will enter interactive selection if no option and no current work or the
-    '--select' option is given.
+$(help-work-status | sed -e 's/^/  /')
   ${underline}involve${reset} [-L|--no-link] [<repository name>]: Involves the current or named
     repository in the current unit of work. When involved, any projects in the
     newly involved project will be linked to the primary project in the unit of
@@ -5759,6 +5810,15 @@ ${PREFIX}${cyan_u}work${reset} <action>:
 A 'unit of work' is essentially a set of work branches across all involved projects. The first project involved in a unit of work is considered the primary project, which will effect automated linking when involving other projects.
 
 ${red_b}ALPHA Note:${reset} The 'stop' and 'resume' actions do not currently manage the work branches and only updates the 'current work' pointer.
+EOF
+}
+
+help-work-status() {
+  cat <<EOF
+${underline}status${reset} [-s|--select] [--list-projects|-p] [--list-issues|-i] [<name>]:
+  Shows details for the current or named unit of work. Will enter interactive selection if no option and no
+  current work or the '--select' option is given. The '--list-projects' and '--list-issues' options are meant
+  to be used on their own and will just list the involved projects or associated issues respectively.
 EOF
 }
 workBranchName() {

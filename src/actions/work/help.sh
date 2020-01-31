@@ -9,9 +9,7 @@ ${PREFIX}${cyan_u}work${reset} <action>:
     have been made directly through 'git' and you want to push them.
   ${underline}stage${reset} [-a|--all] [-i|--interactive] [-r|--review] [-d|--dry-run] [<path spec>...]:
     Stages files for save.
-  ${underline}status${reset} [-s|--select] [<name>]: Shows details for the current or named unit of work.
-    Will enter interactive selection if no option and no current work or the
-    '--select' option is given.
+$(help-work-status | sed -e 's/^/  /')
   ${underline}involve${reset} [-L|--no-link] [<repository name>]: Involves the current or named
     repository in the current unit of work. When involved, any projects in the
     newly involved project will be linked to the primary project in the unit of
@@ -49,5 +47,14 @@ ${PREFIX}${cyan_u}work${reset} <action>:
 A 'unit of work' is essentially a set of work branches across all involved projects. The first project involved in a unit of work is considered the primary project, which will effect automated linking when involving other projects.
 
 ${red_b}ALPHA Note:${reset} The 'stop' and 'resume' actions do not currently manage the work branches and only updates the 'current work' pointer.
+EOF
+}
+
+help-work-status() {
+  cat <<EOF
+${underline}status${reset} [-s|--select] [--list-projects|-p] [--list-issues|-i] [<name>]:
+  Shows details for the current or named unit of work. Will enter interactive selection if no option and no
+  current work or the '--select' option is given. The '--list-projects' and '--list-issues' options are meant
+  to be used on their own and will just list the involved projects or associated issues respectively.
 EOF
 }

@@ -421,7 +421,7 @@ work-stage() {
 }
 
 work-status() {
-  eval "$(setSimpleOptions SELECT PR_READY NO_FETCH:F -- "$@")" \
+  eval "$(setSimpleOptions SELECT PR_READY: NO_FETCH:F LIST_PROJECTS:p LIST_ISSUES:i -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
   local WORK_NAME LOCAL_COMMITS REMOTE_COMMITS
@@ -436,13 +436,21 @@ work-status() {
     return $?
   fi
 
+  source "${LIQ_WORK_DB}/${WORK_NAME}"
+  if [[ -n "$LIST_PROJECTS" ]]; then
+    echo "$INVOLVED_PROJECTS"
+    return $?
+  elif [[ -n "$LIST_ISSUES" ]]; then
+    echo "$WORK_ISSUES"
+    return $?
+  fi
+
   if [[ -z "$NO_FETCH" ]]; then
     work-sync --fetch-only
   fi
 
   echo "Branch name: $WORK_NAME"
   echo
-  source "${LIQ_WORK_DB}/${WORK_NAME}"
   if [[ -z "$INVOLVED_PROJECTS" ]]; then
     "Involved projects: <none>"
   else
@@ -522,6 +530,8 @@ work-status() {
     git status --short
   done
 }
+# alias TODO: I think I might like 'show' better after all
+work-show() { work-status "$@"; }
 
 work-start() {
   findBase
@@ -639,7 +649,7 @@ work-test() {
 }
 
 work-submit() {
-  eval "$(setSimpleOptions MESSAGE= NOT_CLEAN:C NO_CLOSE:X -- "$@")" \
+  eval "$(setSimpleOptions MESSAGE= NOT_CLEAN:C NO_CLOSE:X NO_BROWSE:B -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
@@ -736,7 +746,11 @@ EOF)
         DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
       fi
 
-      hub pull-request --push --base=${BASE_TARGET}:master -m "${DESC}"
+      local PULL_OPTS="--push --base=${BASE_TARGET}:master "
+      if [[ -z "$NO_BROWSE" ]]; then
+        PULL_OPTS="$PULL_OPTS --browse"
+      fi
+      hub pull-request $PULL_OPTS -m "${DESC}"
     ) # end policy-subshell
   done
 }
