@@ -56,6 +56,7 @@ projects-close() {
 
 # see: liq help projects create
 projects-create() {
+  # TODO: Support 'NPM_PASSTHRUOGH:P' which will use the NPM default values for version and license.
   eval "$(setSimpleOptions NEW= SOURCE= FOLLOW NO_FORK:F VERSION= LICENSE= DESCRIPTION= PUBLIC: -- "$@")"
 
   # TODO: check that the upstream and workspace projects don't already exist
@@ -80,9 +81,9 @@ projects-create() {
       echoerrandexit "Must specify NPM org scope when creating new projects."
     else
       if [[ -e "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]]; then
-        echoerrandexit "Did not find base org repo for '$PKG_ORG_NAME'. Try:\nliq orgs import <base org pkg or URL>"
-      else
         source "${LIQ_ORG_DB}/${PKG_ORG_NAME}/settings.sh"
+      else
+        echoerrandexit "Did not find base org repo for '$PKG_ORG_NAME'. Try:\nliq orgs import <base org pkg or URL>"
       fi
     fi
   fi
@@ -93,11 +94,40 @@ projects-create() {
   BUGS_URL="https://${REPO_FRAG}/issues"
   HOMEPAGE="https://${REPO_FRAG}#readme"
 
+  update_pkg() {
+    update_pkg_line ".name = \"@${ORG_NPM_SCOPE}/${__PROJ_NAME}\""
+    [[ -n "$VERSION" ]] || VERSION='1.0.0-alpha.0'
+    update_pkg_line ".version = \"${VERSION}\""
+    [[ -n "$LICENSE" ]] || LICENSE='UNLICENSED'
+    update_pkg_line ".license = \"${LICENSE}\""
+    update_pkg_line ".repository = { type: \"git\", url: \"${REPO_URL}\"}"
+    update_pkg_line ".bugs = { url: \"${BUGS_URL}\"}"
+    update_pkg_line ".homepage = \"${HOMEPAGE}\""
+    if [[ -n "$DESCRIPTION" ]]; then
+      update_pkg_line ".description = \"${DESCRIPTION}\""
+    fi
+  }
+
+  update_pkg_line() {
+    echo "$(cat package.json | jq "${1}")" > package.json
+  }
+
   if [[ -n "$NEW" ]]; then
-    cd "$PROJ_STAGE"
+    local STAGING PROJ_STAGE
+    projectResetStaging "$__PROJ_NAME"
+    mkdir -p "${PROJ_STAGE}"
+    cd "${PROJ_STAGE}"
     git init .
-    npm init "$NEW"
-    # The init script is responsible for setting up package.json
+    npm init -y
+
+    if [[ "$NEW" == "raw" ]]; then
+      update_pkg
+    else
+      # TODO
+      echoerr "Only the 'raw' type is currently supported in this alpha version."
+    fi
+    git add package.json
+    git commit -m "packaage initialization"
   else
     projectClone "$SOURCE" 'source'
     cd "$PROJ_STAGE"
@@ -112,19 +142,7 @@ projects-create() {
 
     [[ -f "package.json" ]] || echo '{}' > package.json
 
-    update_pkg() {
-      echo "$(cat package.json | jq "${1}")" > package.json
-    }
-
-    update_pkg ".name = \"@${ORG_NPM_SCOPE}/${__PROJ_NAME}\""
-    update_pkg ".version = \"${VERSION}\""
-    update_pkg ".license = \"${LICENSE}\""
-    update_pkg ".repository = { type: \"git\", url: \"${REPO_URL}\"}"
-    update_pkg ".bugs = { url: \"${BUGS_URL}\"}"
-    update_pkg ".homepage = \"${HOMEPAGE}\""
-    if [[ -n "$DESCRIPTION" ]]; then
-      update_pkg ".description = \"${DESCRIPTION}\""
-    fi
+    update_pkg
 
     git add package.json
     git commit -m "setup and/or updated package.json"
@@ -141,7 +159,7 @@ projects-create() {
     hub fork --remote-name workspace
     git branch -u upstream/master master
   fi
-  if [[ -z "$FOLLOW" ]]; then
+  if [[ -z "$NEW" ]] && [[ -z "$FOLLOW" ]]; then
     echo "Un-following source repo..."
     git remote remove source
   fi

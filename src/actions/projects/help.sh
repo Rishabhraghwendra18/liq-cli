@@ -46,6 +46,10 @@ ${underline}create${reset} [[--new <type>] || [--source|-s <pkg|URL>] [--follow|
   calls 'npm init <type>' and then sets up the GitHub repository and working repo (unless --no-fork
   is specified).
 
+  The 'raw' type is a built-in type that initiates a completly raw repo with just minimal 'package.json'
+  defintion. The package attributes will be configured based on parameters with the version defaulting to
+  '1.0.0-alpha.0' and 'license' defaulting to 'UNLICENSED'.
+
   If '--source' is specified, will first clone the source repo as a starting point. This can be used
   to "convert" non-Liquid projects (from GitHub or other sources) as well as to create re-named
   duplicates of Liquid projects If set to '--follow' the source, then this effectively sets up a
