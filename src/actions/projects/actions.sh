@@ -56,6 +56,7 @@ projects-close() {
 
 # see: liq help projects create
 projects-create() {
+  local PKG_ORG_NAME PKG_BASENAME
   # TODO: Support 'NPM_PASSTHRUOGH:P' which will use the NPM default values for version and license.
   eval "$(setSimpleOptions NEW= SOURCE= FOLLOW NO_FORK:F VERSION= LICENSE= DESCRIPTION= PUBLIC: -- "$@")"
 
@@ -75,30 +76,32 @@ projects-create() {
     else
       echoerrandexit "Must specify project name for '--new' projects."
     fi
-  else # check that project name includes org
-    projectsSetPkgNameComponents "${__PROJ_NAME}"
-    if [[ "$PKG_ORG_NAME" == '.' ]]; then
-      echoerrandexit "Must specify NPM org scope when creating new projects."
-    else
-      if [[ -e "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]]; then
-        source "${LIQ_ORG_DB}/${PKG_ORG_NAME}/settings.sh"
-      else
-        echoerrandexit "Did not find base org repo for '$PKG_ORG_NAME'. Try:\nliq orgs import <base org pkg or URL>"
-      fi
-    fi
+  fi
+
+  projectsSetPkgNameComponents "${__PROJ_NAME}"
+  if [[ "$PKG_ORG_NAME" == '.' ]]; then
+    echoerrandexit "Must specify org scope when creating a project."
+  fi
+
+  if [[ -e "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]]; then
+    source "${LIQ_ORG_DB}/${PKG_ORG_NAME}/settings.sh"
+  else
+    echoerrandexit "Did not find base org repo for '$PKG_ORG_NAME'. Try:\nliq orgs import <base org pkg or URL>"
   fi
 
   local REPO_FRAG REPO_URL BUGS_URL README_URL
-  REPO_FRAG="github.com/${ORG_GITHUB_NAME}/${__PROJ_NAME}"
+  REPO_FRAG="github.com/${ORG_GITHUB_NAME}/${PKG_BASENAME}"
   REPO_URL="git+ssh://git@${REPO_FRAG}.git"
   BUGS_URL="https://${REPO_FRAG}/issues"
   HOMEPAGE="https://${REPO_FRAG}#readme"
 
   update_pkg() {
-    update_pkg_line ".name = \"@${ORG_NPM_SCOPE}/${__PROJ_NAME}\""
+    update_pkg_line ".name = \"@${ORG_NPM_SCOPE}/${PKG_BASENAME}\""
     [[ -n "$VERSION" ]] || VERSION='1.0.0-alpha.0'
     update_pkg_line ".version = \"${VERSION}\""
-    [[ -n "$LICENSE" ]] || LICENSE='UNLICENSED'
+    [[ -n "$LICENSE" ]] \
+      || { [[ -n "${ORG_DEFAULT_LICENSE:-}" ]] && LICENSE="$ORG_DEFAULT_LICENSE"; } \
+      || LICENSE='UNLICENSED'
     update_pkg_line ".license = \"${LICENSE}\""
     update_pkg_line ".repository = { type: \"git\", url: \"${REPO_URL}\"}"
     update_pkg_line ".bugs = { url: \"${BUGS_URL}\"}"
@@ -117,8 +120,8 @@ projects-create() {
     projectResetStaging "$__PROJ_NAME"
     mkdir -p "${PROJ_STAGE}"
     cd "${PROJ_STAGE}"
-    git init .
-    npm init -y
+    git init --quiet .
+    npm init -y > /dev/null
 
     if [[ "$NEW" == "raw" ]]; then
       update_pkg
@@ -136,9 +139,6 @@ projects-create() {
     echo "Setting up package.json..."
     # setup all the vars
     [[ -n "$VERSION" ]] || VERSION='1.0.0'
-    [[ -n "$LICENSE" ]] \
-      || { [[ -n "${ORG_DEFAULT_LICENSE:-}" ]] && LICENSE="$ORG_DEFAULT_LICENSE"; } \
-      || LICENSE='UNLICENSED'
 
     [[ -f "package.json" ]] || echo '{}' > package.json
 
@@ -165,7 +165,7 @@ projects-create() {
   fi
 
   cd -
-  projectMoveStaged "$__PROJ_NAME" "$PROJ_STAGE"
+  projectMoveStaged "${PKG_ORG_NAME}/${PKG_BASENAME}" "$PROJ_STAGE"
 }
 
 # see: liq help projects deploy
