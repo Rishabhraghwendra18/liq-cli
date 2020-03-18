@@ -151,7 +151,7 @@ projects-create() {
   echo "Creating upstream repo..."
   local CREATE_OPTS="--remote-name upstream"
   if [[ -z "$PUBLIC" ]]; then CREATE_OPTS="${CREATE_OPTS} --private"; fi
-  hub create ${CREATE_OPTS} -d "$DESCRIPTION" "${ORG_GITHUB_NAME}/${__PROJ_NAME}"
+  hub create --remote-name upstream ${CREATE_OPTS} -d "$DESCRIPTION" "${ORG_GITHUB_NAME}/${__PROJ_NAME}"
   git push --all upstream
 
   if [[ -z "$NO_FORK" ]]; then
