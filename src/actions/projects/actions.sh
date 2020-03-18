@@ -80,7 +80,7 @@ projects-create() {
 
   projectsSetPkgNameComponents "${__PROJ_NAME}"
   if [[ "$PKG_ORG_NAME" == '.' ]]; then
-    echoerrandexit "Must specify org scope when creating a project."
+    echoerrandexit "Must specify org scope in name when creating a project. E.g. 'my-org/my-project'."
   fi
 
   if [[ -e "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]]; then
