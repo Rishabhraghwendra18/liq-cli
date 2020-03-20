@@ -60,6 +60,8 @@ projects-create() {
   # TODO: Support 'NPM_PASSTHRUOGH:P' which will use the NPM default values for version and license.
   eval "$(setSimpleOptions NEW= SOURCE= FOLLOW NO_FORK:F VERSION= LICENSE= DESCRIPTION= PUBLIC: -- "$@")"
 
+  # first, check that we can access GitHub
+  projectsCheckGitAccess
   # TODO: check that the upstream and workspace projects don't already exist
 
   if [[ -n "$NEW" ]] && [[ -n "$SOURCE" ]]; then

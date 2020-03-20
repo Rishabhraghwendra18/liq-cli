@@ -3541,6 +3541,8 @@ projects-create() {
   # TODO: Support 'NPM_PASSTHRUOGH:P' which will use the NPM default values for version and license.
   eval "$(setSimpleOptions NEW= SOURCE= FOLLOW NO_FORK:F VERSION= LICENSE= DESCRIPTION= PUBLIC: -- "$@")"
 
+  # first, check that we can access GitHub
+  projectsCheckGitAccess
   # TODO: check that the upstream and workspace projects don't already exist
 
   if [[ -n "$NEW" ]] && [[ -n "$SOURCE" ]]; then
@@ -3561,7 +3563,7 @@ projects-create() {
 
   projectsSetPkgNameComponents "${__PROJ_NAME}"
   if [[ "$PKG_ORG_NAME" == '.' ]]; then
-    echoerrandexit "Must specify org scope when creating a project."
+    echoerrandexit "Must specify org scope in name when creating a project. E.g. 'my-org/my-project'."
   fi
 
   if [[ -e "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]]; then
@@ -3632,7 +3634,7 @@ projects-create() {
   echo "Creating upstream repo..."
   local CREATE_OPTS="--remote-name upstream"
   if [[ -z "$PUBLIC" ]]; then CREATE_OPTS="${CREATE_OPTS} --private"; fi
-  hub create ${CREATE_OPTS} -d "$DESCRIPTION" "${ORG_GITHUB_NAME}/${__PROJ_NAME}"
+  hub create --remote-name upstream ${CREATE_OPTS} -d "$DESCRIPTION" "${ORG_GITHUB_NAME}/${__PROJ_NAME}"
   git push --all upstream
 
   if [[ -z "$NO_FORK" ]]; then
@@ -4130,10 +4132,10 @@ projectCheckIfInPlayground() {
   fi
 }
 
-projectCheckGitAuth() {
+projectsCheckGitAccess() {
   # if we don't supress the output, then we get noise even when successful
   ssh -qT git@github.com 2> /dev/null || if [ $? -ne 1 ]; then
-    echoerrandexit "Could not connect to github; add your github key with 'ssh-add'."
+        echoerrandexit "Could not connect to github; try to add add your GitHub key like:\nssh-add /example/path/to/key"
   fi
 }
 
@@ -4162,7 +4164,7 @@ projectClone() {
   local URL="${1}"
   local ORIGIN_NAME="${2:-upstream}"
 
-  projectCheckGitAuth
+  projectsCheckGitAccess
 
   local STAGING
   projectResetStaging $(basename "$URL")
@@ -4191,7 +4193,7 @@ projectHubWhoami() {
 projectForkClone() {
   local URL="${1}"
 
-  projectCheckGitAuth
+  projectsCheckGitAccess
 
   local PROJ_NAME ORG_URL GITHUB_NAME
   PROJ_NAME=$(basename "$URL")
