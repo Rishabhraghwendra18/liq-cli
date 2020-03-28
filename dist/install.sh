@@ -404,6 +404,9 @@ _help-func-summary() {
     -e "1,/\\]:/ s/(\\]:)/\\1${reset}/" \
     -e "1 s/^([[:alpha:]]+)([: ])/${yellow}${underline}\\1${reset}\\2/" \
     -e '2,$s/^/  /'
+    # We fold, then color because fold sees the control characters as just plain characters, so it throws the fold off.
+    # The non-printing characters are only really understood as such by the terminal and individual programs that
+    # support it (which fold should, but, as this is written, doesn't).
     # 1 & 2) make options green
     # 3) yellow underline function name
     # 4) add hanging indent

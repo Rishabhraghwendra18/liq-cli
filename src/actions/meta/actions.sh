@@ -39,6 +39,9 @@ meta-next() {
   if [ ! -d "$HOME/.liquid-development" ]; then
     [[ -z "$TECH_DETAIL" ]] || TECH_DETAIL=" (expected ~/.liquid-development)"
     echofmt $COLOR "It looks like liq CLI hasn't been setup yet$TECH_DETAIL. Try:\nliq meta init"
+  elif [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
+    source "${LIQ_WORK_DB}/curr_work"
+    echofmt $COLOR "It looks like you were worknig on something: '${WORK_DESC}'. Try:\nliq work status"
   else
     [[ -n "$ERROR" ]] || COLOR="yellow"
     echofmt $COLOR "I have no advice to give you at this time."

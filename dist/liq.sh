@@ -775,15 +775,18 @@ _help-func-summary() {
 
   (
     # echo -n "${underline}${yellow}${FUNC_NAME}${reset} "
-    echo -n "${FUNC_NAME}"
-    [[ -z "$OPTIONS" ]] || echo -n " ${OPTIONS}"
+    echo -n "${FUNC_NAME} "
+    [[ -z "$OPTIONS" ]] || echo -n "${OPTIONS}"
     echo -n ": "
     cat
   ) | fold -sw $WIDTH | sed -E \
     -e "1,/\\[--/ s/(\\[--)/${green}\\1/" \
     -e "1,/\\]:/ s/(\\]:)/\\1${reset}/" \
-    -e "1 s/^([[:alpha:]-]+)(:? )/${yellow}${underline}\\1${reset}\\2/" \
+    -e "1 s/^([[:alpha:]]+)([: ])/${yellow}${underline}\\1${reset}\\2/" \
     -e '2,$s/^/  /'
+    # We fold, then color because fold sees the control characters as just plain characters, so it throws the fold off.
+    # The non-printing characters are only really understood as such by the terminal and individual programs that
+    # support it (which fold should, but, as this is written, doesn't).
     # 1 & 2) make options green
     # 3) yellow underline function name
     # 4) add hanging indent
@@ -1319,7 +1322,7 @@ exitUnknownHelpTopic() {
 }
 function dataSQLCheckRunning() {
   eval "$(setSimpleOptions NO_CHECK -- "$@")"
-
+  
   if [[ -z "$NO_CHECK" ]] && ! services-list --exit-on-stopped -q sql; then
     services-start sql
   fi
@@ -2578,6 +2581,9 @@ meta-next() {
   if [ ! -d "$HOME/.liquid-development" ]; then
     [[ -z "$TECH_DETAIL" ]] || TECH_DETAIL=" (expected ~/.liquid-development)"
     echofmt $COLOR "It looks like liq CLI hasn't been setup yet$TECH_DETAIL. Try:\nliq meta init"
+  elif [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
+    source "${LIQ_WORK_DB}/curr_work"
+    echofmt $COLOR "It looks like you were worknig on something: '${WORK_DESC}'. Try:\nliq work status"
   else
     [[ -n "$ERROR" ]] || COLOR="yellow"
     echofmt $COLOR "I have no advice to give you at this time."
