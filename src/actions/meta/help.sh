@@ -6,11 +6,29 @@ help-meta() {
 The meta group manages local liq configurations and non-liq user resources.
 
 ${PREFIX}${cyan_u}meta${reset} <action>:
-   ${underline}init${reset} [--silent|-s] [--playground|-p <absolute path>]: Creates the Liquid
-     Development DB (a local directory) and playground.
-   ${underline}bash-config${reset}: Prints bash configuration. Try: eval \`liq meta bash-config\`
+$(_help-actions-list next init bash-config | indent)
 
-   ${bold}Sub-resources${reset}:
-     * $( SUMMARY_ONLY=true; help-meta-keys )
+  ${bold}Sub-resources${reset}:
+    * $( SUMMARY_ONLY=true; help-meta-keys )
+EOF
+}
+
+help-meta-bash-config() {
+  cat <<EOF | _help-func-summary bash-config
+Prints bash configuration. Try:\neval "\$(liq meta bash-config)"
+EOF
+}
+
+help-meta-init() {
+  cat <<EOF | _help-func-summary init "[--silent|-s] [--playground|-p <absolute path>]"
+Creates the Liquid Development DB (a local directory) and playground.
+EOF
+}
+
+help-meta-next() {
+  cat <<EOF | _help-func-summary next "[--tech-detail|-t] [--error|-e]"
+Analyzes current state of play and suggests what to do next. '--tech-detail' may provide additional technical information for the curious or liq developers.
+
+Regular users can ignore the '--error' option. It's an internal option allowing the 'next' action to be leveraged to for error information and hints when appropriate.
 EOF
 }

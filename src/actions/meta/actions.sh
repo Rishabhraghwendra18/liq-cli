@@ -29,3 +29,20 @@ meta-init() {
 meta-bash-config() {
   echo "[ -d '$COMPLETION_PATH' ] && . '${COMPLETION_PATH}/liq'"
 }
+
+meta-next() {
+  eval "$(setSimpleOptions TECH_DETAIL ERROR -- "$@")"
+
+  local COLOR="green"
+  [[ -z "$ERROR" ]] || COLOR="red"
+
+  if [ ! -d "$HOME/.liquid-development" ]; then
+    [[ -z "$TECH_DETAIL" ]] || TECH_DETAIL=" (expected ~/.liquid-development)"
+    echofmt $COLOR "It looks like liq CLI hasn't been setup yet$TECH_DETAIL. Try:\nliq meta init"
+  else
+    [[ -n "$ERROR" ]] || COLOR="yellow"
+    echofmt $COLOR "I have no advice to give you at this time."
+  fi
+
+  [[ -z "$ERROR" ]] || exit 1
+}
