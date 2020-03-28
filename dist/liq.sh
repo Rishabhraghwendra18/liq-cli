@@ -759,17 +759,46 @@ echogreen() {
   echofmt green "$@"
 }
 
+# Basic indent of a line.
 indent() {
-  local LEADING_INDENT=''
-  local PAR_INDENT='  '
-  local WIDTH=82
-  if [[ -n "${INDENT:-}" ]]; then
-    LEADING_INDENT=`printf '  %.0s' {1..$INDENT}`
-    PAR_INDENT=`printf '  %.0s' {1..$(( $INDENT + 1))}`
-    WIDTH=$(( $WIDTH - $INDENT * 2 ))
-  fi
+  cat | sed -e 's/^/  /'
+}
 
-  fold -sw $WIDTH | sed -e "1,\$s/^/${LEADING_INDENT}/" -e "2,\$s/^/${PAR_INDENT}/"
+# Folds the summary with a hanging indent.
+_help-func-summary() {
+  local FUNC_NAME="${1}"
+  local OPTIONS="${2:-}"
+
+  local STD_FOLD=82
+  local WIDTH
+  WIDTH=$(( $STD_FOLD - 2 ))
+
+  (
+    # echo -n "${underline}${yellow}${FUNC_NAME}${reset} "
+    echo -n "${FUNC_NAME} "
+    [[ -z "$OPTIONS" ]] || echo -n "${OPTIONS}"
+    echo -n ": "
+    cat
+  ) | fold -sw $WIDTH | sed -E \
+    -e "1,/\\[--/ s/(\\[--)/${green}\\1/" \
+    -e "1,/\\]:/ s/(\\]:)/\\1${reset}/" \
+    -e "1 s/^([[:alpha:]]+)([: ])/${yellow}${underline}\\1${reset}\\2/" \
+    -e '2,$s/^/  /'
+    # We fold, then color because fold sees the control characters as just plain characters, so it throws the fold off.
+    # The non-printing characters are only really understood as such by the terminal and individual programs that
+    # support it (which fold should, but, as this is written, doesn't).
+    # 1 & 2) make options green
+    # 3) yellow underline function name
+    # 4) add hanging indent
+}
+
+# Prints and indents the help for each action
+_help-actions-list() {
+  local ACTION
+  for ACTION in "$@"; do
+    echo
+    help-meta-$ACTION -i
+  done
 }
 
 helpActionPrefix() {
@@ -859,8 +888,9 @@ sourceWorkspaceConfig() {
 
 requirePackage() {
   requireNpmPackage
-  PACKAGE=`cat $PACKAGE_FILE`
-  PACKAGE_NAME=`echo "$PACKAGE" | jq --raw-output ".name"`
+  PACKAGE="$(cat $PACKAGE_FILE)"
+  PACKAGE_NAME="$(echo "$PACKAGE" | jq --raw-output ".name")"
+  echo "$PACKAGE_NAME"
 }
 
 requireEnvironment() {
@@ -1260,27 +1290,16 @@ EOF
       exitUnknownHelpTopic "$1" ""
     fi
     local HELP_SPEC="${1}"; shift
+    local CONTEXT="liq "
     while (( $# > 0)); do
       if ! type -t help-${HELP_SPEC}-${1} | grep -q 'function'; then
         exitUnknownHelpTopic "$1" "$HELP_SPEC"
       fi
-      HELP_SPEC="${HELP_SPEC}-${1}"; shift
+      HELP_SPEC="${HELP_SPEC}-${1}"
+      CONTEXT="${CONTEXT}${1} "; shift
     done
 
-    local CONTEXT="liq "
-    CONTEXT="liq $(echo "$HELP_SPEC" | sed -e 's/-[^-]*$//' | sed -e 's/-/ /g')"
     help-${HELP_SPEC} "$CONTEXT"
-  fi
-}
-
-helperHandler() {
-  local PREFIX="$1"; shift
-  if [[ -n "$PREFIX" ]]; then
-    local HELPER
-    for HELPER in "$@"; do
-      echo
-      $HELPER
-    done
   fi
 }
 
@@ -1304,7 +1323,7 @@ exitUnknownHelpTopic() {
 }
 function dataSQLCheckRunning() {
   eval "$(setSimpleOptions NO_CHECK -- "$@")"
-  
+
   if [[ -z "$NO_CHECK" ]] && ! services-list --exit-on-stopped -q sql; then
     services-start sql
   fi
@@ -2553,6 +2572,27 @@ meta-init() {
 meta-bash-config() {
   echo "[ -d '$COMPLETION_PATH' ] && . '${COMPLETION_PATH}/liq'"
 }
+
+meta-next() {
+  eval "$(setSimpleOptions TECH_DETAIL ERROR -- "$@")"
+
+  local COLOR="green"
+  [[ -z "$ERROR" ]] || COLOR="red"
+
+  if [ ! -d "$HOME/.liquid-development" ]; then
+    [[ -z "$TECH_DETAIL" ]] || TECH_DETAIL=" (expected ~/.liquid-development)"
+    echofmt $COLOR "It looks like liq CLI hasn't been setup yet$TECH_DETAIL. Try:\nliq meta init"
+  elif ! [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
+    source "${LIQ_WORK_DB}/curr_work"
+    echofmt $COLOR "It looks like you were worknig on something: '${WORK_DESC}'. Try:\nliq work status"
+  elif ! requirePackage; then
+    echofmt $COLOR "Looks like you're currently in project '$PACKAGE_NAME'. You could start working on an issue. Try:\nliq work start ..."
+  else
+    echofmt $COLOR "Choose a project and 'cd' there."
+  fi
+
+  [[ -z "$ERROR" ]] || exit 1
+}
 help-meta() {
   local PREFIX="${1:-}"
 
@@ -2561,12 +2601,30 @@ help-meta() {
 The meta group manages local liq configurations and non-liq user resources.
 
 ${PREFIX}${cyan_u}meta${reset} <action>:
-   ${underline}init${reset} [--silent|-s] [--playground|-p <absolute path>]: Creates the Liquid
-     Development DB (a local directory) and playground.
-   ${underline}bash-config${reset}: Prints bash configuration. Try: eval \`liq meta bash-config\`
+$(_help-actions-list next init bash-config | indent)
 
-   ${bold}Sub-resources${reset}:
-     * $( SUMMARY_ONLY=true; help-meta-keys )
+  ${bold}Sub-resources${reset}:
+    * $( SUMMARY_ONLY=true; help-meta-keys )
+EOF
+}
+
+help-meta-bash-config() {
+  cat <<EOF | _help-func-summary bash-config
+Prints bash configuration. Try:\neval "\$(liq meta bash-config)"
+EOF
+}
+
+help-meta-init() {
+  cat <<EOF | _help-func-summary init "[--silent|-s] [--playground|-p <absolute path>]"
+Creates the Liquid Development DB (a local directory) and playground.
+EOF
+}
+
+help-meta-next() {
+  cat <<EOF | _help-func-summary next "[--tech-detail|-t] [--error|-e]"
+Analyzes current state of play and suggests what to do next. '--tech-detail' may provide additional technical information for the curious or liq developers.
+
+Regular users can ignore the '--error' option. It's an internal option allowing the 'next' action to be leveraged to for error information and hints when appropriate.
 EOF
 }
 metaSetupLiqDb() {
@@ -2866,10 +2924,14 @@ ${PREFIX}${cyan_u}orgs${reset} <action>:
   * There is a 1-1 correspondance between the liq org, a GitHub organization (or individual), and—if publishing publicly—an npm package scope.
   * The GitHub organization (or individual) must exist prior to creating an org.
 
-  $(help-orgs-create | sed -e 's/^/  /')
+$(help-orgs-create | indent)
 
-  $(help-orgs-import | sed -e 's/^/  /')
+$(help-orgs-close | indent)
+
+$(help-orgs-import | indent)
+
   ${underline}list${reset}: Lists the currently affiliated orgs.
+
   ${underline}show${reset} [--sensitive] [<org nick>]: Displays info on the currently active or named org.
 EOF
 }

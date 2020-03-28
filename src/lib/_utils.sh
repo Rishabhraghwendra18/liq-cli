@@ -16,17 +16,46 @@ echogreen() {
   echofmt green "$@"
 }
 
+# Basic indent of a line.
 indent() {
-  local LEADING_INDENT=''
-  local PAR_INDENT='  '
-  local WIDTH=82
-  if [[ -n "${INDENT:-}" ]]; then
-    LEADING_INDENT=`printf '  %.0s' {1..$INDENT}`
-    PAR_INDENT=`printf '  %.0s' {1..$(( $INDENT + 1))}`
-    WIDTH=$(( $WIDTH - $INDENT * 2 ))
-  fi
+  cat | sed -e 's/^/  /'
+}
 
-  fold -sw $WIDTH | sed -e "1,\$s/^/${LEADING_INDENT}/" -e "2,\$s/^/${PAR_INDENT}/"
+# Folds the summary with a hanging indent.
+_help-func-summary() {
+  local FUNC_NAME="${1}"
+  local OPTIONS="${2:-}"
+
+  local STD_FOLD=82
+  local WIDTH
+  WIDTH=$(( $STD_FOLD - 2 ))
+
+  (
+    # echo -n "${underline}${yellow}${FUNC_NAME}${reset} "
+    echo -n "${FUNC_NAME} "
+    [[ -z "$OPTIONS" ]] || echo -n "${OPTIONS}"
+    echo -n ": "
+    cat
+  ) | fold -sw $WIDTH | sed -E \
+    -e "1,/\\[--/ s/(\\[--)/${green}\\1/" \
+    -e "1,/\\]:/ s/(\\]:)/\\1${reset}/" \
+    -e "1 s/^([[:alpha:]]+)([: ])/${yellow}${underline}\\1${reset}\\2/" \
+    -e '2,$s/^/  /'
+    # We fold, then color because fold sees the control characters as just plain characters, so it throws the fold off.
+    # The non-printing characters are only really understood as such by the terminal and individual programs that
+    # support it (which fold should, but, as this is written, doesn't).
+    # 1 & 2) make options green
+    # 3) yellow underline function name
+    # 4) add hanging indent
+}
+
+# Prints and indents the help for each action
+_help-actions-list() {
+  local ACTION
+  for ACTION in "$@"; do
+    echo
+    help-meta-$ACTION -i
+  done
 }
 
 helpActionPrefix() {
@@ -116,8 +145,8 @@ sourceWorkspaceConfig() {
 
 requirePackage() {
   requireNpmPackage
-  PACKAGE=`cat $PACKAGE_FILE`
-  PACKAGE_NAME=`echo "$PACKAGE" | jq --raw-output ".name"`
+  PACKAGE="$(cat $PACKAGE_FILE)"
+  PACKAGE_NAME="$(echo "$PACKAGE" | jq --raw-output ".name")"
 }
 
 requireEnvironment() {

@@ -36,27 +36,16 @@ EOF
       exitUnknownHelpTopic "$1" ""
     fi
     local HELP_SPEC="${1}"; shift
+    local CONTEXT="liq "
     while (( $# > 0)); do
       if ! type -t help-${HELP_SPEC}-${1} | grep -q 'function'; then
         exitUnknownHelpTopic "$1" "$HELP_SPEC"
       fi
-      HELP_SPEC="${HELP_SPEC}-${1}"; shift
+      HELP_SPEC="${HELP_SPEC}-${1}"
+      CONTEXT="${CONTEXT}${1} "; shift
     done
 
-    local CONTEXT="liq "
-    CONTEXT="liq $(echo "$HELP_SPEC" | sed -e 's/-[^-]*$//' | sed -e 's/-/ /g')"
     help-${HELP_SPEC} "$CONTEXT"
-  fi
-}
-
-helperHandler() {
-  local PREFIX="$1"; shift
-  if [[ -n "$PREFIX" ]]; then
-    local HELPER
-    for HELPER in "$@"; do
-      echo
-      $HELPER
-    done
   fi
 }
 

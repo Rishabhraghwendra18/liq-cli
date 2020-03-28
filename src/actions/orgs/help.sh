@@ -10,10 +10,14 @@ ${PREFIX}${cyan_u}orgs${reset} <action>:
   * There is a 1-1 correspondance between the liq org, a GitHub organization (or individual), and—if publishing publicly—an npm package scope.
   * The GitHub organization (or individual) must exist prior to creating an org.
 
-  $(help-orgs-create | sed -e 's/^/  /')
+$(help-orgs-create | indent)
 
-  $(help-orgs-import | sed -e 's/^/  /')
+$(help-orgs-close | indent)
+
+$(help-orgs-import | indent)
+
   ${underline}list${reset}: Lists the currently affiliated orgs.
+
   ${underline}show${reset} [--sensitive] [<org nick>]: Displays info on the currently active or named org.
 EOF
 }
