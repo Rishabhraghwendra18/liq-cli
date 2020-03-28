@@ -42,9 +42,10 @@ meta-next() {
   elif [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     source "${LIQ_WORK_DB}/curr_work"
     echofmt $COLOR "It looks like you were worknig on something: '${WORK_DESC}'. Try:\nliq work status"
+  elif requirePackage; then
+    echofmt $COLOR "Looks like you're currently in project '$PACKAGE_NAME'. You could start working on an issue. Try:\nliq work start ..."
   else
-    [[ -n "$ERROR" ]] || COLOR="yellow"
-    echofmt $COLOR "I have no advice to give you at this time."
+    echofmt $COLOR "Choose a project and 'cd' there."
   fi
 
   [[ -z "$ERROR" ]] || exit 1

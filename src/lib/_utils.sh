@@ -145,8 +145,8 @@ sourceWorkspaceConfig() {
 
 requirePackage() {
   requireNpmPackage
-  PACKAGE=`cat $PACKAGE_FILE`
-  PACKAGE_NAME=`echo "$PACKAGE" | jq --raw-output ".name"`
+  PACKAGE="$(cat $PACKAGE_FILE)"
+  PACKAGE_NAME="$(echo "$PACKAGE" | jq --raw-output ".name")"
 }
 
 requireEnvironment() {

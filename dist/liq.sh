@@ -888,8 +888,9 @@ sourceWorkspaceConfig() {
 
 requirePackage() {
   requireNpmPackage
-  PACKAGE=`cat $PACKAGE_FILE`
-  PACKAGE_NAME=`echo "$PACKAGE" | jq --raw-output ".name"`
+  PACKAGE="$(cat $PACKAGE_FILE)"
+  PACKAGE_NAME="$(echo "$PACKAGE" | jq --raw-output ".name")"
+  echo "$PACKAGE_NAME"
 }
 
 requireEnvironment() {
@@ -1322,7 +1323,7 @@ exitUnknownHelpTopic() {
 }
 function dataSQLCheckRunning() {
   eval "$(setSimpleOptions NO_CHECK -- "$@")"
-  
+
   if [[ -z "$NO_CHECK" ]] && ! services-list --exit-on-stopped -q sql; then
     services-start sql
   fi
@@ -2581,12 +2582,13 @@ meta-next() {
   if [ ! -d "$HOME/.liquid-development" ]; then
     [[ -z "$TECH_DETAIL" ]] || TECH_DETAIL=" (expected ~/.liquid-development)"
     echofmt $COLOR "It looks like liq CLI hasn't been setup yet$TECH_DETAIL. Try:\nliq meta init"
-  elif [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
+  elif ! [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     source "${LIQ_WORK_DB}/curr_work"
     echofmt $COLOR "It looks like you were worknig on something: '${WORK_DESC}'. Try:\nliq work status"
+  elif ! requirePackage; then
+    echofmt $COLOR "Looks like you're currently in project '$PACKAGE_NAME'. You could start working on an issue. Try:\nliq work start ..."
   else
-    [[ -n "$ERROR" ]] || COLOR="yellow"
-    echofmt $COLOR "I have no advice to give you at this time."
+    echofmt $COLOR "Choose a project and 'cd' there."
   fi
 
   [[ -z "$ERROR" ]] || exit 1
