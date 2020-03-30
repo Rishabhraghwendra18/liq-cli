@@ -12,5 +12,5 @@ orgsStaffCommit() {
 # defined.
 orgsStaffRepo() {
   orgsSourceOrg || echoerrandexit "Could not locate local base org project."
-  [[ -n "$ORG_STAFF_REPO" ]] || echoerrandexit "'ORG_STAFF_REPO' not defined in base org project."
+  [[ -n "${ORG_STAFF_REPO:-}" ]] || echoerrandexit "'ORG_STAFF_REPO' not defined in base org project."
 }
