@@ -1,7 +1,7 @@
 # Commits the org staff data.
 orgsStaffCommit() {
   orgsStaffRepo
-  cd "${ORG_STAFF_REPO}" \
+  cd "${LIQ_PLAYGROUND}/${ORG_STAFF_REPO/@/}" \
     && git add staff.tsv \
     && git commit -am "Added staff member '${EMAIL}'." \
     && git push
