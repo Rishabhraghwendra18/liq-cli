@@ -132,15 +132,18 @@ var tsv = createCommonjsModule(function (module) {
 });
 
 var _temp, _headers, _fileName, _keys, _data, _cursor;
+/**
+ * Converts array-string data to an actual object
+ */
 
-var item = function item(keys, fields, pos) {
+var item = function item(keys, multis, fields, pos) {
   if (keys.length !== fields.length) throw new Error("Found ".concat(keys.length, " keys but ").concat(fields.length, " fields."));
   var item = {
     _pos: pos
   };
 
   for (var i = 0; i < fields.length; i += 1) {
-    item[keys[i]] = fields[i];
+    item[keys[i]] = multis[keys[i]] ? fields[i] === '' || fields[i] === '-' ? [] : fields[i].split(/\s*,\s*/) : fields[i] === '' || fields[i] === '-' ? null : fields[i];
   }
 
   return item;
@@ -149,7 +152,7 @@ var item = function item(keys, fields, pos) {
 var TsvExt = (_temp =
 /*#__PURE__*/
 function () {
-  function TsvExt(headers, keys, fileName) {
+  function TsvExt(headers, keys, fileName, multis) {
     classCallCheck(this, TsvExt);
 
     _headers.set(this, {
@@ -179,17 +182,19 @@ function () {
 
     this.headers = headers;
     this.fileName = fileName;
-    var contents = fs.readFileSync(fileName, 'utf8'); // allow blank lines (which are ignored)
-
+    var contents = fs.readFileSync(fileName, 'utf8');
     var lines = contents.split("\n");
     lines.shift(); // remove headers line
+    // allow blank lines (which are ignored)
 
     var filteredLines = lines.filter(function (line) {
       return !line.match(/^\s*$/);
     });
     tsv.header = false;
     this.keys = keys;
-    this.data = tsv.parse(filteredLines.join("\n"));
+    this.multis = multis || {};
+    this.data = filteredLines.length > 0 ? tsv.parse(filteredLines.join("\n")) : [];
+    this.reset();
   }
 
   createClass(TsvExt, [{
@@ -201,18 +206,20 @@ function () {
     key: "next",
     value: function next() {
       this.cursor += 1;
-      if (this.cursor >= this.length) return null;else return item(this.keys, this.data[this.cursor], this.cursor);
+      var l = this.data.length;
+      var cursor = this.cursor;
+      if (this.cursor >= this.data.length) return undefined;else return item(this.keys, this.multis, this.data[this.cursor], this.cursor);
     }
   }, {
     key: "add",
     value: function add(item) {
+      var _this = this;
+
       var line = [];
       this.keys.forEach(function (key) {
-        var field = item[key];
-        if (field === undefined) throw new Error("Item does not define key '".concat(key, "'.")); // We convert a single '-' to 'null'. Primarily because Atom trims white space at the end of  lines (!). Fix that,
-        // and consider changing this.
-
-        line.push(field === '-' ? null : field);
+        var value = item[key];
+        if (value === undefined) throw new Error("Item does not define value for key '".concat(key, "'."));
+        line.push(_this.multis[key] ? value.length === 0 ? '-' : value.join(",") : value === null ? '-' : value);
       });
       var failDesc;
       if (this.notUnique && (failDesc = this.notUnique(this.data.slice(), item))) throw new Error(failDesc);
@@ -221,18 +228,20 @@ function () {
   }, {
     key: "remove",
     value: function remove(key) {
-      var _this = this;
+      var _this2 = this;
 
       var index = this.data.findIndex(function (line) {
-        return _this.matchKey(line, key);
+        return _this2.matchKey(line, key);
       });
       if (index >= 0) return this.data.splice(index, 1);else return null;
     }
   }, {
     key: "write",
     value: function write() {
-      fs.writeFileSync(this.fileName, "".concat(this.headers.join("\t"), "\n").concat(this.data.map(function (line) {
-        return line.join("\t");
+      fs.writeFileSync(this.fileName, "".concat(this.headers.join("\t"), "\n") + "".concat(this.data.map(function (line) {
+        return line.map(function (v) {
+          return v === '' ? '-' : v;
+        }).join("\t");
       }).join("\n"), "\n"));
     }
   }, {
@@ -468,6 +477,108 @@ function (_TsvExt) {
   return Roles;
 }(TsvExt), defineProperty(_class$1, "headers", ['Name', 'Application', 'Super-role', 'Description', 'Notes']), defineProperty(_class$1, "keys", ['name', 'application', 'superRole', 'description', 'notes']), _temp$2);
 
+function _arrayWithHoles(arr) {
+  if (Array.isArray(arr)) return arr;
+}
+
+var arrayWithHoles = _arrayWithHoles;
+
+function _iterableToArrayLimit(arr, i) {
+  if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) {
+    return;
+  }
+
+  var _arr = [];
+  var _n = true;
+  var _d = false;
+  var _e = undefined;
+
+  try {
+    for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+      _arr.push(_s.value);
+
+      if (i && _arr.length === i) break;
+    }
+  } catch (err) {
+    _d = true;
+    _e = err;
+  } finally {
+    try {
+      if (!_n && _i["return"] != null) _i["return"]();
+    } finally {
+      if (_d) throw _e;
+    }
+  }
+
+  return _arr;
+}
+
+var iterableToArrayLimit = _iterableToArrayLimit;
+
+function _nonIterableRest() {
+  throw new TypeError("Invalid attempt to destructure non-iterable instance");
+}
+
+var nonIterableRest = _nonIterableRest;
+
+function _slicedToArray(arr, i) {
+  return arrayWithHoles(arr) || iterableToArrayLimit(arr, i) || nonIterableRest();
+}
+
+var slicedToArray = _slicedToArray;
+
+var Glossary =
+/*#__PURE__*/
+function () {
+  function Glossary() {
+    classCallCheck(this, Glossary);
+
+    this.terms = [];
+  }
+
+  createClass(Glossary, [{
+    key: "addTerm",
+    value: function addTerm(term, definition) {
+      this.terms.push([term, definition]);
+    }
+  }, {
+    key: "addTermsFromIterator",
+    value: function addTermsFromIterator(_ref) {
+      var it = _ref.it,
+          _ref$termKey = _ref.termKey,
+          termKey = _ref$termKey === void 0 ? 'name' : _ref$termKey,
+          _ref$descKey = _ref.descKey,
+          descKey = _ref$descKey === void 0 ? 'description' : _ref$descKey;
+      if (!it) return;
+      it.reset();
+      var i;
+
+      while (i = it.next()) {
+        this.addTerm(i[termKey], i[descKey]);
+      }
+    }
+  }, {
+    key: "generateContent",
+    value: function generateContent() {
+      var content = "# Glossary\n\n<dl>";
+      this.terms.sort(function (a, b) {
+        return a[0].localeCompare(b[0]);
+      });
+      this.terms.forEach(function (_ref2) {
+        var _ref3 = slicedToArray(_ref2, 2),
+            term = _ref3[0],
+            def = _ref3[1];
+
+        return content += "  <dt>".concat(term, "</dt>\n  <dd>").concat(def, "</dd>\n\n");
+      });
+      content += "</dl>\n";
+      return content;
+    }
+  }]);
+
+  return Glossary;
+}();
+
 var _temp$3, _docDir, _roles, _rolesFile, _terms;
 var Policies = (_temp$3 =
 /*#__PURE__*/
@@ -542,7 +653,8 @@ function () {
       if (!fs.existsSync(this.docDir)) throw new Error("Target document dir '".concat(this.docDir, "' does not exist."));
       var roles = this.getRoles();
       var glossary = new Glossary();
-      glossary.addTermsFromIterator(roles);
+      if (roles) glossary.addTermsFromIterator(roles); // TODO: else warn
+
       fs.writeFileSync("".concat(this.docDir, "/Glossary.md"), glossary.generateContent());
     }
   }]);
@@ -561,7 +673,7 @@ function (_TsvExt) {
 
     classCallCheck(this, Staff);
 
-    _this = possibleConstructorReturn(this, getPrototypeOf(Staff).call(this, Staff.headers, Staff.keys, fileName));
+    _this = possibleConstructorReturn(this, getPrototypeOf(Staff).call(this, Staff.headers, Staff.keys, fileName, Staff.multis));
 
     defineProperty(assertThisInitialized(_this), "matchKey", function (line, key) {
       return line[0] === key;
@@ -581,7 +693,11 @@ function (_TsvExt) {
   }]);
 
   return Staff;
-}(TsvExt), defineProperty(_class$2, "headers", ['Email', 'Family Name', 'Given Name', 'Start Date']), defineProperty(_class$2, "keys", ['email', 'familyName', 'givenName', 'startDate']), _temp$4);
+}(TsvExt), defineProperty(_class$2, "headers", ['Email', 'Family Name', 'Given Name', 'Start Date', 'Primary Roles', 'Secondary Roles']), defineProperty(_class$2, "keys", ['email', 'familyName', 'givenName', 'startDate', 'primaryRoles', 'secondaryRoles']), defineProperty(_class$2, "multis", {
+  'primaryRoles': true,
+  'secondaryRoles': true,
+  'managers': true
+}), _temp$4);
 
 var refreshDocuments = function refreshDocuments(destDir, inputFiles) {
   var policies = new Policies();
