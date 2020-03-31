@@ -374,6 +374,7 @@ echoerrandexit() {
   fi
   exit $EXIT_CODE
 }
+
 field-to-label() {
   local FIELD="${1}"
   echo "${FIELD:0:1}$(echo "${FIELD:1}" | tr '[:upper:]' '[:lower:]' | tr '_' ' ')"
@@ -531,6 +532,7 @@ gather-answers() {
       if [[ -n "$SELECTOR" ]] && SELECT_OPS="$($SELECTOR "$FIELD")" && [[ -n "$SELECT_OPS" ]]; then
         local FIELD_SET="${FIELD}_SET"
         if [[ -z ${!FIELD:-} ]] && [[ "${!FIELD_SET}" != 'true' ]] || [[ "$VERIFIED" == false ]]; then
+          unset $FIELD
           PS3="${PROMPT}"
           selectDoneCancel "$FIELD" SELECT_OPS
           unset PS3
@@ -3087,7 +3089,7 @@ orgs-staff-add() {
     [[ -f "$ORG_STRUCTURE" ]] || echoerrandexit "'ORG_STRUCTURE' defnied, but does not point to a file."
 
     local ROLE_OPTS
-    ROLE_OPTS="$(cat "$ORG_STRUCTURE" | jq -r ".[] | .[0]")" || echoerrandexit "Could not parse '$ORG_STRUCTURE' as a valid JSON/org structure file."
+    ROLE_OPTS="$(cat "$ORG_STRUCTURE" | jq -r ".[] | .[0]" | sort)" || echoerrandexit "Could not parse '$ORG_STRUCTURE' as a valid JSON/org structure file."
 
     local STAFF_FILE="${LIQ_PLAYGROUND}/${ORG_STAFF_REPO/@/}/staff.tsv"
     [[ -f "$STAFF_FILE" ]] || touch "$STAFF_FILE"
@@ -3148,13 +3150,13 @@ orgs-staff-add() {
                 console.log(s['email']);
                 found = true;
               }
-              if (!found) {
-                console.log(\`!!NONE:\${role_def[1]}\`)
-              }
+            }
+            if (!found) {
+              console.log(\`!!NONE:\${role_def[1]}\`)
             }
           }
         }
-        catch (e) { console.error(e.message); process.exit(1); }" \
+        catch (e) { console.error(e.message); process.exit(1); }" | sort \
         2> >(while read line; do echo -e "${red}${line}${reset}" >&2; done; \
              [[ -z "$line" ]] || echoerrandexit "Problem Processing managers."))"
       if [[ "$CANDIDATE_MANAGERS" != 'n/a' ]] ; then
@@ -3162,6 +3164,7 @@ orgs-staff-add() {
           local NEEDED="${CANDIDATE_MANAGERS:7}"
           echoerrandexit "Could not find valid manager for role '$ROLE'. Try adding '${NEEDED}' staff and try again."
         fi
+        echo "CANDIDATE_MANAGERS: $CANDIDATE_MANAGERS"
         PS3="Manager (as $ROLE): "
         selectOneCancel MANAGER CANDIDATE_MANAGERS
       fi

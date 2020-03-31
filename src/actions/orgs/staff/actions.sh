@@ -32,7 +32,7 @@ orgs-staff-add() {
     [[ -f "$ORG_STRUCTURE" ]] || echoerrandexit "'ORG_STRUCTURE' defnied, but does not point to a file."
 
     local ROLE_OPTS
-    ROLE_OPTS="$(cat "$ORG_STRUCTURE" | jq -r ".[] | .[0]")" || echoerrandexit "Could not parse '$ORG_STRUCTURE' as a valid JSON/org structure file."
+    ROLE_OPTS="$(cat "$ORG_STRUCTURE" | jq -r ".[] | .[0]" | sort)" || echoerrandexit "Could not parse '$ORG_STRUCTURE' as a valid JSON/org structure file."
 
     local STAFF_FILE="${LIQ_PLAYGROUND}/${ORG_STAFF_REPO/@/}/staff.tsv"
     [[ -f "$STAFF_FILE" ]] || touch "$STAFF_FILE"
@@ -93,13 +93,13 @@ orgs-staff-add() {
                 console.log(s['email']);
                 found = true;
               }
-              if (!found) {
-                console.log(\`!!NONE:\${role_def[1]}\`)
-              }
+            }
+            if (!found) {
+              console.log(\`!!NONE:\${role_def[1]}\`)
             }
           }
         }
-        catch (e) { console.error(e.message); process.exit(1); }" \
+        catch (e) { console.error(e.message); process.exit(1); }" | sort \
         2> >(while read line; do echo -e "${red}${line}${reset}" >&2; done; \
              [[ -z "$line" ]] || echoerrandexit "Problem Processing managers."))"
       if [[ "$CANDIDATE_MANAGERS" != 'n/a' ]] ; then
