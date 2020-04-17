@@ -139,15 +139,59 @@ orgs-staff-add() {
 }
 
 orgs-staff-list() {
-  eval "$(setSimpleOptions ENUMERATE -- "$@")"
+  local COLS="EMAIL FAMILY_NAME GIVEN_NAME START_DATE PRIMARY_ROLES SECONDARY_ROLES:S"
+  eval "$(setSimpleOptions ENUMERATE:n $COLS -- "$@")"
   orgsStaffRepo
-  local STAFF_FILE="${ORG_STAFF_REPO}/staff.tsv"
-  if [[ -z "$ENUMERATE" ]]; then
-    column -s $'\t' -t "${STAFF_FILE}"
-  else
-    (echo -e "Entry #\t$(head -n 1 "${STAFF_FILE}")"; tail +2 "${STAFF_FILE}" | cat -ne ) \
-      | column -s $'\t' -t
+  local STAFF_FILE="${LIQ_PLAYGROUND}/${ORG_STAFF_REPO/@/}/staff.tsv"
+
+  local EMAIL_COL=1
+  local FAMILY_NAME_COL=2
+  local GIVEN_NAME_COL=3
+  local START_DATE_COL=4
+  local PRIMARY_ROLES_COL=5
+  local SECONDARY_ROLES_COL=6
+
+  local HEADER
+  local AWK_CMD='{print '
+  local COL_OFFSET=0
+  if [[ -n "$ENUMERATE" ]]; then
+    HEADER="$(echo -en "Entry #\t")"
+    AWK_CMD="${AWK_CMD}\$1,\"\\t\","
+    COL_OFFSET=1
   fi
+
+  local ALL_COLS=true
+  for i in $COLS; do
+    if [[ -n "${!i%:*}" ]]; then
+      ALL_COLS=false
+    fi
+  done
+
+  if [[ "$ALL_COLS" == "true" ]]; then
+    for i in $COLS; do
+      eval "${i%:*}=true"
+    done
+  fi
+
+  # now we can setup the awk print command
+  shopt -s extglob
+  for i in $COLS; do
+    if [[ -n "${!i%:*}" ]]; then
+      HEADER="${HEADER}$(echo -e "$(field-to-label "${i}")\t")"
+      local COL="${i}_COL"
+      AWK_CMD="${AWK_CMD}\$$((${!COL} + $COL_OFFSET)),\"\t\","
+    fi
+  done
+  AWK_CMD="${AWK_CMD%,\"\\t\",} }"
+  HEADER="${HEADER%+([[:space]])}"
+  shopt -u extglob
+
+  # and finally, we are ready to print
+  echo -e "$HEADER"
+  tail +2 "${STAFF_FILE}" \
+    | cat -e $([[ -z "$ENUMERATE" ]] || echo "-n") \
+    | awk "$AWK_CMD" \
+    | column -s $'\t' -t
 }
 
 orgs-staff-remove() {

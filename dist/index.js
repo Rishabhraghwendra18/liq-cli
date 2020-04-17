@@ -4,6 +4,36 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 var fs = require('fs');
 
+function _arrayWithoutHoles(arr) {
+  if (Array.isArray(arr)) {
+    for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) {
+      arr2[i] = arr[i];
+    }
+
+    return arr2;
+  }
+}
+
+var arrayWithoutHoles = _arrayWithoutHoles;
+
+function _iterableToArray(iter) {
+  if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter);
+}
+
+var iterableToArray = _iterableToArray;
+
+function _nonIterableSpread() {
+  throw new TypeError("Invalid attempt to spread non-iterable instance");
+}
+
+var nonIterableSpread = _nonIterableSpread;
+
+function _toConsumableArray(arr) {
+  return arrayWithoutHoles(arr) || iterableToArray(arr) || nonIterableSpread();
+}
+
+var toConsumableArray = _toConsumableArray;
+
 function _classCallCheck(instance, Constructor) {
   if (!(instance instanceof Constructor)) {
     throw new TypeError("Cannot call a class as a function");
@@ -198,10 +228,17 @@ function () {
   }
 
   createClass(TsvExt, [{
+    key: "getRows",
+    value: function getRows() {
+      return toConsumableArray(this.data);
+    } // deprecated; use 'getRows()'
+
+  }, {
     key: "reset",
     value: function reset() {
       this.cursor = -1;
-    }
+    } // deprecated; use 'getRows()'
+
   }, {
     key: "next",
     value: function next() {
@@ -243,6 +280,14 @@ function () {
           return v === '' ? '-' : v;
         }).join("\t");
       }).join("\n"), "\n"));
+    } // Generic find; assumes the first column is the key.
+
+  }, {
+    key: "find",
+    value: function find(key) {
+      return this.data.find(function (line) {
+        return line[0] === key;
+      });
     }
   }, {
     key: "length",
@@ -353,7 +398,139 @@ function _defineProperty(obj, key, value) {
 var defineProperty = _defineProperty;
 
 var _class, _temp$1;
-var PolicyCalendar = (_temp$1 = _class =
+var RolesTsv = (_temp$1 = _class =
+/*#__PURE__*/
+function (_TsvExt) {
+  inherits(RolesTsv, _TsvExt);
+
+  function RolesTsv(fileName) {
+    var _this;
+
+    classCallCheck(this, RolesTsv);
+
+    _this = possibleConstructorReturn(this, getPrototypeOf(RolesTsv).call(this, RolesTsv.headers, RolesTsv.keys, fileName));
+
+    defineProperty(assertThisInitialized(_this), "matchKey", function (line, key) {
+      return line[0] === key;
+    });
+
+    return _this;
+  }
+
+  createClass(RolesTsv, [{
+    key: "notUnique",
+    value: function notUnique(data, item) {
+      var i;
+      return -1 !== (i = data.findIndex(function (line) {
+        return line[0].toLowerCase() === item.name.toLowerCase();
+      })) && "Role with name '".concat(item.name, "' already exists at entry ").concat(i, ".");
+    }
+  }, {
+    key: "hydrate",
+
+    /**
+    * Turns the 'row' data into minimal Row objects.
+    */
+    value: function hydrate() {
+      return this.data.forEach(function (r) {
+        return org.roles[r.name] = new Role(r);
+      });
+    } //  TODO: clone item to protect data
+
+  }]);
+
+  return RolesTsv;
+}(TsvExt), defineProperty(_class, "headers", ['Name', 'Application', 'Super-role', 'Description', 'Notes']), defineProperty(_class, "keys", ['name', 'application', 'superRole', 'description', 'notes']), _temp$1);
+
+var _class$1, _temp$2;
+var StaffTsv = (_temp$2 = _class$1 =
+/*#__PURE__*/
+function (_TsvExt) {
+  inherits(StaffTsv, _TsvExt);
+
+  function StaffTsv(fileName) {
+    var _this;
+
+    classCallCheck(this, StaffTsv);
+
+    _this = possibleConstructorReturn(this, getPrototypeOf(StaffTsv).call(this, StaffTsv.headers, StaffTsv.keys, fileName, StaffTsv.multis));
+
+    defineProperty(assertThisInitialized(_this), "matchKey", function (line, key) {
+      return line[0] === key;
+    });
+
+    return _this;
+  }
+
+  createClass(StaffTsv, [{
+    key: "notUnique",
+    value: function notUnique(data, item) {
+      var i;
+      return -1 !== (i = data.findIndex(function (line) {
+        return line[0].toLowerCase() === item.email.toLowerCase();
+      })) && "member with email '".concat(item.email, "' already exists at entry ").concat(i + 1, ".");
+    }
+  }]);
+
+  return StaffTsv;
+}(TsvExt), defineProperty(_class$1, "headers", ['Email', 'Family Name', 'Given Name', 'Start Date', 'Primary Roles', 'Secondary Roles']), defineProperty(_class$1, "keys", ['email', 'familyName', 'givenName', 'startDate', 'primaryRoles', 'secondaryRoles']), defineProperty(_class$1, "multis", {
+  'primaryRoles': true,
+  'secondaryRoles': true,
+  'managers': true
+}), _temp$2);
+
+function _arrayWithHoles(arr) {
+  if (Array.isArray(arr)) return arr;
+}
+
+var arrayWithHoles = _arrayWithHoles;
+
+function _iterableToArrayLimit(arr, i) {
+  if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) {
+    return;
+  }
+
+  var _arr = [];
+  var _n = true;
+  var _d = false;
+  var _e = undefined;
+
+  try {
+    for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+      _arr.push(_s.value);
+
+      if (i && _arr.length === i) break;
+    }
+  } catch (err) {
+    _d = true;
+    _e = err;
+  } finally {
+    try {
+      if (!_n && _i["return"] != null) _i["return"]();
+    } finally {
+      if (_d) throw _e;
+    }
+  }
+
+  return _arr;
+}
+
+var iterableToArrayLimit = _iterableToArrayLimit;
+
+function _nonIterableRest() {
+  throw new TypeError("Invalid attempt to destructure non-iterable instance");
+}
+
+var nonIterableRest = _nonIterableRest;
+
+function _slicedToArray(arr, i) {
+  return arrayWithHoles(arr) || iterableToArrayLimit(arr, i) || nonIterableRest();
+}
+
+var slicedToArray = _slicedToArray;
+
+var _class$2, _temp$3;
+var PolicyCalendar = (_temp$3 = _class$2 =
 /*#__PURE__*/
 function (_TsvExt) {
   inherits(PolicyCalendar, _TsvExt);
@@ -442,90 +619,7 @@ function (_TsvExt) {
   }]);
 
   return PolicyCalendar;
-}(TsvExt), defineProperty(_class, "headers", ['UUID', 'Item Name', 'Description', 'Frequency', 'Impact Weighting (hrs)', 'Time Span (days)', 'Absolute Condition', 'Policy Refs']), defineProperty(_class, "keys", ['uuid', 'itemName', 'description', 'frequency', 'impactWeighting', 'timeSpan', 'absCond', 'policyRefs']), defineProperty(_class, "BIENNIAL_SELECTOR", ['ODD', 'EVEN']), defineProperty(_class, "TRIENNIAL_SELECTOR", ['ODD', 'EVEN', 'TRIPLETS']), _temp$1);
-
-var _class$1, _temp$2;
-var Roles = (_temp$2 = _class$1 =
-/*#__PURE__*/
-function (_TsvExt) {
-  inherits(Roles, _TsvExt);
-
-  function Roles(fileName) {
-    var _this;
-
-    classCallCheck(this, Roles);
-
-    _this = possibleConstructorReturn(this, getPrototypeOf(Roles).call(this, Roles.headers, Roles.keys, fileName));
-
-    defineProperty(assertThisInitialized(_this), "matchKey", function (line, key) {
-      return line[0] === key;
-    });
-
-    return _this;
-  }
-
-  createClass(Roles, [{
-    key: "notUnique",
-    value: function notUnique(data, item) {
-      var i;
-      return -1 !== (i = data.findIndex(function (line) {
-        return line[0].toLowerCase() === item.name.toLowerCase();
-      })) && "Role with name '".concat(item.name, "' already exists at entry ").concat(i, ".");
-    }
-  }]);
-
-  return Roles;
-}(TsvExt), defineProperty(_class$1, "headers", ['Name', 'Application', 'Super-role', 'Description', 'Notes']), defineProperty(_class$1, "keys", ['name', 'application', 'superRole', 'description', 'notes']), _temp$2);
-
-function _arrayWithHoles(arr) {
-  if (Array.isArray(arr)) return arr;
-}
-
-var arrayWithHoles = _arrayWithHoles;
-
-function _iterableToArrayLimit(arr, i) {
-  if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) {
-    return;
-  }
-
-  var _arr = [];
-  var _n = true;
-  var _d = false;
-  var _e = undefined;
-
-  try {
-    for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
-      _arr.push(_s.value);
-
-      if (i && _arr.length === i) break;
-    }
-  } catch (err) {
-    _d = true;
-    _e = err;
-  } finally {
-    try {
-      if (!_n && _i["return"] != null) _i["return"]();
-    } finally {
-      if (_d) throw _e;
-    }
-  }
-
-  return _arr;
-}
-
-var iterableToArrayLimit = _iterableToArrayLimit;
-
-function _nonIterableRest() {
-  throw new TypeError("Invalid attempt to destructure non-iterable instance");
-}
-
-var nonIterableRest = _nonIterableRest;
-
-function _slicedToArray(arr, i) {
-  return arrayWithHoles(arr) || iterableToArrayLimit(arr, i) || nonIterableRest();
-}
-
-var slicedToArray = _slicedToArray;
+}(TsvExt), defineProperty(_class$2, "headers", ['UUID', 'Item Name', 'Description', 'Frequency', 'Impact Weighting (hrs)', 'Time Span (days)', 'Absolute Condition', 'Policy Refs']), defineProperty(_class$2, "keys", ['uuid', 'itemName', 'description', 'frequency', 'impactWeighting', 'timeSpan', 'absCond', 'policyRefs']), defineProperty(_class$2, "BIENNIAL_SELECTOR", ['ODD', 'EVEN']), defineProperty(_class$2, "TRIENNIAL_SELECTOR", ['ODD', 'EVEN', 'TRIPLETS']), _temp$3);
 
 var Glossary =
 /*#__PURE__*/
@@ -579,8 +673,8 @@ function () {
   return Glossary;
 }();
 
-var _temp$3, _docDir, _roles, _rolesFile, _terms;
-var Policies = (_temp$3 =
+var _temp$4, _docDir, _roles, _rolesFile, _terms;
+var Policies = (_temp$4 =
 /*#__PURE__*/
 function () {
   function Policies() {
@@ -629,7 +723,7 @@ function () {
       if (this.roles !== undefined) return this.roles; // TODO: allom multiple role files to be merged
 
       var rolesFile = this.findFile(this.rolesFile);
-      this.roles = new Roles(rolesFile);
+      this.roles = new RolesTsv(rolesFile);
       return this.roles;
     }
   }, {
@@ -660,44 +754,7 @@ function () {
   }]);
 
   return Policies;
-}(), _docDir = new WeakMap(), _roles = new WeakMap(), _rolesFile = new WeakMap(), _terms = new WeakMap(), _temp$3);
-
-var _class$2, _temp$4;
-var Staff = (_temp$4 = _class$2 =
-/*#__PURE__*/
-function (_TsvExt) {
-  inherits(Staff, _TsvExt);
-
-  function Staff(fileName) {
-    var _this;
-
-    classCallCheck(this, Staff);
-
-    _this = possibleConstructorReturn(this, getPrototypeOf(Staff).call(this, Staff.headers, Staff.keys, fileName, Staff.multis));
-
-    defineProperty(assertThisInitialized(_this), "matchKey", function (line, key) {
-      return line[0] === key;
-    });
-
-    return _this;
-  }
-
-  createClass(Staff, [{
-    key: "notUnique",
-    value: function notUnique(data, item) {
-      var i;
-      return -1 !== (i = data.findIndex(function (line) {
-        return line[0].toLowerCase() === item.email.toLowerCase();
-      })) && "Staff member with email '".concat(item.email, "' already exists at entry ").concat(i + 1, ".");
-    }
-  }]);
-
-  return Staff;
-}(TsvExt), defineProperty(_class$2, "headers", ['Email', 'Family Name', 'Given Name', 'Start Date', 'Primary Roles', 'Secondary Roles']), defineProperty(_class$2, "keys", ['email', 'familyName', 'givenName', 'startDate', 'primaryRoles', 'secondaryRoles']), defineProperty(_class$2, "multis", {
-  'primaryRoles': true,
-  'secondaryRoles': true,
-  'managers': true
-}), _temp$4);
+}(), _docDir = new WeakMap(), _roles = new WeakMap(), _rolesFile = new WeakMap(), _terms = new WeakMap(), _temp$4);
 
 var refreshDocuments = function refreshDocuments(destDir, inputFiles) {
   var policies = new Policies();
