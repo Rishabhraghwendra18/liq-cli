@@ -1,35 +1,5 @@
 import { existsSync, writeFileSync, readFileSync } from 'fs';
 
-function _arrayWithoutHoles(arr) {
-  if (Array.isArray(arr)) {
-    for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) {
-      arr2[i] = arr[i];
-    }
-
-    return arr2;
-  }
-}
-
-var arrayWithoutHoles = _arrayWithoutHoles;
-
-function _iterableToArray(iter) {
-  if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter);
-}
-
-var iterableToArray = _iterableToArray;
-
-function _nonIterableSpread() {
-  throw new TypeError("Invalid attempt to spread non-iterable instance");
-}
-
-var nonIterableSpread = _nonIterableSpread;
-
-function _toConsumableArray(arr) {
-  return arrayWithoutHoles(arr) || iterableToArray(arr) || nonIterableSpread();
-}
-
-var toConsumableArray = _toConsumableArray;
-
 function _classCallCheck(instance, Constructor) {
   if (!(instance instanceof Constructor)) {
     throw new TypeError("Cannot call a class as a function");
@@ -159,11 +129,12 @@ var tsv = createCommonjsModule(function (module) {
 
 var _temp, _headers, _fileName, _keys, _data, _cursor;
 /**
- * Converts array-string data to an actual object
+ * Converts array-string data to an intermediate object. Handles the special '-' <=> null and muti-part field
+ * conversions to arrays.
  */
 
 var item = function item(keys, multis, fields, pos) {
-  if (keys.length !== fields.length) throw new Error("Found ".concat(keys.length, " keys but ").concat(fields.length, " fields."));
+  if (keys.length !== fields.length) throw new Error("Found ".concat(keys.length, " keys but ").concat(fields.length, " fields at item ").concat(pos, " (").concat(fields[0], ")."));
   var item = {
     _pos: pos
   };
@@ -220,53 +191,16 @@ function () {
     this.keys = keys;
     this.multis = multis || {};
     this.data = filteredLines.length > 0 ? tsv.parse(filteredLines.join("\n")) : [];
-    this.reset();
   }
 
   createClass(TsvExt, [{
-    key: "getRows",
-    value: function getRows() {
-      return toConsumableArray(this.data);
-    } // deprecated; use 'getRows()'
-
-  }, {
-    key: "reset",
-    value: function reset() {
-      this.cursor = -1;
-    } // deprecated; use 'getRows()'
-
-  }, {
-    key: "next",
-    value: function next() {
-      this.cursor += 1;
-      var l = this.data.length;
-      var cursor = this.cursor;
-      if (this.cursor >= this.data.length) return undefined;else return item(this.keys, this.multis, this.data[this.cursor], this.cursor);
-    }
-  }, {
-    key: "add",
-    value: function add(item) {
+    key: "getItems",
+    value: function getItems() {
       var _this = this;
 
-      var line = [];
-      this.keys.forEach(function (key) {
-        var value = item[key];
-        if (value === undefined) throw new Error("Item does not define value for key '".concat(key, "'."));
-        line.push(_this.multis[key] ? value.length === 0 ? '-' : value.join(",") : value === null ? '-' : value);
+      return this.data.map(function (r, i) {
+        return item(_this.keys, _this.multis, r, i);
       });
-      var failDesc;
-      if (this.notUnique && (failDesc = this.notUnique(this.data.slice(), item))) throw new Error(failDesc);
-      this.data.push(line);
-    }
-  }, {
-    key: "remove",
-    value: function remove(key) {
-      var _this2 = this;
-
-      var index = this.data.findIndex(function (line) {
-        return _this2.matchKey(line, key);
-      });
-      if (index >= 0) return this.data.splice(index, 1);else return null;
     }
   }, {
     key: "write",
@@ -295,6 +229,56 @@ function () {
   return TsvExt;
 }(), _headers = new WeakMap(), _fileName = new WeakMap(), _keys = new WeakMap(), _data = new WeakMap(), _cursor = new WeakMap(), _temp);
 
+function _arrayWithHoles(arr) {
+  if (Array.isArray(arr)) return arr;
+}
+
+var arrayWithHoles = _arrayWithHoles;
+
+function _iterableToArrayLimit(arr, i) {
+  if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) {
+    return;
+  }
+
+  var _arr = [];
+  var _n = true;
+  var _d = false;
+  var _e = undefined;
+
+  try {
+    for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+      _arr.push(_s.value);
+
+      if (i && _arr.length === i) break;
+    }
+  } catch (err) {
+    _d = true;
+    _e = err;
+  } finally {
+    try {
+      if (!_n && _i["return"] != null) _i["return"]();
+    } finally {
+      if (_d) throw _e;
+    }
+  }
+
+  return _arr;
+}
+
+var iterableToArrayLimit = _iterableToArrayLimit;
+
+function _nonIterableRest() {
+  throw new TypeError("Invalid attempt to destructure non-iterable instance");
+}
+
+var nonIterableRest = _nonIterableRest;
+
+function _slicedToArray(arr, i) {
+  return arrayWithHoles(arr) || iterableToArrayLimit(arr, i) || nonIterableRest();
+}
+
+var slicedToArray = _slicedToArray;
+
 var _typeof_1 = createCommonjsModule(function (module) {
 function _typeof2(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof2 = function _typeof2(obj) { return typeof obj; }; } else { _typeof2 = function _typeof2(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof2(obj); }
 
@@ -314,6 +298,80 @@ function _typeof(obj) {
 
 module.exports = _typeof;
 });
+
+var AttachedRole =
+/*#__PURE__*/
+function () {
+  function AttachedRole(baseRole, staffMember, parameters) {
+    classCallCheck(this, AttachedRole);
+
+    parameters = parameters !== undefined && parameters.split(/\s*;\s*/) || [];
+    this.baseRole = baseRole;
+    this.acting = parameters.some(function (p) {
+      return p === 'acting';
+    });
+    var qualifierCapt = parameters.reduce(function (result, p) {
+      return result || /qual:([^,]+)/.exec(p);
+    }, null);
+    this.qualifier = null;
+    if (qualifierCapt) this.qualifier = qualifierCapt[1].trim();
+    if (!baseRole.isQualifiable() && this.qualifier) throw new Error("Attempt to qualify non-qualifiable role '".concat(baseRole.getName(), "' ") + "for staff member '".concat(staffMember.getEmail(), "'."));
+  }
+
+  createClass(AttachedRole, [{
+    key: "getName",
+    value: function getName() {
+      return this.baseRole.getName();
+    }
+  }, {
+    key: "isActing",
+    value: function isActing() {
+      return this.acting;
+    }
+  }, {
+    key: "isQualifiable",
+    value: function isQualifiable() {
+      return this.baseRole.isQualifiable();
+    }
+  }, {
+    key: "getQualifier",
+    value: function getQualifier() {
+      return this.qualifier;
+    }
+  }]);
+
+  return AttachedRole;
+}();
+
+var Role =
+/*#__PURE__*/
+function () {
+  function Role(item) {
+    classCallCheck(this, Role);
+
+    this.item = item;
+  }
+
+  createClass(Role, [{
+    key: "getName",
+    value: function getName() {
+      return this.item.name;
+    }
+  }, {
+    key: "isQualifiable",
+    value: function isQualifiable() {
+      var application = this.item.application;
+      return Boolean(application && application.match(/(^|;)\s*qualifiable\s*(;|$)/));
+    }
+  }, {
+    key: "attachTo",
+    value: function attachTo(staff, parameters) {
+      return new AttachedRole(this, staff, parameters);
+    }
+  }]);
+
+  return Role;
+}();
 
 function _assertThisInitialized(self) {
   if (self === void 0) {
@@ -393,8 +451,8 @@ function _defineProperty(obj, key, value) {
 
 var defineProperty = _defineProperty;
 
-var _class, _temp$1;
-var RolesTsv = (_temp$1 = _class =
+var _class, _temp$2;
+var RolesTsv = (_temp$2 = _class =
 /*#__PURE__*/
 function (_TsvExt) {
   inherits(RolesTsv, _TsvExt);
@@ -428,18 +486,163 @@ function (_TsvExt) {
     * Turns the 'row' data into minimal Row objects.
     */
     value: function hydrate() {
-      return this.data.forEach(function (r) {
-        return org.roles[r.name] = new Role(r);
-      });
-    } //  TODO: clone item to protect data
-
+      return this.getItems().reduce(function (roles, item) {
+        roles[item.name] = new Role(item);
+        return roles;
+      }, {});
+    }
   }]);
 
   return RolesTsv;
-}(TsvExt), defineProperty(_class, "headers", ['Name', 'Application', 'Super-role', 'Description', 'Notes']), defineProperty(_class, "keys", ['name', 'application', 'superRole', 'description', 'notes']), _temp$1);
+}(TsvExt), defineProperty(_class, "headers", ['Name', 'Application', 'Super-role', 'Description', 'Notes']), defineProperty(_class, "keys", ['name', 'application', 'superRole', 'description', 'notes']), _temp$2);
 
-var _class$1, _temp$2;
-var StaffTsv = (_temp$2 = _class$1 =
+var Staff =
+/*#__PURE__*/
+function () {
+  function Staff(item) {
+    classCallCheck(this, Staff);
+
+    this.item = item;
+    this.attachedRoles = {}; // keyed by role name
+
+    this.managers = {}; // managers keyed by our role names
+
+    this.reportsByReportRole = {}; // roles keyed to reports role names
+  }
+  /**
+   * Fully defines the staff data. This is done as a static method to allow us to retrieve staff my name and cross-link
+   * managers with reports. In the underlying datastructure, reports are linked to managers and not vice-a-versa, so we
+   * have to pre-define the universe of staff individuals in prep for / before fully defining each..
+   */
+
+
+  createClass(Staff, [{
+    key: "getEmail",
+    value: function getEmail() {
+      return this.item.email;
+    }
+  }, {
+    key: "setEmail",
+    value: function setEmail(v) {
+      this.item.email = v;
+    }
+  }, {
+    key: "getFullName",
+    value: function getFullName() {
+      return "".concat(this.getGivenName(), " ").concat(this.getFamilyName());
+    } // TODO: i18n...
+
+  }, {
+    key: "getFamilyName",
+    value: function getFamilyName() {
+      return this.item.familyName;
+    }
+  }, {
+    key: "setFamilyName",
+    value: function setFamilyName(v) {
+      this.item.familyName = v;
+    }
+  }, {
+    key: "getGivenName",
+    value: function getGivenName() {
+      return this.item.givenName;
+    }
+  }, {
+    key: "setGivenName",
+    value: function setGivenName(v) {
+      this.item.givenName = v;
+    }
+  }, {
+    key: "getStartDate",
+    value: function getStartDate() {
+      return this.item.startDate;
+    }
+  }, {
+    key: "setStartDate",
+    value: function setStartDate(v) {
+      this.item.startDate = v;
+    }
+  }, {
+    key: "hasRole",
+    value: function hasRole(roleName) {
+      return Boolean(this.attachedRoles[roleName]);
+    }
+  }, {
+    key: "getRoleNames",
+    value: function getRoleNames() {
+      return Object.keys(this.attachedRoles);
+    }
+  }, {
+    key: "getAttachedRoleByName",
+    value: function getAttachedRoleByName(roleName) {
+      return this.attachedRoles[roleName];
+    }
+  }, {
+    key: "getAttachedRoles",
+    value: function getAttachedRoles() {
+      return Object.values(this.attachedRoles);
+    }
+  }, {
+    key: "getManagerByRoleName",
+    value: function getManagerByRoleName(roleName) {
+      return this.managers[roleName];
+    }
+  }, {
+    key: "getManagers",
+    value: function getManagers() {
+      return Object.values(this.manangers);
+    }
+  }, {
+    key: "getReportsByRoleName",
+    value: function getReportsByRoleName(roleName) {
+      return this.reportsByReportRole[roleName];
+    }
+  }, {
+    key: "getReports",
+    value: function getReports() {
+      var _this = this;
+
+      return Object.values(this.reportsByReportRole).reduce(function (acc, reps) {
+        return acc.concat(reps);
+      }, []).filter(function (rep) {
+        return rep.getEmail() !== _this.getEmail();
+      });
+    }
+  }], [{
+    key: "hydrate",
+    value: function hydrate(org) {
+      Object.values(org.staff).forEach(function (s) {
+        s.item.primaryRoles.forEach(function (rSpec) {
+          var _rSpec$split = rSpec.split(/\//),
+              _rSpec$split2 = slicedToArray(_rSpec$split, 3),
+              roleName = _rSpec$split2[0],
+              roleManagerEmail = _rSpec$split2[1],
+              roleParameters = _rSpec$split2[2]; // verify good roleName
+
+
+          var orgNode = org.orgStructure.getNodeByRoleName(roleName);
+          if (orgNode === undefined) throw new Error("Staff '".concat(s.getEmail(), "' claims non-existent role '").concat(roleName, "'.")); // attach the role
+
+          s.attachedRoles[roleName] = org.roles[roleName].attachTo(s, roleParameters); // TODO: migrate the manager to the AttachedRole
+          // set manager and add ourselves to their reports
+
+          if (orgNode.getParent() !== null) {
+            var roleManager = org.getStaffMember(roleManagerEmail);
+            if (roleManager === undefined) throw new Error("No such manager '".concat(roleManagerEmail, "' found while loading staff member '").concat(s.getEmail(), "'."));
+            s.managers[roleName] = roleManager;
+            if (roleManager.reportsByReportRole[roleName] === undefined) roleManager.reportsByReportRole[roleName] = [];
+            roleManager.reportsByReportRole[roleName].push(s);
+          } else s.managers[roleName] = null;
+        });
+      });
+    }
+  }]);
+
+  return Staff;
+}();
+
+var _class$1, _temp$3;
+var StaffTsv = (_temp$3 = _class$1 =
 /*#__PURE__*/
 function (_TsvExt) {
   inherits(StaffTsv, _TsvExt);
@@ -459,12 +662,13 @@ function (_TsvExt) {
   }
 
   createClass(StaffTsv, [{
-    key: "notUnique",
-    value: function notUnique(data, item) {
-      var i;
-      return -1 !== (i = data.findIndex(function (line) {
-        return line[0].toLowerCase() === item.email.toLowerCase();
-      })) && "member with email '".concat(item.email, "' already exists at entry ").concat(i + 1, ".");
+    key: "init",
+    value: function init() {
+      return this.getItems().reduce(function (staff, item) {
+        if (staff[item.email] !== undefined) throw new Error("member with email '".concat(item.email, "' already exists at entry ").concat(item._pos + 1, "."));
+        staff[item.email] = new Staff(item);
+        return staff;
+      }, {});
     }
   }]);
 
@@ -473,60 +677,10 @@ function (_TsvExt) {
   'primaryRoles': true,
   'secondaryRoles': true,
   'managers': true
-}), _temp$2);
+}), _temp$3);
 
-function _arrayWithHoles(arr) {
-  if (Array.isArray(arr)) return arr;
-}
-
-var arrayWithHoles = _arrayWithHoles;
-
-function _iterableToArrayLimit(arr, i) {
-  if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) {
-    return;
-  }
-
-  var _arr = [];
-  var _n = true;
-  var _d = false;
-  var _e = undefined;
-
-  try {
-    for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
-      _arr.push(_s.value);
-
-      if (i && _arr.length === i) break;
-    }
-  } catch (err) {
-    _d = true;
-    _e = err;
-  } finally {
-    try {
-      if (!_n && _i["return"] != null) _i["return"]();
-    } finally {
-      if (_d) throw _e;
-    }
-  }
-
-  return _arr;
-}
-
-var iterableToArrayLimit = _iterableToArrayLimit;
-
-function _nonIterableRest() {
-  throw new TypeError("Invalid attempt to destructure non-iterable instance");
-}
-
-var nonIterableRest = _nonIterableRest;
-
-function _slicedToArray(arr, i) {
-  return arrayWithHoles(arr) || iterableToArrayLimit(arr, i) || nonIterableRest();
-}
-
-var slicedToArray = _slicedToArray;
-
-var _class$2, _temp$3;
-var PolicyCalendar = (_temp$3 = _class$2 =
+var _class$2, _temp$4;
+var PolicyCalendar = (_temp$4 = _class$2 =
 /*#__PURE__*/
 function (_TsvExt) {
   inherits(PolicyCalendar, _TsvExt);
@@ -615,7 +769,7 @@ function (_TsvExt) {
   }]);
 
   return PolicyCalendar;
-}(TsvExt), defineProperty(_class$2, "headers", ['UUID', 'Item Name', 'Description', 'Frequency', 'Impact Weighting (hrs)', 'Time Span (days)', 'Absolute Condition', 'Policy Refs']), defineProperty(_class$2, "keys", ['uuid', 'itemName', 'description', 'frequency', 'impactWeighting', 'timeSpan', 'absCond', 'policyRefs']), defineProperty(_class$2, "BIENNIAL_SELECTOR", ['ODD', 'EVEN']), defineProperty(_class$2, "TRIENNIAL_SELECTOR", ['ODD', 'EVEN', 'TRIPLETS']), _temp$3);
+}(TsvExt), defineProperty(_class$2, "headers", ['UUID', 'Item Name', 'Description', 'Frequency', 'Impact Weighting (hrs)', 'Time Span (days)', 'Absolute Condition', 'Policy Refs']), defineProperty(_class$2, "keys", ['uuid', 'itemName', 'description', 'frequency', 'impactWeighting', 'timeSpan', 'absCond', 'policyRefs']), defineProperty(_class$2, "BIENNIAL_SELECTOR", ['ODD', 'EVEN']), defineProperty(_class$2, "TRIENNIAL_SELECTOR", ['ODD', 'EVEN', 'TRIPLETS']), _temp$4);
 
 var Glossary =
 /*#__PURE__*/
@@ -669,8 +823,8 @@ function () {
   return Glossary;
 }();
 
-var _temp$4, _docDir, _roles, _rolesFile, _terms;
-var Policies = (_temp$4 =
+var _temp$5, _docDir, _roles, _rolesFile, _terms;
+var Policies = (_temp$5 =
 /*#__PURE__*/
 function () {
   function Policies() {
@@ -750,7 +904,7 @@ function () {
   }]);
 
   return Policies;
-}(), _docDir = new WeakMap(), _roles = new WeakMap(), _rolesFile = new WeakMap(), _terms = new WeakMap(), _temp$4);
+}(), _docDir = new WeakMap(), _roles = new WeakMap(), _rolesFile = new WeakMap(), _terms = new WeakMap(), _temp$5);
 
 var refreshDocuments = function refreshDocuments(destDir, inputFiles) {
   var policies = new Policies();

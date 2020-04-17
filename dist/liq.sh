@@ -3085,8 +3085,7 @@ orgs-staff-add() {
 
   # not all specified or confirmation not skipped
   if [[ -z "$ALL_SPECIFIED" ]] || [[ -z "$NO_VERIFY" ]]; then
-    [[ -n "$ORG_STRUCTURE" ]] || echoerrandexit "You must define 'ORG_STRUCTURE' to point to a valid JSON file in the 'settings.sh' file."
-    [[ -f "$ORG_STRUCTURE" ]] || echoerrandexit "'ORG_STRUCTURE' defnied, but does not point to a file."
+    orgs-staff-lib-check-org-structure
 
     local ROLE_OPTS
     ROLE_OPTS="$(cat "$ORG_STRUCTURE" | jq -r ".[] | .[0]" | sort)" || echoerrandexit "Could not parse '$ORG_STRUCTURE' as a valid JSON/org structure file."
@@ -3243,15 +3242,31 @@ orgs-staff-list() {
   HEADER="${HEADER%+([[:space]])}"
   shopt -u extglob
 
-  echo -e "HEADER: $HEADER"
-  echo -e "AWK_CMD: $AWK_CMD"
-
   # and finally, we are ready to print
   echo -e "$HEADER"
   tail +2 "${STAFF_FILE}" \
     | cat -e $([[ -z "$ENUMERATE" ]] || echo "-n") \
     | awk "$AWK_CMD" \
     | column -s $'\t' -t
+}
+
+orgs-staff-org-chart() {
+  orgsStaffRepo # picks up ORG_STRUCTURE
+  orgs-staff-lib-check-org-structure
+
+  echo "ORG_STRUCTURE: $ORG_STRUCTURE"
+  local ROLES_DEF="${LIQ_PLAYGROUND}/${ORG_POLICY_REPO/@/}/node_modules/@liquid-labs/policy-core/policy/roles.tsv"
+  local STAFF_FILE="${LIQ_PLAYGROUND}/${ORG_STAFF_REPO/@/}/staff.tsv"
+
+  trap - ERR
+  NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "
+    const { Organization } = require('@liquid-labs/policies-model');
+    const org = new Organization(
+      '${ROLES_DEF}',
+      '${STAFF_FILE}',
+      '${ORG_STRUCTURE}')
+
+    console.log(JSON.stringify(org.generateOrgChartData('debang/OrgChart')))"
 }
 
 orgs-staff-remove() {
@@ -3294,6 +3309,11 @@ orgsStaffCommit() {
 orgsStaffRepo() {
   orgsSourceOrg || echoerrandexit "Could not locate local base org project."
   [[ -n "${ORG_STAFF_REPO:-}" ]] || echoerrandexit "'ORG_STAFF_REPO' not defined in base org project."
+}
+
+orgs-staff-lib-check-org-structure() {
+  [[ -n "$ORG_STRUCTURE" ]] || echoerrandexit "You must define 'ORG_STRUCTURE' to point to a valid JSON file in the 'settings.sh' file."
+  [[ -f "$ORG_STRUCTURE" ]] || echoerrandexit "'ORG_STRUCTURE' defnied, but does not point to a file."
 }
 
 requirements-policies() {

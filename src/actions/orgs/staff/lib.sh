@@ -14,3 +14,8 @@ orgsStaffRepo() {
   orgsSourceOrg || echoerrandexit "Could not locate local base org project."
   [[ -n "${ORG_STAFF_REPO:-}" ]] || echoerrandexit "'ORG_STAFF_REPO' not defined in base org project."
 }
+
+orgs-staff-lib-check-org-structure() {
+  [[ -n "$ORG_STRUCTURE" ]] || echoerrandexit "You must define 'ORG_STRUCTURE' to point to a valid JSON file in the 'settings.sh' file."
+  [[ -f "$ORG_STRUCTURE" ]] || echoerrandexit "'ORG_STRUCTURE' defnied, but does not point to a file."
+}
