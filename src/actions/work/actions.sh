@@ -688,7 +688,7 @@ work-submit() {
     IP=$(workConvertDot "$IP")
     IP="${IP/@/}"
     cd "${LIQ_PLAYGROUND}/${IP}"
-    orgsSourceOrg
+    orgs-lib-source-settings
     ( # we source the policy in a subshell because the vars are not reliably refreshed, and so we need them isolated.
       # TODO: also, if the policy repo is the main repo and there are multiple orgs in[olved], this will overwrite
       # basic org settings... is that a problem?

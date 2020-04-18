@@ -18,7 +18,8 @@ orgs-staff-add() {
   list-from-csv PRIMARY_ROLES
   list-from-csv SECONDARY_ROLES
 
-  orgsStaffRepo
+  orgs-lib-source-settings
+  orgs-staff-lib-check-parameters
 
   local ALL_SPECIFIED FIELD
   ALL_SPECIFIED=true
@@ -28,8 +29,6 @@ orgs-staff-add() {
 
   # not all specified or confirmation not skipped
   if [[ -z "$ALL_SPECIFIED" ]] || [[ -z "$NO_VERIFY" ]]; then
-    orgs-staff-lib-check-org-structure
-
     local ROLE_OPTS
     ROLE_OPTS="$(cat "$ORG_STRUCTURE" | jq -r ".[] | .[0]" | sort)" || echoerrandexit "Could not parse '$ORG_STRUCTURE' as a valid JSON/org structure file."
 
@@ -140,7 +139,8 @@ orgs-staff-add() {
 orgs-staff-list() {
   local COLS="EMAIL FAMILY_NAME GIVEN_NAME START_DATE PRIMARY_ROLES SECONDARY_ROLES:S"
   eval "$(setSimpleOptions ENUMERATE:n $COLS -- "$@")"
-  orgsStaffRepo
+  orgs-lib-source-settings
+  orgs-staff-lib-check-parameters
   local STAFF_FILE="${LIQ_PLAYGROUND}/${ORG_STAFF_REPO/@/}/staff.tsv"
 
   local EMAIL_COL=1
@@ -194,27 +194,36 @@ orgs-staff-list() {
 }
 
 orgs-staff-org-chart() {
-  orgsStaffRepo # picks up ORG_STRUCTURE
-  orgs-staff-lib-check-org-structure
+  orgs-lib-source-settings
+  orgs-staff-lib-check-parameters
 
-  echo "ORG_STRUCTURE: $ORG_STRUCTURE"
-  local ROLES_DEF="${LIQ_PLAYGROUND}/${ORG_POLICY_REPO/@/}/node_modules/@liquid-labs/policy-core/policy/roles.tsv"
   local STAFF_FILE="${LIQ_PLAYGROUND}/${ORG_STAFF_REPO/@/}/staff.tsv"
+  local CUT_POINT TMP_FILE
+  ORG_CHART_TEMPLATE="${ORG_CHART_TEMPLATE/\~/$LIQ_PLAYGROUND}"
+  CUT_POINT="$(grep -n "~~DATA~~" "${ORG_CHART_TEMPLATE}" | awk -F: '{print $1}')"
+  TMP_FILE="$(mktemp -d)/org-chart.html"
+
+  head -n $(( $CUT_POINT - 1 )) "${ORG_CHART_TEMPLATE}" > "${TMP_FILE}"
 
   trap - ERR
   NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "
     const { Organization } = require('@liquid-labs/policies-model');
     const org = new Organization(
-      '${ROLES_DEF}',
+      '${ORG_ROLES}',
       '${STAFF_FILE}',
       '${ORG_STRUCTURE}')
 
-    console.log(JSON.stringify(org.generateOrgChartData('debang/OrgChart')))"
+    console.log(JSON.stringify(org.generateOrgChartData('debang/OrgChart')))" >> "${TMP_FILE}" || exit
+
+  tail +$(( $CUT_POINT + 1 )) "${ORG_CHART_TEMPLATE}" >> "$TMP_FILE"
+
+  open -a "Google Chrome" "$TMP_FILE"
 }
 
 orgs-staff-remove() {
   local EMAIL="${1}"
-  orgsStaffRepo
+  orgs-lib-source-settings
+  orgs-staff-lib-check-parameters
   local STAFF_FILE="${ORG_STAFF_REPO}/staff.tsv"
 
   trap - ERR

@@ -158,7 +158,7 @@ orgs-import() {
 
   if [[ -n "$IMPORT_REFS" ]]; then
     local REF_REPO
-    orgsSourceOrg "$(dirname "$PKG_NAME")"
+    orgs-lib-source-settings "$(dirname "$PKG_NAME")"
     for REF_REPO in ORG_POLICY_REPO ORG_SENSITIVE_REPO ORG_STAFF_REPO; do
       if [[ -n ${!REF_REPO:-} ]]; then
         projects-import ${!REF_REPO}

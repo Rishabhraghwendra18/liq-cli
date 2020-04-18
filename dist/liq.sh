@@ -2927,7 +2927,7 @@ orgs-import() {
 
   if [[ -n "$IMPORT_REFS" ]]; then
     local REF_REPO
-    orgsSourceOrg "$(dirname "$PKG_NAME")"
+    orgs-lib-source-settings "$(dirname "$PKG_NAME")"
     for REF_REPO in ORG_POLICY_REPO ORG_SENSITIVE_REPO ORG_STAFF_REPO; do
       if [[ -n ${!REF_REPO:-} ]]; then
         projects-import ${!REF_REPO}
@@ -3031,14 +3031,14 @@ sourceCurrentOrg() {
 # Retrieves the policy dir for the named NPM org or will infer from context. Org base and, when private, policy projects
 # must be locally available.
 orgsPolicyRepo() {
-  orgsSourceOrg "${1:-}"
+  orgs-lib-source-settings "${1:-}"
 
   echo "${LIQ_PLAYGROUND}/${ORG_POLICY_REPO/@/}"
 }
 
 # Sources the named base org settings or will infer org context. If the base org cannot be found, the execution will
 # halt and the user will be advised to import it.
-orgsSourceOrg() {
+orgs-lib-source-settings() {
   local NPM_ORG="${1:-}"
 
   if [[ -z "$NPM_ORG" ]]; then
@@ -3049,6 +3049,7 @@ orgsSourceOrg() {
   fi
 
   if [[ -e "$LIQ_ORG_DB/${NPM_ORG}" ]]; then
+    [[ -f "$LIQ_ORG_DB/${NPM_ORG}/settings.sh" ]] || echoerrandexit "Could not locate settings file for '${NPM_ORG}'."
     source "$LIQ_ORG_DB/${NPM_ORG}/settings.sh"
   else
     echoerrandexit "Did not find expected base org package. Try:\nliq orgs import <pkg || URL>"
@@ -3075,7 +3076,8 @@ orgs-staff-add() {
   list-from-csv PRIMARY_ROLES
   list-from-csv SECONDARY_ROLES
 
-  orgsStaffRepo
+  orgs-lib-source-settings
+  orgs-staff-lib-check-parameters
 
   local ALL_SPECIFIED FIELD
   ALL_SPECIFIED=true
@@ -3085,8 +3087,6 @@ orgs-staff-add() {
 
   # not all specified or confirmation not skipped
   if [[ -z "$ALL_SPECIFIED" ]] || [[ -z "$NO_VERIFY" ]]; then
-    orgs-staff-lib-check-org-structure
-
     local ROLE_OPTS
     ROLE_OPTS="$(cat "$ORG_STRUCTURE" | jq -r ".[] | .[0]" | sort)" || echoerrandexit "Could not parse '$ORG_STRUCTURE' as a valid JSON/org structure file."
 
@@ -3197,7 +3197,8 @@ orgs-staff-add() {
 orgs-staff-list() {
   local COLS="EMAIL FAMILY_NAME GIVEN_NAME START_DATE PRIMARY_ROLES SECONDARY_ROLES:S"
   eval "$(setSimpleOptions ENUMERATE:n $COLS -- "$@")"
-  orgsStaffRepo
+  orgs-lib-source-settings
+  orgs-staff-lib-check-parameters
   local STAFF_FILE="${LIQ_PLAYGROUND}/${ORG_STAFF_REPO/@/}/staff.tsv"
 
   local EMAIL_COL=1
@@ -3251,27 +3252,36 @@ orgs-staff-list() {
 }
 
 orgs-staff-org-chart() {
-  orgsStaffRepo # picks up ORG_STRUCTURE
-  orgs-staff-lib-check-org-structure
+  orgs-lib-source-settings
+  orgs-staff-lib-check-parameters
 
-  echo "ORG_STRUCTURE: $ORG_STRUCTURE"
-  local ROLES_DEF="${LIQ_PLAYGROUND}/${ORG_POLICY_REPO/@/}/node_modules/@liquid-labs/policy-core/policy/roles.tsv"
   local STAFF_FILE="${LIQ_PLAYGROUND}/${ORG_STAFF_REPO/@/}/staff.tsv"
+  local CUT_POINT TMP_FILE
+  ORG_CHART_TEMPLATE="${ORG_CHART_TEMPLATE/\~/$LIQ_PLAYGROUND}"
+  CUT_POINT="$(grep -n "~~DATA~~" "${ORG_CHART_TEMPLATE}" | awk -F: '{print $1}')"
+  TMP_FILE="$(mktemp -d)/org-chart.html"
+
+  head -n $(( $CUT_POINT - 1 )) "${ORG_CHART_TEMPLATE}" > "${TMP_FILE}"
 
   trap - ERR
   NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "
     const { Organization } = require('@liquid-labs/policies-model');
     const org = new Organization(
-      '${ROLES_DEF}',
+      '${ORG_ROLES}',
       '${STAFF_FILE}',
       '${ORG_STRUCTURE}')
 
-    console.log(JSON.stringify(org.generateOrgChartData('debang/OrgChart')))"
+    console.log(JSON.stringify(org.generateOrgChartData('debang/OrgChart')))" >> "${TMP_FILE}" || exit
+
+  tail +$(( $CUT_POINT + 1 )) "${ORG_CHART_TEMPLATE}" >> "$TMP_FILE"
+
+  open -a "Google Chrome" "$TMP_FILE"
 }
 
 orgs-staff-remove() {
   local EMAIL="${1}"
-  orgsStaffRepo
+  orgs-lib-source-settings
+  orgs-staff-lib-check-parameters
   local STAFF_FILE="${ORG_STAFF_REPO}/staff.tsv"
 
   trap - ERR
@@ -3296,23 +3306,24 @@ EOF
 }
 # Commits the org staff data.
 orgsStaffCommit() {
-  orgsStaffRepo
   cd "${LIQ_PLAYGROUND}/${ORG_STAFF_REPO/@/}" \
     && git add staff.tsv \
     && git commit -am "Added staff member '${EMAIL}'." \
     && git push
 }
 
-# Verifies the existence of and provides 'ORG_STAFF_REPO' as a global var (and the rest of the org vars as a side
-# effect). Will exit and report error if the base org project is not locally available or 'ORG_STAFF_REPO' is not
-# defined.
-orgsStaffRepo() {
-  orgsSourceOrg || echoerrandexit "Could not locate local base org project."
+# Verifies the that the staff related parameters have been set. Typcially, these settings are handlid in the org
+# 'settings.sh' file loaded by 'orgs-lib-source-settings'. If the expected parameters are not found, the process will
+# exit with an appropriate message regarding the first missing parameter. General usage is:
+#    orgs-lib-source-settings
+#    orgs-staff-lib-verify-settings
+orgs-staff-lib-check-parameters() {
   [[ -n "${ORG_STAFF_REPO:-}" ]] || echoerrandexit "'ORG_STAFF_REPO' not defined in base org project."
-}
 
-orgs-staff-lib-check-org-structure() {
-  [[ -n "$ORG_STRUCTURE" ]] || echoerrandexit "You must define 'ORG_STRUCTURE' to point to a valid JSON file in the 'settings.sh' file."
+  [[ -n "${ORG_ROLES:-}" ]] || echoerrandexit "You must define 'ORG_ROLES' to point to a valid TSV file in the 'settings.sh' file."
+  [[ -f "$ORG_ROLES" ]] || echoerrandexit "'ORG_ROLES' defnied, but does not point to a file."
+
+  [[ -n "${ORG_STRUCTURE:-}" ]] || echoerrandexit "You must define 'ORG_STRUCTURE' to point to a valid JSON file in the 'settings.sh' file."
   [[ -f "$ORG_STRUCTURE" ]] || echoerrandexit "'ORG_STRUCTURE' defnied, but does not point to a file."
 }
 
@@ -5972,7 +5983,7 @@ work-submit() {
     IP=$(workConvertDot "$IP")
     IP="${IP/@/}"
     cd "${LIQ_PLAYGROUND}/${IP}"
-    orgsSourceOrg
+    orgs-lib-source-settings
     ( # we source the policy in a subshell because the vars are not reliably refreshed, and so we need them isolated.
       # TODO: also, if the policy repo is the main repo and there are multiple orgs in[olved], this will overwrite
       # basic org settings... is that a problem?
