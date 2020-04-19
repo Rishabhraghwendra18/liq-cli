@@ -409,9 +409,9 @@ _help-func-summary() {
     echo -n ": "
     cat
   ) | fold -sw $WIDTH | sed -E \
-    -e "1,/\\[--/ s/(\\[--)/${green}\\1/" \
-    -e "1,/\\]:/ s/(\\]:)/\\1${reset}/" \
-    -e "1 s/^([[:alpha:]]+)([: ])/${yellow}${underline}\\1${reset}\\2/" \
+    -e "1 s/^([[:alpha:]-]+) /\\1 ${green}/" \
+    -e "1,/:/ s/:/${reset}:/" \
+    -e "1 s/^([[:alpha:]-]+)/${yellow}${underline}\\1${reset}/" \
     -e '2,$s/^/  /'
     # We fold, then color because fold sees the control characters as just plain characters, so it throws the fold off.
     # The non-printing characters are only really understood as such by the terminal and individual programs that
@@ -423,10 +423,11 @@ _help-func-summary() {
 
 # Prints and indents the help for each action
 _help-actions-list() {
+  local GROUP="${1}"; shift
   local ACTION
   for ACTION in "$@"; do
     echo
-    help-meta-$ACTION -i
+    help-$GROUP-$ACTION -i
   done
 }
 

@@ -28,7 +28,7 @@
   "homepage": "https://liquid-labs.github.io/liq-cli/",
   "dependencies": {
     "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.26",
-    "@liquid-labs/policies-model": "file:.yalc/@liquid-labs/policies-model"
+    "@liquid-labs/policies-model": "^1.0.0-beta.23"
   },
   "bin": {
     "liq": "./dist/liq.sh"
@@ -37,7 +37,7 @@
     "@babel/cli": "^7.8.4",
     "@babel/core": "^7.2.2",
     "@babel/preset-env": "^7.3.1",
-    "@liquid-labs/bash-toolkit": "file:.yalc/@liquid-labs/bash-toolkit",
+    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.37",
     "jest": "^25.0.0",
     "npm-run-all": "^4.1.5",
     "shelljs": "^0.8.3",

@@ -823,9 +823,9 @@ _help-func-summary() {
     echo -n ": "
     cat
   ) | fold -sw $WIDTH | sed -E \
-    -e "1,/\\[--/ s/(\\[--)/${green}\\1/" \
-    -e "1,/\\]:/ s/(\\]:)/\\1${reset}/" \
-    -e "1 s/^([[:alpha:]]+)([: ])/${yellow}${underline}\\1${reset}\\2/" \
+    -e "1 s/^([[:alpha:]-]+) /\\1 ${green}/" \
+    -e "1,/:/ s/:/${reset}:/" \
+    -e "1 s/^([[:alpha:]-]+)/${yellow}${underline}\\1${reset}/" \
     -e '2,$s/^/  /'
     # We fold, then color because fold sees the control characters as just plain characters, so it throws the fold off.
     # The non-printing characters are only really understood as such by the terminal and individual programs that
@@ -837,10 +837,11 @@ _help-func-summary() {
 
 # Prints and indents the help for each action
 _help-actions-list() {
+  local GROUP="${1}"; shift
   local ACTION
   for ACTION in "$@"; do
     echo
-    help-meta-$ACTION -i
+    help-$GROUP-$ACTION -i
   done
 }
 
@@ -2640,10 +2641,9 @@ help-meta() {
 
   handleSummary "${PREFIX}${cyan_u}meta${reset} <action>: Handles liq self-config and meta operations." \
    || cat <<EOF
-The meta group manages local liq configurations and non-liq user resources.
-
 ${PREFIX}${cyan_u}meta${reset} <action>:
-$(_help-actions-list next init bash-config | indent)
+  Manages local liq configurations and non-liq user resources.
+$(_help-actions-list meta next init bash-config | indent)
 
   ${bold}Sub-resources${reset}:
     * $( SUMMARY_ONLY=true; help-meta-keys )
@@ -3252,6 +3252,8 @@ orgs-staff-list() {
 }
 
 orgs-staff-org-chart() {
+  local STYLE="${1:-}"
+  [[ -n "$STYLE" ]] || STYLE='debang/OrgChart'
   orgs-lib-source-settings
   orgs-staff-lib-check-parameters
 
@@ -3271,7 +3273,7 @@ orgs-staff-org-chart() {
       '${STAFF_FILE}',
       '${ORG_STRUCTURE}')
 
-    console.log(JSON.stringify(org.generateOrgChartData('debang/OrgChart')))" >> "${TMP_FILE}" || exit
+    console.log(JSON.stringify(org.generateOrgChartData('${STYLE}')))" >> "${TMP_FILE}" || exit
 
   tail +$(( $CUT_POINT + 1 )) "${ORG_CHART_TEMPLATE}" >> "$TMP_FILE"
 
@@ -3299,9 +3301,32 @@ help-orgs-staff() {
 
   handleSummary "${PREFIX}${cyan_u}orgs staff${reset} <action>: Manages organizations staff." || cat <<EOF
 ${PREFIX}${cyan_u}orgs staff${reset} <action>:
-  ${underline}add${reset} [--email|-e <email>] [--family-name|-f <name>] [--given-name|-g <name>] [--start-date|-s <YYY-MM-DD>]:
-  ${underline}list${reset}
-  ${underline}remove${reset}
+  Manages organization staff.
+$(_help-actions-list orgs-staff add list remove org-chart | indent)
+EOF
+}
+
+help-orgs-staff-add() {
+  cat <<EOF | _help-func-summary add "[--email|-e <email>] [--family-name|-f <name>] [--given-name|-g <name>] [--start-date|-s <YYY-MM-DD>]"
+Adds a staff member to the organization.
+EOF
+}
+
+help-orgs-staff-list() {
+  cat <<EOF | _help-func-summary list "[--email|-e] [--family-name|-f] [--given-name|-g] [--start-date|-s] [--primary-roles|-p] [--secondary-roles|-S] [--enumerate|-n]"
+Lists staff. By default lists all columns for CLI display using 'column'. If any data options are given, only those fields are listed. The '--enumerate' option includes a record number as the first column.
+EOF
+}
+
+help-orgs-staff-remove() {
+  cat <<EOF | _help-func-summary remove
+Removes the staff member as indicated by their email.
+EOF
+}
+
+help-orgs-staff-org-chart() {
+  cat <<EOF | _help-func-summary org-chart "[<style>] <blah>"
+Launches browser to display an org chart. The default style is 'debang/OrgChart+collapsed'.
 EOF
 }
 # Commits the org staff data.

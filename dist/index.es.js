@@ -451,8 +451,8 @@ function _defineProperty(obj, key, value) {
 
 var defineProperty = _defineProperty;
 
-var _class, _temp$2;
-var RolesTsv = (_temp$2 = _class =
+var _class, _temp$1;
+var RolesTsv = (_temp$1 = _class =
 /*#__PURE__*/
 function (_TsvExt) {
   inherits(RolesTsv, _TsvExt);
@@ -494,7 +494,7 @@ function (_TsvExt) {
   }]);
 
   return RolesTsv;
-}(TsvExt), defineProperty(_class, "headers", ['Name', 'Application', 'Super-role', 'Description', 'Notes']), defineProperty(_class, "keys", ['name', 'application', 'superRole', 'description', 'notes']), _temp$2);
+}(TsvExt), defineProperty(_class, "headers", ['Name', 'Application', 'Super-role', 'Description', 'Notes']), defineProperty(_class, "keys", ['name', 'application', 'superRole', 'description', 'notes']), _temp$1);
 
 var Staff =
 /*#__PURE__*/
@@ -641,8 +641,8 @@ function () {
   return Staff;
 }();
 
-var _class$1, _temp$3;
-var StaffTsv = (_temp$3 = _class$1 =
+var _class$1, _temp$2;
+var StaffTsv = (_temp$2 = _class$1 =
 /*#__PURE__*/
 function (_TsvExt) {
   inherits(StaffTsv, _TsvExt);
@@ -677,10 +677,10 @@ function (_TsvExt) {
   'primaryRoles': true,
   'secondaryRoles': true,
   'managers': true
-}), _temp$3);
+}), _temp$2);
 
-var _class$2, _temp$4;
-var PolicyCalendar = (_temp$4 = _class$2 =
+var _class$2, _temp$3;
+var PolicyCalendar = (_temp$3 = _class$2 =
 /*#__PURE__*/
 function (_TsvExt) {
   inherits(PolicyCalendar, _TsvExt);
@@ -769,7 +769,7 @@ function (_TsvExt) {
   }]);
 
   return PolicyCalendar;
-}(TsvExt), defineProperty(_class$2, "headers", ['UUID', 'Item Name', 'Description', 'Frequency', 'Impact Weighting (hrs)', 'Time Span (days)', 'Absolute Condition', 'Policy Refs']), defineProperty(_class$2, "keys", ['uuid', 'itemName', 'description', 'frequency', 'impactWeighting', 'timeSpan', 'absCond', 'policyRefs']), defineProperty(_class$2, "BIENNIAL_SELECTOR", ['ODD', 'EVEN']), defineProperty(_class$2, "TRIENNIAL_SELECTOR", ['ODD', 'EVEN', 'TRIPLETS']), _temp$4);
+}(TsvExt), defineProperty(_class$2, "headers", ['UUID', 'Item Name', 'Description', 'Frequency', 'Impact Weighting (hrs)', 'Time Span (days)', 'Absolute Condition', 'Policy Refs']), defineProperty(_class$2, "keys", ['uuid', 'itemName', 'description', 'frequency', 'impactWeighting', 'timeSpan', 'absCond', 'policyRefs']), defineProperty(_class$2, "BIENNIAL_SELECTOR", ['ODD', 'EVEN']), defineProperty(_class$2, "TRIENNIAL_SELECTOR", ['ODD', 'EVEN', 'TRIPLETS']), _temp$3);
 
 var Glossary =
 /*#__PURE__*/
@@ -823,8 +823,8 @@ function () {
   return Glossary;
 }();
 
-var _temp$5, _docDir, _roles, _rolesFile, _terms;
-var Policies = (_temp$5 =
+var _temp$4, _docDir, _roles, _rolesFile, _terms;
+var Policies = (_temp$4 =
 /*#__PURE__*/
 function () {
   function Policies() {
@@ -904,7 +904,7 @@ function () {
   }]);
 
   return Policies;
-}(), _docDir = new WeakMap(), _roles = new WeakMap(), _rolesFile = new WeakMap(), _terms = new WeakMap(), _temp$5);
+}(), _docDir = new WeakMap(), _roles = new WeakMap(), _rolesFile = new WeakMap(), _terms = new WeakMap(), _temp$4);
 
 var refreshDocuments = function refreshDocuments(destDir, inputFiles) {
   var policies = new Policies();
