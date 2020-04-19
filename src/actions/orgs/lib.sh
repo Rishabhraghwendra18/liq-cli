@@ -18,14 +18,14 @@ sourceCurrentOrg() {
 # Retrieves the policy dir for the named NPM org or will infer from context. Org base and, when private, policy projects
 # must be locally available.
 orgsPolicyRepo() {
-  orgsSourceOrg "${1:-}"
+  orgs-lib-source-settings "${1:-}"
 
   echo "${LIQ_PLAYGROUND}/${ORG_POLICY_REPO/@/}"
 }
 
 # Sources the named base org settings or will infer org context. If the base org cannot be found, the execution will
 # halt and the user will be advised to import it.
-orgsSourceOrg() {
+orgs-lib-source-settings() {
   local NPM_ORG="${1:-}"
 
   if [[ -z "$NPM_ORG" ]]; then
@@ -36,6 +36,7 @@ orgsSourceOrg() {
   fi
 
   if [[ -e "$LIQ_ORG_DB/${NPM_ORG}" ]]; then
+    [[ -f "$LIQ_ORG_DB/${NPM_ORG}/settings.sh" ]] || echoerrandexit "Could not locate settings file for '${NPM_ORG}'."
     source "$LIQ_ORG_DB/${NPM_ORG}/settings.sh"
   else
     echoerrandexit "Did not find expected base org package. Try:\nliq orgs import <pkg || URL>"

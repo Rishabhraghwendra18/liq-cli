@@ -3,10 +3,9 @@ help-meta() {
 
   handleSummary "${PREFIX}${cyan_u}meta${reset} <action>: Handles liq self-config and meta operations." \
    || cat <<EOF
-The meta group manages local liq configurations and non-liq user resources.
-
 ${PREFIX}${cyan_u}meta${reset} <action>:
-$(_help-actions-list next init bash-config | indent)
+  Manages local liq configurations and non-liq user resources.
+$(_help-actions-list meta next init bash-config | indent)
 
   ${bold}Sub-resources${reset}:
     * $( SUMMARY_ONLY=true; help-meta-keys )

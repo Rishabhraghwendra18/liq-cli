@@ -11,7 +11,7 @@ policies-document() {
   rm -rf "$TARGET_DIR"
   mkdir -p "$TARGET_DIR"
   # argv[1] because the 0th arg is the 'node' executable.
-  node -e "require('$NODE_SCRIPT').refreshDocuments('${TARGET_DIR}', process.argv[1].split(\"\\n\"))" "$(policiesGetPolicyFiles)"
+  NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "require('$NODE_SCRIPT').refreshDocuments('${TARGET_DIR}', process.argv[1].split(\"\\n\"))" "$(policiesGetPolicyFiles)"
 }
 
 # see ./help.sh for behavior
