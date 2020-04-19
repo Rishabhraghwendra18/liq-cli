@@ -194,6 +194,8 @@ orgs-staff-list() {
 }
 
 orgs-staff-org-chart() {
+  local STYLE="${1:-}"
+  [[ -n "$STYLE" ]] || STYLE='debang/OrgChart'
   orgs-lib-source-settings
   orgs-staff-lib-check-parameters
 
@@ -213,7 +215,7 @@ orgs-staff-org-chart() {
       '${STAFF_FILE}',
       '${ORG_STRUCTURE}')
 
-    console.log(JSON.stringify(org.generateOrgChartData('debang/OrgChart')))" >> "${TMP_FILE}" || exit
+    console.log(JSON.stringify(org.generateOrgChartData('${STYLE}')))" >> "${TMP_FILE}" || exit
 
   tail +$(( $CUT_POINT + 1 )) "${ORG_CHART_TEMPLATE}" >> "$TMP_FILE"
 
