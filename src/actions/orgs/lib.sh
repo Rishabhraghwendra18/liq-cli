@@ -38,6 +38,9 @@ orgs-lib-source-settings() {
   if [[ -e "$LIQ_ORG_DB/${NPM_ORG}" ]]; then
     [[ -f "$LIQ_ORG_DB/${NPM_ORG}/settings.sh" ]] || echoerrandexit "Could not locate settings file for '${NPM_ORG}'."
     source "$LIQ_ORG_DB/${NPM_ORG}/settings.sh"
+
+    ORG_STRUCTURE="${ORG_STRUCTURE/\~/$LIQ_PLAYGROUND}"
+    ORG_CHART_TEMPLATE="${ORG_CHART_TEMPLATE/\~/$LIQ_PLAYGROUND}"
   else
     echoerrandexit "Did not find expected base org package. Try:\nliq orgs import <pkg || URL>"
   fi

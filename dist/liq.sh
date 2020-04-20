@@ -3051,6 +3051,9 @@ orgs-lib-source-settings() {
   if [[ -e "$LIQ_ORG_DB/${NPM_ORG}" ]]; then
     [[ -f "$LIQ_ORG_DB/${NPM_ORG}/settings.sh" ]] || echoerrandexit "Could not locate settings file for '${NPM_ORG}'."
     source "$LIQ_ORG_DB/${NPM_ORG}/settings.sh"
+
+    ORG_STRUCTURE="${ORG_STRUCTURE/\~/$LIQ_PLAYGROUND}"
+    ORG_CHART_TEMPLATE="${ORG_CHART_TEMPLATE/\~/$LIQ_PLAYGROUND}"
   else
     echoerrandexit "Did not find expected base org package. Try:\nliq orgs import <pkg || URL>"
   fi
@@ -3259,7 +3262,6 @@ orgs-staff-org-chart() {
 
   local STAFF_FILE="${LIQ_PLAYGROUND}/${ORG_STAFF_REPO/@/}/staff.tsv"
   local CUT_POINT TMP_FILE
-  ORG_CHART_TEMPLATE="${ORG_CHART_TEMPLATE/\~/$LIQ_PLAYGROUND}"
   CUT_POINT="$(grep -n "~~DATA~~" "${ORG_CHART_TEMPLATE}" | awk -F: '{print $1}')"
   TMP_FILE="$(mktemp -d)/org-chart.html"
 

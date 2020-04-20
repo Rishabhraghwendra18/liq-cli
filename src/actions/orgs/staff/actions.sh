@@ -201,7 +201,6 @@ orgs-staff-org-chart() {
 
   local STAFF_FILE="${LIQ_PLAYGROUND}/${ORG_STAFF_REPO/@/}/staff.tsv"
   local CUT_POINT TMP_FILE
-  ORG_CHART_TEMPLATE="${ORG_CHART_TEMPLATE/\~/$LIQ_PLAYGROUND}"
   CUT_POINT="$(grep -n "~~DATA~~" "${ORG_CHART_TEMPLATE}" | awk -F: '{print $1}')"
   TMP_FILE="$(mktemp -d)/org-chart.html"
 
