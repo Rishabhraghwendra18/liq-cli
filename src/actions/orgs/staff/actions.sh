@@ -23,7 +23,7 @@ orgs-staff-add() {
 
   local ALL_SPECIFIED FIELD
   ALL_SPECIFIED=true
-  for FIELD in $FIELDS; do
+  for FIELD in $FIELDS; do # TODO: "--secondary-roles ''" will trigger; need to check the '_SET', not values.
     if [[ -z "${!FIELD:-}" ]]; then ALL_SPECIFIED=''; break; fi
   done
 
@@ -62,9 +62,19 @@ orgs-staff-add() {
   local ROLE_DEF
   exec 10<<< "$PRIMARY_ROLES"
   while read -u 10 -r ROLE_DEF; do
-    local ROLE MANAGER CANDIDATE_MANAGERS
+    local ROLE MANAGER CANDIDATE_MANAGERS PARAMS QAULIFICATION
     ROLE="$(echo "$ROLE_DEF" | awk -F/ '{print $1}')"
     MANAGER="$(echo "$ROLE_DEF" | awk -F/ '{print $2}')"
+    PARAMS="$(echo "$ROLE_DEF" | awk -F/ '{print $3}')"
+    if [[ -n "$PARAMS" ]]; then
+      QAULIFICATION="$(echo "$PARAMS" | sed -E 's/.*qual:([^,]+).*/\1/')"
+    fi
+    if [[ -z "${QUALIFICATION:-}" ]] \
+        && ! echo "$ROLE_DEF" | grep -qE '.+/.*/.*' \
+        && grep -E "^${ROLE}"$'\t' "${ORG_ROLES}" | awk -F$'\t' '{print $2}' | grep -qE 'qualified'; then
+      require-answer "Role qualification: " QUALIFICATION
+      QUALIFICATION="qual:${QUALIFICATION}"
+    fi
     if [[ -z "$MANAGER" ]]; then
       # trap - ERR # without this, an error causes the entire node script to print, which is cumbersome
       CANDIDATE_MANAGERS="$(NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e \
@@ -88,7 +98,12 @@ orgs-staff-add() {
             }
 
             staff.getItems().forEach((s) => {
-              if (s['primaryRoles'].findIndex(r => r.match(new RegExp(\`^\${role_def[1]}\`))) != -1) {
+              if (s['primaryRoles'].findIndex(r => {
+                    return r.match(new RegExp(\`^\${role_def[1]}/\`))
+                      || (role_def[2] !== undefined
+                          && role_def[2].findIndex(sd => {
+                               return r.match(new RegExp(\`^\${sd}/\`))}) !== -1)
+                  }) !== -1) {
                 console.log(s['email']);
                 found = true;
               }
@@ -110,7 +125,7 @@ orgs-staff-add() {
         selectOneCancel MANAGER CANDIDATE_MANAGERS
       fi
       [[ "$MANAGER" != "self - "* ]] || MANAGER=${MANAGER:7}
-      PRIMARY_ROLES="$(echo "$PRIMARY_ROLES" | sed -E "s|${ROLE}/?|${ROLE}/${MANAGER:-}|")"
+      PRIMARY_ROLES="$(echo "$PRIMARY_ROLES" | sed -E "s|${ROLE}/?[^/]*/?.*|${ROLE}/${MANAGER:-}/${QUALIFICATION:-}|")"
     fi
   done # <<< "$PRIMARY_ROLES"
   exec 10<&-
@@ -208,7 +223,6 @@ orgs-staff-org-chart() {
   head -n $(( $CUT_POINT - 1 )) "${ORG_CHART_TEMPLATE}" > "${TMP_FILE}"
 
   trap - ERR
-  echo "LIQ_DIST_DIR: $LIQ_DIST_DIR"
   NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "
     const { Organization } = require('@liquid-labs/policies-model');
     const org = new Organization(
