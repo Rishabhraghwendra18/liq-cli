@@ -70,8 +70,8 @@ orgs-staff-add() {
       CANDIDATE_MANAGERS="$(NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e \
         "try {
           const fs = require('fs');
-          const { Staff } = require('@liquid-labs/policies-model');
-          const staff = new Staff('${STAFF_FILE}');
+          const { StaffTsv } = require('@liquid-labs/policies-model');
+          const staff = new StaffTsv('${STAFF_FILE}');
           const org_struct = JSON.parse(fs.readFileSync('${ORG_STRUCTURE}'));
 
           const role_def = org_struct.find(el => el[0] == '${ROLE}')
@@ -86,14 +86,15 @@ orgs-staff-add() {
               console.log('self - ${EMAIL}');
               found = true;
             }
-            while ((s = staff.next()) !== undefined) {
+
+            staff.getItems().forEach((s) => {
               if (s['primaryRoles'].findIndex(r => r.match(new RegExp(\`^\${role_def[1]}\`))) != -1) {
                 console.log(s['email']);
                 found = true;
               }
-            }
+            });
             if (!found) {
-              console.log(\`!!NONE:\${role_def[1]}\`)
+              console.log(\`!!NONE:\${role_def[1]}\`);
             }
           }
         }
@@ -116,8 +117,8 @@ orgs-staff-add() {
 
   trap - ERR # without this, an error causes the entire node script to print, which is cumbersome
   NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "try {
-      const { Staff } = require('@liquid-labs/policies-model');
-      const staff = new Staff('${STAFF_FILE}');
+      const { StaffTsv } = require('@liquid-labs/policies-model');
+      const staff = new StaffTsv('${STAFF_FILE}');
       staff.add({ email: '${EMAIL}',
                   familyName: '${FAMILY_NAME}',
                   givenName: '${GIVEN_NAME}',
@@ -207,14 +208,16 @@ orgs-staff-org-chart() {
   head -n $(( $CUT_POINT - 1 )) "${ORG_CHART_TEMPLATE}" > "${TMP_FILE}"
 
   trap - ERR
+  echo "LIQ_DIST_DIR: $LIQ_DIST_DIR"
   NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "
     const { Organization } = require('@liquid-labs/policies-model');
     const org = new Organization(
       '${ORG_ROLES}',
       '${STAFF_FILE}',
-      '${ORG_STRUCTURE}')
+      '${ORG_STRUCTURE}');
 
-    console.log(JSON.stringify(org.generateOrgChartData('${STYLE}')))" >> "${TMP_FILE}" || exit
+    const chartData = org.generateOrgChartData('${STYLE}');
+    console.log(JSON.stringify(chartData));" >> "${TMP_FILE}" || exit
 
   tail +$(( $CUT_POINT + 1 )) "${ORG_CHART_TEMPLATE}" >> "$TMP_FILE"
 
