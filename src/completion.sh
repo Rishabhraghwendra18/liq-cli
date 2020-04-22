@@ -57,7 +57,7 @@ _liq()
           fi;;
         orgs)
           if [[ "${ACTION}" == staff ]] && (( $WORD_COUNT == 4 )); then
-            OPTS="add list remove"
+            OPTS="add list remove org-chart"
           else
             case "${ACTION}" in
               select)
