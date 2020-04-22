@@ -201,15 +201,44 @@ function () {
       return this.data.map(function (r, i) {
         return item(_this.keys, _this.multis, r, i);
       });
+    } // Adds an item as an object (NOT array)
+
+  }, {
+    key: "add",
+    value: function add(item) {
+      var line = [];
+      this.keys.forEach(function (key) {
+        var field = item[key];
+        if (field === undefined) throw new Error("Item does not define key '".concat(key, "'."));
+        line.push(field);
+      });
+      var failDesc;
+      if (this.notUnique && (failDesc = this.notUnique(this.data.slice(), item))) throw new Error(failDesc);
+      this.data.push(line);
+    }
+  }, {
+    key: "remove",
+    value: function remove(key) {
+      var _this2 = this;
+
+      var index = this.data.findIndex(function (line) {
+        return _this2.matchKey(line, key);
+      });
+      if (index >= 0) return this.data.splice(index, 1);else return null;
+    }
+  }, {
+    key: "writeString",
+    value: function writeString() {
+      return "".concat(this.headers.join("\t"), "\n") + "".concat(this.data.map(function (line) {
+        return line.map(function (v) {
+          return v === '' || Array.isArray(v) && v.length === 0 ? '-' : v;
+        }).join("\t");
+      }).join("\n"), "\n");
     }
   }, {
     key: "write",
     value: function write() {
-      writeFileSync(this.fileName, "".concat(this.headers.join("\t"), "\n") + "".concat(this.data.map(function (line) {
-        return line.map(function (v) {
-          return v === '' ? '-' : v;
-        }).join("\t");
-      }).join("\n"), "\n"));
+      writeFileSync(this.fileName, this.writeString());
     } // Generic find; assumes the first column is the key.
 
   }, {
@@ -595,7 +624,7 @@ function () {
   }, {
     key: "getReportsByRoleName",
     value: function getReportsByRoleName(roleName) {
-      return this.reportsByReportRole[roleName];
+      return this.reportsByReportRole[roleName] || [];
     }
   }, {
     key: "getReports",
@@ -626,7 +655,7 @@ function () {
           s.attachedRoles[roleName] = org.roles[roleName].attachTo(s, roleParameters); // TODO: migrate the manager to the AttachedRole
           // set manager and add ourselves to their reports
 
-          if (orgNode.getParent() !== null) {
+          if (orgNode.getPrimMngr() !== null) {
             var roleManager = org.getStaffMember(roleManagerEmail);
             if (roleManager === undefined) throw new Error("No such manager '".concat(roleManagerEmail, "' found while loading staff member '").concat(s.getEmail(), "'."));
             s.managers[roleName] = roleManager;
