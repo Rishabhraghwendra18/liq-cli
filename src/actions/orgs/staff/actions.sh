@@ -13,7 +13,7 @@ orgs-staff-add() {
   local FIELDS="EMAIL FAMILY_NAME GIVEN_NAME START_DATE PRIMARY_ROLES SECONDARY_ROLES"
   local FIELDS_SPEC="${FIELDS}"
   FIELDS_SPEC="$(echo "$FIELDS_SPEC" | sed -e 's/ /= /g')="
-  eval "$(setSimpleOptions $FIELDS_SPEC NO_VERIFY:V NO_COMMIT:C -- "$@")"
+  eval "$(setSimpleOptions $FIELDS_SPEC NO_VERIFY:V COMMIT -- "$@")"
 
   list-from-csv PRIMARY_ROLES
   list-from-csv SECONDARY_ROLES
@@ -145,7 +145,8 @@ orgs-staff-add() {
     console.log(\"Staff member '${EMAIL}' added.\");" \
       2> >(while read line; do echo -e "${red}${line}${reset}" >&2; done; \
            [[ -z "$line" ]] || echoerrandexit "Problem loading staff data.")
-  if [[ -n "$NO_COMMIT" ]]; then
+  
+  if [[ -n "$COMMIT" ]]; then
     echowarn "Updates have not been committed. Manually commit and push when ready."
   else
     orgsStaffCommit

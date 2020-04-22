@@ -9,7 +9,7 @@ EOF
 }
 
 help-orgs-staff-add() {
-  cat <<EOF | _help-func-summary add "[--email|-e <email>] [--family-name|-f <name>] [--given-name|-g <name>] [--start-date|-s <YYY-MM-DD>]"
+  cat <<EOF | _help-func-summary add "[--email|-e <email>] [--family-name|-f <name>] [--given-name|-g <name>] [--start-date|-s <YYY-MM-DD>] [--commit|-c]"
 Adds a staff member to the organization.
 EOF
 }
