@@ -1,7 +1,7 @@
 # TODO: instead, create simple spec; generate 'completion' options and 'docs' from spec.
 
 help-orgs-audits() {
-  handleSummary "${cyan_u}audits${reset} <action>: Manage audits." || cat <<EOF
+  handleSummary "${cyan_u}orgs audits${reset} <action>: Manage audits." || cat <<EOF
 ${cyan_u}policies audits${reset} <action>:
 $(help-orgs-audits-start | sed -e 's/^/  /')
 EOF
