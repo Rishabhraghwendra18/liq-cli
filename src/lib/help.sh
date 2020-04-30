@@ -1,4 +1,4 @@
-CATALYST_COMMAND_GROUPS=(help data environments meta orgs orgs-audits orgs-policies orgs-staff projects projects-issues required-services services work)
+CATALYST_COMMAND_GROUPS=(help data environments meta orgs orgs-audits orgs-policies orgs-staff projects projects-issues services work)
 
 # display help on help
 help-help() {
