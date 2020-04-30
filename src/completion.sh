@@ -39,7 +39,7 @@ _liq()
 				policies)
 					OPTS="document audits";;
         projects)
-          OPTS="build close create init issues publish qa sync test services";;
+          OPTS="build close create issues publish qa sync test services";;
         remotes)
           OPTS="add delete set-main";;
         required-services) # deprecated
