@@ -41,7 +41,20 @@ meta-next() {
     echofmt $COLOR "It looks like liq CLI hasn't been setup yet$TECH_DETAIL. Try:\nliq meta init"
   elif [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     source "${LIQ_WORK_DB}/curr_work"
-    echofmt $COLOR "It looks like you were worknig on something: '${WORK_DESC}'. Try:\nliq work status"
+    local PROJ DONE
+    export DONE
+    for PROJ in $INVOLVED_PROJECTS; do
+      PROJ=${PROJ/@/}
+      cd "$LIQ_PLAYGROUND/${PROJ}"
+      if [[ -n "$(git status --porcelain)" ]]; then
+        echofmt $COLOR "It looks like you were worknig on '${WORK_DESC}' and have uncommitted changes in '${PROJ}'. Try:\n\nliq work save -m 'commit message' --project $PROJ\n\nOr, to use 'liq work stage' with 'liq work save' to save sets of files with different messages.\n\nOr, to get an overview of all work status, try:\n\nliq work status."
+        DONE=true
+        break
+      fi
+    done
+    if [[ "$DONE" != "true" ]]; then
+      echofmt $COLOR "It looks like you were worknig on '${WORK_DESC}' and everything is committed. If ready to submit changes, try:\nliq work submit"
+    fi
   elif requirePackage; then
     echofmt $COLOR "Looks like you're currently in project '$PACKAGE_NAME'. You could start working on an issue. Try:\nliq work start ..."
   else
