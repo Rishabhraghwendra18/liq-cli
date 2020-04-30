@@ -7,7 +7,6 @@ ${PREFIX}${cyan_u}data${reset} <action>:
 $(help-data-build)
   ${underline}reset${reset} [<iface>...]: Resets all or each named data service, clearing all schema
     definitions.
-  ${underline}clear${reset} [<iface>...]: Clears all data from all or each named data service.
   ${underline}rebuild${reset}: Effectively resets and builds all or each named data service.
   ${underline}dump${reset} [--output-set-name|-o <set name>] <iface>: Dumps the data from all or the
     named interface. If '--output-set-name' is speciifed, will put data in
@@ -21,5 +20,12 @@ if the current project requires 'sql-mysql', the data commands will work and
 require an 'iface' designation of 'sql'.
 
 ${red_b}ALPHA NOTE:${reset} The only currently supported interface class is 'sql'.
+EOF
+}
+
+help-data-build() {
+  cat <<EOF | indent
+$(helpActionPrefix data)${underline}build${reset} [<iface>...]: Loads the project schema into all or
+each named data service.
 EOF
 }
