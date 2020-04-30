@@ -1,9 +1,9 @@
-requirements-policies() {
+requirements-orgs-policies() {
   :
 }
 
 # see ./help.sh for behavior
-policies-document() {
+orgs-policies-document() {
   local TARGET_DIR NODE_SCRIPT
   TARGET_DIR="$(orgsPolicyRepo "${1:-}")/policy"
   NODE_SCRIPT="$(dirname $(real_path ${BASH_SOURCE[0]}))/index.js"
@@ -15,7 +15,7 @@ policies-document() {
 }
 
 # see ./help.sh for behavior
-policies-update() {
+orgs-policies-update() {
   local POLICY
   for POLICY in $(policiesGetPolicyProjects "$@"); do
     npm i "${POLICY}"

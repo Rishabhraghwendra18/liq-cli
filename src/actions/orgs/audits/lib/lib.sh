@@ -1,6 +1,6 @@
 # Generates a human readable description string based on audit parameters. The '--short' option guarantees a name compatible with branch naming conventions and suitable for use with 'liq work start'.
 # outer vars: SCOPE DOMAIN TIME OWNER
-function policies-audits-describe() {
+function orgs-audits-describe() {
   eval "$(setSimpleOptions SHORT SET_SCOPE:c= SET_DOMAIN:d= SET_TIME:t= SET_OWNER:o= -- "$@")"
   [[ -n $SET_SCOPE ]] || SET_SCOPE="$SCOPE"
   [[ -n $SET_DOMAIN ]] || SET_DOMAIN="$DOMAIN"
@@ -15,18 +15,18 @@ function policies-audits-describe() {
 }
 
 # Finalizes the session by signing the log, committing the updates, and summarizing the session. Takes the records folder, key time, and commit message as first, second, and third arguments.
-function policies-audits-finalize-session() {
+function orgs-audits-finalize-session() {
   local AUDIT_PATH="${1}"
   local TIME="${2}"
   local MESSAGE="${3}"
 
-  policies-audits-sign-log "${AUDIT_PATH}"
+  orgs-audits-sign-log "${AUDIT_PATH}"
   (
     cd "${AUDIT_PATH}"
     work-stage .
     work-save -m "${MESSAGE}"
     work-submit --no-close
-    policies-audits-summarize-since "${AUDIT_PATH}" ${TIME}
+    orgs-audits-summarize-since "${AUDIT_PATH}" ${TIME}
     work-resume --pop
   )
 }

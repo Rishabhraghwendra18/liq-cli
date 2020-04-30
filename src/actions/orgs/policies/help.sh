@@ -9,6 +9,6 @@ ${PREFIX}${cyan_u}policies${reset} <action>:
   ${underline}update${reset}: Updates organization policies.
 
 ${bold}Sub-resources${reset}:
-  * $( SUMMARY_ONLY=true; help-policies-audits )
+  * $( SUMMARY_ONLY=true; help-orgs-audits )
 EOF
 }

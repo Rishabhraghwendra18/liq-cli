@@ -20,13 +20,13 @@ In other words, liq eliminates much of the burden of evidence gathering and orga
 
 ## Subscribing to a Policies
 ```bash
-liq policies subscribe @liquid-labs/policies-oss
+liq policies subscribe @liquid-labs/orgs-policies-oss
 ```
 Policies are installed just like packages. The only difference being that as an enforced convention, policy Projects are kept separate from code projects so the process will check the project type prior to acting.
 
 ## Creating a policy
 ```bash
-liq projects create --new liquid-policy @my-company/policies-hiring
+liq projects create --new liquid-policy @my-company/orgs-policies-hiring
 ```
 A policy really is just a kind of Project. Change control is very similar, differing mostly in the human actors.
 

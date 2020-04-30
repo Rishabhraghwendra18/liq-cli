@@ -1,1 +1,1 @@
-export * from '../src/actions/policies/lib/policies-document.js'
+export * from '../src/actions/orgs/policies/lib/policies-document.js'

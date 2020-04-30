@@ -1,13 +1,13 @@
 # TODO: instead, create simple spec; generate 'completion' options and 'docs' from spec.
 
-help-policies-audits() {
+help-orgs-audits() {
   handleSummary "${cyan_u}audits${reset} <action>: Manage audits." || cat <<EOF
 ${cyan_u}policies audits${reset} <action>:
-$(help-policies-audits-start | sed -e 's/^/  /')
+$(help-orgs-audits-start | sed -e 's/^/  /')
 EOF
 } #$'' HACK to reset Atom Beutifier
 
-help-policies-audits-start() {
+help-orgs-audits-start() {
   cat <<EOF
 ${underline}start${reset} [--scope|-s <scope>] [--no-confirm|-C] [<domain>] :
   Initiates an audit. An audit scope is either 'change' (default), 'process' or 'full'.

@@ -11,15 +11,15 @@ source ./orgs/actions.sh
 source ./orgs/help.sh
 source ./orgs/lib.sh
 
+source ./orgs/audits/inc.sh
+
+source ./orgs/policies/actions.sh
+source ./orgs/policies/help.sh
+source ./orgs/policies/lib.sh
+
 source ./orgs/staff/actions.sh
 source ./orgs/staff/help.sh
 source ./orgs/staff/lib.sh
-
-source ./policies/actions.sh
-source ./policies/help.sh
-source ./policies/lib.sh
-
-source ./policies/audits/inc.sh
 
 source ./projects/actions.sh
 source ./projects/services.sh
