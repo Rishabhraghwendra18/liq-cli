@@ -21,14 +21,7 @@ source ./orgs/staff/actions.sh
 source ./orgs/staff/help.sh
 source ./orgs/staff/lib.sh
 
-source ./projects/actions.sh
-source ./projects/services.sh
-source ./projects/help.sh
-source ./projects/lib.sh
-source ./projects/qa-lib.sh
-
-source ./projects/issues/actions.sh
-source ./projects/issues/help.sh
+source ./projects/inc.sh
 
 # deprecated
 source ./required-services/actions.sh
