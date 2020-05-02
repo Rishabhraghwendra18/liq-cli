@@ -8,15 +8,15 @@ function policy-audit-start-prep() {
   policy-audit-start-user-confirm-audit-settings
 }
 
-function policies-audits-setup-work() {
+function orgs-audits-setup-work() {
   (
     local MY_GITHUB_NAME ISSUE_URL ISSUE_NUMBER
     projectHubWhoami MY_GITHUB_NAME
     cd $(orgsPolicyRepo) # TODO: create separately specified records repo
-    ISSUE_URL="$(hub issue create -m "$(policies-audits-describe)" -a "$MY_GITHUB_NAME" -l audit)"
+    ISSUE_URL="$(hub issue create -m "$(orgs-audits-describe)" -a "$MY_GITHUB_NAME" -l audit)"
     ISSUE_NUMBER="$(basename "$ISSUE_URL")"
 
-    work-start --push -i $ISSUE_NUMBER "$(policies-audits-describe --short)"
+    work-start --push -i $ISSUE_NUMBER "$(orgs-audits-describe --short)"
   )
 }
 
@@ -24,9 +24,9 @@ function policies-audits-setup-work() {
 # Initialize an audit. Refer to folder and questions initializers.
 # outer vars: TIME inherited
 function policy-audit-initialize-records() {
-  policies-audits-initialize-folder
-  policies-audits-initialize-audits-json
-  policies-audits-initialize-questions
+  orgs-audits-initialize-folder
+  orgs-audits-initialize-audits-json
+  orgs-audits-initialize-questions
 }
 
 # Internal help functions.
@@ -55,7 +55,7 @@ function policy-audit-start-confirm-and-normalize-input() {
 function policy-audit-derive-vars() {
   local FILE_OWNER FILE_NAME
 
-  TIME="$(policies-audits-now)"
+  TIME="$(orgs-audits-now)"
   OWNER="$(git config user.email)"
   FILE_OWNER=$(echo "${OWNER}" | sed -e 's/@.*$//')
 
@@ -78,7 +78,7 @@ function policy-audit-start-user-confirm-audit-settings() {
 
 # Lib internal helper. Determines and creates the AUDIT_PATH
 # outer vars: AUDIT_PATH
-function policies-audits-initialize-folder() {
+function orgs-audits-initialize-folder() {
   if [[ -d "${AUDIT_PATH}" ]]; then
     echoerrandexit "Looks like the audit has already started. You can't start more than one audit per second."
   fi
@@ -90,11 +90,11 @@ function policies-audits-initialize-folder() {
 
 # Lib internal helper. Initializes the 'audit.json' data record.
 # outer vars: AUDIT_PATH TIME DOMAIN SCOPE OWNER
-function policies-audits-initialize-audits-json() {
+function orgs-audits-initialize-audits-json() {
   local AUDIT_SH="${AUDIT_PATH}/audit.sh"
   local PARAMETERS_SH="${AUDIT_PATH}/parameters.sh"
   local DESCRIPTION
-  DESCRIPTION=$(policies-audits-describe)
+  DESCRIPTION=$(orgs-audits-describe)
 
   if [[ -f "${AUDIT_SH}" ]]; then
     echoerrandexit "Found existing 'audit.json' file while trying to initalize audit. Bailing out..."
@@ -115,16 +115,16 @@ EOF
 
 # Lib internal helper. Determines applicable questions and generates initial TSV record.
 # outer vars: inherited
-function policies-audits-initialize-questions() {
-  policies-audits-create-combined-tsv
+function orgs-audits-initialize-questions() {
+  orgs-audits-create-combined-tsv
   local ACTION_SUMMARY
-  policies-audits-create-final-audit-statements ACTION_SUMMARY
-  policies-audits-add-log-entry "${ACTION_SUMMARY}"
+  orgs-audits-create-final-audit-statements ACTION_SUMMARY
+  orgs-audits-add-log-entry "${ACTION_SUMMARY}"
 }
 
 # Lib internal helper. Creates the 'ref/combined.tsv' file containing the list of policy items included based on org (absolute) parameters.
 # outer vars: DOMAIN AUDIT_PATH
-policies-audits-create-combined-tsv() {
+orgs-audits-create-combined-tsv() {
   echo "Gathering relevant policy statements..."
   local FILES
   FILES="$(policiesGetPolicyFiles --find-options "-path '*/policy/${DOMAIN}/standards/*items.tsv'")"
@@ -136,7 +136,7 @@ policies-audits-create-combined-tsv() {
 
 # Lib internal helper. Analyzes 'ref/combined.tsv' against parameter setting to generate the final list of statements included in the audit. This may involve an interactive question / answer loop (with change audits). Echoes a summary of actions (including any parameter values used) suitable for logging.
 # outer vars: SCOPE AUDIT_PATH
-policies-audits-create-final-audit-statements() {
+orgs-audits-create-final-audit-statements() {
   local SUMMAR_VAR="${1}"
 
   local STATEMENTS LINE

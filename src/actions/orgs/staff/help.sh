@@ -1,9 +1,11 @@
 help-orgs-staff() {
   local PREFIX="${1:-}"
 
-  handleSummary "${PREFIX}${cyan_u}orgs staff${reset} <action>: Manages organizations staff." || cat <<EOF
+  local SUMMARY='Manages organizations staff.'
+
+  handleSummary "${PREFIX}${cyan_u}orgs staff${reset} <action>: ${SUMMARY}" || cat <<EOF
 ${PREFIX}${cyan_u}orgs staff${reset} <action>:
-  Manages organization staff.
+  ${SUMMARY}
 $(_help-actions-list orgs-staff add list remove org-chart | indent)
 EOF
 }

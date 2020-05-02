@@ -1,9 +1,9 @@
 # Gets the current time (resolution: 1 second) in UTC for use by log functions.
-policies-audits-now() { date -u +%Y%m%d%H%M%S; }
+orgs-audits-now() { date -u +%Y%m%d%H%M%S; }
 
 # Adds log entry. Takes a single argument, the message to add to the log entry.
 # outer vars: AUDIT_PATH
-policies-audits-add-log-entry() {
+orgs-audits-add-log-entry() {
   local MESSAGE="${1}"
 
   if [[ -z "${AUDIT_PATH}" ]]; then
@@ -16,15 +16,15 @@ policies-audits-add-log-entry() {
     echoerrandexit "Must set git 'user.email' for use by audit log."
   fi
 
-  echo "$(policies-audits-now) UTC ${USER} ${MESSAGE}" >> "${AUDIT_PATH}/refs/history.log"
+  echo "$(orgs-audits-now) UTC ${USER} ${MESSAGE}" >> "${AUDIT_PATH}/refs/history.log"
 }
 
 # Signs the log. Takes the records folder as first argument.
-policies-audits-sign-log() {
+orgs-audits-sign-log() {
   local AUDIT_PATH="${1}"
   local USER SIGNED_AT
   USER="$(git config user.email)"
-  SIGNED_AT=$(policies-audits-now)
+  SIGNED_AT=$(orgs-audits-now)
 
   echo "Signing current log file..."
 
@@ -36,8 +36,8 @@ policies-audits-sign-log() {
     "${AUDIT_PATH}/refs/history.log"
 }
 
-# Gets all entries since the indicated time (see policies-audits-now for format). Takes records folder and the key time as the first and second arguments.
-policies-audits-summarize-since() {
+# Gets all entries since the indicated time (see orgs-audits-now for format). Takes records folder and the key time as the first and second arguments.
+orgs-audits-summarize-since() {
   local AUDIT_PATH="${1}"
   local SINCE="${2}"
 

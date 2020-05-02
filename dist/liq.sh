@@ -1295,7 +1295,7 @@ function log() {
     file=${BASH_SOURCE[$i-1]}
     echo "${now} $(hostname) $0:${lineno} ${msg}"
 }
-CATALYST_COMMAND_GROUPS=(help data environments meta orgs orgs-staff policies policies-audits projects projects-issues required-services services work)
+CATALYST_COMMAND_GROUPS=(help data environments meta orgs orgs-audits orgs-policies orgs-staff projects projects-issues projects-services services work)
 
 # display help on help
 help-help() {
@@ -1510,13 +1510,6 @@ requirements-data() {
   requireEnvironment
 }
 
-help-data-build() {
-  cat <<EOF | indent
-$(helpActionPrefix data)${underline}build${reset} [<iface>...]: Loads the project schema into all or
-each named data service.
-EOF
-}
-
 data-build() {
   local MAIN='data-build-${IFACE}'
   dataRunner "$@"
@@ -1665,27 +1658,49 @@ findDataFiles() {
 }
 help-data() {
   local PREFIX="${1:-}"
-  local INDENT=1
 
-  handleSummary "${PREFIX}${cyan_u}data${reset} <action>: Manges data sets and schemas." || cat <<EOF
+  local SUMMARY='Manges data sets and schemas.'
+
+  handleSummary "${PREFIX}${cyan_u}data${reset} <action>: ${SUMMARY}" || cat <<EOF
 ${PREFIX}${cyan_u}data${reset} <action>:
-$(help-data-build)
-  ${underline}reset${reset} [<iface>...]: Resets all or each named data service, clearing all schema
-    definitions.
-  ${underline}clear${reset} [<iface>...]: Clears all data from all or each named data service.
-  ${underline}rebuild${reset}: Effectively resets and builds all or each named data service.
-  ${underline}dump${reset} [--output-set-name|-o <set name>] <iface>: Dumps the data from all or the
-    named interface. If '--output-set-name' is speciifed, will put data in
-    './data/<iface>/<set name>/' or output to stdout if no output is specified.
-    This is a 'data only' dump.
-  ${underline}load${reset} <set name>: Loads the named data set into the project data services. Any
-    existing data will be cleared.
+$(echo "${SUMMARY} The data commands deal exclusively with primary interface classes (iface). Thus even if the current project requires 'sql-mysql', the data commands will work and require an 'iface' designation of 'sql'." | fold -sw 80 | indent)
+$(_help-actions-list data build dump load rebuild reset test | indent)
+EOF
+}
 
-The data commands deal exclusively with primary interface classes (${underline}iface${reset}). Thus even
-if the current project requires 'sql-mysql', the data commands will work and
-require an 'iface' designation of 'sql'.
+help-data-build() {
+  cat <<EOF | _help-func-summary build "[<iface>...]"
+Loads the project schema into all or each named data service.
+EOF
+}
 
-${red_b}ALPHA NOTE:${reset} The only currently supported interface class is 'sql'.
+help-data-dump() {
+  cat <<EOF | _help-func-summary dump "[--output-set-name|-o <set name>] <iface>"
+Dumps the data from all or the named interface. If '--output-set-name' is speciifed, will put data in './data/<iface>/<set name>/' or output to stdout if no output is specified. This is a 'data only' dump.
+EOF
+}
+
+help-data-load() {
+  cat <<EOF | _help-func-summary load "<set name>"
+Loads the named data set into the project data services. Any existing data will be cleared.
+EOF
+}
+
+help-data-reset() {
+  cat <<EOF | _help-func-summary reset "[<iface>...]"
+Resets all or each named data service, clearing all schema definitions.
+EOF
+}
+
+help-data-rebuild() {
+  cat <<EOF | _help-func-summary rebuild
+Effectively resets and builds all or each named data service.
+EOF
+}
+
+help-data-test() {
+  cat <<EOF | _help-func-summary test
+Runs data tests.
 EOF
 }
 
@@ -2569,18 +2584,60 @@ environments-update() {
 help-environments() {
   local PREFIX="${1:-}"
 
-  handleSummary "${PREFIX}${cyan_u}environments${reset} <action>: Runtime environment configurations." || cat <<EOF
+  local SUMMARY="Runtime environment configurations."
+
+  handleSummary "${PREFIX}${cyan_u}environments${reset} <action>: ${SUMMARY}" || cat <<EOF
 ${PREFIX}${cyan_u}environments${reset}:
-  ${underline}list${reset}: List available environments for the current project.
-  ${underline}show${reset} [<name>]: Display the named or current environment.
-  ${underline}add${reset} [<name>]: Interactively adds a new environment definition to the current
-    project.
-  ${underline}delete${reset} <name>: Deletes named environment for the current project.
-  ${underline}select${reset} [<name>]: Selects one of the available environment.
-  ${underline}deselect${reset}: Unsets the current environment.
-  ${underline}set${reset} [<key> <value>] | [<env name> <key> <value>]: Updates environment
-    settings.
-  ${underline}update${reset} [-n|--new-only]: Interactively update the current environment.
+  ${SUMMARY}
+$(_help-actions-list environments add delete deselect list select set show update | indent)
+EOF
+}
+
+help-environments-add() {
+  cat <<EOF | _help-func-summary add "[<name>]"
+Interactively adds a new environment definition to the current project.
+EOF
+}
+
+help-environments-delete() {
+  cat <<EOF | _help-func-summary delete "<name>"
+Deletes named environment for the current project.
+EOF
+}
+
+help-environments-deselect() {
+  cat <<EOF | _help-func-summary deselect
+Unsets the current environment.
+EOF
+}
+
+help-environments-list() {
+  cat <<EOF | _help-func-summary list
+List available environments for the current project.
+EOF
+}
+
+help-environments-select() {
+  cat <<EOF | _help-func-summary select "[<name>]"
+Display the named or current environment.
+EOF
+}
+
+help-environments-set() {
+  cat <<EOF | _help-func-summary set "[<key> <value>] | [<env name> <key> <value>]"
+Updates environment settings.
+EOF
+}
+
+help-environments-show() {
+  cat <<EOF | _help-func-summary show "[<name>]"
+Selects one of the available environment.
+EOF
+}
+
+help-environments-update() {
+  cat <<EOF | _help-func-summary update "[-n|--new-only]"
+Interactively update the current environment.
 EOF
 }
 
@@ -2627,7 +2684,20 @@ meta-next() {
     echofmt $COLOR "It looks like liq CLI hasn't been setup yet$TECH_DETAIL. Try:\nliq meta init"
   elif [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     source "${LIQ_WORK_DB}/curr_work"
-    echofmt $COLOR "It looks like you were worknig on something: '${WORK_DESC}'. Try:\nliq work status"
+    local PROJ DONE
+    export DONE
+    for PROJ in $INVOLVED_PROJECTS; do
+      PROJ=${PROJ/@/}
+      cd "$LIQ_PLAYGROUND/${PROJ}"
+      if [[ -n "$(git status --porcelain)" ]]; then
+        echofmt $COLOR "It looks like you were worknig on '${WORK_DESC}' and have uncommitted changes in '${PROJ}'. Try:\n\nliq work save -m 'commit message' --project $PROJ\n\nOr, to use 'liq work stage' with 'liq work save' to save sets of files with different messages.\n\nOr, to get an overview of all work status, try:\n\nliq work status."
+        DONE=true
+        break
+      fi
+    done
+    if [[ "$DONE" != "true" ]]; then
+      echofmt $COLOR "It looks like you were worknig on '${WORK_DESC}' and everything is committed. If ready to submit changes, try:\nliq work submit"
+    fi
   elif requirePackage; then
     echofmt $COLOR "Looks like you're currently in project '$PACKAGE_NAME'. You could start working on an issue. Try:\nliq work start ..."
   else
@@ -2959,56 +3029,60 @@ help-orgs() {
 
   local SUMMARY="Manages organizations and affiliations."
 
-  handleSummary "${PREFIX}${cyan_u}orgs${reset} <action>: $SUMMARY" || cat <<EOF
+  handleSummary "${PREFIX}${cyan_u}orgs${reset} <action>: ${SUMMARY}" || cat <<EOF
 ${PREFIX}${cyan_u}orgs${reset} <action>:
-  An org(anization) is the legal owner of work and all work is done in the context of an org. An org may represent a employer, an open source project, a department, or yourself. Certain policies and settings are defined at the org level which would then apply to all work done in that org.
+$(echo "${SUMMARY} An org(anization) is the legal owner of work and all work is done in the context of an org. An org may represent a employer, an open source project, a department, or yourself. Certain policies and settings are defined at the org level which would then apply to all work done in that org.
 
-  * There is a 1-1 correspondance between the liq org, a GitHub organization (or individual), and—if publishing publicly—an npm package scope.
-  * The GitHub organization (or individual) must exist prior to creating an org.
+* There is a 1-1 correspondance between the liq org, a GitHub organization (or individual), and—if publishing publicly—an npm package scope.
+* The GitHub organization (or individual) must exist prior to creating an org." | fold -sw 80 | indent)
+$(_help-actions-list orgs create close import list show | indent)
 
-$(help-orgs-create | indent)
-
-$(help-orgs-close | indent)
-
-$(help-orgs-import | indent)
-
-  ${underline}list${reset}: Lists the currently affiliated orgs.
-
-  ${underline}show${reset} [--sensitive] [<org nick>]: Displays info on the currently active or named org.
-EOF
-}
-
-help-orgs-close() {
-  cat <<EOF
-${underline}close${reset} [--force] <name>...: Closes (deletes from playground) the named org-project after
-  checking that all changes are committed and pushed. '--force' will skip the 'up-to-date checks.
+$(echo "Subresources:
+* ${yellow}${underline}audits${reset}
+* ${yellow}${underline}policies${reset}
+* ${yellow}${underline}staff${reset}" | indent)
 EOF
 }
 
 help-orgs-create() {
-  cat <<EOF
-${underline}create${reset} [--no-sensitive] [--no-staff] [-private-policy] <base org-package>:
-  Interactively gathers any org info not specified via CLI options and creates the indicated repos under the indicated
-  GitHub org or user.
+  cat <<EOF | _help-func-summary create "[--no-sensitive] [--no-staff] [-private-policy] <base org-package>"
+Interactively gathers any org info not specified via CLI options and creates the indicated repos under the indicated GitHub org or user.
 
-  The following options may be used to specify fields from the CLI. If all required options are specified (even if
-  blank), then the command will run non-interactively and optional fields will be set to default values unless
-  specified:
-  * --common-name
-  * --legal-name
-  * --address (use $'\n' for linebreaks)
-  * --github-name
-  * (optional )--ein
-  * (optional) --naics
-  * (optional) --npm-registry
+The following options may be used to specify fields from the CLI. If all required options are specified (even if blank), then the command will run non-interactively and optional fields will be set to default values unless specified:
+
+* --common-name
+* --legal-name
+* --address (use $'\n' for linebreaks)
+* --github-name
+* (optional )--ein
+* (optional) --naics
+* (optional) --npm-registry$(
+
+)
+EOF
+}
+
+help-orgs-close() {
+  cat <<EOF | _help-func-summary close "[--force] <name>..."
+After checking that all changes are committed and pushed, closes the named org-project by deleting it from the local playground. '--force' will skip the 'up-to-date checks.
 EOF
 }
 
 help-orgs-import() {
-  cat <<EOF
-${underline}import${reset} [--import-refs:r] <package or URL>: Imports the 'base' org package into your playground. The
-  '--import-refs' option will attempt to import any referenced repos. The access rights on referenced repos might be
-  different than the base repo and could fail, in which case the script will attempt to move on to the next, if any.
+  cat <<EOF | _help-func-summary import "[--import-refs:r] <package or URL>"
+Imports the 'base' org package into your playground. The '--import-refs' option will attempt to import any referenced repos. The access rights on referenced repos might be different than the base repo and could fail, in which case the script will attempt to move on to the next, if any.
+EOF
+}
+
+help-orgs-list() {
+  cat <<EOF | _help-func-summary list
+Lists the currently affiliated orgs.
+EOF
+}
+
+help-orgs-show() {
+  cat <<EOF | _help-func-summary show "[--sensitive] [<org nick>]"
+Displays info on the currently active or named org.
 EOF
 }
 # sources the current org settings, if any
@@ -3059,6 +3133,430 @@ orgs-lib-source-settings() {
   fi
 }
 
+orgs-audits() {
+  local ACTION="${1}"; shift
+
+  if [[ $(type -t "orgs-audits-${ACTION}" || echo '') == 'function' ]]; then
+    orgs-audits-${ACTION} "$@"
+  else
+    exitUnknownHelpTopic "$ACTION" policies audits
+  fi
+}
+
+orgs-audits-process() {
+  echoerrandexit "Audit processing not yet implemented."
+}
+
+orgs-audits-start() {
+  eval "$(setSimpleOptions SCOPE= NO_CONFIRM:C -- "$@")"
+
+  local SCOPE TIME OWNER AUDIT_PATH FILES
+  policy-audit-start-prep "$@"
+  orgs-audits-setup-work
+  policy-audit-initialize-records
+
+  echofmt reset "Would you like to begin processing the audit now? If not, the session will and your previous work will be resumed."
+  if yes-no "Begin processing? (y/N)" N; then
+    orgs-audits-process
+  else
+    orgs-audits-finalize-session "${AUDIT_PATH}" "${TIME}" "$(orgs-audits-describe)"
+  fi
+}
+help-orgs-audits() {
+  local PREFIX="${1:-}"
+
+  local SUMMARY="Audit management."
+
+  handleSummary "${cyan_u}orgs audits${reset} <action>: ${SUMMARY}" || cat <<EOF
+${cyan_u}orgs audits${reset} <action>:
+  ${SUMMARY}
+$(_help-actions-list orgs-audits start | indent)
+EOF
+}
+
+help-orgs-audits-start() {
+  cat <<EOF | _help-func-summary start "[--scope|-s <scope>] [--no-confirm|-C] [<domain>]"
+Initiates an audit. An audit scope is either 'change' (default), 'process' or 'full'.
+
+Currently supported domains are 'code' and 'network'. If domain isn't specified, then the user will be given an interactive list.
+
+By default, a summary of the audit will be displayed to the user for confirmation. This can be supressed with the '--no-confirm' option.
+EOF
+}
+# Generates a human readable description string based on audit parameters. The '--short' option guarantees a name compatible with branch naming conventions and suitable for use with 'liq work start'.
+# outer vars: SCOPE DOMAIN TIME OWNER
+function orgs-audits-describe() {
+  eval "$(setSimpleOptions SHORT SET_SCOPE:c= SET_DOMAIN:d= SET_TIME:t= SET_OWNER:o= -- "$@")"
+  [[ -n $SET_SCOPE ]] || SET_SCOPE="$SCOPE"
+  [[ -n $SET_DOMAIN ]] || SET_DOMAIN="$DOMAIN"
+  [[ -n $SET_TIME ]] || SET_TIME="$TIME"
+  [[ -n $SET_OWNER ]] || SET_OWNER="$OWNER"
+
+  if [[ -z $SHORT ]]; then
+    echo "$(tr '[:lower:]' '[:upper:]' <<< ${SET_SCOPE:0:1})${SET_SCOPE:1} ${SET_DOMAIN} audit starting $(date -ujf %Y%m%d%H%M%S ${SET_TIME} +"%Y-%m-%d %H:%M UTC") by ${SET_OWNER}."
+  else
+    echo "$(tr '[:lower:]' '[:upper:]' <<< ${SET_SCOPE:0:1})${SET_SCOPE:1} ${SET_DOMAIN} audit $(date -ujf %Y%m%d%H%M%S ${SET_TIME} +"%Y-%m-%d %H%M UTC")"
+  fi
+}
+
+# Finalizes the session by signing the log, committing the updates, and summarizing the session. Takes the records folder, key time, and commit message as first, second, and third arguments.
+function orgs-audits-finalize-session() {
+  local AUDIT_PATH="${1}"
+  local TIME="${2}"
+  local MESSAGE="${3}"
+
+  orgs-audits-sign-log "${AUDIT_PATH}"
+  (
+    cd "${AUDIT_PATH}"
+    work-stage .
+    work-save -m "${MESSAGE}"
+    work-submit --no-close
+    orgs-audits-summarize-since "${AUDIT_PATH}" ${TIME}
+    work-resume --pop
+  )
+}
+# Gets the current time (resolution: 1 second) in UTC for use by log functions.
+orgs-audits-now() { date -u +%Y%m%d%H%M%S; }
+
+# Adds log entry. Takes a single argument, the message to add to the log entry.
+# outer vars: AUDIT_PATH
+orgs-audits-add-log-entry() {
+  local MESSAGE="${1}"
+
+  if [[ -z "${AUDIT_PATH}" ]]; then
+    echoerrandexit "Could not update log; 'AUDIT_PATH' not set."
+  fi
+
+  local USER
+  USER="$(git config user.email)"
+  if [[ -z "$USER" ]]; then
+    echoerrandexit "Must set git 'user.email' for use by audit log."
+  fi
+
+  echo "$(orgs-audits-now) UTC ${USER} ${MESSAGE}" >> "${AUDIT_PATH}/refs/history.log"
+}
+
+# Signs the log. Takes the records folder as first argument.
+orgs-audits-sign-log() {
+  local AUDIT_PATH="${1}"
+  local USER SIGNED_AT
+  USER="$(git config user.email)"
+  SIGNED_AT=$(orgs-audits-now)
+
+  echo "Signing current log file..."
+
+  mkdir -p "${AUDIT_PATH}/sigs"
+  gpg2 --output "${AUDIT_PATH}/sigs/history-${SIGNED_AT}-zane.sig" \
+    -u ${USER} \
+    --detach-sig \
+    --armor \
+    "${AUDIT_PATH}/refs/history.log"
+}
+
+# Gets all entries since the indicated time (see orgs-audits-now for format). Takes records folder and the key time as the first and second arguments.
+orgs-audits-summarize-since() {
+  local AUDIT_PATH="${1}"
+  local SINCE="${2}"
+
+  local ENTRY_TIME LINE LINE_NO
+  LINE_NO=1
+  for ENTRY_TIME in $(awk '{print $1}' "${AUDIT_PATH}/refs/history.log"); do
+    if (( $ENTRY_TIME < $SINCE )); then
+      LINE_NO=$(( $LINE_NO + 1 ))
+    else
+      break
+    fi
+  done
+
+  echofmt reset "Summary of actions:"
+  # for each line in history log, turn into a word-wrapped bullet point
+  while read -e LINE; do
+    echo "$LINE" | fold -sw 82 | sed -e '1s/^/* /' -e '2,$s/^/  /'
+    LINE_NO=$(( $LINE_NO + 1 ))
+  done <<< "$(tail +${LINE_NO} "${AUDIT_PATH}/refs/history.log")"
+  echo
+}
+# TODO: link the references once we support.
+# Performs all checks and sets up variables ahead of any state changes. Refer to input confirmation, defaults, and user confirmation functions.
+# outer vars: inherited
+function policy-audit-start-prep() {
+  meta-keys-user-has-key
+  policy-audit-start-confirm-and-normalize-input "$@"
+  policy-audit-derive-vars
+  policy-audit-start-user-confirm-audit-settings
+}
+
+function orgs-audits-setup-work() {
+  (
+    local MY_GITHUB_NAME ISSUE_URL ISSUE_NUMBER
+    projectHubWhoami MY_GITHUB_NAME
+    cd $(orgsPolicyRepo) # TODO: create separately specified records repo
+    ISSUE_URL="$(hub issue create -m "$(orgs-audits-describe)" -a "$MY_GITHUB_NAME" -l audit)"
+    ISSUE_NUMBER="$(basename "$ISSUE_URL")"
+
+    work-start --push -i $ISSUE_NUMBER "$(orgs-audits-describe --short)"
+  )
+}
+
+# TODO: link the references once we support.
+# Initialize an audit. Refer to folder and questions initializers.
+# outer vars: TIME inherited
+function policy-audit-initialize-records() {
+  orgs-audits-initialize-folder
+  orgs-audits-initialize-audits-json
+  orgs-audits-initialize-questions
+}
+
+# Internal help functions.
+
+# Lib internal helper. See 'liq help policy audit start' for description of proper input.
+# outer vars: CHANGE_CONTROL FULL DOMAIN SCOPE
+function policy-audit-start-confirm-and-normalize-input() {
+  DOMAIN="${1:-}"
+
+  if [[ -z $SCOPE ]]; then
+    SCOPE='change'
+  elif [[ $SCOPE != 'change' ]] && [[ $SCOPE != 'full' ]] && [[ $SCOPE != 'process' ]]; then
+    echoerrandexit "Invalid scope '$SCOPE'. Scope may be 'change', 'process', or 'full'."
+  fi
+
+  if [[ -z $DOMAIN ]]; then # do menu select
+    # TODO
+    echoerrandexit "Interactive domain not yet supported."
+  elif [[ $DOMAIN != 'code' ]] && [[ $DOMAIN != 'network' ]]; then
+    echoerrandexit "Unrecognized domain reference: '$DOMAIN'. Try one of:\n* code\n*network"
+  fi
+}
+
+# Lib internal helper. Sets the outer vars SCOPE, TIME, OWNER, and AUDIT_PATH
+# outer vars: FULL SCOPE TIME OWNER AUDIT_PATH
+function policy-audit-derive-vars() {
+  local FILE_OWNER FILE_NAME
+
+  TIME="$(orgs-audits-now)"
+  OWNER="$(git config user.email)"
+  FILE_OWNER=$(echo "${OWNER}" | sed -e 's/@.*$//')
+
+  FILE_NAME="${TIME}-${DOMAIN}-${SCOPE}-${FILE_OWNER}"
+  AUDIT_PATH="$(orgsPolicyRepo)/${AUDITS_ACTIVE_PATH}/${FILE_NAME}"
+}
+
+# Lib internal helper. Confirms audit settings unless explicitly told not to.
+# outer vars: NO_CONFIRM SCOPE DOMAIN OWNER TIME
+function policy-audit-start-user-confirm-audit-settings() {
+  echofmt reset "Starting audit with:\n\n* scope: ${bold}${SCOPE}${reset}\n* domain: ${bold}${DOMAIN}${reset}\n* owner: ${bold}${OWNER}${reset}\n"
+  if [[ -z $NO_CONFIRM ]]; then
+    # TODO: update 'yes-no' to use 'echofmt'? also fix echofmt to take '--color'
+    if ! yes-no "confirm? (y/N) " N; then
+      echowarn "Audit canceled."
+      exit 0
+    fi
+  fi
+}
+
+# Lib internal helper. Determines and creates the AUDIT_PATH
+# outer vars: AUDIT_PATH
+function orgs-audits-initialize-folder() {
+  if [[ -d "${AUDIT_PATH}" ]]; then
+    echoerrandexit "Looks like the audit has already started. You can't start more than one audit per second."
+  fi
+  echo "Creating records folder..."
+  mkdir -p "${AUDIT_PATH}"
+  mkdir "${AUDIT_PATH}/refs"
+  mkdir "${AUDIT_PATH}/sigs"
+}
+
+# Lib internal helper. Initializes the 'audit.json' data record.
+# outer vars: AUDIT_PATH TIME DOMAIN SCOPE OWNER
+function orgs-audits-initialize-audits-json() {
+  local AUDIT_SH="${AUDIT_PATH}/audit.sh"
+  local PARAMETERS_SH="${AUDIT_PATH}/parameters.sh"
+  local DESCRIPTION
+  DESCRIPTION=$(orgs-audits-describe)
+
+  if [[ -f "${AUDIT_SH}" ]]; then
+    echoerrandexit "Found existing 'audit.json' file while trying to initalize audit. Bailing out..."
+  fi
+
+  echofmt reset "Initializing audit data records..."
+  # TODO: extract and use 'double-quote-escape' for description
+  cat <<EOF > "${AUDIT_SH}"
+START="${TIME}"
+DESCRIPTION="${DESCRIPTION}"
+DOMAIN="${DOMAIN}"
+SCOPE="${SCOPE}"
+OWNER="${OWNER}"
+EOF
+  touch "${PARAMETERS_SH}"
+  echo "${TIME} UTC ${OWNER} : initiated audit" > "${AUDIT_PATH}/refs/history.log"
+}
+
+# Lib internal helper. Determines applicable questions and generates initial TSV record.
+# outer vars: inherited
+function orgs-audits-initialize-questions() {
+  orgs-audits-create-combined-tsv
+  local ACTION_SUMMARY
+  orgs-audits-create-final-audit-statements ACTION_SUMMARY
+  orgs-audits-add-log-entry "${ACTION_SUMMARY}"
+}
+
+# Lib internal helper. Creates the 'ref/combined.tsv' file containing the list of policy items included based on org (absolute) parameters.
+# outer vars: DOMAIN AUDIT_PATH
+orgs-audits-create-combined-tsv() {
+  echo "Gathering relevant policy statements..."
+  local FILES
+  FILES="$(policiesGetPolicyFiles --find-options "-path '*/policy/${DOMAIN}/standards/*items.tsv'")"
+
+  while read -e FILE; do
+    npx liq-standards-filter-abs --settings "$(orgsPolicyRepo)/settings.sh" "$FILE" >> "${AUDIT_PATH}/refs/combined.tsv"
+  done <<< "$FILES"
+}
+
+# Lib internal helper. Analyzes 'ref/combined.tsv' against parameter setting to generate the final list of statements included in the audit. This may involve an interactive question / answer loop (with change audits). Echoes a summary of actions (including any parameter values used) suitable for logging.
+# outer vars: SCOPE AUDIT_PATH
+orgs-audits-create-final-audit-statements() {
+  local SUMMAR_VAR="${1}"
+
+  local STATEMENTS LINE
+  if [[ $SCOPE == 'full' ]]; then # all statments included
+    STATEMENTS="$(while read -e LINE; do echo "$LINE" | awk -F '\t' '{print $3}'; done \
+                  < "${AUDIT_PATH}/refs/combined.tsv")"
+    eval "$SUMMARY_VAR='Initialized audit statements using with all policy standards.'"
+  elif [[ $SCOPE == 'process' ]]; then # only IS_PROCESS_AUDIT statements included
+    STATEMENTS="$(while read -e LINE; do
+                    echo "$LINE" | awk -F '\t' '{ if ($6 == "IS_PROCESS_AUDIT") print $3 }'
+                  done < "${AUDIT_PATH}/refs/combined.tsv")"
+    eval "$SUMMARY_VAR='Initialized audit statements using with all process audit standards.'"
+  else # it's a change audit and we want to ask about the nature of the change
+    local ALWAYS=1
+    local IS_FULL_AUDIT=0
+    local IS_PROCESS_AUDIT=0
+    local PARAMS PARAM PARAM_SETTINGS AND_CONDITIONS CONDITION
+    echofmt reset "\nYou will now be asked a series of questions in order to determine the nature of the change. This will determine which policy statements need to be reviewed."
+    read -n 1 -s -r -p "Press any key to continue..."
+    echo; echo
+
+    exec 10< "${AUDIT_PATH}/refs/combined.tsv"
+    while read -u 10 -e LINE; do
+      local INCLUDE=true
+      # we read each set of 'and' conditions
+      AND_CONDITIONS="$(echo "$LINE" | awk -F '\t' '{print $6}' | tr ',' '\n' | tr -d ' ')"
+      IFS=$'\n' #
+      for CONDITION in $AND_CONDITIONS; do # evaluate each condition sequentially until failure or end
+        PARAMS="$(echo "$CONDITION" | tr -C '[:alpha:]_' '\n')"
+        for PARAM in $PARAMS; do # define undefined params of clause
+          if [[ -z "${!PARAM:-}" ]]; then
+            function set-yes() { eval $PARAM=1; }
+            function set-no() { eval $PARAM=0; }
+            local PROMPT
+            PROMPT="${PARAM:0:1}$(echo ${PARAM:1} | tr '[:upper:]' '[:lower:]' | tr '_' ' ')? (y/n) "
+            yes-no "$PROMPT" "" set-yes set-no
+            echo
+            PARAM_SETTINGS="${PARAM_SETTINGS} ${PARAM}='${!PARAM}'"
+          fi
+        done # define clause params
+        if ! env -i -S "$(for PARAM in $PARAMS; do echo "$PARAM=${!PARAM} "; done)" perl -e '
+            use strict; use warnings;
+            my $condition="$ARGV[0]";
+            while (my ($k, $v) = each %ENV) { $condition =~ s/$k/$v/g; }
+            $condition =~ /[0-9<>=]+/ or die "Invalid audit condition: $condition";
+            eval "$condition" or exit 1;' $CONDITION; then
+          INCLUDE=false
+          break # stop processing conditions
+        fi
+      done # evaluate each condition
+      unset IFS
+      if [[ $INCLUDE == true ]]; then
+        list-add-item STATEMENTS "$(echo "$LINE" | awk -F '\t' '{print $3}')"
+      fi
+    done
+    exec 10<&-
+
+    eval "$SUMMAR_VAR='Initialized audit statements using parameters:${PARAM_SETTINGS}.'"
+  fi
+
+  local STATEMENT
+  echo -e "Statement\tReviewer\tAffirmed\tComments" > "${AUDIT_PATH}/reviews.tsv"
+  while read -e STATEMENT; do
+    echo -e "$STATEMENT\t\t\t" >> "${AUDIT_PATH}/reviews.tsv"
+  done <<< "$STATEMENTS"
+}
+
+requirements-orgs-policies() {
+  :
+}
+
+# see ./help.sh for behavior
+orgs-policies-document() {
+  local TARGET_DIR NODE_SCRIPT
+  TARGET_DIR="$(orgsPolicyRepo "${1:-}")/policy"
+  NODE_SCRIPT="$(dirname $(real_path ${BASH_SOURCE[0]}))/index.js"
+
+  rm -rf "$TARGET_DIR"
+  mkdir -p "$TARGET_DIR"
+  # argv[1] because the 0th arg is the 'node' executable.
+  NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "require('$NODE_SCRIPT').refreshDocuments('${TARGET_DIR}', process.argv[1].split(\"\\n\"))" "$(policiesGetPolicyFiles)"
+}
+
+# see ./help.sh for behavior
+orgs-policies-update() {
+  local POLICY
+  for POLICY in $(policiesGetPolicyProjects "$@"); do
+    npm i "${POLICY}"
+  done
+}
+help-orgs-policies() {
+  local PREFIX="${1:-}"
+
+  local SUMMARY="Manages organization policies."
+
+  handleSummary "${PREFIX}${cyan_u}orgs policies${reset} <action>: ${SUMMARY}" || cat <<EOF
+$(echo "${SUMMARY} Policies defines all manner of organizational operations. They are \"organizational code\"." | fold -sw 80 | indent)
+$(_help-actions-list orgs-policies document update | indent)
+EOF
+}
+
+help-orgs-policies-document() {
+  cat <<EOF | _help-func-summary document
+Refreshes (or generates) org policy documentation based on current data.
+EOF
+}
+
+help-orgs-policies-update() {
+  cat <<EOF | _help-func-summary update
+Updates organization policies.
+EOF
+}
+# Retrieves the policy directories from the current org. Currenly requires sensitive until we think through the
+# implication of having 'partial' policy access and whether that's ever useful.
+#
+# Returns one file per line, suitable for use with:
+#
+# while read VAR; do ... ; done < <(policiesGetPolicyDirs)
+policiesGetPolicyDirs() {
+  find "$(orgsPolicyRepo "$@")/node_modules/@liquid-labs" -maxdepth 1 -type d -name "policy-*"
+}
+
+# Will search policy dirs for TSV files. '--find-options' will be passed verbatim to find (see code). This function uses eval and it is unsafe to incorporate raw user input into the '--find-options' parameter.
+policiesGetPolicyFiles() {
+  eval "$(setSimpleOptions FIND_OPTIONS= -- "$@")"
+
+  local DIR
+  for DIR in $(policiesGetPolicyDirs); do
+    # Not sure why the eval is necessary, but it is... (MacOS/Bash 3.x, 2020-01)
+    eval find $DIR $FIND_OPTIONS -name '*.tsv'
+  done
+}
+
+# Gets the installed policy projects. Note that we get installed rather than declared as policies are often an
+# 'optional' dependency, so this is considered slightly more robust.
+policiesGetPolicyProjects() {
+  local DIR
+  for DIR in $(policiesGetPolicyDirs); do
+    cat "${DIR}/package.json" | jq --raw-output '.name' | tr -d "'"
+  done
+}
+
 orgs-staff() {
   local ACTION="${1}"; shift
   local CMD="orgs-staff-${ACTION}"
@@ -3074,7 +3572,7 @@ orgs-staff-add() {
   local FIELDS="EMAIL FAMILY_NAME GIVEN_NAME START_DATE PRIMARY_ROLES SECONDARY_ROLES"
   local FIELDS_SPEC="${FIELDS}"
   FIELDS_SPEC="$(echo "$FIELDS_SPEC" | sed -e 's/ /= /g')="
-  eval "$(setSimpleOptions $FIELDS_SPEC NO_VERIFY:V NO_COMMIT:C -- "$@")"
+  eval "$(setSimpleOptions $FIELDS_SPEC NO_VERIFY:V COMMIT -- "$@")"
 
   list-from-csv PRIMARY_ROLES
   list-from-csv SECONDARY_ROLES
@@ -3141,7 +3639,7 @@ orgs-staff-add() {
       CANDIDATE_MANAGERS="$(NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e \
         "try {
           const fs = require('fs');
-          const { StaffTsv } = require('@liquid-labs/policies-model');
+          const { StaffTsv } = require('@liquid-labs/orgs-policies-model');
           const staff = new StaffTsv('${STAFF_FILE}');
           const org_struct = JSON.parse(fs.readFileSync('${ORG_STRUCTURE}'));
 
@@ -3193,7 +3691,7 @@ orgs-staff-add() {
 
   trap - ERR # without this, an error causes the entire node script to print, which is cumbersome
   NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "try {
-      const { StaffTsv } = require('@liquid-labs/policies-model');
+      const { StaffTsv } = require('@liquid-labs/orgs-policies-model');
       const staff = new StaffTsv('${STAFF_FILE}');
       staff.add({ email: '${EMAIL}',
                   familyName: '${FAMILY_NAME}',
@@ -3206,7 +3704,8 @@ orgs-staff-add() {
     console.log(\"Staff member '${EMAIL}' added.\");" \
       2> >(while read line; do echo -e "${red}${line}${reset}" >&2; done; \
            [[ -z "$line" ]] || echoerrandexit "Problem loading staff data.")
-  if [[ -n "$NO_COMMIT" ]]; then
+  
+  if [[ -n "$COMMIT" ]]; then
     echowarn "Updates have not been committed. Manually commit and push when ready."
   else
     orgsStaffCommit
@@ -3285,7 +3784,7 @@ orgs-staff-org-chart() {
 
   trap - ERR
   NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "
-    const { Organization } = require('@liquid-labs/policies-model');
+    const { Organization } = require('@liquid-labs/orgs-policies-model');
     const org = new Organization(
       '${ORG_ROLES}',
       '${STAFF_FILE}',
@@ -3318,15 +3817,17 @@ orgs-staff-remove() {
 help-orgs-staff() {
   local PREFIX="${1:-}"
 
-  handleSummary "${PREFIX}${cyan_u}orgs staff${reset} <action>: Manages organizations staff." || cat <<EOF
+  local SUMMARY='Manages organizations staff.'
+
+  handleSummary "${PREFIX}${cyan_u}orgs staff${reset} <action>: ${SUMMARY}" || cat <<EOF
 ${PREFIX}${cyan_u}orgs staff${reset} <action>:
-  Manages organization staff.
+  ${SUMMARY}
 $(_help-actions-list orgs-staff add list remove org-chart | indent)
 EOF
 }
 
 help-orgs-staff-add() {
-  cat <<EOF | _help-func-summary add "[--email|-e <email>] [--family-name|-f <name>] [--given-name|-g <name>] [--start-date|-s <YYY-MM-DD>]"
+  cat <<EOF | _help-func-summary add "[--email|-e <email>] [--family-name|-f <name>] [--given-name|-g <name>] [--start-date|-s <YYY-MM-DD>] [--commit|-c]"
 Adds a staff member to the organization.
 EOF
 }
@@ -3371,420 +3872,84 @@ orgs-staff-lib-check-parameters() {
   [[ -f "$ORG_STRUCTURE" ]] || echoerrandexit "'ORG_STRUCTURE' defnied, but does not point to a file."
 }
 
-requirements-policies() {
-  :
-}
-
-# see ./help.sh for behavior
-policies-document() {
-  local TARGET_DIR NODE_SCRIPT
-  TARGET_DIR="$(orgsPolicyRepo "${1:-}")/policy"
-  NODE_SCRIPT="$(dirname $(real_path ${BASH_SOURCE[0]}))/index.js"
-
-  rm -rf "$TARGET_DIR"
-  mkdir -p "$TARGET_DIR"
-  # argv[1] because the 0th arg is the 'node' executable.
-  NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "require('$NODE_SCRIPT').refreshDocuments('${TARGET_DIR}', process.argv[1].split(\"\\n\"))" "$(policiesGetPolicyFiles)"
-}
-
-# see ./help.sh for behavior
-policies-update() {
-  local POLICY
-  for POLICY in $(policiesGetPolicyProjects "$@"); do
-    npm i "${POLICY}"
-  done
-}
-help-policies() {
-  local PREFIX="${1:-}"
-
-  handleSummary "${PREFIX}${cyan_u}policies${reset} <action>: Manages organization policies." || cat <<EOF
-Policies defines all manner of organizational operations. They are "organizational code".
-
-${PREFIX}${cyan_u}policies${reset} <action>:
-  ${underline}document${reset}: Refreshes (or generates) org policy documentation based on current data.
-  ${underline}update${reset}: Updates organization policies.
-
-${bold}Sub-resources${reset}:
-  * $( SUMMARY_ONLY=true; help-policies-audits )
-EOF
-}
-# Retrieves the policy directories from the current org. Currenly requires sensitive until we think through the
-# implication of having 'partial' policy access and whether that's ever useful.
-#
-# Returns one file per line, suitable for use with:
-#
-# while read VAR; do ... ; done < <(policiesGetPolicyDirs)
-policiesGetPolicyDirs() {
-  find "$(orgsPolicyRepo "$@")/node_modules/@liquid-labs" -maxdepth 1 -type d -name "policy-*"
-}
-
-# Will search policy dirs for TSV files. '--find-options' will be passed verbatim to find (see code). This function uses eval and it is unsafe to incorporate raw user input into the '--find-options' parameter.
-policiesGetPolicyFiles() {
-  eval "$(setSimpleOptions FIND_OPTIONS= -- "$@")"
-
-  local DIR
-  for DIR in $(policiesGetPolicyDirs); do
-    # Not sure why the eval is necessary, but it is... (MacOS/Bash 3.x, 2020-01)
-    eval find $DIR $FIND_OPTIONS -name '*.tsv'
-  done
-}
-
-# Gets the installed policy projects. Note that we get installed rather than declared as policies are often an
-# 'optional' dependency, so this is considered slightly more robust.
-policiesGetPolicyProjects() {
-  local DIR
-  for DIR in $(policiesGetPolicyDirs); do
-    cat "${DIR}/package.json" | jq --raw-output '.name' | tr -d "'"
-  done
-}
-
-policies-audits() {
+projects-issues() {
   local ACTION="${1}"; shift
 
-  if [[ $(type -t "policies-audits-${ACTION}" || echo '') == 'function' ]]; then
-    policies-audits-${ACTION} "$@"
+  if [[ $(type -t "projects-issues-${ACTION}" || echo '') == 'function' ]]; then
+    projects-issues-${ACTION} "$@"
   else
-    exitUnknownHelpTopic "$ACTION" policies audits
+    exitUnknownHelpTopic "$ACTION" projects issues
   fi
 }
 
-policies-audits-process() {
-  echoerrandexit "Audit processing not yet implemented."
-}
+# see 'liq help org issues show'
+projects-issues-show() {
+  eval "$(setSimpleOptions MINE -- "$@")"
 
-policies-audits-start() {
-  eval "$(setSimpleOptions SCOPE= NO_CONFIRM:C -- "$@")"
+  findBase
 
-  local SCOPE TIME OWNER AUDIT_PATH FILES
-  policy-audit-start-prep "$@"
-  policies-audits-setup-work
-  policy-audit-initialize-records
+  local URL
+  URL=$(cat "$BASE_DIR/package.json" | jq -r '.bugs.url' )
 
-  echofmt reset "Would you like to begin processing the audit now? If not, the session will and your previous work will be resumed."
-  if yes-no "Begin processing? (y/N)" N; then
-    policies-audits-process
-  else
-    policies-audits-finalize-session "${AUDIT_PATH}" "${TIME}" "$(policies-audits-describe)"
-  fi
-}
-# TODO: instead, create simple spec; generate 'completion' options and 'docs' from spec.
-
-help-policies-audits() {
-  handleSummary "${cyan_u}audits${reset} <action>: Manage audits." || cat <<EOF
-${cyan_u}policies audits${reset} <action>:
-$(help-policies-audits-start | sed -e 's/^/  /')
-EOF
-} #$'' HACK to reset Atom Beutifier
-
-help-policies-audits-start() {
-  cat <<EOF
-${underline}start${reset} [--scope|-s <scope>] [--no-confirm|-C] [<domain>] :
-  Initiates an audit. An audit scope is either 'change' (default), 'process' or 'full'.
-
-  Currently supported domains are 'code' and 'network'. If domain isn't specified, then the user will be given an
-  interactive list.
-
-  By default, a summary of the audit will be displayed to the user for confirmation. This can be supressed with
-  the '--no-confirm' option.
-EOF
-}
-# Generates a human readable description string based on audit parameters. The '--short' option guarantees a name compatible with branch naming conventions and suitable for use with 'liq work start'.
-# outer vars: SCOPE DOMAIN TIME OWNER
-function policies-audits-describe() {
-  eval "$(setSimpleOptions SHORT SET_SCOPE:c= SET_DOMAIN:d= SET_TIME:t= SET_OWNER:o= -- "$@")"
-  [[ -n $SET_SCOPE ]] || SET_SCOPE="$SCOPE"
-  [[ -n $SET_DOMAIN ]] || SET_DOMAIN="$DOMAIN"
-  [[ -n $SET_TIME ]] || SET_TIME="$TIME"
-  [[ -n $SET_OWNER ]] || SET_OWNER="$OWNER"
-
-  if [[ -z $SHORT ]]; then
-    echo "$(tr '[:lower:]' '[:upper:]' <<< ${SET_SCOPE:0:1})${SET_SCOPE:1} ${SET_DOMAIN} audit starting $(date -ujf %Y%m%d%H%M%S ${SET_TIME} +"%Y-%m-%d %H:%M UTC") by ${SET_OWNER}."
-  else
-    echo "$(tr '[:lower:]' '[:upper:]' <<< ${SET_SCOPE:0:1})${SET_SCOPE:1} ${SET_DOMAIN} audit $(date -ujf %Y%m%d%H%M%S ${SET_TIME} +"%Y-%m-%d %H%M UTC")"
-  fi
-}
-
-# Finalizes the session by signing the log, committing the updates, and summarizing the session. Takes the records folder, key time, and commit message as first, second, and third arguments.
-function policies-audits-finalize-session() {
-  local AUDIT_PATH="${1}"
-  local TIME="${2}"
-  local MESSAGE="${3}"
-
-  policies-audits-sign-log "${AUDIT_PATH}"
-  (
-    cd "${AUDIT_PATH}"
-    work-stage .
-    work-save -m "${MESSAGE}"
-    work-submit --no-close
-    policies-audits-summarize-since "${AUDIT_PATH}" ${TIME}
-    work-resume --pop
-  )
-}
-# Gets the current time (resolution: 1 second) in UTC for use by log functions.
-policies-audits-now() { date -u +%Y%m%d%H%M%S; }
-
-# Adds log entry. Takes a single argument, the message to add to the log entry.
-# outer vars: AUDIT_PATH
-policies-audits-add-log-entry() {
-  local MESSAGE="${1}"
-
-  if [[ -z "${AUDIT_PATH}" ]]; then
-    echoerrandexit "Could not update log; 'AUDIT_PATH' not set."
-  fi
-
-  local USER
-  USER="$(git config user.email)"
-  if [[ -z "$USER" ]]; then
-    echoerrandexit "Must set git 'user.email' for use by audit log."
-  fi
-
-  echo "$(policies-audits-now) UTC ${USER} ${MESSAGE}" >> "${AUDIT_PATH}/refs/history.log"
-}
-
-# Signs the log. Takes the records folder as first argument.
-policies-audits-sign-log() {
-  local AUDIT_PATH="${1}"
-  local USER SIGNED_AT
-  USER="$(git config user.email)"
-  SIGNED_AT=$(policies-audits-now)
-
-  echo "Signing current log file..."
-
-  mkdir -p "${AUDIT_PATH}/sigs"
-  gpg2 --output "${AUDIT_PATH}/sigs/history-${SIGNED_AT}-zane.sig" \
-    -u ${USER} \
-    --detach-sig \
-    --armor \
-    "${AUDIT_PATH}/refs/history.log"
-}
-
-# Gets all entries since the indicated time (see policies-audits-now for format). Takes records folder and the key time as the first and second arguments.
-policies-audits-summarize-since() {
-  local AUDIT_PATH="${1}"
-  local SINCE="${2}"
-
-  local ENTRY_TIME LINE LINE_NO
-  LINE_NO=1
-  for ENTRY_TIME in $(awk '{print $1}' "${AUDIT_PATH}/refs/history.log"); do
-    if (( $ENTRY_TIME < $SINCE )); then
-      LINE_NO=$(( $LINE_NO + 1 ))
-    else
-      break
-    fi
-  done
-
-  echofmt reset "Summary of actions:"
-  # for each line in history log, turn into a word-wrapped bullet point
-  while read -e LINE; do
-    echo "$LINE" | fold -sw 82 | sed -e '1s/^/* /' -e '2,$s/^/  /'
-    LINE_NO=$(( $LINE_NO + 1 ))
-  done <<< "$(tail +${LINE_NO} "${AUDIT_PATH}/refs/history.log")"
-  echo
-}
-# TODO: link the references once we support.
-# Performs all checks and sets up variables ahead of any state changes. Refer to input confirmation, defaults, and user confirmation functions.
-# outer vars: inherited
-function policy-audit-start-prep() {
-  meta-keys-user-has-key
-  policy-audit-start-confirm-and-normalize-input "$@"
-  policy-audit-derive-vars
-  policy-audit-start-user-confirm-audit-settings
-}
-
-function policies-audits-setup-work() {
-  (
-    local MY_GITHUB_NAME ISSUE_URL ISSUE_NUMBER
+  if [[ -n "$MINE" ]]; then
+    local MY_GITHUB_NAME
     projectHubWhoami MY_GITHUB_NAME
-    cd $(orgsPolicyRepo) # TODO: create separately specified records repo
-    ISSUE_URL="$(hub issue create -m "$(policies-audits-describe)" -a "$MY_GITHUB_NAME" -l audit)"
-    ISSUE_NUMBER="$(basename "$ISSUE_URL")"
-
-    work-start --push -i $ISSUE_NUMBER "$(policies-audits-describe --short)"
-  )
-}
-
-# TODO: link the references once we support.
-# Initialize an audit. Refer to folder and questions initializers.
-# outer vars: TIME inherited
-function policy-audit-initialize-records() {
-  policies-audits-initialize-folder
-  policies-audits-initialize-audits-json
-  policies-audits-initialize-questions
-}
-
-# Internal help functions.
-
-# Lib internal helper. See 'liq help policy audit start' for description of proper input.
-# outer vars: CHANGE_CONTROL FULL DOMAIN SCOPE
-function policy-audit-start-confirm-and-normalize-input() {
-  DOMAIN="${1:-}"
-
-  if [[ -z $SCOPE ]]; then
-    SCOPE='change'
-  elif [[ $SCOPE != 'change' ]] && [[ $SCOPE != 'full' ]] && [[ $SCOPE != 'process' ]]; then
-    echoerrandexit "Invalid scope '$SCOPE'. Scope may be 'change', 'process', or 'full'."
-  fi
-
-  if [[ -z $DOMAIN ]]; then # do menu select
-    # TODO
-    echoerrandexit "Interactive domain not yet supported."
-  elif [[ $DOMAIN != 'code' ]] && [[ $DOMAIN != 'network' ]]; then
-    echoerrandexit "Unrecognized domain reference: '$DOMAIN'. Try one of:\n* code\n*network"
+    open "${URL}/assigned/${MY_GITHUB_NAME}"
+  else
+    open "${URL}"
   fi
 }
+help-projects-issues() {
+  local PREFIX="${1:-}"
 
-# Lib internal helper. Sets the outer vars SCOPE, TIME, OWNER, and AUDIT_PATH
-# outer vars: FULL SCOPE TIME OWNER AUDIT_PATH
-function policy-audit-derive-vars() {
-  local FILE_OWNER FILE_NAME
+  local SUMMARY="Manage projects issues."
 
-  TIME="$(policies-audits-now)"
-  OWNER="$(git config user.email)"
-  FILE_OWNER=$(echo "${OWNER}" | sed -e 's/@.*$//')
-
-  FILE_NAME="${TIME}-${DOMAIN}-${SCOPE}-${FILE_OWNER}"
-  AUDIT_PATH="$(orgsPolicyRepo)/${AUDITS_ACTIVE_PATH}/${FILE_NAME}"
-}
-
-# Lib internal helper. Confirms audit settings unless explicitly told not to.
-# outer vars: NO_CONFIRM SCOPE DOMAIN OWNER TIME
-function policy-audit-start-user-confirm-audit-settings() {
-  echofmt reset "Starting audit with:\n\n* scope: ${bold}${SCOPE}${reset}\n* domain: ${bold}${DOMAIN}${reset}\n* owner: ${bold}${OWNER}${reset}\n"
-  if [[ -z $NO_CONFIRM ]]; then
-    # TODO: update 'yes-no' to use 'echofmt'? also fix echofmt to take '--color'
-    if ! yes-no "confirm? (y/N) " N; then
-      echowarn "Audit canceled."
-      exit 0
-    fi
-  fi
-}
-
-# Lib internal helper. Determines and creates the AUDIT_PATH
-# outer vars: AUDIT_PATH
-function policies-audits-initialize-folder() {
-  if [[ -d "${AUDIT_PATH}" ]]; then
-    echoerrandexit "Looks like the audit has already started. You can't start more than one audit per second."
-  fi
-  echo "Creating records folder..."
-  mkdir -p "${AUDIT_PATH}"
-  mkdir "${AUDIT_PATH}/refs"
-  mkdir "${AUDIT_PATH}/sigs"
-}
-
-# Lib internal helper. Initializes the 'audit.json' data record.
-# outer vars: AUDIT_PATH TIME DOMAIN SCOPE OWNER
-function policies-audits-initialize-audits-json() {
-  local AUDIT_SH="${AUDIT_PATH}/audit.sh"
-  local PARAMETERS_SH="${AUDIT_PATH}/parameters.sh"
-  local DESCRIPTION
-  DESCRIPTION=$(policies-audits-describe)
-
-  if [[ -f "${AUDIT_SH}" ]]; then
-    echoerrandexit "Found existing 'audit.json' file while trying to initalize audit. Bailing out..."
-  fi
-
-  echofmt reset "Initializing audit data records..."
-  # TODO: extract and use 'double-quote-escape' for description
-  cat <<EOF > "${AUDIT_SH}"
-START="${TIME}"
-DESCRIPTION="${DESCRIPTION}"
-DOMAIN="${DOMAIN}"
-SCOPE="${SCOPE}"
-OWNER="${OWNER}"
+  handleSummary "${PREFIX}${cyan_u}projects issues${reset} <action>: ${SUMMARY}" || cat <<EOF
+${PREFIX}${cyan_u}projects issues${reset} <action>:
+  ${SUMMARY}
+$(_help-actions-list projects-issues show | indent)
 EOF
-  touch "${PARAMETERS_SH}"
-  echo "${TIME} UTC ${OWNER} : initiated audit" > "${AUDIT_PATH}/refs/history.log"
 }
 
-# Lib internal helper. Determines applicable questions and generates initial TSV record.
-# outer vars: inherited
-function policies-audits-initialize-questions() {
-  policies-audits-create-combined-tsv
-  local ACTION_SUMMARY
-  policies-audits-create-final-audit-statements ACTION_SUMMARY
-  policies-audits-add-log-entry "${ACTION_SUMMARY}"
+help-projects-issues-show() {
+  cat <<EOF | _help-func-summary show "[--mine|-m]"
+Displays the open issues for the current project. With '--mine', will attempt to get the user's GitHub name and show them their own issues.
+EOF
+}
+help-projects-services() {
+  local PREFIX="${1:-}"
+
+  local SUMMARY="Manages package service configuration."
+
+  handleSummary "${PREFIX}${cyan_u}projects services${reset} <action>: ${SUMMARY}" || cat <<EOF
+${PREFIX}${cyan_u}projects services${reset} <action>:
+  ${SUMMARY}
+$(_help-actions-list projects-services add delete list show | indent)
+EOF
 }
 
-# Lib internal helper. Creates the 'ref/combined.tsv' file containing the list of policy items included based on org (absolute) parameters.
-# outer vars: DOMAIN AUDIT_PATH
-policies-audits-create-combined-tsv() {
-  echo "Gathering relevant policy statements..."
-  local FILES
-  FILES="$(policiesGetPolicyFiles --find-options "-path '*/policy/${DOMAIN}/standards/*items.tsv'")"
-
-  while read -e FILE; do
-    npx liq-standards-filter-abs --settings "$(orgsPolicyRepo)/settings.sh" "$FILE" >> "${AUDIT_PATH}/refs/combined.tsv"
-  done <<< "$FILES"
+help-projects-services-add() {
+  cat <<EOF | _help-func-summary add "[<service name>]"
+Add a provided service to the current project.
+EOF
 }
 
-# Lib internal helper. Analyzes 'ref/combined.tsv' against parameter setting to generate the final list of statements included in the audit. This may involve an interactive question / answer loop (with change audits). Echoes a summary of actions (including any parameter values used) suitable for logging.
-# outer vars: SCOPE AUDIT_PATH
-policies-audits-create-final-audit-statements() {
-  local SUMMAR_VAR="${1}"
+help-projects-services-list() {
+  cat <<EOF | _help-func-summary list "[<service name>...]"
+Lists the services provided by the current or named projects.
+EOF
+}
 
-  local STATEMENTS LINE
-  if [[ $SCOPE == 'full' ]]; then # all statments included
-    STATEMENTS="$(while read -e LINE; do echo "$LINE" | awk -F '\t' '{print $3}'; done \
-                  < "${AUDIT_PATH}/refs/combined.tsv")"
-    eval "$SUMMARY_VAR='Initialized audit statements using with all policy standards.'"
-  elif [[ $SCOPE == 'process' ]]; then # only IS_PROCESS_AUDIT statements included
-    STATEMENTS="$(while read -e LINE; do
-                    echo "$LINE" | awk -F '\t' '{ if ($6 == "IS_PROCESS_AUDIT") print $3 }'
-                  done < "${AUDIT_PATH}/refs/combined.tsv")"
-    eval "$SUMMARY_VAR='Initialized audit statements using with all process audit standards.'"
-  else # it's a change audit and we want to ask about the nature of the change
-    local ALWAYS=1
-    local IS_FULL_AUDIT=0
-    local IS_PROCESS_AUDIT=0
-    local PARAMS PARAM PARAM_SETTINGS AND_CONDITIONS CONDITION
-    echofmt reset "\nYou will now be asked a series of questions in order to determine the nature of the change. This will determine which policy statements need to be reviewed."
-    read -n 1 -s -r -p "Press any key to continue..."
-    echo; echo
+help-projects-services-delete() {
+  cat <<EOF | _help-func-summary delete "<project name> [<service name>]"
+Deletes a provided service.
+EOF
+}
 
-    exec 10< "${AUDIT_PATH}/refs/combined.tsv"
-    while read -u 10 -e LINE; do
-      local INCLUDE=true
-      # we read each set of 'and' conditions
-      AND_CONDITIONS="$(echo "$LINE" | awk -F '\t' '{print $6}' | tr ',' '\n' | tr -d ' ')"
-      IFS=$'\n' #
-      for CONDITION in $AND_CONDITIONS; do # evaluate each condition sequentially until failure or end
-        PARAMS="$(echo "$CONDITION" | tr -C '[:alpha:]_' '\n')"
-        for PARAM in $PARAMS; do # define undefined params of clause
-          if [[ -z "${!PARAM:-}" ]]; then
-            function set-yes() { eval $PARAM=1; }
-            function set-no() { eval $PARAM=0; }
-            local PROMPT
-            PROMPT="${PARAM:0:1}$(echo ${PARAM:1} | tr '[:upper:]' '[:lower:]' | tr '_' ' ')? (y/n) "
-            yes-no "$PROMPT" "" set-yes set-no
-            echo
-            PARAM_SETTINGS="${PARAM_SETTINGS} ${PARAM}='${!PARAM}'"
-          fi
-        done # define clause params
-        if ! env -i -S "$(for PARAM in $PARAMS; do echo "$PARAM=${!PARAM} "; done)" perl -e '
-            use strict; use warnings;
-            my $condition="$ARGV[0]";
-            while (my ($k, $v) = each %ENV) { $condition =~ s/$k/$v/g; }
-            $condition =~ /[0-9<>=]+/ or die "Invalid audit condition: $condition";
-            eval "$condition" or exit 1;' $CONDITION; then
-          INCLUDE=false
-          break # stop processing conditions
-        fi
-      done # evaluate each condition
-      unset IFS
-      if [[ $INCLUDE == true ]]; then
-        list-add-item STATEMENTS "$(echo "$LINE" | awk -F '\t' '{print $3}')"
-      fi
-    done
-    exec 10<&-
-
-    eval "$SUMMAR_VAR='Initialized audit statements using parameters:${PARAM_SETTINGS}.'"
-  fi
-
-  local STATEMENT
-  echo -e "Statement\tReviewer\tAffirmed\tComments" > "${AUDIT_PATH}/reviews.tsv"
-  while read -e STATEMENT; do
-    echo -e "$STATEMENT\t\t\t" >> "${AUDIT_PATH}/reviews.tsv"
-  done <<< "$STATEMENTS"
+help-projects-services-show() {
+  cat <<EOF | _help-func-summary show "[<service name>...]"
+Show service details.
+EOF
 }
 
 requirements-projects() {
@@ -4305,129 +4470,93 @@ projects-services-show() {
 help-projects() {
   local PREFIX="${1:-}"
 
-  handleSummary "${PREFIX}${cyan_u}projects${reset} <action>: Project configuration and tools." || cat <<EOF
+  local SUMMARY="Project configuration and tools."
+
+  handleSummary "${PREFIX}${cyan_u}projects${reset} <action>: ${SUMMARY}" || cat <<EOF
 ${PREFIX}${cyan_u}projects${reset} <action>:
-$(help-projects-build | sed -e 's/^/  /')
-$(help-projects-close | sed -e 's/^/  /')
-$(help-projects-create | sed -e 's/^/  /')
-$(help-projects-import | sed -e 's/^/  /')
-$(help-projects-publish | sed -e 's/^/  /')
-$(help-projects-qa | sed -e 's/^/  /')
-$(help-projects-sync | sed -e 's/^/  /')
-$(help-projects-test | sed -e 's/^/  /')
-  ${underline}services${reset}: sub-resource for managing services provided by the package.
-    ${underline}add${reset} [<service name>]: Add a provided service to the current project.
-    ${underline}list${reset} [<project name>...]: Lists the services provided by the current or named projects.
-    ${underline}delete${reset} [<project name>] <name>: Deletes a provided service.
-    ${underline}show${reset} [<service name>...]: Show service details.
+  ${SUMMARY}
+$(_help-actions-list projects build close create import publish qa sync test | indent)
+
+$(echo "Subresources:
+* ${yellow}${underline}issues${reset}
+* ${yellow}${underline}services${reset}" | indent)
 EOF
 }
 
 help-projects-build() {
-  cat <<EOF
-${underline}build${reset} [<name>...]: Builds the current or specified project(s).
+  cat <<EOF | _help-func-summary build "[<name>...]"
+Builds the current or specified project(s).
 EOF
 }
 
 help-projects-close() {
-  cat <<EOF
-${underline}close${reset} --force [<name>...]: Closes (deletes from playground) either the current or named
-  project after checking that all changes are committed and pushed. '--force' will skip the 'up-to-date
-  checks.
+  cat <<EOF | _help-func-summary close "[<name>...]"
+Closes (deletes from playground) either the current or named project after checking that all changes are committed and pushed. '--force' will skip the 'up-to-date checks.
 EOF
 }
 
 help-projects-create() {
-  cat <<EOF
-${underline}create${reset} [[--new <type>] || [--source|-s <pkg|URL>] [--follow|-f]] [--no-fork|-F] [--version|-v <semver> ] [--license|-l <license name>] [--description|-d <desc>] [--public] [<project name>]:
-  Note, 'project name' should be a bare name. The scope is determined by the current org settings. An
-  explicit name is required for '--new' projects. If no name is given for '--source' projects, then
-  the base source name is used.
+  cat <<EOF | _help-func-summary create "[[--new <type>] || [--source|-s <pkg|URL>] [--follow|-f]] [--no-fork|-F] [--version|-v <semver> ] [--license|-l <license name>] [--description|-d <desc>] [--public] [<project name>]"
+Note, 'project name' should be a bare name. The scope is determined by the current org settings. An explicit name is required for '--new' projects. If no name is given for '--source' projects, then the base source name is used.
 
-  Creates a new Liquid project in one of two modes. If '--new' is specified, then the indicated type
-  will be used to initiate a 'create' script. There are various '@liquid-labs/create-*' projects
-  which may be used, and third-party or private scripts may developed as well. This essentially
-  calls 'npm init <type>' and then sets up the GitHub repository and working repo (unless --no-fork
-  is specified).
+Creates a new Liquid project in one of two modes. If '--new' is specified, then the indicated type will be used to initiate a 'create' script. There are various '@liquid-labs/create-*' projects which may be used, and third-party or private scripts may developed as well. This essentially calls 'npm init <type>' and then sets up the GitHub repository and working repo (unless --no-fork is specified).
 
-  The 'raw' type is a built-in type that initiates a completly raw repo with just minimal 'package.json'
-  defintion. The package attributes will be configured based on parameters with the version defaulting to
-  '1.0.0-alpha.0' and 'license' defaulting to 'UNLICENSED'.
+The 'raw' type is a built-in type that initiates a completly raw repo with just minimal 'package.json' defintion. The package attributes will be configured based on parameters with the version defaulting to '1.0.0-alpha.0' and 'license' defaulting to 'UNLICENSED'.
 
-  If '--source' is specified, will first clone the source repo as a starting point. This can be used
-  to "convert" non-Liquid projects (from GitHub or other sources) as well as to create re-named
-  duplicates of Liquid projects If set to '--follow' the source, then this effectively sets up a
-  'source' remote conceptually upstream from 'upstream' and future invocations of 'project sync' will
-  attempt to merge changes from 'source' to 'upstream'. This can later be managed using the 'projects
-  remotes' sub-group.
+If '--source' is specified, will first clone the source repo as a starting point. This can be used to "convert" non-Liquid projects (from GitHub or other sources) as well as to create re-named duplicates of Liquid projects If set to '--follow' the source, then this effectively sets up a 'source' remote conceptually upstream from 'upstream' and future invocations of 'project sync' will attempt to merge changes from 'source' to 'upstream'. This can later be managed using the 'projects remotes' sub-group.
 
-  Regardless, the following 'package.json' fields will be set according to the following:
-  * the package will be scoped accourding to the org scope.
-  * 'project name' will be used to create a git repository under the org scope.
-  * the 'repository' and 'bugs' fields will be set to match.
-  * the 'homepage' will be set to the repo 'README.md' (#readme).
-  * version to '--version', otherwise '1.0.0'.
-  * license to the '--license', otherwise org's default license, otherwise 'UNLICENSED'.
+Regardless, the following 'package.json' fields will be set according to the following:
+* the package will be scoped accourding to the org scope.
+* 'project name' will be used to create a git repository under the org scope.
+* the 'repository' and 'bugs' fields will be set to match.
+* the 'homepage' will be set to the repo 'README.md' (#readme).
+* version to '--version', otherwise '1.0.0'.
+* license to the '--license', otherwise org's default license, otherwise 'UNLICENSED'.
 
-  Any compatible create script must conform to the above, though additional rules and/or interactions
-  may added. Note, just because no option is given to change some of the above parameters they can, of
-  course, be modified post-create (though they are "very standard" for Liquid projects).
+Any compatible create script must conform to the above, though additional rules and/or interactions may added. Note, just because no option is given to change some of the above parameters they can, of course, be modified post-create (though they are "very standard" for Liquid projects).
 
-  Use 'liq projects import' to import an existing project from a URL.
+Use 'liq projects import' to import an existing project from a URL.
 EOF
 }
 
 help-projects-deploy() {
-  cat <<EOF
-${underline}deploy${reset} [<name>...]: Deploys the current or named project(s).
+  cat <<EOF | _help-func-summary deploy "[<name>...]"
+Deploys the current or named project(s).
 EOF
 }
 
 help-projects-import() {
-  cat <<EOF
-${underline}import${reset} [--no-install] <package or URL>: Imports the indicated package into your playground. The
-  newly imported package will be installed unless '--no-install' is given.
+  cat <<EOF | _help-func-summary import "[--no-install] <package or URL>"
+Imports the indicated package into your playground. The newly imported package will be installed unless '--no-install' is given.
 EOF
 }
 
 help-projects-publish() {
-  cat <<EOF
-${underline}publish${reset}: Performs verification tests, updates package version, and publishes package.
+  cat <<EOF | _help-func-summary publish
+Performs verification tests, updates package version, and publishes package.
 EOF
 }
 
 help-projects-qa() {
-  cat <<EOF
-${underline}qa${reset} [--update|-u] [--audit|-a] [--lint|-l] [--version-check|-v]:
-  Performs NPM audit, eslint, and NPM version checks. By default, all three checks are performed, but options
-  can be used to select specific checks. The '--update' option instruct to the selected options to attempt
-  updates/fixes.
+  cat <<EOF | _help-func-summary qa "[--update|-u] [--audit|-a] [--lint|-l] [--version-check|-v]"
+Performs NPM audit, eslint, and NPM version checks. By default, all three checks are performed, but options can be used to select specific checks. The '--update' option instruct to the selected options to attempt updates/fixes.
 EOF
 }
 
 help-projects-sync() {
-  cat <<EOF
-${underline}sync${reset} [--fetch-only|-f] [--no-work-master-merge|-M]:
-  Updates the remote master with new commits from upstream/master and, if currently on a work branch,
-  workspace/master and workspace/<workbranch> and then merges those updates with the current workbranch (if any).
-  '--fetch-only' will update the appropriate remote refs, and exit. --no-work-master-merge update the local master
-  branch and pull the workspace workbranch, but skips merging the new master updates to the workbranch.
+  cat <<EOF | _help-func-summary sync "[--fetch-only|-f] [--no-work-master-merge|-M]"
+Updates the remote master with new commits from upstream/master and, if currently on a work branch, workspace/master and workspace/<workbranch> and then merges those updates with the current workbranch (if any). '--fetch-only' will update the appropriate remote refs, and exit. --no-work-master-merge update the local master branch and pull the workspace workbranch, but skips merging the new master updates to the workbranch.
 EOF
 }
 
 help-projects-test() {
-  cat <<EOF
-${underline}test${reset} [-t|--types <types>][-D|--no-data-reset][-g|--go-run <testregex>][--no-start|-S] [<name>]:
-  Runs unit tests the current or named projects.
-  * 'types' may be 'unit' or 'integration' (=='int') or 'all', which is default.
-    Multiple tests may be specified in a comma delimited list. E.g.,
-    '-t=unit,int' is equivalent no type or '-t=""'.
-  * '--no-start' will skip tryng to start necessary services.
-  * '--no-data-reset' will cause the standard test DB reset to be skipped.
-  * '--no-service-check' will skip checking service status. This is useful when
-    re-running tests and the services are known to be running.
-  * '--go-run' will only run those tests matching the provided regex (per go
-    '-run' standards).
+  cat <<EOF | _help-func-summary test "[-t|--types <types>][-D|--no-data-reset][-g|--go-run <testregex>][--no-start|-S] [<name>]"
+Runs unit tests the current or named projects.
+* 'types' may be 'unit' or 'integration' (=='int') or 'all', which is default. Multiple tests may be specified in a comma delimited list. E.g., '-t=unit,int' is equivalent no type or '-t=""'.
+* '--no-start' will skip tryng to start necessary services.
+* '--no-data-reset' will cause the standard test DB reset to be skipped.
+* '--no-service-check' will skip checking service status. This is useful when re-running tests and the services are known to be running.
+* '--go-run' will only run those tests matching the provided regex (per go '-run' standards).
 EOF
 }
 projectCheckIfInPlayground() {
@@ -4768,50 +4897,6 @@ projectsVersionCheckDo() {
   npm-check ${CMD_OPTS} || true
 }
 
-projects-issues() {
-  local ACTION="${1}"; shift
-
-  if [[ $(type -t "projects-issues-${ACTION}" || echo '') == 'function' ]]; then
-    projects-issues-${ACTION} "$@"
-  else
-    exitUnknownHelpTopic "$ACTION" projects issues
-  fi
-}
-
-# see 'liq help org issues show'
-projects-issues-show() {
-  eval "$(setSimpleOptions MINE -- "$@")"
-
-  findBase
-
-  local URL
-  URL=$(cat "$BASE_DIR/package.json" | jq -r '.bugs.url' )
-
-  if [[ -n "$MINE" ]]; then
-    local MY_GITHUB_NAME
-    projectHubWhoami MY_GITHUB_NAME
-    open "${URL}/assigned/${MY_GITHUB_NAME}"
-  else
-    open "${URL}"
-  fi
-}
-help-projects-issues() {
-  local PREFIX="${1:-}"
-
-  handleSummary "${PREFIX}${cyan_u}projects issues${reset} <action>: Manage organization issues." || cat <<EOF
-${PREFIX}${cyan_u}projects issues${reset} <action>:
-$(help-projects-issues-show | sed -e 's/^/  /')
-EOF
-}
-
-help-projects-issues-show() {
-  cat <<EOF
-${underline}show${reset} [--mine|-m]:
-  Displays the open issues for the current project. With '--mine', will attempt to get the user's GitHub name
-  and show them their own issues.
-EOF
-}
-
 # deprecated
 requirements-required-services() {
   requirePackage
@@ -5115,28 +5200,50 @@ EOF
 help-services() {
   local PREFIX="${1:-}"
 
-  handleSummary "${PREFIX}${cyan_u}services${reset} <action>: Manages active runtime services." || cat <<EOF
-${PREFIX}${cyan_u}services${reset} :
-  ${underline}list${reset} [-s|--show-status] [<service spec>...] : Lists all or named runtime
-    services for the current environment and their status.
-  ${underline}start${reset} [<service spec>...] : Starts all or named services for the current
-    environment.
-  ${underline}stop${reset} [<service spec>...] : Stops all or named services for the current
-    environment.
-  ${underline}log${reset} [<service spec>...] : Displays logs for all or named services for the
-    current environment.
-  ${underline}err-log${reset} [<service spec>...] : Displays error logs for all or named services
-    for the current environment.
-  ${underline}connect${reset} [-c|--capabilities] <service spec> : Connects to the named service, if
-    possible. The '--capabilities' option will print 'interactive', and/or
-    'pipe', separated by newlines, to indicate the capabilities of the specified
-    connection.
+  local SUMMARY="Manages active runtime services."
 
-Where '${cyan}service spec${reset}' is either a service interface class or
-<service iface>.<service name>. A service may be selected by it's major type, so
-'sql' woud select environment services 'sql' and 'sql-mysql' (etc.). Thus,
-'liq services connect sql' may be used to connect to both MySQL,
-Postgres, etc. DBs.
+  handleSummary "${PREFIX}${cyan_u}services${reset} <action>: ${SUMMARY}" || cat <<EOF
+${PREFIX}${cyan_u}services${reset} :
+$(echo "${SUMMARY}
+
+Here, 'service spec' is either a service interface class or <service iface>.<service name>. A service may be selected by it's major type, so 'sql' woud select environment services 'sql' and 'sql-mysql' (etc.). Thus, 'liq services connect sql' may be used to connect to both MySQL, Postgres, etc. DBs." | fold -sw 82 | indent)
+$(_help-actions-list services connect err-log list log start stop | indent)
+EOF
+}
+
+help-services-connect() {
+  cat <<EOF | _help-func-summary connect "[-c|--capabilities] <service spec>"
+Connects to the named service, if possible. The '--capabilities' option will print 'interactive', and/or 'pipe', separated by newlines, to indicate the capabilities of the specified connection.
+EOF
+}
+
+help-services-err-log() {
+  cat <<EOF | _help-func-summary err-log "[<service spec>...]"
+Displays error logs for all or named services for the current environment.
+EOF
+}
+
+help-services-list() {
+  cat <<EOF | _help-func-summary list "[-s|--show-status] [<service spec>...]"
+Lists all or named runtime services for the current environment and their status.
+EOF
+}
+
+help-services-log() {
+  cat <<EOF | _help-func-summary log "[<service spec>...]"
+Displays logs for all or named services for the current environment.
+EOF
+}
+
+help-services-start() {
+  cat <<EOF | _help-func-summary start "[<service spec>...]"
+Starts all or named services for the current environment.
+EOF
+}
+
+help-services-stop() {
+  cat <<EOF | _help-func-summary stop "[<service spec>...]"
+Stops all or named services for the current environment.
 EOF
 }
 # ctrlScriptEnv generates the environment settings and required parameters list
@@ -6096,61 +6203,118 @@ EOF)
 help-work() {
   local PREFIX="${1:-}"
 
-  handleSummary "${PREFIX}${cyan_u}work${reset} <action>: Manages the current unit of work." || cat <<EOF
+  local SUMMARY="Manages the current unit of work."
+
+  handleSummary "${PREFIX}${cyan_u}work${reset} <action>: ${SUMMARY}" || cat <<EOF
 ${PREFIX}${cyan_u}work${reset} <action>:
-  ${underline}save${reset} [-a|--all] [--backup-only|-b] [--message|-m=<version ][<path spec>...]:
-    Save staged files to the local working branch. '--all' auto stages all known files (does not
-    include new files) and saves them to the local working branch. '--backup-only' is useful if local commits
-    have been made directly through 'git' and you want to push them.
-  ${underline}stage${reset} [-a|--all] [-i|--interactive] [-r|--review] [-d|--dry-run] [<path spec>...]:
-    Stages files for save.
-$(help-work-status | sed -e 's/^/  /')
-  ${underline}involve${reset} [-L|--no-link] [<repository name>]: Involves the current or named
-    repository in the current unit of work. When involved, any projects in the
-    newly involved project will be linked to the primary project in the unit of
-    work. The '--no-link' option will suppress this behavior.
-  ${underline}issues${reset} [--list|--add|--remove]: Manages issues associated with the current unit of work.
-    TODO: this should be re-worked as sub-group.
-  ${underline}start${reset} [--issues <# or URL>] [--push] <name>:
-    Creates a new unit of work and adds the current repository (if any) to it. You must specify at least one issue.
-    Use a comma separated list to specify mutliple issues. The '--push' option will record the current unit of work
-    which can then be recovered with 'liq work resume --pop'.
-  ${underline}stop${reset} [-k|--keep-checkout]: Stops working on the current unit of work. The
-    master branch will be checked out for all involved projects unless
-    '--keep-checkout' is used.
-  ${underline}resume${reset} [--pop] [<name>]:
-    alias: ${underline}join${reset}
-    Resume work or join an existing unit of work. If the '--pop' option is specified, then arguments will be
-    ignored and the last 'pushed' unit of work (see 'liq work start --push') will be resumed.
-  ${underline}edit${reset}: Opens a local project editor for all involved repositories.
-  ${underline}report${reset}: Reports status of files in the current unit of work.
-  ${underline}diff-master${reset}: Shows committed changes since branch from 'master' for all
-    involved repositories.
-  ${underline}ignore-rest${reset}: Adds any currently untracked files to '.gitignore'.
-  ${underline}merge${reset}: Merges current work unit to master branches and updates mirrors.
-  ${underline}qa${reset}: Checks the playground status and runs package audit, version check, and
-    tests.
-  ${underline}sync${reset} [--fetch-only|-f] [--no-work-master-merge|-M]:
-    Synchronizes local project repos for all work. See 'liq help work sync' for details.
-  ${underline}test${reset}: Runs tests for each involved project in the current unit of work. See
-    'project test' for details on options for the 'test' action.
-  ${underline}submit${reset} [--message|-m <summary message>][--not-clean|-C] [--no-close|-X][<projects>]:
-    Submits pull request for the current unit of work. With no projects specified, submits patches for all
-    projects in the current unit of work. By default, PR will claim to close related issues unless
-    '--no-close' is included.
+$(echo "${SUMMARY} A 'unit of work' is essentially a set of work branches across all involved projects. The first project involved in a unit of work is considered the primary project, which will effect automated linking when involving other projects.
 
-A 'unit of work' is essentially a set of work branches across all involved projects. The first project involved in a unit of work is considered the primary project, which will effect automated linking when involving other projects.
+${red_b}ALPHA Note:${reset} The 'stop' and 'resume' actions do not currently manage the work branches and only updates the 'current work' pointer." | fold -sw 82 | indent)
+$(_help-actions-list work diff-master edit ignore-rest involve issues merge report qa resume save stage start status stop submit sync test | indent)
+EOF
+}
 
-${red_b}ALPHA Note:${reset} The 'stop' and 'resume' actions do not currently manage the work branches and only updates the 'current work' pointer.
+help-work-diff-master() {
+  cat <<EOF | _help-func-summary diff-master "[--mine|-m]"
+Shows committed changes since branch from 'master' for all involved repositories.
+EOF
+}
+
+help-work-edit() {
+  cat <<EOF | _help-func-summary edit
+Opens a local project editor for all involved repositories.
+EOF
+}
+
+help-work-ignore-rest() {
+  cat <<EOF | _help-func-summary ignore-rest
+Adds any currently untracked files to '.gitignore'.
+EOF
+}
+
+help-work-involve() {
+  cat <<EOF | _help-func-summary involve "[-L|--no-link] [<repository name>]"
+Involves the current or named repository in the current unit of work. When involved, any projects in the newly involved project will be linked to the primary project in the unit of work. The '--no-link' option will suppress this behavior.
+EOF
+}
+
+help-work-issues() {
+  cat <<EOF | _help-func-summary issues "[--list|--add|--remove]"
+Manages issues associated with the current unit of work. TODO: this should be re-worked as sub-group.
+EOF
+}
+
+help-work-merge() {
+  cat <<EOF | _help-func-summary merge
+Merges current work unit to master branches and updates mirrors.
+EOF
+}
+
+help-work-report() {
+  cat <<EOF | _help-func-summary report
+Reports status of files in the current unit of work.
+EOF
+}
+
+help-work-qa() {
+  cat <<EOF | _help-func-summary qa
+Checks the playground status and runs package audit, version check, and tests.
+EOF
+}
+
+help-work-resume() {
+  cat <<EOF | _help-func-summary resume "[--pop] [<name>]"
+alias: ${underline}join${reset}
+
+Resume work or join an existing unit of work. If the '--pop' option is specified, then arguments will be ignored and the last 'pushed' unit of work (see 'liq work start --push') will be resumed.
+EOF
+}
+
+help-work-save() {
+  cat <<EOF | _help-func-summary save "[-a|--all] [--backup-only|-b] [--message|-m=<version ][<path spec>...]"
+Save staged files to the local working branch. '--all' auto stages all known files (does not include new files) and saves them to the local working branch. '--backup-only' is useful if local commits have been made directly through 'git' and you want to push them.
+EOF
+}
+
+help-work-stage() {
+  cat <<EOF | _help-func-summary stage "[-a|--all] [-i|--interactive] [-r|--review] [-d|--dry-run] [<path spec>...]"
+Stages files for save.
+EOF
+}
+
+help-work-start() {
+  cat <<EOF | _help-func-summary start "[--issues <# or URL>] [--push] <name>"
+Creates a new unit of work and adds the current repository (if any) to it. You must specify at least one issue. Use a comma separated list to specify mutliple issues. The '--push' option will record the current unit of work which can then be recovered with 'liq work resume --pop'.
 EOF
 }
 
 help-work-status() {
-  cat <<EOF
-${underline}status${reset} [-s|--select] [--list-projects|-p] [--list-issues|-i] [<name>]:
-  Shows details for the current or named unit of work. Will enter interactive selection if no option and no
-  current work or the '--select' option is given. The '--list-projects' and '--list-issues' options are meant
-  to be used on their own and will just list the involved projects or associated issues respectively.
+  cat <<EOF | _help-func-summary status "[-s|--select] [--list-projects|-p] [--list-issues|-i] [<name>]"
+Shows details for the current or named unit of work. Will enter interactive selection if no option and no current work or the '--select' option is given. The '--list-projects' and '--list-issues' options are meant to be used on their own and will just list the involved projects or associated issues respectively.
+EOF
+}
+
+help-work-stop() {
+  cat <<EOF | _help-func-summary stop "[-k|--keep-checkout]"
+Stops working on the current unit of work. The master branch will be checked out for all involved projects unless '--keep-checkout' is used.
+EOF
+}
+
+help-work-submit() {
+  cat <<EOF | _help-func-summary submit "[--message|-m <summary message>][--not-clean|-C] [--no-close|-X][<projects>]"
+Submits pull request for the current unit of work. With no projects specified, submits patches for all projects in the current unit of work. By default, PR will claim to close related issues unless '--no-close' is included.
+EOF
+}
+
+help-work-sync() {
+  cat <<EOF | _help-func-summary sync "[--fetch-only|-f] [--no-work-master-merge|-M]"
+Synchronizes local project repos for all work. See 'liq help work sync' for details.
+EOF
+}
+
+help-work-test() {
+  cat <<EOF | _help-func-summary test
+Runs tests for each involved project in the current unit of work. See 'project test' for details on options for the 'test' action.
 EOF
 }
 workBranchName() {

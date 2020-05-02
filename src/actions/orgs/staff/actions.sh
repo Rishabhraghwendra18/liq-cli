@@ -80,7 +80,7 @@ orgs-staff-add() {
       CANDIDATE_MANAGERS="$(NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e \
         "try {
           const fs = require('fs');
-          const { StaffTsv } = require('@liquid-labs/policies-model');
+          const { StaffTsv } = require('@liquid-labs/orgs-policies-model');
           const staff = new StaffTsv('${STAFF_FILE}');
           const org_struct = JSON.parse(fs.readFileSync('${ORG_STRUCTURE}'));
 
@@ -132,7 +132,7 @@ orgs-staff-add() {
 
   trap - ERR # without this, an error causes the entire node script to print, which is cumbersome
   NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "try {
-      const { StaffTsv } = require('@liquid-labs/policies-model');
+      const { StaffTsv } = require('@liquid-labs/orgs-policies-model');
       const staff = new StaffTsv('${STAFF_FILE}');
       staff.add({ email: '${EMAIL}',
                   familyName: '${FAMILY_NAME}',
@@ -225,7 +225,7 @@ orgs-staff-org-chart() {
 
   trap - ERR
   NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "
-    const { Organization } = require('@liquid-labs/policies-model');
+    const { Organization } = require('@liquid-labs/orgs-policies-model');
     const org = new Organization(
       '${ORG_ROLES}',
       '${STAFF_FILE}',

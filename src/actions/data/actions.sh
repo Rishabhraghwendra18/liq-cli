@@ -4,13 +4,6 @@ requirements-data() {
   requireEnvironment
 }
 
-help-data-build() {
-  cat <<EOF | indent
-$(helpActionPrefix data)${underline}build${reset} [<iface>...]: Loads the project schema into all or
-each named data service.
-EOF
-}
-
 data-build() {
   local MAIN='data-build-${IFACE}'
   dataRunner "$@"
