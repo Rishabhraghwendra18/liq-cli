@@ -534,6 +534,8 @@ work-status() {
 work-show() { work-status "$@"; }
 
 work-start() {
+  check-git-access
+
   findBase
 
   eval "$(setSimpleOptions ISSUES= PUSH -- "$@")"

@@ -870,6 +870,14 @@ colorerrbg() {
   (eval "$@" 2>&1>&3|sed 's/^\(.*\)$/'$'\e''[31m\1'$'\e''[m/'>&2)3>&1 &
 }
 
+# Verifies access to github.
+check-git-access() {
+  # if we don't supress the output, then we get noise even when successful
+  ssh -qT git@github.com 2> /dev/null || if [ $? -ne 1 ]; then
+    echoerrandexit "Could not connect to github; try to add add your GitHub key like:\nssh-add /example/path/to/key"
+  fi
+}
+
 findFile() {
   local SEARCH_DIR="${1}"
   local FILE_NAME="${2}"
@@ -4015,7 +4023,7 @@ projects-create() {
   eval "$(setSimpleOptions NEW= SOURCE= FOLLOW NO_FORK:F VERSION= LICENSE= DESCRIPTION= PUBLIC: -- "$@")"
 
   # first, check that we can access GitHub
-  projectsCheckGitAccess
+  check-git-access
   # TODO: check that the upstream and workspace projects don't already exist
 
   if [[ -n "$NEW" ]] && [[ -n "$SOURCE" ]]; then
@@ -4569,13 +4577,6 @@ projectCheckIfInPlayground() {
   fi
 }
 
-projectsCheckGitAccess() {
-  # if we don't supress the output, then we get noise even when successful
-  ssh -qT git@github.com 2> /dev/null || if [ $? -ne 1 ]; then
-        echoerrandexit "Could not connect to github; try to add add your GitHub key like:\nssh-add /example/path/to/key"
-  fi
-}
-
 projectsGetUpstreamUrl() {
   local PROJ_NAME="${1/@/}"
 
@@ -4601,7 +4602,7 @@ projectClone() {
   local URL="${1}"
   local ORIGIN_NAME="${2:-upstream}"
 
-  projectsCheckGitAccess
+  check-git-access
 
   local STAGING
   projectResetStaging $(basename "$URL")
@@ -4630,7 +4631,7 @@ projectHubWhoami() {
 projectForkClone() {
   local URL="${1}"
 
-  projectsCheckGitAccess
+  check-git-access
 
   local PROJ_NAME ORG_URL GITHUB_NAME
   PROJ_NAME=$(basename "$URL")
@@ -5980,6 +5981,8 @@ work-status() {
 work-show() { work-status "$@"; }
 
 work-start() {
+  check-git-access
+
   findBase
 
   eval "$(setSimpleOptions ISSUES= PUSH -- "$@")"
