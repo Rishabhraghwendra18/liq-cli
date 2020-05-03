@@ -61,7 +61,7 @@ projects-create() {
   eval "$(setSimpleOptions NEW= SOURCE= FOLLOW NO_FORK:F VERSION= LICENSE= DESCRIPTION= PUBLIC: -- "$@")"
 
   # first, check that we can access GitHub
-  projectsCheckGitAccess
+  check-git-access
   # TODO: check that the upstream and workspace projects don't already exist
 
   if [[ -n "$NEW" ]] && [[ -n "$SOURCE" ]]; then
