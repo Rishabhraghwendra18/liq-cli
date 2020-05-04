@@ -15,7 +15,7 @@ orgs-audits-process() {
 orgs-audits-start() {
   eval "$(setSimpleOptions SCOPE= NO_CONFIRM:C -- "$@")"
 
-  local SCOPE TIME OWNER AUDIT_PATH FILES
+  local TIME OWNER AUDIT_PATH FILES
   policy-audit-start-prep "$@"
   orgs-audits-setup-work
   policy-audit-initialize-records
