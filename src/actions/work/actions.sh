@@ -186,6 +186,7 @@ work-issues() {
   fi
 }
 
+# see liq help work list
 work-list() {
   local WORK_DESC WORK_STARTED WORK_INITIATOR INVOLVED_PROJECTS
   # find "${LIQ_WORK_DB}" -maxdepth 1 -not -name "*~" -type f -exec basename '{}' \;
@@ -196,6 +197,7 @@ work-list() {
   done
 }
 
+# see liq help work merge
 work-merge() {
   # TODO: https://github.com/Liquid-Labs/liq-cli/issues/57 support org-level config to default allow unforced merge
   eval "$(setSimpleOptions FORCE CLOSE PUSH_UPSTREAM -- "$@")"
