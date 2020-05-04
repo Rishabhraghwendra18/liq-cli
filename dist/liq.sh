@@ -5555,6 +5555,8 @@ work-involve() {
     echoerrandexit "There is no active unit of work to involve. Try:\nliq work resume"
   fi
 
+  check-git-access
+
   if (( $# == 0 )) && [[ -n "$BASE_DIR" ]]; then
     requirePackage
     PROJECT_NAME=$(echo "$PACKAGE" | jq --raw-output '.name | @sh' | tr -d "'")
