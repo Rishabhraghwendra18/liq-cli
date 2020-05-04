@@ -878,6 +878,15 @@ check-git-access() {
   fi
 }
 
+change-working-project() {
+  if [[ -n "$PROJECT" ]]; then
+    if ! [[ -d "${LIQ_PLAYGROUND}/${PROJECT}" ]]; then
+      echoerrandexit "No such project '${PROJECT}' found locally."
+    fi
+    cd "${LIQ_PLAYGROUND}/${PROJECT}"
+  fi
+}
+
 findFile() {
   local SEARCH_DIR="${1}"
   local FILE_NAME="${2}"
@@ -5633,6 +5642,7 @@ work-issues() {
   fi
 }
 
+# see liq help work list
 work-list() {
   local WORK_DESC WORK_STARTED WORK_INITIATOR INVOLVED_PROJECTS
   # find "${LIQ_WORK_DB}" -maxdepth 1 -not -name "*~" -type f -exec basename '{}' \;
@@ -5643,6 +5653,7 @@ work-list() {
   done
 }
 
+# see liq help work merge
 work-merge() {
   # TODO: https://github.com/Liquid-Labs/liq-cli/issues/57 support org-level config to default allow unforced merge
   eval "$(setSimpleOptions FORCE CLOSE PUSH_UPSTREAM -- "$@")"
@@ -6215,7 +6226,10 @@ ${PREFIX}${cyan_u}work${reset} <action>:
 $(echo "${SUMMARY} A 'unit of work' is essentially a set of work branches across all involved projects. The first project involved in a unit of work is considered the primary project, which will effect automated linking when involving other projects.
 
 ${red_b}ALPHA Note:${reset} The 'stop' and 'resume' actions do not currently manage the work branches and only updates the 'current work' pointer." | fold -sw 82 | indent)
-$(_help-actions-list work diff-master edit ignore-rest involve issues merge report qa resume save stage start status stop submit sync test | indent)
+$(_help-actions-list work diff-master edit ignore-rest involve issues link list merge report qa resume save stage start status stop submit sync test | indent)
+
+$(echo "Subresources:
+* ${yellow}${underline}links${reset}" | indent)
 EOF
 }
 
@@ -6246,6 +6260,12 @@ EOF
 help-work-issues() {
   cat <<EOF | _help-func-summary issues "[--list|--add|--remove]"
 Manages issues associated with the current unit of work. TODO: this should be re-worked as sub-group.
+EOF
+}
+
+help-work-list() {
+  cat <<EOF | _help-func-summary list
+Lists the current, local, unclosed units of work.
 EOF
 }
 
@@ -6592,6 +6612,126 @@ workProcessIssues() {
   done
 
   echo "$ISSUES"
+}
+
+work-links() {
+  local ACTION="${1}"; shift
+
+  if [[ $(type -t "work-links-${ACTION}" || echo '') == 'function' ]]; then
+    work-links-${ACTION} "$@"
+  else
+    exitUnknownHelpTopic "$ACTION" work links
+  fi
+}
+
+# see liq help work links add
+work-links-add() {
+  eval "$(setSimpleOptions IMPORT PROJECT= -- "$@")"
+  local SOURCE_PROJ="${1}"
+
+  local SOURCE_PROJ_DIR="${LIQ_PLAYGROUND}/${SOURCE_PROJ}"
+  if ! [[ -d "${SOURCE_PROJ_DIR}" ]]; then
+    if [[ -n "${IMPORT}" ]]; then
+      projects-import "@${SOURCE_PROJ/@/}" # TODO: regularize reference style
+    elif [[ -z "${REMOVE}" ]]; then
+      echoerrandexit "No such target project '${SOURCE_PROJ}'."
+    fi
+  fi
+  cd "${SOURCE_PROJ_DIR}"
+  yalc publish
+
+  local INVOLVED_PROJECTS TARGET_PROJ
+  work-links-lib-working-set
+
+  for TARGET_PROJ in $INVOLVED_PROJECTS; do
+    cd "${LIQ_PLAYGROUND}/${TARGET_PROJ/@/}"
+    yalc add "@${SOURCE_PROJ/@/}" # TODO: regularize reference style
+  done
+
+  echo "Successfully linked '${SOURCE_PROJ}'."
+}
+
+work-links-list() {
+  eval "$(setSimpleOptions PROJECT= -- "$@")"
+
+  local INVOLVED_PROJECTS TARGET_PROJ
+  work-links-lib-working-set
+
+  for TARGET_PROJ in $INVOLVED_PROJECTS; do
+    cd "${LIQ_PLAYGROUND}/${TARGET_PROJ/@/}" # TODO: regularize reference style
+    echo -n "${TARGET_PROJ/@/}: " # TODO: regularize reference style
+    local YALC_CHECK="$(yalc check || true)"
+    if [[ -z "$YALC_CHECK" ]]; then
+      echo "none"
+    else
+      echo
+      echo "$YALC_CHECK" | awk -F: '{print $2}' | tr "'" '"' | jq -r '.[]' | sed -E 's/^/- /'
+    fi
+    echo
+  done
+}
+
+# see liq help work links remove
+work-links-remove() {
+  eval "$(setSimpleOptions NO_UPDATE:U PROJECT= -- "$@")"
+  local SOURCE_PROJ="${1}"
+
+  local INVOLVED_PROJECTS TARGET_PROJ
+  work-links-lib-working-set
+
+  for TARGET_PROJ in $INVOLVED_PROJECTS; do
+    if { yalc check || true; } | grep -q "${SOURCE_PROJ}"; then
+      yalc remove "@${SOURCE_PROJ/@/}" # TODO: regularize reference style
+      if [[ -z "${NO_UPDATE}" ]]; then
+        npm i "@${SOURCE_PROJ/@/}" # TODO: regularize reference style
+      fi
+    fi
+  done
+
+  echo "Successfully unlinked '${SOURCE_PROJ}'."
+}
+help-work-links() {
+  local PREFIX="${1:-}"
+
+  local SUMMARY="Manage working links between projects."
+
+  handleSummary "${PREFIX}${cyan_u}work links${reset} <action>: ${SUMMARY}" || cat <<EOF
+${PREFIX}${cyan_u}projects issues${reset} <action>:
+  ${SUMMARY}
+$(_help-actions-list work-links add list remove | indent)
+EOF
+}
+
+help-work-links-add() {
+  cat <<EOF | _help-func-summary add "[--import|-i] <source proj> [--project|-p <target proj>]"
+Links the source project to all projects in the current unit of work. The source project must be present in the playground, unless '--import' is specified, in which case it will be imported if not present.
+
+If '--project' is specified, then only that project, which must be in the working set, is linked to the local source project.
+EOF
+}
+
+help-work-links-list() {
+  cat <<EOF | _help-func-summary list "[--project|-p <target proj>]"
+List all the links in the current unit of work.
+
+If '--project' is specified, then only links to that project are listed.
+EOF
+}
+
+help-work-links-remove() {
+  cat <<EOF | _help-func-summary remove "[--no-update|-U] [--project|-p <working proj>] <source proj>"
+Removes the source project link to all projects in the current unit of work. Exits in error if there are no linkes with the source project. By default, the source project package will be updated after being removed unless '--no-update' is specified.
+
+If '--project' is specified, then only that projecs, which must be in the working set, only that project is de-linked from the source project.
+EOF
+}
+work-links-lib-working-set() {
+  if [[ "${PROJECT}" ]]; then
+    change-working-project # effectively checks for existence
+    INVOLVED_PROJECTS="${PROJECT}"
+  else
+    source "${LIQ_WORK_DB}/curr_work"
+  fi
 }
 
 # getActions() {
