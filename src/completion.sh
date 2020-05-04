@@ -47,7 +47,7 @@ _liq()
         services)
           OPTS="connect err-log list log restart start stop";;
         work)
-          OPTS="diff-master edit ignore-rest involve issues merge qa report resume save stage start status stop submit sync";;
+          OPTS="diff-master edit ignore-rest involve issues links list merge qa report resume save stage start status stop submit sync";;
       esac
     else
       case "${GROUP}" in
@@ -80,6 +80,8 @@ _liq()
           esac ;; # projects-actions
         work)
           case "${ACTION}" in
+            links)
+              OPTS="add list remove";;
             stage)
               COMPREPLY=( $(compgen -o nospace -W "$(for d in ${CUR}*; do [[ -d "$d" ]] && echo $d/ || echo $d; done)" -- ${CUR}) )
               return 0
