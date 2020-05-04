@@ -92,6 +92,15 @@ check-git-access() {
   fi
 }
 
+change-working-project() {
+  if [[ -n "$PROJECT" ]]; then
+    if ! [[ -d "${LIQ_PLAYGROUND}/${PROJECT}" ]]; then
+      echoerrandexit "No such project '${PROJECT}' found locally."
+    fi
+    cd "${LIQ_PLAYGROUND}/${PROJECT}"
+  fi
+}
+
 findFile() {
   local SEARCH_DIR="${1}"
   local FILE_NAME="${2}"

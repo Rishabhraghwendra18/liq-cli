@@ -32,9 +32,7 @@ source ./services/actions.sh
 source ./services/help.sh
 source ./services/lib.sh
 
-source ./work/actions.sh
-source ./work/help.sh
-source ./work/lib.sh
+source ./work/inc.sh
 
 # getActions() {
 #  for d in `find "${SOURCE_DIR}/actions" -type d -maxdepth 1 -not -path "${SOURCE_DIR}/actions"`; do
