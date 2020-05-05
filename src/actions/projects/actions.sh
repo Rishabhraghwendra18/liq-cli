@@ -154,7 +154,22 @@ projects-create() {
   local CREATE_OPTS="--remote-name upstream"
   if [[ -z "$PUBLIC" ]]; then CREATE_OPTS="${CREATE_OPTS} --private"; fi
   hub create --remote-name upstream ${CREATE_OPTS} -d "$DESCRIPTION" "${ORG_GITHUB_NAME}/${__PROJ_NAME}"
-  git push --all upstream
+  local RETRY=4
+  git push --all upstream || { echowarn "Upstream repo not yet available.";
+    while (( $RETRY > 0 )); do
+      echo "Waiting for upstream repo to stabilize..."
+      local COUNTDOWN=3
+      while (( $COUNTDOWN > 0 )); do
+        echo -n "${COUNTDOWN}..."
+        COUNTDOWN=$(( $COUNTDOWN - 1 ))
+      done
+      if (( $RETRY == 1 )); then
+        git push --all upstream || echoerr "Could not push to upstream. Manually update."
+      else
+        { git push --all upstream && RETRY=0; } || RETRY=$(( $RETRY - 1 ))
+      fi
+    done;
+  }
 
   if [[ -z "$NO_FORK" ]]; then
     echo "Creating fork..."
