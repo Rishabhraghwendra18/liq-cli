@@ -8,7 +8,7 @@ ${PREFIX}${cyan_u}services${reset} :
 $(echo "${SUMMARY}
 
 Here, 'service spec' is either a service interface class or <service iface>.<service name>. A service may be selected by it's major type, so 'sql' woud select environment services 'sql' and 'sql-mysql' (etc.). Thus, 'liq services connect sql' may be used to connect to both MySQL, Postgres, etc. DBs." | fold -sw 82 | indent)
-$(_help-actions-list services connect err-log list log start stop | indent)
+$(_help-actions-list services connect err-log list log restart start stop | indent)
 EOF
 }
 
@@ -33,6 +33,12 @@ EOF
 help-services-log() {
   cat <<EOF | _help-func-summary log "[<service spec>...]"
 Displays logs for all or named services for the current environment.
+EOF
+}
+
+help-services-restart() {
+  cat <<EOF | _help-func-summary restart "[<service spec>...]"
+Effectively starts and stops the service. Restart may take advantage of specific 'restart' capabilities in the underlying service which, when available, are presumable more efficient and quicker than a stop-start.
 EOF
 }
 
