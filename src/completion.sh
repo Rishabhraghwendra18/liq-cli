@@ -93,7 +93,8 @@ _liq() {
   local WORK_GROUPS="issues links"
   eval "$(comp-func-builder 'work' 'WORK')"
   comp-liq-work-stage() {
-    COMPREPLY=( $(compgen -o nospace -W "$(for d in ${CUR}*; do [[ -d "$d" ]] && echo $d/ || echo $d; done)" -- ${CUR}) )
+    # TODO: 'nospace' is very unfortunately innefective (on MacOS 10.x AFAIK)
+    COMPREPLY=( $(compgen -o nospace -W "$(for d in ${CUR}*; do [[ -d "$d" ]] && echo "$d/" || echo "$d"; done)" -- ${CUR}) )
   }
 
   local WORK_ISSUES_ACTIONS="add list remove"
