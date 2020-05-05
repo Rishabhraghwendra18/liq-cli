@@ -20,8 +20,10 @@ while (( $# > 0 )) && [[ $1 == *"="* ]]; do
   shift
 done
 
-# see note in lib/utils.sh:colorerr re. SAW_ERROR
-# local SAW_ERROR=''
+if [[ -f "${LIQ_EXTS_DB}/exts.sh" ]]; then
+  source "${LIQ_EXTS_DB}/exts.sh"
+fi
+
 if [[ $# -lt 1 ]]; then
   help --summary-only
   echoerr "Invalid invocation. See help above."

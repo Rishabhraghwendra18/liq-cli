@@ -1,7 +1,3 @@
-source ./data/actions.sh
-source ./data/lib.sh
-source ./data/help.sh
-
 source ./environments/actions.sh
 source ./environments/help.sh
 

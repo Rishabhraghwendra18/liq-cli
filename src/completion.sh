@@ -5,7 +5,7 @@
 _liq() {
   local GLOBAL_ACTIONS="help"
   # Using 'GROUPS' was causing errors; set by some magic.
-  local ACTION_GROUPS="data environments meta orgs projects services work"
+  local ACTION_GROUPS="environments meta orgs projects services work"
 
   local TOKEN COMP_FUNC CUR
   CUR="${COMP_WORDS[COMP_CWORD]}"
@@ -20,6 +20,9 @@ _liq() {
   std-reply() {
     COMPREPLY=( $(compgen -W "${OPTS}" -- ${CUR}) )
   }
+
+  # TODO: Should we use LIQ_EXTS_DB here? We're sidestepping the need to 'build' the completion script...
+  source "${HOME}/.liquid-development/exts/comps.sh"
 
   comp-liq() {
     OPTS="${GLOBAL_ACTIONS} ${ACTION_GROUPS}"; std-reply
@@ -42,10 +45,6 @@ _liq() {
       echo "function comp-liq-help-${TOKEN_PATH}-${OPT}() { no-opts; }"
     done
   }
-
-  # data group
-  local DATA_ACTIONS="build clear load rebuild reset"
-  eval "$(comp-func-builder 'data' 'DATA')"
 
   # environments group
   local ENVIRONMENTS_ACTIONS="add delete deselect list select set show update"

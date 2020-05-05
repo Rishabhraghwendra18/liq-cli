@@ -1,4 +1,4 @@
-CATALYST_COMMAND_GROUPS=(help data environments meta orgs orgs-audits orgs-policies orgs-staff projects projects-issues projects-services services work)
+CATALYST_COMMAND_GROUPS="help environments meta orgs orgs-audits orgs-policies orgs-staff projects projects-issues projects-services services work"
 
 # display help on help
 help-help() {
@@ -27,7 +27,7 @@ Usage:
 EOF
 
     local GROUP
-    for GROUP in ${CATALYST_COMMAND_GROUPS[@]}; do
+    for GROUP in $CATALYST_COMMAND_GROUPS; do
       echo
       help-${GROUP}
     done
