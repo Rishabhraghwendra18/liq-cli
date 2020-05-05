@@ -20,9 +20,9 @@ meta-init() {
   fi
 
   if [[ -n "$SILENT" ]]; then
-    metaSetupLiqDb > /dev/null
+    meta-lib-setup-liq-db > /dev/null
   else
-    metaSetupLiqDb
+    meta-lib-setup-liq-db
   fi
 }
 

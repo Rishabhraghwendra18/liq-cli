@@ -2680,9 +2680,9 @@ meta-init() {
   fi
 
   if [[ -n "$SILENT" ]]; then
-    metaSetupLiqDb > /dev/null
+    meta-lib-setup-liq-db > /dev/null
   else
-    metaSetupLiqDb
+    meta-lib-setup-liq-db
   fi
 }
 
@@ -2756,7 +2756,7 @@ Analyzes current state of play and suggests what to do next. '--tech-detail' may
 Regular users can ignore the '--error' option. It's an internal option allowing the 'next' action to be leveraged to for error information and hints when appropriate.
 EOF
 }
-metaSetupLiqDb() {
+meta-lib-setup-liq-db() {
   # TODO: check LIQ_PLAYGROUND is set
   createDir() {
     local DIR="${1}"
