@@ -1227,6 +1227,7 @@ LIQ_SETTINGS="${LIQ_DB}/settings.sh"
 LIQ_ENV_DB="${LIQ_DB}/environments"
 LIQ_ORG_DB="${LIQ_DB}/orgs"
 LIQ_WORK_DB="${LIQ_DB}/work"
+LIQ_EXTS_DB="${LIQ_DB}/exts"
 LIQ_ENV_LOGS="${LIQ_DB}/logs"
 
 LIQ_DIST_DIR="$(dirname "$(real_path "${0}")")"
@@ -1312,7 +1313,7 @@ function log() {
     file=${BASH_SOURCE[$i-1]}
     echo "${now} $(hostname) $0:${lineno} ${msg}"
 }
-CATALYST_COMMAND_GROUPS=(help data environments meta orgs orgs-audits orgs-policies orgs-staff projects projects-issues projects-services services work)
+CATALYST_COMMAND_GROUPS="help environments meta orgs orgs-audits orgs-policies orgs-staff projects projects-issues projects-services services work"
 
 # display help on help
 help-help() {
@@ -1341,7 +1342,7 @@ Usage:
 EOF
 
     local GROUP
-    for GROUP in ${CATALYST_COMMAND_GROUPS[@]}; do
+    for GROUP in $CATALYST_COMMAND_GROUPS; do
       echo
       help-${GROUP}
     done
@@ -1381,346 +1382,6 @@ exitUnknownHelpTopic() {
   echo
   echoerrandexit "No such command or group: $BAD_SPEC"
 }
-function dataSQLCheckRunning() {
-  eval "$(setSimpleOptions NO_CHECK -- "$@")"
-  
-  if [[ -z "$NO_CHECK" ]] && ! services-list --exit-on-stopped -q sql; then
-    services-start sql
-  fi
-
-  echo "$@"
-}
-
-function dataSqlGetSqlVariant() {
-  echo "${CURR_ENV_SERVICES[@]:-}" | sed -Ee 's/.*(^| *)(sql(-[^:]+)?).*/\2/'
-}
-
-data-build-sql() {
-  dataSQLCheckRunning "$@" > /dev/null
-
-  echo -n "Creating schema; "
-  source "${CURR_ENV_FILE}"
-  local SQL_VARIANT=$(dataSqlGetSqlVariant)
-  local SCHEMA_FILES SCHEMA_FILE_COUNT
-  findDataFiles SCHEMA_FILES SCHEMA_FILE_COUNT "$SQL_VARIANT" "schema"
-  echo "Loading $SCHEMA_FILE_COUNT schema files..."
-  cat $SCHEMA_FILES | services-connect sql
-  echo "Memorializing schema definations..."
-  local SCHEMA_HASH=$(cat $SCHEMA_FILES | shasum -a 256 | sed -Ee 's/ *- *$//')
-  local SCHEMA_VER_SPEC=()
-  local PACKAGE_ROOT
-  for PACKAGE_ROOT in $SCHEMA_FILES; do
-    # TODO: this breaks if 'data' appears twice in the path. We want a reluctant match, but sed doesn't support it. I guess flip to Perl?
-    PACKAGE_ROOT=$(echo "$PACKAGE_ROOT" | sed -Ee 's|/data/.+||')
-    local PACK_DEF=
-    PACK_DEF=$(cat "${PACKAGE_ROOT}/package.json")
-    local PACK_NAME=
-    PACK_NAME=$(echo "$PACK_DEF" | jq --raw-output '.name' | tr -d "'")
-    if ! echo "${SCHEMA_VER_SPEC[@]:-}" | grep -q "$PACK_NAME"; then
-      local PACK_VER=$(echo "$PACK_DEF" | jq --raw-output '.version' | tr -d "'")
-      SCHEMA_VER_SPEC+=("${PACK_NAME}:${PACK_VER}")
-    fi
-  done
-  SCHEMA_VER_SPEC=$(echo "${SCHEMA_VER_SPEC[@]}" | sort)
-  echo "INSERT INTO catalystdb (schema_hash, version_spec) VALUES('$SCHEMA_HASH', '${SCHEMA_VER_SPEC[@]}')" | services-connect sql
-}
-
-data-dump-sql() {
-  dataSQLCheckRunning "$@" > /dev/null
-
-  local DATE_FMT='%Y-%m-%d %H:%M:%S %z'
-  local MAIN=$(cat <<'EOF'
-    if runServiceCtrlScript --no-env $SERV_SCRIPT dump-check 2> /dev/null; then
-      if [[ -n "$SERV_SCRIPTS_COOKIE" ]]; then
-        echoerrandexit "Multilpe dump providers found; try specifying service process."
-      fi
-      SERV_SCRIPTS_COOKIE='found'
-      if [[ -n "$OUT_FILE" ]]; then
-        mkdir -p "$(dirname "${OUT_FILE}")"
-        echo "-- start $(date +'%Y-%m-%d %H:%M:%S %z')" > "${OUT_FILE}"
-        runServiceCtrlScript $SERV_SCRIPT dump >> "${OUT_FILE}"
-        echo "-- end $(date +'%Y-%m-%d %H:%M:%S %z')" >> "${OUT_FILE}"
-      else
-        echo "-- start $(date +"${DATE_FMT}")"
-        runServiceCtrlScript $SERV_SCRIPT dump
-        echo "-- end $(date +"${DATE_FMT}")"
-      fi
-    fi
-EOF
-)
-  # After we've tried to connect with each process, check if anything worked
-  local ALWAYS_RUN=$(cat <<'EOF'
-    if (( $SERV_SCRIPT_COUNT == ( $SERV_SCRIPT_INDEX + 1 ) )) && [[ -z "$SERV_SCRIPTS_COOKIE" ]]; then
-      echoerrandexit "${PROCESS_NAME}' does not support data dumps."
-    fi
-EOF
-)
-
-  runtimeServiceRunner "$MAIN" "$ALWAYS_RUN" sql
-}
-
-data-load-sql() {
-  dataSQLCheckRunning "$@" > /dev/null
-
-  if [[ ! -d "${BASE_DIR}/data/sql/${SET_NAME}" ]]; then
-    echoerrandexit "No such set '$SET_NAME' found."
-  fi
-
-  local DATA_FILES DATA_FILES_COUNT
-  findDataFiles DATA_FILES DATA_FILES_COUNT "sql" "$SET_NAME"
-  echo "Loading ${DATA_FILES_COUNT} data files..."
-  cat $DATA_FILES | services-connect sql
-}
-
-data-rebuild-sql() {
-  dataSQLCheckRunning "$@" > /dev/null
-  # TODO: break out the file search and do it first to avoid dropping when the build is sure to fail.
-  data-reset-sql --no-check
-  data-build-sql --no-check
-}
-
-data-reset-sql() {
-  dataSQLCheckRunning "$@" > /dev/null
-
-  echo "Dropping..."
-  # https://stackoverflow.com/a/36023359/929494
-  cat <<'EOF' | services-connect sql > /dev/null
-DO $$ DECLARE
-    r RECORD;
-BEGIN
-    -- if the schema you operate on is not "current", you will want to
-    -- replace current_schema() in query with 'schematodeletetablesfrom'
-    -- *and* update the generate 'DROP...' accordingly.
-    FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = current_schema()) LOOP
-        EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(r.tablename) || ' CASCADE';
-    END LOOP;
-END $$;
-EOF
-  # for MySQL
-  # relative to dist
-  # colorerr "cat '$(dirname $(real_path ${BASH_SOURCE[0]}))/../tools/data/drop_all.sql' | services-connect sql"
-}
-
-data-test-sql() {
-  echo "Checking for SQL unit test files..."
-  source "${CURR_ENV_FILE}"
-  local SQL_VARIANT=$(dataSqlGetSqlVariant)
-  local TEST_FILES TEST_FILE_COUNT
-  findDataFiles TEST_FILES TEST_FILE_COUNT "$SQL_VARIANT" "test"
-  if (( $TEST_FILE_COUNT > 0 )); then
-    echo "Found $TEST_FILE_COUNT unit test files."
-    if [[ -z "$SKIP_REBUILD" ]]; then
-      data-rebuild-sql
-    else
-      echo "Skipping RDB rebuild."
-    fi
-    dataSQLCheckRunning "$@" > /dev/null
-    echo "Starting tests..."
-    cat $TEST_FILES | services-connect sql
-    echo "Testing complete!"
-  else
-    echo "No SQL unit tests found."
-  fi
-}
-
-requirements-data() {
-  requireEnvironment
-}
-
-data-build() {
-  local MAIN='data-build-${IFACE}'
-  dataRunner "$@"
-}
-
-data-dump() {
-  local TMP
-  TMP=$(setSimpleOptions OUTPUT_SET_NAME= FORCE -- "$@") \
-    || ( contextHelp; echoerrandexit "Bad options."; )
-  eval "$TMP"
-
-  local MAIN=$(cat <<'EOF'
-    local OUT_FILE
-    if [[ -n "${OUTPUT_SET_NAME}" ]]; then
-      OUT_FILE="${BASE_DIR}/data/${IFACE}/${OUTPUT_SET_NAME}/all.sql"
-      if [[ -d "$(dirname "${OUT_FILE}")" ]] && [[ -z "$FORCE" ]]; then
-        if [[ -f "$OUT_FILE" ]]; then
-          function clearPrev() { rm "$OUT_FILE"; }
-          function cancelDump() { echo "Bailing out..."; exit 0; }
-          yes-no "Found existing dump for '$OUTPUT_SET_NAME'. Would you like to replace? (y\N) " \
-            N \
-            clearPrev \
-            cancelDump
-        else
-          echoerrandexit "It appears there is an existing, manually created '${OUTPUT_SET_NAME}' data set. You must remove it manually to re-use that name."
-        fi
-      fi
-    fi
-    data-dump-${IFACE}
-EOF
-)
-  dataRunner "$@"
-}
-
-data-load() {
-  if (( $# != 1 )); then
-    contextHelp
-    echoerrandexit "Must specify exactly one data set name."
-  fi
-
-  local MAIN='data-load-${IFACE}'
-  # notice 'load' is a little different
-  local SET_NAME="${1}"
-  dataRunner
-}
-
-data-reset() {
-  local MAIN='data-reset-${IFACE}'
-  dataRunner "$@"
-}
-
-data-rebuild() {
-  local MAIN='data-rebuild-${IFACE}'
-  dataRunner "$@"
-}
-
-data-test() {
-  local TMP
-  TMP=$(setSimpleOptions SKIP_REBUILD -- "$@") \
-    || ( contextHelp; echoerrandexit "Bad options."; )
-  eval "$TMP"
-
-  local MAIN='data-test-${IFACE}'
-  dataRunner "$@"
-}
-
-dataRunner() {
-  local SERVICE_STATUSES
-  SERVICE_STATUSES=`services-list -sp`
-
-  local IFACES="$@"
-  if (( $# == 0 )); then
-    IFACES=$(echo "$PACKAGE" | jq --raw-output '.catalyst.requires | .[] | .iface | capture("(?<iface>sql)") | .iface' | tr -d '"')
-  fi
-
-  local IFACE
-  for IFACE in $IFACES; do
-    # Check all the parameters are good.
-    if [[ "$IFACE" == *'-'* ]]; then
-      help-data "liq "
-      echoerrandexit "The 'data' commands work with primary interfaces. See help above"
-    else
-      local SERV
-      SERV="$(echo "$SERVICE_STATUSES" | grep -E "^${IFACE}(.[^: ]+)?:")" || \
-        echoerrandexit "Could not find a service to handle interface class '${IFACE}'. Check package configuration and command typos."
-      local SERV_SCRIPT NOT_RUNNING SERV_STATUS
-      local SOME_RUNNING=false
-      while read SERV_STATUS; do
-        SERV_SCRIPT="$(echo "${SERV_STATUS}" | cut -d':' -f1)"
-        echo "${SERV_STATUS}" | cut -d':' -f2 | grep -q 'running' && SOME_RUNNING=true || \
-          NOT_RUNNING="${NOT_RUNNING} ${SERV_SCRIPT}"
-      done <<< "${SERV}"
-      if [[ -n "${NOT_RUNNING}" ]]; then
-        if [[ "$SOME_RUNNING" == true ]]; then
-          echoerrandexit "Some necessary processes providing the '${IFACE}' service are not running. Try:\nliq services start${NOT_RUNNING}"
-        else
-          echoerrandexit "The '${IFACE}' service is not available. Try:\nliq services start ${IFACE}"
-        fi
-      fi
-    fi
-  done
-
-  if [[ -z "$IFACES" ]]; then
-    source "${CURR_ENV_FILE}"
-    IFACES=$(echo ${CURR_ENV_SERVICES[@]:-} | tr " " "\n" | sed -Ee 's/^(sql).+/\1/')
-  fi
-
-  for IFACE in $IFACES; do
-    eval "$MAIN"
-  done
-}
-findDataFiles() {
-  local _FILES_VAR="$1"
-  local _COUNT_VAR="$2"
-  local DATA_IFACE="$3"
-  local FILE_TYPE="$4"
-  local _FILES
-
-  local CAT_PACKAGE FIND_RESULTS
-  # search Catalyst projects in dependencies (i.e., ./node_modules)
-  for CAT_PACKAGE in `getCatPackagePaths`; do
-    if [[ -d "${CAT_PACKAGE}/data/${DATA_IFACE}/${FILE_TYPE}" ]]; then
-      FIND_RESULTS="$(find "${CAT_PACKAGE}/data/${DATA_IFACE}/${FILE_TYPE}" -type f)"
-      list-add-item _FILES "$FIND_RESULTS"
-    fi
-  done
-  # search our own project
-  if [[ -d "${BASE_DIR}/data/${DATA_IFACE}/${FILE_TYPE}" ]]; then
-    FIND_RESULTS="$(find "${BASE_DIR}/data/${DATA_IFACE}/${FILE_TYPE}" -type f)"
-    list-add-item _FILES "$FIND_RESULTS"
-  fi
-
-  if [[ -z "$_FILES" ]]; then
-    echoerrandexit "\nDid not find any ${FILE_TYPE} files for '${DATA_IFACE}'."
-  else
-    # TODO: should verify all the files have the required naming convention.
-    # sort the files so dependency orders are respected
-    # 1) awk will pull off the last 'field'=='the file name', so
-    # 2) sort will then sort against the filename, and
-    # 3) sed removes the leading filename getting us back to a list of sorted files.
-    _FILES=`echo "${_FILES}" | awk -F/ '{ print $NF, $0 }' | sort -n -k1 | sed -Ee 's/[^ ]+ //'`
-    eval "$_FILES_VAR=\"${_FILES}\""
-  fi
-
-  eval "$_COUNT_VAR"=$(echo "$_FILES" | wc -l | tr -d ' ')
-}
-help-data() {
-  local PREFIX="${1:-}"
-
-  local SUMMARY='Manges data sets and schemas.'
-
-  handleSummary "${PREFIX}${cyan_u}data${reset} <action>: ${SUMMARY}" || cat <<EOF
-${PREFIX}${cyan_u}data${reset} <action>:
-$(echo "${SUMMARY} The data commands deal exclusively with primary interface classes (iface). Thus even if the current project requires 'sql-mysql', the data commands will work and require an 'iface' designation of 'sql'." | fold -sw 80 | indent)
-$(_help-actions-list data build dump load rebuild reset test | indent)
-EOF
-}
-
-help-data-build() {
-  cat <<EOF | _help-func-summary build "[<iface>...]"
-Loads the project schema into all or each named data service.
-EOF
-}
-
-help-data-dump() {
-  cat <<EOF | _help-func-summary dump "[--output-set-name|-o <set name>] <iface>"
-Dumps the data from all or the named interface. If '--output-set-name' is speciifed, will put data in './data/<iface>/<set name>/' or output to stdout if no output is specified. This is a 'data only' dump.
-EOF
-}
-
-help-data-load() {
-  cat <<EOF | _help-func-summary load "<set name>"
-Loads the named data set into the project data services. Any existing data will be cleared.
-EOF
-}
-
-help-data-reset() {
-  cat <<EOF | _help-func-summary reset "[<iface>...]"
-Resets all or each named data service, clearing all schema definitions.
-EOF
-}
-
-help-data-rebuild() {
-  cat <<EOF | _help-func-summary rebuild
-Effectively resets and builds all or each named data service.
-EOF
-}
-
-help-data-test() {
-  cat <<EOF | _help-func-summary test
-Runs data tests.
-EOF
-}
-
 requirements-environments() {
   requireCatalystfile
   requirePackage
@@ -2758,23 +2419,81 @@ EOF
 }
 meta-lib-setup-liq-db() {
   # TODO: check LIQ_PLAYGROUND is set
-  createDir() {
+  create-dir() {
     local DIR="${1}"
     echo -n "Creating Liquid Dev DB ('${DIR}')... "
     mkdir -p "$DIR" \
       || (echo "${red}failed${reset}"; echoerrandexit "Error creating Liquid Development DB (${DIR})\nSee above for further details.")
     echo "${green}success${reset}"
   }
-  createDir "$LIQ_DB"
-  createDir "$LIQ_ENV_DB"
-  createDir "$LIQ_WORK_DB"
-  createDir "$LIQ_ENV_LOGS"
-  createDir "$LIQ_PLAYGROUND"
+  create-dir "$LIQ_DB"
+  create-dir "$LIQ_ENV_DB"
+  create-dir "$LIQ_WORK_DB"
+  create-dir "$LIQ_EXTS_DB"
+  create-dir "$LIQ_ENV_LOGS"
+  create-dir "$LIQ_PLAYGROUND"
   echo -n "Initializing Liquid Dev settings... "
   cat <<EOF > "${LIQ_DB}/settings.sh" || (echo "${red}failed${reset}"; echoerrandexit "Error creating Liquid Development settings.")
 LIQ_PLAYGROUND="$LIQ_PLAYGROUND"
 EOF
   echo "${green}success${reset}"
+}
+meta-exts() {
+  local ACTION="${1}"; shift
+
+  if [[ $(type -t "meta-exts-${ACTION}" || echo '') == 'function' ]]; then
+    meta-exts-${ACTION} "$@"
+  else
+    exitUnknownHelpTopic "$ACTION" meta exts
+  fi
+}
+
+meta-exts-install() {
+  eval "$(setSimpleOptions LOCAL -- "$@")" \
+    || { contextHelp; echoerrandexit "Bad options."; }
+
+  local PKG="${1}"
+  PKG="${PKG/@/}"
+  cd "${LIQ_EXTS_DB}"
+
+  [[ -f 'exts.sh' ]] || touch './exts.sh'
+
+  if [[ -n "${LOCAL}" ]]; then
+    npm i "${LIQ_PLAYGROUND}/${PKG}"
+  else
+    npm i "@${PKG}"
+  fi
+  local PKG_DIR
+  PKG_DIR="$(npm explore @${PKG} -- pwd)"
+  echo "source '${PKG_DIR}/dist/ext.sh'" >> './exts.sh'
+  echo "source '${PKG_DIR}/dist/comp.sh'" >> './comps.sh'
+}
+
+meta-exts-list() {
+  :
+}
+# TODO: instead, create simple spec; generate 'completion' options and 'docs' from spec.
+
+help-meta-exts() {
+  local SUMMARY="Manage liq extensions."
+
+  handleSummary "${cyan_u}exts${reset} <action>: ${SUMMARY}" || cat <<EOF
+${cyan_u}meta exts${reset} <action>:
+  ${SUMMARY}
+$(_help-actions-list meta-exts install list | indent)
+EOF
+}
+
+help-meta-exts-install() {
+  cat <<EOF | _help-func-summary install
+Installs the named extension package.
+EOF
+}
+
+help-meta-exts-list() {
+  cat <<EOF | _help-func-summary list
+Lists locally installed extensions.
+EOF
 }
 meta-keys() {
   local ACTION="${1}"; shift
@@ -3167,7 +2886,7 @@ orgs-audits-process() {
 orgs-audits-start() {
   eval "$(setSimpleOptions SCOPE= NO_CONFIRM:C -- "$@")"
 
-  local SCOPE TIME OWNER AUDIT_PATH FILES
+  local TIME OWNER AUDIT_PATH FILES
   policy-audit-start-prep "$@"
   orgs-audits-setup-work
   policy-audit-initialize-records
@@ -4125,7 +3844,22 @@ projects-create() {
   local CREATE_OPTS="--remote-name upstream"
   if [[ -z "$PUBLIC" ]]; then CREATE_OPTS="${CREATE_OPTS} --private"; fi
   hub create --remote-name upstream ${CREATE_OPTS} -d "$DESCRIPTION" "${ORG_GITHUB_NAME}/${__PROJ_NAME}"
-  git push --all upstream
+  local RETRY=4
+  git push --all upstream || { echowarn "Upstream repo not yet available.";
+    while (( $RETRY > 0 )); do
+      echo "Waiting for upstream repo to stabilize..."
+      local COUNTDOWN=3
+      while (( $COUNTDOWN > 0 )); do
+        echo -n "${COUNTDOWN}..."
+        COUNTDOWN=$(( $COUNTDOWN - 1 ))
+      done
+      if (( $RETRY == 1 )); then
+        git push --all upstream || echoerr "Could not push to upstream. Manually update."
+      else
+        { git push --all upstream && RETRY=0; } || RETRY=$(( $RETRY - 1 ))
+      fi
+    done;
+  }
 
   if [[ -z "$NO_FORK" ]]; then
     echo "Creating fork..."
@@ -5217,7 +4951,7 @@ ${PREFIX}${cyan_u}services${reset} :
 $(echo "${SUMMARY}
 
 Here, 'service spec' is either a service interface class or <service iface>.<service name>. A service may be selected by it's major type, so 'sql' woud select environment services 'sql' and 'sql-mysql' (etc.). Thus, 'liq services connect sql' may be used to connect to both MySQL, Postgres, etc. DBs." | fold -sw 82 | indent)
-$(_help-actions-list services connect err-log list log start stop | indent)
+$(_help-actions-list services connect err-log list log restart start stop | indent)
 EOF
 }
 
@@ -5242,6 +4976,12 @@ EOF
 help-services-log() {
   cat <<EOF | _help-func-summary log "[<service spec>...]"
 Displays logs for all or named services for the current environment.
+EOF
+}
+
+help-services-restart() {
+  cat <<EOF | _help-func-summary restart "[<service spec>...]"
+Effectively starts and stops the service. Restart may take advantage of specific 'restart' capabilities in the underlying service which, when available, are presumable more efficient and quicker than a stop-start.
 EOF
 }
 
@@ -6680,6 +6420,7 @@ work-links-remove() {
   work-links-lib-working-set
 
   for TARGET_PROJ in $INVOLVED_PROJECTS; do
+    cd "${LIQ_PLAYGROUND}/${TARGET_PROJ/@/}"
     if { yalc check || true; } | grep -q "${SOURCE_PROJ}"; then
       yalc remove "@${SOURCE_PROJ/@/}" # TODO: regularize reference style
       if [[ -z "${NO_UPDATE}" ]]; then
@@ -6746,8 +6487,10 @@ while (( $# > 0 )) && [[ $1 == *"="* ]]; do
   shift
 done
 
-# see note in lib/utils.sh:colorerr re. SAW_ERROR
-# local SAW_ERROR=''
+if [[ -f "${LIQ_EXTS_DB}/exts.sh" ]]; then
+  source "${LIQ_EXTS_DB}/exts.sh"
+fi
+
 if [[ $# -lt 1 ]]; then
   help --summary-only
   echoerr "Invalid invocation. See help above."
