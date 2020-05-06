@@ -4394,11 +4394,10 @@ projectClone() {
 
 # Returns true if the current working project has the dependency as either dep, dev, or peer.
 projects-lib-has-any-dep() {
-  local DEP="${1}"
+  local PROJ="${1}"
+  local DEP="${2}"
 
-  requirePackage
-
-  echo "$PACKAGE" | jq -r '.dependencies + .devDependencies + .peerDependencies | keys' | grep -qE '"@?'${DEP}'"'
+  cat "${LIQ_PLAYGROUND}/${PROJ/@/}/package.json" | jq -r '.dependencies + .devDependencies + .peerDependencies | keys' | grep -qE '"@?'${DEP}'"'
 }
 
 projectHubWhoami() {
@@ -5341,6 +5340,7 @@ work-ignore-rest() {
 }
 
 work-involve() {
+  eval "$(setSimpleOptions NO_LINK:L -- "$@")"
   local PROJECT_NAME WORK_DESC WORK_STARTED WORK_INITIATOR INVOLVED_PROJECTS
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "There is no active unit of work to involve. Try:\nliq work resume"
@@ -5373,21 +5373,29 @@ work-involve() {
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
 
+  local OTHER_PROJECTS="${INVOLVED_PROJECTS}" # save this for use in linking later...
   list-add-item INVOLVED_PROJECTS "@${PROJECT_NAME}" # do include the '@' here for display
   workUpdateWorkDb
 
+  # Now, let's see about automatic linking!
   local PRIMARY_PROJECT=$INVOLVED_PROJECTS
-  if [[ "$PRIMARY_PROJECT" != "$PROJECT_NAME" ]]; then
-    local NEW_PACKAGE_FILE
-    while read NEW_PACKAGE_FILE; do
-      local NEW_PACKAGE_NAME
-      NEW_PACKAGE_NAME=$(cat "$NEW_PACKAGE_FILE" | jq --raw-output '.name | @sh' | tr -d "'")
-      if echo "$PACKAGE" | jq -e ".dependencies and ((.dependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\"))) or (.devDependencies and (.devDependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\")))" > /dev/null; then
-        :
-        # Currently disabled
-        # projects-link "${PROJECT_NAME}:${NEW_PACKAGE_NAME}"
+  # if this is the first/primary project, no need to worry about linking
+  if [[ "$PRIMARY_PROJECT" != "$PROJECT_NAME" ]] && [[ -z "${NO_LINK}" ]]; then
+    # first, link this project to other projects
+    local LINKS
+    work-links-add --set-links LINKS "${PROJECT_NAME}"
+    # now link other, already involved projects to this project
+    cd "${LIQ_PLAYGROUND}/${PROJECT_NAME}"
+    local SOURCE_PROJ
+    for SOURCE_PROJ in $OTHER_PROJECTS; do
+      if projects-lib-has-any-dep "${PROJECT_NAME}" "${SOURCE_PROJ}"; then
+        if [[ -n "$(list-get-index LINKS "${SOURCE_PROJ}")" ]]; then
+          echowarn "Project '${SOURCE_PROJ}' linked to '${PROJECT_NAME}', but '${PROJECT_NAME}' also depends on '${SOURCE_PROJ}'; skipping the link back-link to avoid circular reference."
+        else
+          work-links-add --projects="${PROJECT_NAME}" "${SOURCE_PROJ}"
+        fi
       fi
-    done < <(find "${LIQ_PLAYGROUND}/${PROJECT_NAME}" -name "package.json" -not -path "*node_modules/*")
+    done
   fi
 }
 
@@ -6034,8 +6042,8 @@ EOF
 }
 
 help-work-involve() {
-  cat <<EOF | _help-func-summary involve "[-L|--no-link] [<repository name>]"
-Involves the current or named repository in the current unit of work. When involved, any projects in the newly involved project will be linked to the primary project in the unit of work. The '--no-link' option will suppress this behavior.
+  cat <<EOF | _help-func-summary involve "[--no-link|-L] [<repository name>]"
+Involves the current or named repository in the current unit of work. The newly involved project will be linked to other involved projects with a dependincy, and vice-a-versa, unless this would result in a circular reference in which case the 'back link' (from the prior involved project to the newly added project) is skipped and a warning is given. The '--no-link' option will suppress the linking behavior.
 EOF
 }
 
@@ -6406,10 +6414,11 @@ work-links() {
   fi
 }
 
-# see liq help work links add
+# See 'liq help work links add'. Also supports the internal option '--set-links <var name>' which will set the value of the indicataed variable with a lost of the packages linked.
 work-links-add() {
-  eval "$(setSimpleOptions IMPORT PROJECTS= FORCE: -- "$@")"
+  eval "$(setSimpleOptions IMPORT PROJECTS= FORCE: SET_LINKS:= -- "$@")"
   local SOURCE_PROJ="${1}"
+  local LINKS_MADE
 
   local INVOLVED_PROJECTS TARGET_PROJ
   work-links-lib-working-set # sets PROJECTS
@@ -6434,13 +6443,18 @@ work-links-add() {
   for TARGET_PROJ in $PROJECTS; do
     cd "${LIQ_PLAYGROUND}/${TARGET_PROJ/@/}"
     echo -n "Checking '${TARGET_PROJ}'... "
-    if [[ -n "${FORCE}" ]] || projects-lib-has-any-dep "${SOURCE_PROJ}"; then
+    if [[ -n "${FORCE}" ]] || projects-lib-has-any-dep "${TARGET_PROJ/@/}" "${SOURCE_PROJ}"; then
       echo "linking..."
       yalc add "@${SOURCE_PROJ/@/}" # TODO: regularize reference style
+      list-add-item LINKS_MADE "${TARGET_PROJ}"
     else
       echo "skipping (no dependency)."
     fi
   done
+
+  if [[ -n "${SET_LINKS}" ]]; then
+    eval "${SET_LINKS}=\"${LINKS_MADE}\""
+  fi
 
   echo "Successfully linked '${SOURCE_PROJ}'."
 }
@@ -6508,10 +6522,8 @@ EOF
 }
 
 help-work-links-list() {
-  cat <<EOF | _help-func-summary list "[--project|-p <target proj>]"
-List all the links in the current unit of work.
-
-If '--project' is specified, then only links to that project are listed.
+  cat <<EOF | _help-func-summary list "[--projects|-p <target proj>...]"
+List all the for each each project in the currrent unit of work or, if specified, the '--projects' option (a (as a space or comma separated list).
 EOF
 }
 

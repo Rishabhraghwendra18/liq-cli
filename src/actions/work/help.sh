@@ -34,8 +34,8 @@ EOF
 }
 
 help-work-involve() {
-  cat <<EOF | _help-func-summary involve "[-L|--no-link] [<repository name>]"
-Involves the current or named repository in the current unit of work. When involved, any projects in the newly involved project will be linked to the primary project in the unit of work. The '--no-link' option will suppress this behavior.
+  cat <<EOF | _help-func-summary involve "[--no-link|-L] [<repository name>]"
+Involves the current or named repository in the current unit of work. The newly involved project will be linked to other involved projects with a dependincy, and vice-a-versa, unless this would result in a circular reference in which case the 'back link' (from the prior involved project to the newly added project) is skipped and a warning is given. The '--no-link' option will suppress the linking behavior.
 EOF
 }
 

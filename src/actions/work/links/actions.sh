@@ -8,10 +8,11 @@ work-links() {
   fi
 }
 
-# see liq help work links add
+# See 'liq help work links add'. Also supports the internal option '--set-links <var name>' which will set the value of the indicataed variable with a lost of the packages linked.
 work-links-add() {
-  eval "$(setSimpleOptions IMPORT PROJECTS= FORCE: -- "$@")"
+  eval "$(setSimpleOptions IMPORT PROJECTS= FORCE: SET_LINKS:= -- "$@")"
   local SOURCE_PROJ="${1}"
+  local LINKS_MADE
 
   local INVOLVED_PROJECTS TARGET_PROJ
   work-links-lib-working-set # sets PROJECTS
@@ -36,13 +37,18 @@ work-links-add() {
   for TARGET_PROJ in $PROJECTS; do
     cd "${LIQ_PLAYGROUND}/${TARGET_PROJ/@/}"
     echo -n "Checking '${TARGET_PROJ}'... "
-    if [[ -n "${FORCE}" ]] || projects-lib-has-any-dep "${SOURCE_PROJ}"; then
+    if [[ -n "${FORCE}" ]] || projects-lib-has-any-dep "${TARGET_PROJ/@/}" "${SOURCE_PROJ}"; then
       echo "linking..."
       yalc add "@${SOURCE_PROJ/@/}" # TODO: regularize reference style
+      list-add-item LINKS_MADE "${TARGET_PROJ}"
     else
       echo "skipping (no dependency)."
     fi
   done
+
+  if [[ -n "${SET_LINKS}" ]]; then
+    eval "${SET_LINKS}=\"${LINKS_MADE}\""
+  fi
 
   echo "Successfully linked '${SOURCE_PROJ}'."
 }

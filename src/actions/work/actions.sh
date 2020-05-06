@@ -103,6 +103,7 @@ work-ignore-rest() {
 }
 
 work-involve() {
+  eval "$(setSimpleOptions NO_LINK:L -- "$@")"
   local PROJECT_NAME WORK_DESC WORK_STARTED WORK_INITIATOR INVOLVED_PROJECTS
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "There is no active unit of work to involve. Try:\nliq work resume"
@@ -135,21 +136,29 @@ work-involve() {
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
 
+  local OTHER_PROJECTS="${INVOLVED_PROJECTS}" # save this for use in linking later...
   list-add-item INVOLVED_PROJECTS "@${PROJECT_NAME}" # do include the '@' here for display
   workUpdateWorkDb
 
+  # Now, let's see about automatic linking!
   local PRIMARY_PROJECT=$INVOLVED_PROJECTS
-  if [[ "$PRIMARY_PROJECT" != "$PROJECT_NAME" ]]; then
-    local NEW_PACKAGE_FILE
-    while read NEW_PACKAGE_FILE; do
-      local NEW_PACKAGE_NAME
-      NEW_PACKAGE_NAME=$(cat "$NEW_PACKAGE_FILE" | jq --raw-output '.name | @sh' | tr -d "'")
-      if echo "$PACKAGE" | jq -e ".dependencies and ((.dependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\"))) or (.devDependencies and (.devDependencies | keys | any(. == \"${NEW_PACKAGE_NAME}\")))" > /dev/null; then
-        :
-        # Currently disabled
-        # projects-link "${PROJECT_NAME}:${NEW_PACKAGE_NAME}"
+  # if this is the first/primary project, no need to worry about linking
+  if [[ "$PRIMARY_PROJECT" != "$PROJECT_NAME" ]] && [[ -z "${NO_LINK}" ]]; then
+    # first, link this project to other projects
+    local LINKS
+    work-links-add --set-links LINKS "${PROJECT_NAME}"
+    # now link other, already involved projects to this project
+    cd "${LIQ_PLAYGROUND}/${PROJECT_NAME}"
+    local SOURCE_PROJ
+    for SOURCE_PROJ in $OTHER_PROJECTS; do
+      if projects-lib-has-any-dep "${PROJECT_NAME}" "${SOURCE_PROJ}"; then
+        if [[ -n "$(list-get-index LINKS "${SOURCE_PROJ}")" ]]; then
+          echowarn "Project '${SOURCE_PROJ}' linked to '${PROJECT_NAME}', but '${PROJECT_NAME}' also depends on '${SOURCE_PROJ}'; skipping the link back-link to avoid circular reference."
+        else
+          work-links-add --projects="${PROJECT_NAME}" "${SOURCE_PROJ}"
+        fi
       fi
-    done < <(find "${LIQ_PLAYGROUND}/${PROJECT_NAME}" -name "package.json" -not -path "*node_modules/*")
+    done
   fi
 }
 

@@ -49,11 +49,10 @@ projectClone() {
 
 # Returns true if the current working project has the dependency as either dep, dev, or peer.
 projects-lib-has-any-dep() {
-  local DEP="${1}"
+  local PROJ="${1}"
+  local DEP="${2}"
 
-  requirePackage
-
-  echo "$PACKAGE" | jq -r '.dependencies + .devDependencies + .peerDependencies | keys' | grep -qE '"@?'${DEP}'"'
+  cat "${LIQ_PLAYGROUND}/${PROJ/@/}/package.json" | jq -r '.dependencies + .devDependencies + .peerDependencies | keys' | grep -qE '"@?'${DEP}'"'
 }
 
 projectHubWhoami() {
