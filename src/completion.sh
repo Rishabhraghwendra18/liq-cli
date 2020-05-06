@@ -7,7 +7,7 @@ _liq() {
   # Using 'GROUPS' was causing errors; set by some magic.
   local ACTION_GROUPS="environments meta orgs projects services work"
 
-  local TOKEN COMP_FUNC CUR
+  local TOKEN COMP_FUNC CUR OPTS
   CUR="${COMP_WORDS[COMP_CWORD]}"
   COMP_FUNC='comp'
   local WORD_COUNT=${#COMP_WORDS[@]}
@@ -112,6 +112,12 @@ _liq() {
 
   local WORK_LINKS_ACTIONS="add list remove"
   eval "$(comp-func-builder 'work-links' 'WORK_LINKS')"
+  comp-liq-work-links-remove() {
+    OPTS="$(yalc check || true)"
+    # TODO: code adapated from 'work-links-list'; once we build completion, let's share
+    OPTS="$(echo "$OPTS" | awk -F: '{print $2}' | tr "'" '"' | jq -r '.[]')"
+    std-reply
+  }
 
   for TOKEN in ${COMP_WORDS[@]}; do
     if [[ "$TOKEN" != -* ]] && (( $TOKEN_COUNT + 1 < $WORD_COUNT )); then

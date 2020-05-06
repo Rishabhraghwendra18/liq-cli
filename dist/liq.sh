@@ -4392,6 +4392,15 @@ projectClone() {
   fi
 }
 
+# Returns true if the current working project has the dependency as either dep, dev, or peer.
+projects-lib-has-any-dep() {
+  local DEP="${1}"
+
+  requirePackage
+
+  echo "$PACKAGE" | jq -r '.dependencies + .devDependencies + .peerDependencies | keys' | grep -qE '"@?'${DEP}'"'
+}
+
 projectHubWhoami() {
   local VAR_NAME="${1}"
 
@@ -6399,38 +6408,50 @@ work-links() {
 
 # see liq help work links add
 work-links-add() {
-  eval "$(setSimpleOptions IMPORT PROJECT= -- "$@")"
+  eval "$(setSimpleOptions IMPORT PROJECTS= FORCE: -- "$@")"
   local SOURCE_PROJ="${1}"
 
-  local SOURCE_PROJ_DIR="${LIQ_PLAYGROUND}/${SOURCE_PROJ}"
+  local INVOLVED_PROJECTS TARGET_PROJ
+  work-links-lib-working-set # sets PROJECTS
+
+  # preflight checks
+  for TARGET_PROJ in $PROJECTS; do
+    [[ -d "${LIQ_PLAYGROUND}/${TARGET_PROJ/@/}" ]] || echoerrandexit "No such target project: ${TARGET_PROJ}"
+  done
+
+  # ensure the source project is present
+  local SOURCE_PROJ_DIR="${LIQ_PLAYGROUND}/${SOURCE_PROJ//@/}"
   if ! [[ -d "${SOURCE_PROJ_DIR}" ]]; then
     if [[ -n "${IMPORT}" ]]; then
       projects-import "@${SOURCE_PROJ/@/}" # TODO: regularize reference style
-    elif [[ -z "${REMOVE}" ]]; then
-      echoerrandexit "No such target project '${SOURCE_PROJ}'."
     fi
   fi
+  # publish the source
   cd "${SOURCE_PROJ_DIR}"
   yalc publish
 
-  local INVOLVED_PROJECTS TARGET_PROJ
-  work-links-lib-working-set
-
-  for TARGET_PROJ in $INVOLVED_PROJECTS; do
+  # link to targets
+  for TARGET_PROJ in $PROJECTS; do
     cd "${LIQ_PLAYGROUND}/${TARGET_PROJ/@/}"
-    yalc add "@${SOURCE_PROJ/@/}" # TODO: regularize reference style
+    echo -n "Checking '${TARGET_PROJ}'... "
+    if [[ -n "${FORCE}" ]] || projects-lib-has-any-dep "${SOURCE_PROJ}"; then
+      echo "linking..."
+      yalc add "@${SOURCE_PROJ/@/}" # TODO: regularize reference style
+    else
+      echo "skipping (no dependency)."
+    fi
   done
 
   echo "Successfully linked '${SOURCE_PROJ}'."
 }
 
 work-links-list() {
-  eval "$(setSimpleOptions PROJECT= -- "$@")"
+  eval "$(setSimpleOptions PROJECTS= -- "$@")"
 
   local INVOLVED_PROJECTS TARGET_PROJ
-  work-links-lib-working-set
+  work-links-lib-working-set # sets PROJECTS
 
-  for TARGET_PROJ in $INVOLVED_PROJECTS; do
+  for TARGET_PROJ in $PROJECTS; do
     cd "${LIQ_PLAYGROUND}/${TARGET_PROJ/@/}" # TODO: regularize reference style
     echo -n "${TARGET_PROJ/@/}: " # TODO: regularize reference style
     local YALC_CHECK="$(yalc check || true)"
@@ -6446,13 +6467,13 @@ work-links-list() {
 
 # see liq help work links remove
 work-links-remove() {
-  eval "$(setSimpleOptions NO_UPDATE:U PROJECT= -- "$@")"
+  eval "$(setSimpleOptions NO_UPDATE:U PROJECTS= -- "$@")"
   local SOURCE_PROJ="${1}"
 
   local INVOLVED_PROJECTS TARGET_PROJ
-  work-links-lib-working-set
+  work-links-lib-working-set # sets PROJECTS
 
-  for TARGET_PROJ in $INVOLVED_PROJECTS; do
+  for TARGET_PROJ in $PROJECTS; do
     cd "${LIQ_PLAYGROUND}/${TARGET_PROJ/@/}"
     if { yalc check || true; } | grep -q "${SOURCE_PROJ}"; then
       yalc remove "@${SOURCE_PROJ/@/}" # TODO: regularize reference style
@@ -6477,10 +6498,12 @@ EOF
 }
 
 help-work-links-add() {
-  cat <<EOF | _help-func-summary add "[--import|-i] <source proj> [--project|-p <target proj>]"
-Links the source project to all projects in the current unit of work. The source project must be present in the playground, unless '--import' is specified, in which case it will be imported if not present.
+  cat <<EOF | _help-func-summary add "[--import|-i] [--projects|-p <target proj>...] [--force|-f] <source proj>"
+Links the source project to all projects in the current unit of work or the specified target projects that have a dependency on the source project. The source project must be present in the playground, unless '--import' is specified, in which case it will be imported if not present.
 
-If '--project' is specified, then only that project, which must be in the working set, is linked to the local source project.
+The '--force' option will add the dependency even if the target project is not already dependent. E.g., for use when the work adds the dependency and the source project is also being updated or is newly created.
+
+If '--projects' is specified (as a space or comma separated list), then only those project, which must be in the working set, is linked to the local source project.
 EOF
 }
 
@@ -6493,18 +6516,18 @@ EOF
 }
 
 help-work-links-remove() {
-  cat <<EOF | _help-func-summary remove "[--no-update|-U] [--project|-p <working proj>] <source proj>"
+  cat <<EOF | _help-func-summary remove "[--no-update|-U] [--projects|-p <target proj>...] <source proj>"
 Removes the source project link to all projects in the current unit of work. Exits in error if there are no linkes with the source project. By default, the source project package will be updated after being removed unless '--no-update' is specified.
 
-If '--project' is specified, then only that projecs, which must be in the working set, only that project is de-linked from the source project.
+If '--projects' is specified (as a space or comma separated list), then only those project, which must be in the working set, are de-linked from the source project.
 EOF
 }
 work-links-lib-working-set() {
-  if [[ "${PROJECT}" ]]; then
-    change-working-project # effectively checks for existence
-    INVOLVED_PROJECTS="${PROJECT}"
+  if [[ -n "${PROJECTS}" ]]; then
+    PROJECTS="$(echo "${PROJECTS}" | tr ',' ' ')"
   else
     source "${LIQ_WORK_DB}/curr_work"
+    PROJECTS="${INVOLVED_PROJECTS}"
   fi
 }
 

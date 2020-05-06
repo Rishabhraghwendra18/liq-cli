@@ -10,38 +10,50 @@ work-links() {
 
 # see liq help work links add
 work-links-add() {
-  eval "$(setSimpleOptions IMPORT PROJECT= -- "$@")"
+  eval "$(setSimpleOptions IMPORT PROJECTS= FORCE: -- "$@")"
   local SOURCE_PROJ="${1}"
 
-  local SOURCE_PROJ_DIR="${LIQ_PLAYGROUND}/${SOURCE_PROJ}"
+  local INVOLVED_PROJECTS TARGET_PROJ
+  work-links-lib-working-set # sets PROJECTS
+
+  # preflight checks
+  for TARGET_PROJ in $PROJECTS; do
+    [[ -d "${LIQ_PLAYGROUND}/${TARGET_PROJ/@/}" ]] || echoerrandexit "No such target project: ${TARGET_PROJ}"
+  done
+
+  # ensure the source project is present
+  local SOURCE_PROJ_DIR="${LIQ_PLAYGROUND}/${SOURCE_PROJ//@/}"
   if ! [[ -d "${SOURCE_PROJ_DIR}" ]]; then
     if [[ -n "${IMPORT}" ]]; then
       projects-import "@${SOURCE_PROJ/@/}" # TODO: regularize reference style
-    elif [[ -z "${REMOVE}" ]]; then
-      echoerrandexit "No such target project '${SOURCE_PROJ}'."
     fi
   fi
+  # publish the source
   cd "${SOURCE_PROJ_DIR}"
   yalc publish
 
-  local INVOLVED_PROJECTS TARGET_PROJ
-  work-links-lib-working-set
-
-  for TARGET_PROJ in $INVOLVED_PROJECTS; do
+  # link to targets
+  for TARGET_PROJ in $PROJECTS; do
     cd "${LIQ_PLAYGROUND}/${TARGET_PROJ/@/}"
-    yalc add "@${SOURCE_PROJ/@/}" # TODO: regularize reference style
+    echo -n "Checking '${TARGET_PROJ}'... "
+    if [[ -n "${FORCE}" ]] || projects-lib-has-any-dep "${SOURCE_PROJ}"; then
+      echo "linking..."
+      yalc add "@${SOURCE_PROJ/@/}" # TODO: regularize reference style
+    else
+      echo "skipping (no dependency)."
+    fi
   done
 
   echo "Successfully linked '${SOURCE_PROJ}'."
 }
 
 work-links-list() {
-  eval "$(setSimpleOptions PROJECT= -- "$@")"
+  eval "$(setSimpleOptions PROJECTS= -- "$@")"
 
   local INVOLVED_PROJECTS TARGET_PROJ
-  work-links-lib-working-set
+  work-links-lib-working-set # sets PROJECTS
 
-  for TARGET_PROJ in $INVOLVED_PROJECTS; do
+  for TARGET_PROJ in $PROJECTS; do
     cd "${LIQ_PLAYGROUND}/${TARGET_PROJ/@/}" # TODO: regularize reference style
     echo -n "${TARGET_PROJ/@/}: " # TODO: regularize reference style
     local YALC_CHECK="$(yalc check || true)"
@@ -57,13 +69,13 @@ work-links-list() {
 
 # see liq help work links remove
 work-links-remove() {
-  eval "$(setSimpleOptions NO_UPDATE:U PROJECT= -- "$@")"
+  eval "$(setSimpleOptions NO_UPDATE:U PROJECTS= -- "$@")"
   local SOURCE_PROJ="${1}"
 
   local INVOLVED_PROJECTS TARGET_PROJ
-  work-links-lib-working-set
+  work-links-lib-working-set # sets PROJECTS
 
-  for TARGET_PROJ in $INVOLVED_PROJECTS; do
+  for TARGET_PROJ in $PROJECTS; do
     cd "${LIQ_PLAYGROUND}/${TARGET_PROJ/@/}"
     if { yalc check || true; } | grep -q "${SOURCE_PROJ}"; then
       yalc remove "@${SOURCE_PROJ/@/}" # TODO: regularize reference style
