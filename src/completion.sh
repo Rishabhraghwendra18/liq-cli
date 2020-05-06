@@ -57,6 +57,14 @@ _liq() {
 
   META_EXTS_ACTIONS="install list uninstall"
   eval "$(comp-func-builder 'meta-exts' 'META_EXTS')"
+  comp-liq-meta-exts-uninstall() {
+    # TODO: this is essentially the same logic aas 'liq meta exts list'; change completion to use 'rollup-bash' and share code
+    if [[ -f ${HOME}/.liquid-development/exts/exts.sh ]]; then
+      COMPREPLY=( $(compgen -W "$(cat "${HOME}/.liquid-development/exts/exts.sh" | awk -F/ 'NF { print $(NF-3)"/"$(NF-2) }')" -- ${CUR}) )
+    else
+      return 0
+    fi
+  }
 
   META_KEYS_ACTIONS="create"
   eval "$(comp-func-builder 'meta-keys' 'META_KEYS')"

@@ -2394,6 +2394,7 @@ ${PREFIX}${cyan_u}meta${reset} <action>:
 $(_help-actions-list meta next init bash-config | indent)
 
   ${bold}Sub-resources${reset}:
+    * $( SUMMARY_ONLY=true; help-meta-exts )
     * $( SUMMARY_ONLY=true; help-meta-keys )
 EOF
 }
@@ -2452,25 +2453,51 @@ meta-exts-install() {
   eval "$(setSimpleOptions LOCAL -- "$@")" \
     || { contextHelp; echoerrandexit "Bad options."; }
 
-  local PKG="${1}"
-  PKG="${PKG/@/}"
+  local PKGS="$@"
+  PKGS="${PKGS//@/}"
   cd "${LIQ_EXTS_DB}"
 
   [[ -f 'exts.sh' ]] || touch './exts.sh'
 
   if [[ -n "${LOCAL}" ]]; then
-    npm i "${LIQ_PLAYGROUND}/${PKG}"
+    npm i "${LIQ_PLAYGROUND}/${PKGS}"
   else
-    npm i "@${PKG}"
+    npm i "@${PKGS}"
   fi
-  local PKG_DIR
-  PKG_DIR="$(npm explore @${PKG} -- pwd)"
-  echo "source '${PKG_DIR}/dist/ext.sh'" >> './exts.sh'
-  echo "source '${PKG_DIR}/dist/comp.sh'" >> './comps.sh'
+  local PKG
+  for PKG in ${PKGS//@/}; do
+    local PKG_DIR
+    PKG_DIR="$(npm explore @${PKG} -- pwd)"
+    echo "source '${PKG_DIR}/dist/ext.sh'" >> './exts.sh'
+    echo "source '${PKG_DIR}/dist/comp.sh'" >> './comps.sh'
+  done
 }
 
 meta-exts-list() {
-  cat "${LIQ_EXTS_DB}/exts.sh" | awk -F/ '{ print $(NF-3)"/"$(NF-2) }'
+  ! [[ -f "${LIQ_EXTS_DB}/exts.sh" ]] \
+    || cat "${LIQ_EXTS_DB}/exts.sh" | awk -F/ 'NF { print $(NF-3)"/"$(NF-2) }'
+}
+
+meta-exts-uninstall() {
+  local PKGS="$@"
+  PKGS="${PKGS//@/}"
+  cd "${LIQ_EXTS_DB}"
+
+  [[ -f 'exts.sh' ]] || touch './exts.sh'
+
+  # npm uninstall "@${PKGS}"
+
+  local NEW_EXTS NEW_COMPS PKG
+  NEW_EXTS="$(cat './exts.sh')"
+  NEW_COMPS="$(cat './comps.sh')"
+  for PKG in ${PKGS//@/}; do
+    NEW_EXTS="$(echo -n "$NEW_EXTS" \
+      | { grep -Ev "${PKG}/dist/ext.sh'\$" || echowarn "No such extension found: '${PKG}'"; })"
+    NEW_COMPS="$(echo -n "$NEW_COMPS" | { grep -Ev "${PKG}/dist/comp.sh'\$" || true; })"
+  done
+
+  echo "$NEW_EXTS" > './exts.sh'
+  echo "$NEW_COMPS" > './comps.sh'
 }
 # TODO: instead, create simple spec; generate 'completion' options and 'docs' from spec.
 
@@ -2480,19 +2507,25 @@ help-meta-exts() {
   handleSummary "${cyan_u}exts${reset} <action>: ${SUMMARY}" || cat <<EOF
 ${cyan_u}meta exts${reset} <action>:
   ${SUMMARY}
-$(_help-actions-list meta-exts install list | indent)
+$(_help-actions-list meta-exts install list uninstall | indent)
 EOF
 }
 
 help-meta-exts-install() {
-  cat <<EOF | _help-func-summary install
-Installs the named extension package.
+  cat <<EOF | _help-func-summary install "[--local] <pkg name[@version]...>"
+Installs the named extension package. The '--local' option will use (aka, link to) the local package rather than installing via npm.
 EOF
 }
 
 help-meta-exts-list() {
   cat <<EOF | _help-func-summary list
 Lists locally installed extensions.
+EOF
+}
+
+help-meta-exts-uninstall() {
+  cat <<EOF | _help-func-summary uninstall "<pkg name...>"
+Removes the installed package. If the package is locally installed, the local package installation is untouched and it is simply no longer used by liq.
 EOF
 }
 meta-keys() {
