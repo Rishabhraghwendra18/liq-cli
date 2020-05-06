@@ -5,7 +5,7 @@
 _liq() {
   local GLOBAL_ACTIONS="help"
   # Using 'GROUPS' was causing errors; set by some magic.
-  local ACTION_GROUPS="data environments meta orgs projects services work"
+  local ACTION_GROUPS="environments meta orgs projects services work"
 
   local TOKEN COMP_FUNC CUR
   CUR="${COMP_WORDS[COMP_CWORD]}"
@@ -20,6 +20,9 @@ _liq() {
   std-reply() {
     COMPREPLY=( $(compgen -W "${OPTS}" -- ${CUR}) )
   }
+
+  # TODO: Should we use LIQ_EXTS_DB here? We're sidestepping the need to 'build' the completion script...
+  source "${HOME}/.liquid-development/exts/comps.sh"
 
   comp-liq() {
     OPTS="${GLOBAL_ACTIONS} ${ACTION_GROUPS}"; std-reply
@@ -43,18 +46,25 @@ _liq() {
     done
   }
 
-  # data group
-  local DATA_ACTIONS="build clear load rebuild reset"
-  eval "$(comp-func-builder 'data' 'DATA')"
-
   # environments group
   local ENVIRONMENTS_ACTIONS="add delete deselect list select set show update"
   eval "$(comp-func-builder 'environments' 'ENVIRONMENTS')"
 
   # meta group
   local META_ACTIONS="bash-config init"
-  local META_GROUPS="keys"
+  local META_GROUPS="exts keys"
   eval "$(comp-func-builder 'meta' 'META')"
+
+  META_EXTS_ACTIONS="install list uninstall"
+  eval "$(comp-func-builder 'meta-exts' 'META_EXTS')"
+  comp-liq-meta-exts-uninstall() {
+    # TODO: this is essentially the same logic aas 'liq meta exts list'; change completion to use 'rollup-bash' and share code
+    if [[ -f ${HOME}/.liquid-development/exts/exts.sh ]]; then
+      COMPREPLY=( $(compgen -W "$(cat "${HOME}/.liquid-development/exts/exts.sh" | awk -F/ 'NF { print $(NF-3)"/"$(NF-2) }')" -- ${CUR}) )
+    else
+      return 0
+    fi
+  }
 
   META_KEYS_ACTIONS="create"
   eval "$(comp-func-builder 'meta-keys' 'META_KEYS')"

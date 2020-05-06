@@ -8,6 +8,7 @@ ${PREFIX}${cyan_u}meta${reset} <action>:
 $(_help-actions-list meta next init bash-config | indent)
 
   ${bold}Sub-resources${reset}:
+    * $( SUMMARY_ONLY=true; help-meta-exts )
     * $( SUMMARY_ONLY=true; help-meta-keys )
 EOF
 }

@@ -64,6 +64,7 @@ work-links-remove() {
   work-links-lib-working-set
 
   for TARGET_PROJ in $INVOLVED_PROJECTS; do
+    cd "${LIQ_PLAYGROUND}/${TARGET_PROJ/@/}"
     if { yalc check || true; } | grep -q "${SOURCE_PROJ}"; then
       yalc remove "@${SOURCE_PROJ/@/}" # TODO: regularize reference style
       if [[ -z "${NO_UPDATE}" ]]; then
