@@ -2470,7 +2470,7 @@ meta-exts-install() {
 }
 
 meta-exts-list() {
-  :
+  cat "${LIQ_EXTS_DB}/exts.sh" | awk -F/ '{ print $(NF-3)"/"$(NF-2) }'
 }
 # TODO: instead, create simple spec; generate 'completion' options and 'docs' from spec.
 

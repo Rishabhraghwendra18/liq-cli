@@ -30,5 +30,5 @@ meta-exts-install() {
 }
 
 meta-exts-list() {
-  :
+  cat "${LIQ_EXTS_DB}/exts.sh" | awk -F/ '{ print $(NF-3)"/"$(NF-2) }'
 }

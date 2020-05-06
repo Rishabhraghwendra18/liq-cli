@@ -52,8 +52,11 @@ _liq() {
 
   # meta group
   local META_ACTIONS="bash-config init"
-  local META_GROUPS="keys"
+  local META_GROUPS="exts keys"
   eval "$(comp-func-builder 'meta' 'META')"
+
+  META_EXTS_ACTIONS="install list uninstall"
+  eval "$(comp-func-builder 'meta-exts' 'META_EXTS')"
 
   META_KEYS_ACTIONS="create"
   eval "$(comp-func-builder 'meta-keys' 'META_KEYS')"
