@@ -3,7 +3,7 @@
 help-meta-keys() {
   local SUMMARY="Manage user keys."
 
-  handleSummary "${cyan_u}keys${reset} <action>: ${SUMMARY}" || cat <<EOF
+  handleSummary "${cyan_u}meta keys${reset} <action>: ${SUMMARY}" || cat <<EOF
 ${cyan_u}meta keys${reset} <action>:
   ${SUMMARY}
 $(_help-actions-list meta-keys create | indent)

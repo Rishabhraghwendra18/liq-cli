@@ -3,7 +3,7 @@
 help-meta-exts() {
   local SUMMARY="Manage liq extensions."
 
-  handleSummary "${cyan_u}exts${reset} <action>: ${SUMMARY}" || cat <<EOF
+  handleSummary "${cyan_u}meta exts${reset} <action>: ${SUMMARY}" || cat <<EOF
 ${cyan_u}meta exts${reset} <action>:
   ${SUMMARY}
 $(_help-actions-list meta-exts install list uninstall | indent)

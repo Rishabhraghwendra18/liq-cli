@@ -1313,7 +1313,7 @@ function log() {
     file=${BASH_SOURCE[$i-1]}
     echo "${now} $(hostname) $0:${lineno} ${msg}"
 }
-CATALYST_COMMAND_GROUPS="help meta orgs orgs-audits orgs-policies orgs-staff projects projects-issues work"
+CATALYST_COMMAND_GROUPS="help meta meta-exts meta-keys orgs orgs-audits orgs-policies orgs-staff projects projects-issues work"
 
 # display help on help
 help-help() {
@@ -1453,7 +1453,7 @@ help-meta() {
    || cat <<EOF
 ${PREFIX}${cyan_u}meta${reset} <action>:
   Manages local liq configurations and non-liq user resources.
-$(_help-actions-list meta next init bash-config | indent)
+$(_help-actions-list meta bash-config init next | indent)
 
   ${bold}Sub-resources${reset}:
     * $( SUMMARY_ONLY=true; help-meta-exts )
@@ -1566,7 +1566,7 @@ meta-exts-uninstall() {
 help-meta-exts() {
   local SUMMARY="Manage liq extensions."
 
-  handleSummary "${cyan_u}exts${reset} <action>: ${SUMMARY}" || cat <<EOF
+  handleSummary "${cyan_u}meta exts${reset} <action>: ${SUMMARY}" || cat <<EOF
 ${cyan_u}meta exts${reset} <action>:
   ${SUMMARY}
 $(_help-actions-list meta-exts install list uninstall | indent)
@@ -1640,7 +1640,7 @@ Expire-Date: ${EXPIRY_YEARS}y
 help-meta-keys() {
   local SUMMARY="Manage user keys."
 
-  handleSummary "${cyan_u}keys${reset} <action>: ${SUMMARY}" || cat <<EOF
+  handleSummary "${cyan_u}meta keys${reset} <action>: ${SUMMARY}" || cat <<EOF
 ${cyan_u}meta keys${reset} <action>:
   ${SUMMARY}
 $(_help-actions-list meta-keys create | indent)

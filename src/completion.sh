@@ -48,7 +48,7 @@ _liq() {
   eval "$(comp-func-builder 'environments' 'ENVIRONMENTS')"
 
   # meta group
-  local META_ACTIONS="bash-config init"
+  local META_ACTIONS="bash-config init next"
   local META_GROUPS="exts keys"
   eval "$(comp-func-builder 'meta' 'META')"
 
