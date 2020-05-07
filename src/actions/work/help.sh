@@ -8,7 +8,7 @@ ${PREFIX}${cyan_u}work${reset} <action>:
 $(echo "${SUMMARY} A 'unit of work' is essentially a set of work branches across all involved projects. The first project involved in a unit of work is considered the primary project, which will effect automated linking when involving other projects.
 
 ${red_b}ALPHA Note:${reset} The 'stop' and 'resume' actions do not currently manage the work branches and only updates the 'current work' pointer." | fold -sw 82 | indent)
-$(_help-actions-list work diff-master edit ignore-rest involve issues link list merge report qa resume save stage start status stop submit sync test | indent)
+$(_help-actions-list work diff-master edit ignore-rest involve issues list merge report qa resume save stage start status stop submit sync test | indent)
 
 $(echo "Subresources:
 * ${yellow}${underline}links${reset}" | indent)
