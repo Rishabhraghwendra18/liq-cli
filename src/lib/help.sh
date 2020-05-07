@@ -1,4 +1,4 @@
-CATALYST_COMMAND_GROUPS="help environments meta orgs orgs-audits orgs-policies orgs-staff projects projects-issues projects-services services work"
+CATALYST_COMMAND_GROUPS="help meta orgs orgs-audits orgs-policies orgs-staff projects projects-issues projects-services work"
 
 # display help on help
 help-help() {
@@ -36,16 +36,15 @@ EOF
       exitUnknownHelpTopic "$1" ""
     fi
     local HELP_SPEC="${1}"; shift
-    local CONTEXT="liq "
     while (( $# > 0)); do
       if ! type -t help-${HELP_SPEC}-${1} | grep -q 'function'; then
         exitUnknownHelpTopic "$1" "$HELP_SPEC"
       fi
       HELP_SPEC="${HELP_SPEC}-${1}"
-      CONTEXT="${CONTEXT}${1} "; shift
+      shift
     done
 
-    help-${HELP_SPEC} "$CONTEXT"
+    help-${HELP_SPEC} "liq "
   fi
 }
 
