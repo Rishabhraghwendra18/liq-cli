@@ -1,3 +1,5 @@
+PROJECTS_GROUPS="issues"
+
 help-projects() {
   local PREFIX="${1:-}"
 
@@ -8,9 +10,7 @@ ${PREFIX}${cyan_u}projects${reset} <action>:
   ${SUMMARY}
 $(_help-actions-list projects build close create import publish qa sync test | indent)
 
-$(echo "Subresources:
-* ${yellow}${underline}issues${reset}
-* ${yellow}${underline}services${reset}" | indent)
+$( { echo "Subresources:"; for PG in $PROJECTS_GROUPS; do echo "* ${yellow}${underline}${PG}${reset}"; done; } | indent)
 EOF
 }
 
