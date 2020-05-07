@@ -31,6 +31,7 @@ work-links-add() {
   fi
   # publish the source
   cd "${SOURCE_PROJ_DIR}"
+  echo "Publishing '${SOURCE_PROJ_DIR}' locally..."
   yalc publish
 
   # link to targets
@@ -49,8 +50,6 @@ work-links-add() {
   if [[ -n "${SET_LINKS}" ]]; then
     eval "${SET_LINKS}=\"${LINKS_MADE}\""
   fi
-
-  echo "Successfully linked '${SOURCE_PROJ}'."
 }
 
 work-links-list() {
