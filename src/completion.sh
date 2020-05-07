@@ -49,7 +49,7 @@ _liq() {
 
   # meta group
   local META_ACTIONS="bash-config init next"
-  local META_GROUPS="exts keys"
+  local META_GROUPS="exts"
   eval "$(comp-func-builder 'meta' 'META')"
 
   META_EXTS_ACTIONS="install list uninstall"
@@ -64,7 +64,7 @@ _liq() {
   }
 
   local ORGS_ACTIONS="affiliate create list show select"
-  local ORGS_GROUPS="audits policies staff"
+  local ORGS_GROUPS="staff"
   eval "$(comp-func-builder 'orgs' 'ORGS')"
   comp-liq-orgs-select() {
     COMPREPLY=( $(compgen -W "$(find ~/.liquid-development/orgs -maxdepth 1 -mindepth 1 -type l -exec basename {} \;)" -- ${CUR}) )
@@ -72,13 +72,6 @@ _liq() {
 
   local ORGS_STAFF_ACTIONS="add list remove org-chart"
   eval "$(comp-func-builder 'orgs-staff' 'ORGS_STAFF')"
-
-  local ORGS_POLICIES_ACTIONS="document update"
-  eval "$(comp-func-builder 'orgs-policies' 'ORGS_POLICIES')"
-
-  local ORGS_AUDITS_ACTIONS="start"
-  eval "$(comp-func-builder 'orgs-audits' 'ORGS_AUDITS')"
-  # TODO: support 'code' and 'network' type completion for start
 
   local PROJECTS_ACTIONS="build close create publish qa sync test"
   local PROJECTS_GROUPS="issues"
