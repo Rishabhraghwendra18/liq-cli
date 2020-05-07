@@ -12,7 +12,7 @@ $(echo "${SUMMARY} An org(anization) is the legal owner of work and all work is 
 * There is a 1-1 correspondance between the liq org, a GitHub organization (or individual), and—if publishing publicly—an npm package scope.
 * The GitHub organization (or individual) must exist prior to creating an org." | fold -sw 80 | indent)
 $(_help-actions-list orgs create close import list show | indent)
-$(_help-sub-group-list ORGS_GROUPS)
+$(_help-sub-group-list orgs ORGS_GROUPS)
 EOF
 }
 

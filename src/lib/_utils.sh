@@ -60,14 +60,15 @@ _help-actions-list() {
 }
 
 _help-sub-group-list() {
-  local GROUPS_VAR="${1}"
+  local PREFIX="${1}"
+  local GROUPS_VAR="${2}"
 
-  if [[ -n "${!GROUP_VAR:-}" ]]; then
+  if [[ -n "${!GROUPS_VAR}" ]]; then
     local SG
-    $( {  echo -e "\n${bold}Sub-groups${reset}:"
-          for SG in ${!GROUP_VAR}; do
-            echo "* $( SUMMARY_ONLY=true; help-meta-exts )"
-          done; } | indent)
+    echo "$( {  echo -e "\n${bold}Sub-groups${reset}:";
+                for SG in ${!GROUPS_VAR}; do
+                  echo "* $( SUMMARY_ONLY=true; help-${PREFIX}-${SG} )";
+                done; } | indent)"
   fi
 }
 

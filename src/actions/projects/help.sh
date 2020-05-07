@@ -9,7 +9,7 @@ help-projects() {
 ${PREFIX}${cyan_u}projects${reset} <action>:
   ${SUMMARY}
 $(_help-actions-list projects build close create import publish qa sync test | indent)
-$(_help-sub-group-list PROJECTS_GROUPS)
+$(_help-sub-group-list projects PROJECTS_GROUPS)
 EOF
 }
 

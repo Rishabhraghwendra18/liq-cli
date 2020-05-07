@@ -1,3 +1,5 @@
+WORK_GROUPS="links"
+
 help-work() {
   local PREFIX="${1:-}"
 
@@ -9,9 +11,7 @@ $(echo "${SUMMARY} A 'unit of work' is essentially a set of work branches across
 
 ${red_b}ALPHA Note:${reset} The 'stop' and 'resume' actions do not currently manage the work branches and only updates the 'current work' pointer." | fold -sw 82 | indent)
 $(_help-actions-list work diff-master edit ignore-rest involve issues list merge report qa resume save stage start status stop submit sync test | indent)
-
-$(echo "Subresources:
-* ${yellow}${underline}links${reset}" | indent)
+$(_help-sub-group-list work WORK_GROUPS)
 EOF
 }
 

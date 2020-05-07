@@ -846,14 +846,15 @@ _help-actions-list() {
 }
 
 _help-sub-group-list() {
-  local GROUPS_VAR="${1}"
+  local PREFIX="${1}"
+  local GROUPS_VAR="${2}"
 
-  if [[ -n "${!GROUP_VAR:-}" ]]; then
+  if [[ -n "${!GROUPS_VAR}" ]]; then
     local SG
-    $( {  echo -e "\n${bold}Sub-groups${reset}:"
-          for SG in ${!GROUP_VAR}; do
-            echo "* $( SUMMARY_ONLY=true; help-meta-exts )"
-          done; } | indent)
+    echo "$( {  echo -e "\n${bold}Sub-groups${reset}:";
+                for SG in ${!GROUPS_VAR}; do
+                  echo "* $( SUMMARY_ONLY=true; help-${PREFIX}-${SG} )";
+                done; } | indent)"
   fi
 }
 
@@ -1325,7 +1326,7 @@ function log() {
     file=${BASH_SOURCE[$i-1]}
     echo "${now} $(hostname) $0:${lineno} ${msg}"
 }
-CATALYST_COMMAND_GROUPS="help meta meta-exts orgs orgs-staff projects projects-issues work"
+CATALYST_COMMAND_GROUPS="help meta meta-exts orgs orgs-staff projects projects-issues work work-links"
 
 # display help on help
 help-help() {
@@ -1468,7 +1469,7 @@ help-meta() {
 ${PREFIX}${cyan_u}meta${reset} <action>:
   Manages local liq configurations and non-liq user resources.
 $(_help-actions-list meta bash-config init next | indent)
-$(_help-sub-group-list META_GROUPS)
+$(_help-sub-group-list meta META_GROUPS)
 EOF
 }
 
@@ -1803,7 +1804,7 @@ $(echo "${SUMMARY} An org(anization) is the legal owner of work and all work is 
 * There is a 1-1 correspondance between the liq org, a GitHub organization (or individual), and—if publishing publicly—an npm package scope.
 * The GitHub organization (or individual) must exist prior to creating an org." | fold -sw 80 | indent)
 $(_help-actions-list orgs create close import list show | indent)
-$(_help-sub-group-list ORGS_GROUPS)
+$(_help-sub-group-list orgs ORGS_GROUPS)
 EOF
 }
 
@@ -2703,7 +2704,7 @@ help-projects() {
 ${PREFIX}${cyan_u}projects${reset} <action>:
   ${SUMMARY}
 $(_help-actions-list projects build close create import publish qa sync test | indent)
-$(_help-sub-group-list PROJECTS_GROUPS)
+$(_help-sub-group-list projects PROJECTS_GROUPS)
 EOF
 }
 
@@ -4003,6 +4004,8 @@ EOF)
     ) # end policy-subshell
   done
 }
+WORK_GROUPS="links"
+
 help-work() {
   local PREFIX="${1:-}"
 
@@ -4014,9 +4017,7 @@ $(echo "${SUMMARY} A 'unit of work' is essentially a set of work branches across
 
 ${red_b}ALPHA Note:${reset} The 'stop' and 'resume' actions do not currently manage the work branches and only updates the 'current work' pointer." | fold -sw 82 | indent)
 $(_help-actions-list work diff-master edit ignore-rest involve issues list merge report qa resume save stage start status stop submit sync test | indent)
-
-$(echo "Subresources:
-* ${yellow}${underline}links${reset}" | indent)
+$(_help-sub-group-list work WORK_GROUPS)
 EOF
 }
 

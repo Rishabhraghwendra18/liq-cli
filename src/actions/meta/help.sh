@@ -8,7 +8,7 @@ help-meta() {
 ${PREFIX}${cyan_u}meta${reset} <action>:
   Manages local liq configurations and non-liq user resources.
 $(_help-actions-list meta bash-config init next | indent)
-$(_help-sub-group-list META_GROUPS)
+$(_help-sub-group-list meta META_GROUPS)
 EOF
 }
 
