@@ -316,15 +316,18 @@ projects-qa() {
 
 # see: liq help projects sync
 projects-sync() {
-  eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M -- "$@")" \
+  eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M PROJECT -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
-  [[ -n "${BASE_DIR:-}" ]] || findBase
-  local PROJ_NAME
-  PROJ_NAME="$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name' | tr -d "'")"
+  if [[ -z "$PROJECT" ]]; then
+    [[ -n "${BASE_DIR:-}" ]] || findBase
+    PROJECT="$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name' | tr -d "'")"
+  fi
+  PROJECT=${PROJECT/@/}
+  local PROJ_DIR="${PROJ_DIR}"
 
   if [[ -z "$NO_WORK_MASTER_MERGE" ]] && [[ -z "$FETCH_ONLY" ]]; then
-    requireCleanRepo "$PROJ_NAME"
+    requireCleanRepo "$PROJECT"
   fi
 
   local CURR_BRANCH REMOTE_COMMITS MASTER_UPDATED
@@ -343,7 +346,7 @@ projects-sync() {
   fi
 
   cleanupMaster() {
-    cd ${BASE_DIR}
+    cd "${LIQ_PLAYGROUND}/${PROJECT}"
     # heh, need this to always be 'true' or 'set -e' complains
     [[ ! -d _master ]] || git worktree remove _master
   }
@@ -351,7 +354,7 @@ projects-sync() {
   REMOTE_COMMITS=$(git rev-list --right-only --count master...upstream/master)
   if (( $REMOTE_COMMITS > 0 )); then
     echo "Syncing with upstream master..."
-    cd "$BASE_DIR"
+    cd "${PROJ_DIR}"
     if [[ "$CURR_BRANCH" != 'master' ]]; then
       (git worktree add _master master \
         || echoerrandexit "Could not create 'master' worktree.") \
@@ -369,7 +372,7 @@ projects-sync() {
     REMOTE_COMMITS=$(git rev-list --right-only --count master...workspace/master)
     if (( $REMOTE_COMMITS > 0 )); then
       echo "Syncing with workspace master..."
-      cd "$BASE_DIR/_master"
+      cd "${PROJ_DIR}/_master"
       git merge remotes/workspace/master || \
           { cleanupMaster; echoerrandexit "Could not merge upstream master to local master."; }
       MASTER_UPDATED=true
@@ -388,14 +391,15 @@ projects-sync() {
          && ( [[ "$MASTER_UPDATED" == true ]] || ! git merge-base --is-ancestor master $CURR_BRANCH ); then
       echo "Merging master updates to work branch..."
       git merge master --no-commit --no-ff || true # might fail with conflicts, and that's OK
-      if git diff-index --quiet HEAD "${BASE_DIR}" && git diff --quiet HEAD "${BASE_DIR}"; then
+      if git diff-index --quiet HEAD "${PROJ_DIR}" \
+         && git diff --quiet HEAD "${PROJ_DIR}"; then
         echowarn "Hmm... expected to see changes from master, but none appeared. It's possible the changes have already been incorporated/recreated without a merge, so this isn't necessarily an issue, but you may want to double check that everything is as expected."
       else
-        if ! git diff-index --quiet HEAD "${BASE_DIR}/dist" || ! git diff --quiet HEAD "${BASE_DIR}/dist"; then # there are changes in ./dist
-          echowarn "Backing out merge updates to './dist'; rebuild to generate current distribution:\nliq projects build $PROJ_NAME"
+        if ! git diff-index --quiet HEAD "${PROJ_DIR}/dist" || ! git diff --quiet HEAD "${PROJ_DIR}/dist"; then # there are changes in ./dist
+          echowarn "Backing out merge updates to './dist'; rebuild to generate current distribution:\nliq projects build $PROJECT"
           git checkout -f HEAD -- ./dist
         fi
-        if git diff --quiet "${BASE_DIR}"; then # no conflicts
+        if git diff --quiet "${PROJ_DIR}"; then # no conflicts
           git add -A
           git commit -m "Merge updates from master to workbranch."
           work-save --backup-only

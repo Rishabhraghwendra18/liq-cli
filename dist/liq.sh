@@ -2530,15 +2530,18 @@ projects-qa() {
 
 # see: liq help projects sync
 projects-sync() {
-  eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M -- "$@")" \
+  eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M PROJECT -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
-  [[ -n "${BASE_DIR:-}" ]] || findBase
-  local PROJ_NAME
-  PROJ_NAME="$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name' | tr -d "'")"
+  if [[ -z "$PROJECT" ]]; then
+    [[ -n "${BASE_DIR:-}" ]] || findBase
+    PROJECT="$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name' | tr -d "'")"
+  fi
+  PROJECT=${PROJECT/@/}
+  local PROJ_DIR="${PROJ_DIR}"
 
   if [[ -z "$NO_WORK_MASTER_MERGE" ]] && [[ -z "$FETCH_ONLY" ]]; then
-    requireCleanRepo "$PROJ_NAME"
+    requireCleanRepo "$PROJECT"
   fi
 
   local CURR_BRANCH REMOTE_COMMITS MASTER_UPDATED
@@ -2557,7 +2560,7 @@ projects-sync() {
   fi
 
   cleanupMaster() {
-    cd ${BASE_DIR}
+    cd "${LIQ_PLAYGROUND}/${PROJECT}"
     # heh, need this to always be 'true' or 'set -e' complains
     [[ ! -d _master ]] || git worktree remove _master
   }
@@ -2565,7 +2568,7 @@ projects-sync() {
   REMOTE_COMMITS=$(git rev-list --right-only --count master...upstream/master)
   if (( $REMOTE_COMMITS > 0 )); then
     echo "Syncing with upstream master..."
-    cd "$BASE_DIR"
+    cd "${PROJ_DIR}"
     if [[ "$CURR_BRANCH" != 'master' ]]; then
       (git worktree add _master master \
         || echoerrandexit "Could not create 'master' worktree.") \
@@ -2583,7 +2586,7 @@ projects-sync() {
     REMOTE_COMMITS=$(git rev-list --right-only --count master...workspace/master)
     if (( $REMOTE_COMMITS > 0 )); then
       echo "Syncing with workspace master..."
-      cd "$BASE_DIR/_master"
+      cd "${PROJ_DIR}/_master"
       git merge remotes/workspace/master || \
           { cleanupMaster; echoerrandexit "Could not merge upstream master to local master."; }
       MASTER_UPDATED=true
@@ -2602,14 +2605,15 @@ projects-sync() {
          && ( [[ "$MASTER_UPDATED" == true ]] || ! git merge-base --is-ancestor master $CURR_BRANCH ); then
       echo "Merging master updates to work branch..."
       git merge master --no-commit --no-ff || true # might fail with conflicts, and that's OK
-      if git diff-index --quiet HEAD "${BASE_DIR}" && git diff --quiet HEAD "${BASE_DIR}"; then
+      if git diff-index --quiet HEAD "${PROJ_DIR}" \
+         && git diff --quiet HEAD "${PROJ_DIR}"; then
         echowarn "Hmm... expected to see changes from master, but none appeared. It's possible the changes have already been incorporated/recreated without a merge, so this isn't necessarily an issue, but you may want to double check that everything is as expected."
       else
-        if ! git diff-index --quiet HEAD "${BASE_DIR}/dist" || ! git diff --quiet HEAD "${BASE_DIR}/dist"; then # there are changes in ./dist
-          echowarn "Backing out merge updates to './dist'; rebuild to generate current distribution:\nliq projects build $PROJ_NAME"
+        if ! git diff-index --quiet HEAD "${PROJ_DIR}/dist" || ! git diff --quiet HEAD "${PROJ_DIR}/dist"; then # there are changes in ./dist
+          echowarn "Backing out merge updates to './dist'; rebuild to generate current distribution:\nliq projects build $PROJECT"
           git checkout -f HEAD -- ./dist
         fi
-        if git diff --quiet "${BASE_DIR}"; then # no conflicts
+        if git diff --quiet "${PROJ_DIR}"; then # no conflicts
           git add -A
           git commit -m "Merge updates from master to workbranch."
           work-save --backup-only
@@ -3252,7 +3256,7 @@ work-close() {
     list-rm-item INVOLVED_PROJECTS "@${PROJECT}" # this cannot be done in a subshell
     workUpdateWorkDb
 		if [[ -z "$NO_SYNC" ]]; then
-			projects-sync
+			projects-sync --project="${PROJECT}"
 		fi
     # Notice we don't close the workspace branch. It may be involved in a PR and, generally, we don't care if the
     # workspace gets a little messy. TODO: reference workspace cleanup method here when we have one.
@@ -3572,8 +3576,6 @@ work-resume() {
     echoerrandexit "No previous unit of work found."
   fi
 
-  requireCleanRepos "${WORK_NAME}"
-
   workSwitchBranches "$WORK_NAME"
   (
     cd "${LIQ_WORK_DB}"
@@ -3806,7 +3808,6 @@ work-stop() {
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     local CURR_WORK=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
     if [[ -z "$KEEP_CHECKOUT" ]]; then
-      requireCleanRepos
       workSwitchBranches master
     else
       source "${LIQ_WORK_DB}/curr_work"
@@ -4308,36 +4309,44 @@ workUserSelectOne() {
 
 workSwitchBranches() {
   local _BRANCH_NAME="$1"
-  ( # the following source is probably OK, expected, and/or redundant in many cases, but just in case, we protect with
-    # a subshell
-    source "${LIQ_WORK_DB}/${_BRANCH_NAME}"
-    local IP
-    for IP in $INVOLVED_PROJECTS; do
-      IP="${IP/@/}"
+  requireCleanRepos
 
-      if [[ ! -d "${LIQ_PLAYGROUND}/${IP}" ]]; then
-        echoerr "Project @${IP} is not locally available. Try:\nliq projects import ${IP}\nliq work resume ${WORK_NAME}"
-        continue
-      fi
+  source "${LIQ_WORK_DB}/curr_work"
+  echo "Resetting playground to 'master'..."
+  local IP
+  for IP in $INVOLVED_PROJECTS; do
+    IP="${IP/@/}"
+    git checkout master
+  done
+  if [[ "$_BRANCH_NAME" != "master" ]]; then
+    ( # we don't wanto overwrite the sourced vars
+      source "${LIQ_WORK_DB}/${_BRANCH_NAME}"
 
-      echo "Updating project '$IP' to branch '${_BRANCH_NAME}'"
-      cd "${LIQ_PLAYGROUND}/${IP}"
-      if git show-ref --verify --quiet "refs/heads/${_BRANCH_NAME}"; then
-        git checkout "${_BRANCH_NAME}" \
-          || echoerrandexit "Error updating '${IP}' to work branch '${_BRANCH_NAME}'. See above for details."
-      else # the branch is not locally availble, but lets check the workspace
-        echo "Work branch not locally available, checking workspace..."
-        git fetch --quiet workspace
-        if git show-ref --verify --quiet "refs/remotes/workspace/${_BRANCH_NAME}"; then
-          git checkout --track "workspace/${_BRANCH_NAME}" \
-            || echoerrandexit "Found branch on workspace, but there were problems checking it out."
-        else
-          echoerrandexit "Could not find the indicated work branch either localaly or on workspace. It is possible the work has been completed or dropped."
-          # TODO: long term, we want to be able to resurrect old branches, and we'd offer that as a 'try' option here.
+      for IP in $INVOLVED_PROJECTS; do
+        if [[ ! -d "${LIQ_PLAYGROUND}/${IP}" ]]; then
+          echoerr "Project @${IP} is not locally available. Try:\nliq projects import ${IP}\nliq work resume ${WORK_NAME}"
+          continue
         fi
-      fi
-    done
-  ) # source-isolating subshel
+
+        echo "Updating project '$IP' to branch '${_BRANCH_NAME}'"
+        cd "${LIQ_PLAYGROUND}/${IP}"
+        if git show-ref --verify --quiet "refs/heads/${_BRANCH_NAME}"; then
+          git checkout "${_BRANCH_NAME}" \
+            || echoerrandexit "Error updating '${IP}' to work branch '${_BRANCH_NAME}'. See above for details."
+        else # the branch is not locally availble, but lets check the workspace
+          echo "Work branch not locally available, checking workspace..."
+          git fetch --quiet workspace
+          if git show-ref --verify --quiet "refs/remotes/workspace/${_BRANCH_NAME}"; then
+            git checkout --track "workspace/${_BRANCH_NAME}" \
+              || echoerrandexit "Found branch on workspace, but there were problems checking it out."
+          else
+            echoerrandexit "Could not find the indicated work branch either localaly or on workspace. It is possible the work has been completed or dropped."
+            # TODO: long term, we want to be able to resurrect old branches, and we'd offer that as a 'try' option here.
+          fi
+        fi
+      done
+    ) # source-isolating subshel
+  fi
 }
 
 workProcessIssues() {
