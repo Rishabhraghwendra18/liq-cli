@@ -1326,7 +1326,7 @@ function log() {
     file=${BASH_SOURCE[$i-1]}
     echo "${now} $(hostname) $0:${lineno} ${msg}"
 }
-CATALYST_COMMAND_GROUPS="help meta meta-exts orgs orgs-staff projects projects-issues work work-links"
+CATALYST_COMMAND_GROUPS="help meta meta-exts orgs orgs-staff projects work work-links"
 
 # display help on help
 help-help() {
@@ -2212,51 +2212,6 @@ orgs-staff-lib-check-parameters() {
   [[ -f "$ORG_STRUCTURE" ]] || echoerrandexit "'ORG_STRUCTURE' defnied, but does not point to a file."
 }
 
-projects-issues() {
-  local ACTION="${1}"; shift
-
-  if [[ $(type -t "projects-issues-${ACTION}" || echo '') == 'function' ]]; then
-    projects-issues-${ACTION} "$@"
-  else
-    exitUnknownHelpTopic "$ACTION" projects issues
-  fi
-}
-
-# see 'liq help org issues show'
-projects-issues-show() {
-  eval "$(setSimpleOptions MINE -- "$@")"
-
-  findBase
-
-  local URL
-  URL=$(cat "$BASE_DIR/package.json" | jq -r '.bugs.url' )
-
-  if [[ -n "$MINE" ]]; then
-    local MY_GITHUB_NAME
-    projectHubWhoami MY_GITHUB_NAME
-    open "${URL}/assigned/${MY_GITHUB_NAME}"
-  else
-    open "${URL}"
-  fi
-}
-help-projects-issues() {
-  local PREFIX="${1:-}"
-
-  local SUMMARY="Manage projects issues."
-
-  handleSummary "${PREFIX}${cyan_u}projects issues${reset} <action>: ${SUMMARY}" || cat <<EOF
-${PREFIX}${cyan_u}projects issues${reset} <action>:
-  ${SUMMARY}
-$(_help-actions-list projects-issues show | indent)
-EOF
-}
-
-help-projects-issues-show() {
-  cat <<EOF | _help-func-summary show "[--mine|-m]"
-Displays the open issues for the current project. With '--mine', will attempt to get the user's GitHub name and show them their own issues.
-EOF
-}
-
 requirements-projects() {
   :
 }
@@ -2693,7 +2648,7 @@ projects-test() {
   TEST_TYPES="$TYPES" NO_DATA_RESET="$NO_DATA_RESET" GO_RUN="$GO_RUN" projectsRunPackageScript test || \
     echoerrandexit "If failure due to non-running services, you can also run only the unit tests with:\nliq projects test --type=unit" $?
 }
-PROJECTS_GROUPS="issues"
+PROJECTS_GROUPS=""
 
 help-projects() {
   local PREFIX="${1:-}"

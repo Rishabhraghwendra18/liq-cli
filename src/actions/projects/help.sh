@@ -1,4 +1,4 @@
-PROJECTS_GROUPS="issues"
+PROJECTS_GROUPS=""
 
 help-projects() {
   local PREFIX="${1:-}"
