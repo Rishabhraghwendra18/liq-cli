@@ -845,6 +845,17 @@ _help-actions-list() {
   done
 }
 
+_help-sub-group-list() {
+  local GROUPS_VAR="${1}"
+
+  local SG
+  $( {
+        echo "${bold}Sub-groups${reset}:"
+        for SG in ${!GROUP_VAR}; do
+          echo "* $( SUMMARY_ONLY=true; help-meta-exts )"
+        done; } | indent)
+}
+
 helpActionPrefix() {
   if [[ -z "${INDENT:-}" ]]; then
     echo -n "liq $1 "
@@ -1313,7 +1324,7 @@ function log() {
     file=${BASH_SOURCE[$i-1]}
     echo "${now} $(hostname) $0:${lineno} ${msg}"
 }
-CATALYST_COMMAND_GROUPS="help meta meta-exts meta-keys orgs orgs-audits orgs-policies orgs-staff projects projects-issues work"
+CATALYST_COMMAND_GROUPS="help meta meta-exts orgs orgs-audits orgs-policies orgs-staff projects projects-issues work"
 
 # display help on help
 help-help() {
@@ -1446,6 +1457,8 @@ meta-next() {
 
   [[ -z "$ERROR" ]] || exit 1
 }
+META_GROUPS="exts"
+
 help-meta() {
   local PREFIX="${1:-}"
 
@@ -1455,9 +1468,7 @@ ${PREFIX}${cyan_u}meta${reset} <action>:
   Manages local liq configurations and non-liq user resources.
 $(_help-actions-list meta bash-config init next | indent)
 
-  ${bold}Sub-resources${reset}:
-    * $( SUMMARY_ONLY=true; help-meta-exts )
-    * $( SUMMARY_ONLY=true; help-meta-keys )
+$(_help-sub-group-list META_GROUPS)
 EOF
 }
 
@@ -1589,83 +1600,6 @@ help-meta-exts-uninstall() {
   cat <<EOF | _help-func-summary uninstall "<pkg name...>"
 Removes the installed package. If the package is locally installed, the local package installation is untouched and it is simply no longer used by liq.
 EOF
-}
-meta-keys() {
-  local ACTION="${1}"; shift
-
-  if [[ $(type -t "meta-keys-${ACTION}" || echo '') == 'function' ]]; then
-    meta-keys-${ACTION} "$@"
-  else
-    exitUnknownHelpTopic "$ACTION" meta keys
-  fi
-}
-
-meta-keys-create() {
-  eval "$(setSimpleOptions IMPORT USER= FULL_NAME= -- "$@")"
-
-  if [[ -z "$USER" ]]; then
-    USER="$(git config user.email)"
-    if [[ -z "$USER" ]]; then
-      echoerrandexit "Must set git 'user.email' or specify '--user' to create key."
-    fi
-  fi
-
-  if [[ -z "${FULL_NAME}" ]]; then
-    FULL_NAME="$(git config user.email)"
-    if [[ -z "$FULL_NAME" ]]; then
-      echoerrandexit "Must set git 'user.name' or specify '--full-name' to create key."
-    fi
-  fi
-
-  # Does the key already exist?
-  if gpg2 --list-secret-keys "$USER" 2> /dev/null; then
-    echoerrandexit "Key for '${USER}' already exists in default secret keyring. Bailing out..."
-  fi
-
-  local BITS=4096
-  local ALGO=rsa
-  local EXPIRY_YEARS=5
-  gpg2 --batch --gen-key <<<"%echo Generating ${ALGO}${BITS} key for '${USER}'; expires in ${EXPIRY_YEARS} years.
-Key-Type: RSA
-Key-Length: 4096
-Name-Real: ${FULL_NAME}
-Name-Comment: General purpose key.
-Name-Email: ${USER}
-Expire-Date: ${EXPIRY_YEARS}y
-%ask-passphrase
-%commit"
-}
-# TODO: instead, create simple spec; generate 'completion' options and 'docs' from spec.
-
-help-meta-keys() {
-  local SUMMARY="Manage user keys."
-
-  handleSummary "${cyan_u}meta keys${reset} <action>: ${SUMMARY}" || cat <<EOF
-${cyan_u}meta keys${reset} <action>:
-  ${SUMMARY}
-$(_help-actions-list meta-keys create | indent)
-EOF
-}
-
-help-meta-keys-create() {
-  cat <<EOF | _help-func-summary create "[--import|-i] [--user|-u <email>] [--full-name|-f <full name>]"
-Creates a PGP key appropriate for use with liq. The user (email) and their full name will be extracted from the git config 'user.email' and 'user.name' if not specified. In general, you should configure the git parameters because that's what will be used by other liq funcitons.
-EOF
-}
-meta-keys-user-has-key() {
-  local USER
-  USER="$(git config user.email)"
-  if [[ -z "$USER" ]]; then
-    echoerrandexit "git 'user.email' not set; needed for digital signing."
-  fi
-
-  if ! command -v gpg2 > /dev/null; then
-    echoerrandexit "'gpg2' not found in path; please install. This is needed for digital signing."
-  fi
-
-  if ! gpg2 --list-secret-keys "$USER" > /dev/null; then
-    echoerrandexit "No PGP key found for '$USER'. Either update git 'user.email' configuration, or add a key. To add a key, use:\nliq meta keys create"
-  fi
 }
 
 requirements-orgs() {
@@ -1963,6 +1897,8 @@ orgs-lib-source-settings() {
     echoerrandexit "Did not find expected base org package. Try:\nliq orgs import <pkg || URL>"
   fi
 }
+
+# TODO: add check that 'meta keys' command group is available. Post install func, I think.
 
 orgs-audits() {
   local ACTION="${1}"; shift
@@ -3196,7 +3132,7 @@ ${PREFIX}${cyan_u}projects${reset} <action>:
   ${SUMMARY}
 $(_help-actions-list projects build close create import publish qa sync test | indent)
 
-$( { echo "Subresources:"; for PG in $PROJECTS_GROUPS; do echo "* ${yellow}${underline}${PG}${reset}"; done; } | indent)
+$(_help-sub-group-list PROJECTS_GROUPS)
 EOF
 }
 
@@ -3330,7 +3266,7 @@ projects-lib-has-any-dep() {
   local PROJ="${1}"
   local DEP="${2}"
 
-  cat "${LIQ_PLAYGROUND}/${PROJ/@/}/package.json" | jq -r '.dependencies + .devDependencies + .peerDependencies | keys' | grep -qE '"@?'${DEP}'"'
+  cat "${LIQ_PLAYGROUND}/${PROJ/@/}/package.json" | jq -r '.dependencies + .devDependencies + .peerDependencies + {} | keys' | grep -qE '"@?'${DEP}'"'
 }
 
 projectHubWhoami() {

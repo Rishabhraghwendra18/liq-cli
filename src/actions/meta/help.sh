@@ -1,3 +1,5 @@
+META_GROUPS="exts"
+
 help-meta() {
   local PREFIX="${1:-}"
 
@@ -7,9 +9,7 @@ ${PREFIX}${cyan_u}meta${reset} <action>:
   Manages local liq configurations and non-liq user resources.
 $(_help-actions-list meta bash-config init next | indent)
 
-  ${bold}Sub-resources${reset}:
-    * $( SUMMARY_ONLY=true; help-meta-exts )
-    * $( SUMMARY_ONLY=true; help-meta-keys )
+$(_help-sub-group-list META_GROUPS)
 EOF
 }
 

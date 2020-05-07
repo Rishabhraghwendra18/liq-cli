@@ -63,9 +63,6 @@ _liq() {
     fi
   }
 
-  META_KEYS_ACTIONS="create"
-  eval "$(comp-func-builder 'meta-keys' 'META_KEYS')"
-
   local ORGS_ACTIONS="affiliate create list show select"
   local ORGS_GROUPS="audits policies staff"
   eval "$(comp-func-builder 'orgs' 'ORGS')"
