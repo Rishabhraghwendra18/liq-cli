@@ -21,9 +21,6 @@ _liq() {
     COMPREPLY=( $(compgen -W "${OPTS}" -- ${CUR}) )
   }
 
-  # TODO: Should we use LIQ_EXTS_DB here? We're sidestepping the need to 'build' the completion script...
-  source "${HOME}/.liquid-development/exts/comps.sh"
-
   comp-liq() {
     OPTS="${GLOBAL_ACTIONS} ${ACTION_GROUPS}"; std-reply
   }
@@ -87,17 +84,11 @@ _liq() {
   # TODO: support 'code' and 'network' type completion for start
 
   local PROJECTS_ACTIONS="build close create publish qa sync test"
-  local PROJECTS_GROUPS="issues sevices"
+  local PROJECTS_GROUPS="issues"
   eval "$(comp-func-builder 'projects' 'PROJECTS')"
 
   local PROJECTS_ISSUES_ACTIONS="show"
   eval "$(comp-func-builder 'projects-issues' 'PROJECTS_ISSUES')"
-
-  local PROJECTS_SERVICES_ACTIONS="add list delete show"
-  eval "$(comp-func-builder 'projects-services' 'PROJECTS_SERVICES')"
-
-  local SERVICES_ACTIONS="connect err-log list log restart start stop"
-  eval "$(comp-func-builder 'services' 'SERVICES')"
 
   local WORK_ACTIONS="diff-master edit ignore-rest involve list merge qa report resume save stage start status stop submit sync"
   local WORK_GROUPS="issues links"
@@ -118,6 +109,9 @@ _liq() {
     OPTS="$(echo "$OPTS" | awk -F: '{print $2}' | tr "'" '"' | jq -r '.[]')"
     std-reply
   }
+
+  # TODO: Should we use LIQ_EXTS_DB here? We're sidestepping the need to 'build' the completion script...
+  source "${HOME}/.liquid-development/exts/comps.sh"
 
   for TOKEN in ${COMP_WORDS[@]}; do
     if [[ "$TOKEN" != -* ]] && (( $TOKEN_COUNT + 1 < $WORD_COUNT )); then
