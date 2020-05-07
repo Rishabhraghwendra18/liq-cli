@@ -62,7 +62,7 @@ work-close() {
     list-rm-item INVOLVED_PROJECTS "@${PROJECT}" # this cannot be done in a subshell
     workUpdateWorkDb
 		if [[ -z "$NO_SYNC" ]]; then
-			projects-sync
+			projects-sync --project="${PROJECT}"
 		fi
     # Notice we don't close the workspace branch. It may be involved in a PR and, generally, we don't care if the
     # workspace gets a little messy. TODO: reference workspace cleanup method here when we have one.
