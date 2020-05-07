@@ -10,7 +10,7 @@ ${PREFIX}${cyan_u}projects${reset} <action>:
   ${SUMMARY}
 $(_help-actions-list projects build close create import publish qa sync test | indent)
 
-$( { echo "Subresources:"; for PG in $PROJECTS_GROUPS; do echo "* ${yellow}${underline}${PG}${reset}"; done; } | indent)
+$(_help-sub-group-list PROJECTS_GROUPS)
 EOF
 }
 

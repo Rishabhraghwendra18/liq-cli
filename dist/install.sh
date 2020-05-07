@@ -431,6 +431,17 @@ _help-actions-list() {
   done
 }
 
+_help-sub-group-list() {
+  local GROUPS_VAR="${1}"
+
+  local SG
+  $( {
+        echo "${bold}Sub-groups${reset}:"
+        for SG in ${!GROUP_VAR}; do
+          echo "* $( SUMMARY_ONLY=true; help-meta-exts )"
+        done; } | indent)
+}
+
 helpActionPrefix() {
   if [[ -z "${INDENT:-}" ]]; then
     echo -n "liq $1 "

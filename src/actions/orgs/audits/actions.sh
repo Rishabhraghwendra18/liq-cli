@@ -1,3 +1,5 @@
+# TODO: add check that 'meta keys' command group is available. Post install func, I think.
+
 orgs-audits() {
   local ACTION="${1}"; shift
 
