@@ -5,7 +5,7 @@
 _liq() {
   local GLOBAL_ACTIONS="help"
   # Using 'GROUPS' was causing errors; set by some magic.
-  local ACTION_GROUPS="environments meta orgs projects services work"
+  local ACTION_GROUPS="meta orgs projects work"
 
   local TOKEN COMP_FUNC CUR OPTS
   CUR="${COMP_WORDS[COMP_CWORD]}"
