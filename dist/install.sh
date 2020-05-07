@@ -434,12 +434,13 @@ _help-actions-list() {
 _help-sub-group-list() {
   local GROUPS_VAR="${1}"
 
-  local SG
-  $( {
-        echo "${bold}Sub-groups${reset}:"
-        for SG in ${!GROUP_VAR}; do
-          echo "* $( SUMMARY_ONLY=true; help-meta-exts )"
-        done; } | indent)
+  if [[ -n "${!GROUP_VAR:-}" ]]; then
+    local SG
+    $( {  echo -e "\n${bold}Sub-groups${reset}:"
+          for SG in ${!GROUP_VAR}; do
+            echo "* $( SUMMARY_ONLY=true; help-meta-exts )"
+          done; } | indent)
+  fi
 }
 
 helpActionPrefix() {

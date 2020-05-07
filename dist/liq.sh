@@ -848,12 +848,13 @@ _help-actions-list() {
 _help-sub-group-list() {
   local GROUPS_VAR="${1}"
 
-  local SG
-  $( {
-        echo "${bold}Sub-groups${reset}:"
-        for SG in ${!GROUP_VAR}; do
-          echo "* $( SUMMARY_ONLY=true; help-meta-exts )"
-        done; } | indent)
+  if [[ -n "${!GROUP_VAR:-}" ]]; then
+    local SG
+    $( {  echo -e "\n${bold}Sub-groups${reset}:"
+          for SG in ${!GROUP_VAR}; do
+            echo "* $( SUMMARY_ONLY=true; help-meta-exts )"
+          done; } | indent)
+  fi
 }
 
 helpActionPrefix() {
@@ -1324,7 +1325,7 @@ function log() {
     file=${BASH_SOURCE[$i-1]}
     echo "${now} $(hostname) $0:${lineno} ${msg}"
 }
-CATALYST_COMMAND_GROUPS="help meta meta-exts orgs orgs-audits orgs-policies orgs-staff projects projects-issues work"
+CATALYST_COMMAND_GROUPS="help meta meta-exts orgs orgs-staff projects projects-issues work"
 
 # display help on help
 help-help() {
@@ -1467,7 +1468,6 @@ help-meta() {
 ${PREFIX}${cyan_u}meta${reset} <action>:
   Manages local liq configurations and non-liq user resources.
 $(_help-actions-list meta bash-config init next | indent)
-
 $(_help-sub-group-list META_GROUPS)
 EOF
 }
@@ -1789,6 +1789,8 @@ orgs-show() {
     echowarn "No base package found for '${NPM_ORG}'. Try:\nliq orgs import <base pkg|URL>"
   fi
 }
+ORGS_GROUPS="staff"
+
 help-orgs() {
   local PREFIX="${1:-}"
 
@@ -1801,11 +1803,7 @@ $(echo "${SUMMARY} An org(anization) is the legal owner of work and all work is 
 * There is a 1-1 correspondance between the liq org, a GitHub organization (or individual), and—if publishing publicly—an npm package scope.
 * The GitHub organization (or individual) must exist prior to creating an org." | fold -sw 80 | indent)
 $(_help-actions-list orgs create close import list show | indent)
-
-$(echo "Subresources:
-* ${yellow}${underline}audits${reset}
-* ${yellow}${underline}policies${reset}
-* ${yellow}${underline}staff${reset}" | indent)
+$(_help-sub-group-list ORGS_GROUPS)
 EOF
 }
 
@@ -1896,432 +1894,6 @@ orgs-lib-source-settings() {
   else
     echoerrandexit "Did not find expected base org package. Try:\nliq orgs import <pkg || URL>"
   fi
-}
-
-# TODO: add check that 'meta keys' command group is available. Post install func, I think.
-
-orgs-audits() {
-  local ACTION="${1}"; shift
-
-  if [[ $(type -t "orgs-audits-${ACTION}" || echo '') == 'function' ]]; then
-    orgs-audits-${ACTION} "$@"
-  else
-    exitUnknownHelpTopic "$ACTION" policies audits
-  fi
-}
-
-orgs-audits-process() {
-  echoerrandexit "Audit processing not yet implemented."
-}
-
-orgs-audits-start() {
-  eval "$(setSimpleOptions SCOPE= NO_CONFIRM:C -- "$@")"
-
-  local TIME OWNER AUDIT_PATH FILES
-  policy-audit-start-prep "$@"
-  orgs-audits-setup-work
-  policy-audit-initialize-records
-
-  echofmt reset "Would you like to begin processing the audit now? If not, the session will and your previous work will be resumed."
-  if yes-no "Begin processing? (y/N)" N; then
-    orgs-audits-process
-  else
-    orgs-audits-finalize-session "${AUDIT_PATH}" "${TIME}" "$(orgs-audits-describe)"
-  fi
-}
-help-orgs-audits() {
-  local PREFIX="${1:-}"
-
-  local SUMMARY="Audit management."
-
-  handleSummary "${cyan_u}orgs audits${reset} <action>: ${SUMMARY}" || cat <<EOF
-${cyan_u}orgs audits${reset} <action>:
-  ${SUMMARY}
-$(_help-actions-list orgs-audits start | indent)
-EOF
-}
-
-help-orgs-audits-start() {
-  cat <<EOF | _help-func-summary start "[--scope|-s <scope>] [--no-confirm|-C] [<domain>]"
-Initiates an audit. An audit scope is either 'change' (default), 'process' or 'full'.
-
-Currently supported domains are 'code' and 'network'. If domain isn't specified, then the user will be given an interactive list.
-
-By default, a summary of the audit will be displayed to the user for confirmation. This can be supressed with the '--no-confirm' option.
-EOF
-}
-# Generates a human readable description string based on audit parameters. The '--short' option guarantees a name compatible with branch naming conventions and suitable for use with 'liq work start'.
-# outer vars: SCOPE DOMAIN TIME OWNER
-function orgs-audits-describe() {
-  eval "$(setSimpleOptions SHORT SET_SCOPE:c= SET_DOMAIN:d= SET_TIME:t= SET_OWNER:o= -- "$@")"
-  [[ -n $SET_SCOPE ]] || SET_SCOPE="$SCOPE"
-  [[ -n $SET_DOMAIN ]] || SET_DOMAIN="$DOMAIN"
-  [[ -n $SET_TIME ]] || SET_TIME="$TIME"
-  [[ -n $SET_OWNER ]] || SET_OWNER="$OWNER"
-
-  if [[ -z $SHORT ]]; then
-    echo "$(tr '[:lower:]' '[:upper:]' <<< ${SET_SCOPE:0:1})${SET_SCOPE:1} ${SET_DOMAIN} audit starting $(date -ujf %Y%m%d%H%M%S ${SET_TIME} +"%Y-%m-%d %H:%M UTC") by ${SET_OWNER}."
-  else
-    echo "$(tr '[:lower:]' '[:upper:]' <<< ${SET_SCOPE:0:1})${SET_SCOPE:1} ${SET_DOMAIN} audit $(date -ujf %Y%m%d%H%M%S ${SET_TIME} +"%Y-%m-%d %H%M UTC")"
-  fi
-}
-
-# Finalizes the session by signing the log, committing the updates, and summarizing the session. Takes the records folder, key time, and commit message as first, second, and third arguments.
-function orgs-audits-finalize-session() {
-  local AUDIT_PATH="${1}"
-  local TIME="${2}"
-  local MESSAGE="${3}"
-
-  orgs-audits-sign-log "${AUDIT_PATH}"
-  (
-    cd "${AUDIT_PATH}"
-    work-stage .
-    work-save -m "${MESSAGE}"
-    work-submit --no-close
-    orgs-audits-summarize-since "${AUDIT_PATH}" ${TIME}
-    work-resume --pop
-  )
-}
-# Gets the current time (resolution: 1 second) in UTC for use by log functions.
-orgs-audits-now() { date -u +%Y%m%d%H%M%S; }
-
-# Adds log entry. Takes a single argument, the message to add to the log entry.
-# outer vars: AUDIT_PATH
-orgs-audits-add-log-entry() {
-  local MESSAGE="${1}"
-
-  if [[ -z "${AUDIT_PATH}" ]]; then
-    echoerrandexit "Could not update log; 'AUDIT_PATH' not set."
-  fi
-
-  local USER
-  USER="$(git config user.email)"
-  if [[ -z "$USER" ]]; then
-    echoerrandexit "Must set git 'user.email' for use by audit log."
-  fi
-
-  echo "$(orgs-audits-now) UTC ${USER} ${MESSAGE}" >> "${AUDIT_PATH}/refs/history.log"
-}
-
-# Signs the log. Takes the records folder as first argument.
-orgs-audits-sign-log() {
-  local AUDIT_PATH="${1}"
-  local USER SIGNED_AT
-  USER="$(git config user.email)"
-  SIGNED_AT=$(orgs-audits-now)
-
-  echo "Signing current log file..."
-
-  mkdir -p "${AUDIT_PATH}/sigs"
-  gpg2 --output "${AUDIT_PATH}/sigs/history-${SIGNED_AT}-zane.sig" \
-    -u ${USER} \
-    --detach-sig \
-    --armor \
-    "${AUDIT_PATH}/refs/history.log"
-}
-
-# Gets all entries since the indicated time (see orgs-audits-now for format). Takes records folder and the key time as the first and second arguments.
-orgs-audits-summarize-since() {
-  local AUDIT_PATH="${1}"
-  local SINCE="${2}"
-
-  local ENTRY_TIME LINE LINE_NO
-  LINE_NO=1
-  for ENTRY_TIME in $(awk '{print $1}' "${AUDIT_PATH}/refs/history.log"); do
-    if (( $ENTRY_TIME < $SINCE )); then
-      LINE_NO=$(( $LINE_NO + 1 ))
-    else
-      break
-    fi
-  done
-
-  echofmt reset "Summary of actions:"
-  # for each line in history log, turn into a word-wrapped bullet point
-  while read -e LINE; do
-    echo "$LINE" | fold -sw 82 | sed -e '1s/^/* /' -e '2,$s/^/  /'
-    LINE_NO=$(( $LINE_NO + 1 ))
-  done <<< "$(tail +${LINE_NO} "${AUDIT_PATH}/refs/history.log")"
-  echo
-}
-# TODO: link the references once we support.
-# Performs all checks and sets up variables ahead of any state changes. Refer to input confirmation, defaults, and user confirmation functions.
-# outer vars: inherited
-function policy-audit-start-prep() {
-  meta-keys-user-has-key
-  policy-audit-start-confirm-and-normalize-input "$@"
-  policy-audit-derive-vars
-  policy-audit-start-user-confirm-audit-settings
-}
-
-function orgs-audits-setup-work() {
-  (
-    local MY_GITHUB_NAME ISSUE_URL ISSUE_NUMBER
-    projectHubWhoami MY_GITHUB_NAME
-    cd $(orgsPolicyRepo) # TODO: create separately specified records repo
-    ISSUE_URL="$(hub issue create -m "$(orgs-audits-describe)" -a "$MY_GITHUB_NAME" -l audit)"
-    ISSUE_NUMBER="$(basename "$ISSUE_URL")"
-
-    work-start --push -i $ISSUE_NUMBER "$(orgs-audits-describe --short)"
-  )
-}
-
-# TODO: link the references once we support.
-# Initialize an audit. Refer to folder and questions initializers.
-# outer vars: TIME inherited
-function policy-audit-initialize-records() {
-  orgs-audits-initialize-folder
-  orgs-audits-initialize-audits-json
-  orgs-audits-initialize-questions
-}
-
-# Internal help functions.
-
-# Lib internal helper. See 'liq help policy audit start' for description of proper input.
-# outer vars: CHANGE_CONTROL FULL DOMAIN SCOPE
-function policy-audit-start-confirm-and-normalize-input() {
-  DOMAIN="${1:-}"
-
-  if [[ -z $SCOPE ]]; then
-    SCOPE='change'
-  elif [[ $SCOPE != 'change' ]] && [[ $SCOPE != 'full' ]] && [[ $SCOPE != 'process' ]]; then
-    echoerrandexit "Invalid scope '$SCOPE'. Scope may be 'change', 'process', or 'full'."
-  fi
-
-  if [[ -z $DOMAIN ]]; then # do menu select
-    # TODO
-    echoerrandexit "Interactive domain not yet supported."
-  elif [[ $DOMAIN != 'code' ]] && [[ $DOMAIN != 'network' ]]; then
-    echoerrandexit "Unrecognized domain reference: '$DOMAIN'. Try one of:\n* code\n*network"
-  fi
-}
-
-# Lib internal helper. Sets the outer vars SCOPE, TIME, OWNER, and AUDIT_PATH
-# outer vars: FULL SCOPE TIME OWNER AUDIT_PATH
-function policy-audit-derive-vars() {
-  local FILE_OWNER FILE_NAME
-
-  TIME="$(orgs-audits-now)"
-  OWNER="$(git config user.email)"
-  FILE_OWNER=$(echo "${OWNER}" | sed -e 's/@.*$//')
-
-  FILE_NAME="${TIME}-${DOMAIN}-${SCOPE}-${FILE_OWNER}"
-  AUDIT_PATH="$(orgsPolicyRepo)/${AUDITS_ACTIVE_PATH}/${FILE_NAME}"
-}
-
-# Lib internal helper. Confirms audit settings unless explicitly told not to.
-# outer vars: NO_CONFIRM SCOPE DOMAIN OWNER TIME
-function policy-audit-start-user-confirm-audit-settings() {
-  echofmt reset "Starting audit with:\n\n* scope: ${bold}${SCOPE}${reset}\n* domain: ${bold}${DOMAIN}${reset}\n* owner: ${bold}${OWNER}${reset}\n"
-  if [[ -z $NO_CONFIRM ]]; then
-    # TODO: update 'yes-no' to use 'echofmt'? also fix echofmt to take '--color'
-    if ! yes-no "confirm? (y/N) " N; then
-      echowarn "Audit canceled."
-      exit 0
-    fi
-  fi
-}
-
-# Lib internal helper. Determines and creates the AUDIT_PATH
-# outer vars: AUDIT_PATH
-function orgs-audits-initialize-folder() {
-  if [[ -d "${AUDIT_PATH}" ]]; then
-    echoerrandexit "Looks like the audit has already started. You can't start more than one audit per second."
-  fi
-  echo "Creating records folder..."
-  mkdir -p "${AUDIT_PATH}"
-  mkdir "${AUDIT_PATH}/refs"
-  mkdir "${AUDIT_PATH}/sigs"
-}
-
-# Lib internal helper. Initializes the 'audit.json' data record.
-# outer vars: AUDIT_PATH TIME DOMAIN SCOPE OWNER
-function orgs-audits-initialize-audits-json() {
-  local AUDIT_SH="${AUDIT_PATH}/audit.sh"
-  local PARAMETERS_SH="${AUDIT_PATH}/parameters.sh"
-  local DESCRIPTION
-  DESCRIPTION=$(orgs-audits-describe)
-
-  if [[ -f "${AUDIT_SH}" ]]; then
-    echoerrandexit "Found existing 'audit.json' file while trying to initalize audit. Bailing out..."
-  fi
-
-  echofmt reset "Initializing audit data records..."
-  # TODO: extract and use 'double-quote-escape' for description
-  cat <<EOF > "${AUDIT_SH}"
-START="${TIME}"
-DESCRIPTION="${DESCRIPTION}"
-DOMAIN="${DOMAIN}"
-SCOPE="${SCOPE}"
-OWNER="${OWNER}"
-EOF
-  touch "${PARAMETERS_SH}"
-  echo "${TIME} UTC ${OWNER} : initiated audit" > "${AUDIT_PATH}/refs/history.log"
-}
-
-# Lib internal helper. Determines applicable questions and generates initial TSV record.
-# outer vars: inherited
-function orgs-audits-initialize-questions() {
-  orgs-audits-create-combined-tsv
-  local ACTION_SUMMARY
-  orgs-audits-create-final-audit-statements ACTION_SUMMARY
-  orgs-audits-add-log-entry "${ACTION_SUMMARY}"
-}
-
-# Lib internal helper. Creates the 'ref/combined.tsv' file containing the list of policy items included based on org (absolute) parameters.
-# outer vars: DOMAIN AUDIT_PATH
-orgs-audits-create-combined-tsv() {
-  echo "Gathering relevant policy statements..."
-  local FILES
-  FILES="$(policiesGetPolicyFiles --find-options "-path '*/policy/${DOMAIN}/standards/*items.tsv'")"
-
-  while read -e FILE; do
-    npx liq-standards-filter-abs --settings "$(orgsPolicyRepo)/settings.sh" "$FILE" >> "${AUDIT_PATH}/refs/combined.tsv"
-  done <<< "$FILES"
-}
-
-# Lib internal helper. Analyzes 'ref/combined.tsv' against parameter setting to generate the final list of statements included in the audit. This may involve an interactive question / answer loop (with change audits). Echoes a summary of actions (including any parameter values used) suitable for logging.
-# outer vars: SCOPE AUDIT_PATH
-orgs-audits-create-final-audit-statements() {
-  local SUMMAR_VAR="${1}"
-
-  local STATEMENTS LINE
-  if [[ $SCOPE == 'full' ]]; then # all statments included
-    STATEMENTS="$(while read -e LINE; do echo "$LINE" | awk -F '\t' '{print $3}'; done \
-                  < "${AUDIT_PATH}/refs/combined.tsv")"
-    eval "$SUMMARY_VAR='Initialized audit statements using with all policy standards.'"
-  elif [[ $SCOPE == 'process' ]]; then # only IS_PROCESS_AUDIT statements included
-    STATEMENTS="$(while read -e LINE; do
-                    echo "$LINE" | awk -F '\t' '{ if ($6 == "IS_PROCESS_AUDIT") print $3 }'
-                  done < "${AUDIT_PATH}/refs/combined.tsv")"
-    eval "$SUMMARY_VAR='Initialized audit statements using with all process audit standards.'"
-  else # it's a change audit and we want to ask about the nature of the change
-    local ALWAYS=1
-    local IS_FULL_AUDIT=0
-    local IS_PROCESS_AUDIT=0
-    local PARAMS PARAM PARAM_SETTINGS AND_CONDITIONS CONDITION
-    echofmt reset "\nYou will now be asked a series of questions in order to determine the nature of the change. This will determine which policy statements need to be reviewed."
-    read -n 1 -s -r -p "Press any key to continue..."
-    echo; echo
-
-    exec 10< "${AUDIT_PATH}/refs/combined.tsv"
-    while read -u 10 -e LINE; do
-      local INCLUDE=true
-      # we read each set of 'and' conditions
-      AND_CONDITIONS="$(echo "$LINE" | awk -F '\t' '{print $6}' | tr ',' '\n' | tr -d ' ')"
-      IFS=$'\n' #
-      for CONDITION in $AND_CONDITIONS; do # evaluate each condition sequentially until failure or end
-        PARAMS="$(echo "$CONDITION" | tr -C '[:alpha:]_' '\n')"
-        for PARAM in $PARAMS; do # define undefined params of clause
-          if [[ -z "${!PARAM:-}" ]]; then
-            function set-yes() { eval $PARAM=1; }
-            function set-no() { eval $PARAM=0; }
-            local PROMPT
-            PROMPT="${PARAM:0:1}$(echo ${PARAM:1} | tr '[:upper:]' '[:lower:]' | tr '_' ' ')? (y/n) "
-            yes-no "$PROMPT" "" set-yes set-no
-            echo
-            PARAM_SETTINGS="${PARAM_SETTINGS} ${PARAM}='${!PARAM}'"
-          fi
-        done # define clause params
-        if ! env -i -S "$(for PARAM in $PARAMS; do echo "$PARAM=${!PARAM} "; done)" perl -e '
-            use strict; use warnings;
-            my $condition="$ARGV[0]";
-            while (my ($k, $v) = each %ENV) { $condition =~ s/$k/$v/g; }
-            $condition =~ /[0-9<>=]+/ or die "Invalid audit condition: $condition";
-            eval "$condition" or exit 1;' $CONDITION; then
-          INCLUDE=false
-          break # stop processing conditions
-        fi
-      done # evaluate each condition
-      unset IFS
-      if [[ $INCLUDE == true ]]; then
-        list-add-item STATEMENTS "$(echo "$LINE" | awk -F '\t' '{print $3}')"
-      fi
-    done
-    exec 10<&-
-
-    eval "$SUMMAR_VAR='Initialized audit statements using parameters:${PARAM_SETTINGS}.'"
-  fi
-
-  local STATEMENT
-  echo -e "Statement\tReviewer\tAffirmed\tComments" > "${AUDIT_PATH}/reviews.tsv"
-  while read -e STATEMENT; do
-    echo -e "$STATEMENT\t\t\t" >> "${AUDIT_PATH}/reviews.tsv"
-  done <<< "$STATEMENTS"
-}
-
-requirements-orgs-policies() {
-  :
-}
-
-# see ./help.sh for behavior
-orgs-policies-document() {
-  local TARGET_DIR NODE_SCRIPT
-  TARGET_DIR="$(orgsPolicyRepo "${1:-}")/policy"
-  NODE_SCRIPT="$(dirname $(real_path ${BASH_SOURCE[0]}))/index.js"
-
-  rm -rf "$TARGET_DIR"
-  mkdir -p "$TARGET_DIR"
-  # argv[1] because the 0th arg is the 'node' executable.
-  NODE_PATH="${LIQ_DIST_DIR}/../node_modules" node -e "require('$NODE_SCRIPT').refreshDocuments('${TARGET_DIR}', process.argv[1].split(\"\\n\"))" "$(policiesGetPolicyFiles)"
-}
-
-# see ./help.sh for behavior
-orgs-policies-update() {
-  local POLICY
-  for POLICY in $(policiesGetPolicyProjects "$@"); do
-    npm i "${POLICY}"
-  done
-}
-help-orgs-policies() {
-  local PREFIX="${1:-}"
-
-  local SUMMARY="Manages organization policies."
-
-  handleSummary "${PREFIX}${cyan_u}orgs policies${reset} <action>: ${SUMMARY}" || cat <<EOF
-$(echo "${SUMMARY} Policies defines all manner of organizational operations. They are \"organizational code\"." | fold -sw 80 | indent)
-$(_help-actions-list orgs-policies document update | indent)
-EOF
-}
-
-help-orgs-policies-document() {
-  cat <<EOF | _help-func-summary document
-Refreshes (or generates) org policy documentation based on current data.
-EOF
-}
-
-help-orgs-policies-update() {
-  cat <<EOF | _help-func-summary update
-Updates organization policies.
-EOF
-}
-# Retrieves the policy directories from the current org. Currenly requires sensitive until we think through the
-# implication of having 'partial' policy access and whether that's ever useful.
-#
-# Returns one file per line, suitable for use with:
-#
-# while read VAR; do ... ; done < <(policiesGetPolicyDirs)
-policiesGetPolicyDirs() {
-  find "$(orgsPolicyRepo "$@")/node_modules/@liquid-labs" -maxdepth 1 -type d -name "policy-*"
-}
-
-# Will search policy dirs for TSV files. '--find-options' will be passed verbatim to find (see code). This function uses eval and it is unsafe to incorporate raw user input into the '--find-options' parameter.
-policiesGetPolicyFiles() {
-  eval "$(setSimpleOptions FIND_OPTIONS= -- "$@")"
-
-  local DIR
-  for DIR in $(policiesGetPolicyDirs); do
-    # Not sure why the eval is necessary, but it is... (MacOS/Bash 3.x, 2020-01)
-    eval find $DIR $FIND_OPTIONS -name '*.tsv'
-  done
-}
-
-# Gets the installed policy projects. Note that we get installed rather than declared as policies are often an
-# 'optional' dependency, so this is considered slightly more robust.
-policiesGetPolicyProjects() {
-  local DIR
-  for DIR in $(policiesGetPolicyDirs); do
-    cat "${DIR}/package.json" | jq --raw-output '.name' | tr -d "'"
-  done
 }
 
 orgs-staff() {
@@ -3131,7 +2703,6 @@ help-projects() {
 ${PREFIX}${cyan_u}projects${reset} <action>:
   ${SUMMARY}
 $(_help-actions-list projects build close create import publish qa sync test | indent)
-
 $(_help-sub-group-list PROJECTS_GROUPS)
 EOF
 }
@@ -3551,7 +3122,7 @@ projectsVersionCheckDo() {
   npm-check ${CMD_OPTS} || true
 }
 
-# deprecated
+# TODO: deprecated
 requirements-required-services() {
   requirePackage
 }
@@ -4442,7 +4013,7 @@ ${PREFIX}${cyan_u}work${reset} <action>:
 $(echo "${SUMMARY} A 'unit of work' is essentially a set of work branches across all involved projects. The first project involved in a unit of work is considered the primary project, which will effect automated linking when involving other projects.
 
 ${red_b}ALPHA Note:${reset} The 'stop' and 'resume' actions do not currently manage the work branches and only updates the 'current work' pointer." | fold -sw 82 | indent)
-$(_help-actions-list work diff-master edit ignore-rest involve issues link list merge report qa resume save stage start status stop submit sync test | indent)
+$(_help-actions-list work diff-master edit ignore-rest involve issues list merge report qa resume save stage start status stop submit sync test | indent)
 
 $(echo "Subresources:
 * ${yellow}${underline}links${reset}" | indent)
@@ -4863,6 +4434,7 @@ work-links-add() {
   fi
   # publish the source
   cd "${SOURCE_PROJ_DIR}"
+  echo "Publishing '${SOURCE_PROJ_DIR}' locally..."
   yalc publish
 
   # link to targets
@@ -4881,8 +4453,6 @@ work-links-add() {
   if [[ -n "${SET_LINKS}" ]]; then
     eval "${SET_LINKS}=\"${LINKS_MADE}\""
   fi
-
-  echo "Successfully linked '${SOURCE_PROJ}'."
 }
 
 work-links-list() {
