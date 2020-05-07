@@ -52,7 +52,7 @@ projects-lib-has-any-dep() {
   local PROJ="${1}"
   local DEP="${2}"
 
-  cat "${LIQ_PLAYGROUND}/${PROJ/@/}/package.json" | jq -r '.dependencies + .devDependencies + .peerDependencies | keys' | grep -qE '"@?'${DEP}'"'
+  cat "${LIQ_PLAYGROUND}/${PROJ/@/}/package.json" | jq -r '.dependencies + .devDependencies + .peerDependencies + {} | keys' | grep -qE '"@?'${DEP}'"'
 }
 
 projectHubWhoami() {
