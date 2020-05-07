@@ -382,8 +382,6 @@ work-resume() {
     echoerrandexit "No previous unit of work found."
   fi
 
-  requireCleanRepos "${WORK_NAME}"
-
   workSwitchBranches "$WORK_NAME"
   (
     cd "${LIQ_WORK_DB}"
@@ -616,7 +614,6 @@ work-stop() {
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     local CURR_WORK=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
     if [[ -z "$KEEP_CHECKOUT" ]]; then
-      requireCleanRepos
       workSwitchBranches master
     else
       source "${LIQ_WORK_DB}/curr_work"
