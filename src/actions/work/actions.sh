@@ -699,13 +699,12 @@ work-submit() {
   local DESC
   local PROJ_ISSUES=''
   local OTHER_ISSUES=''
-  DESC="$( cat <<EOF
-Merge ${WORK_BRANCH} to master
+  DESC="Merge ${WORK_BRANCH} to master
 
 ## Summary
 
-$MESSAGE
-EOF )"
+${MESSAGE}
+"
   if [[ $(type -t "work-policy-review" || echo '') == 'function' ]]; then
     work-policy-review "$TO_SUBMIT"
   fi
