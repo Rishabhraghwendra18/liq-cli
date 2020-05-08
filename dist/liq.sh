@@ -3561,7 +3561,7 @@ work-resume() {
   if [[ -z "$POP" ]]; then
     # if no args, gives list of availabale work units; otherwise interprets argument as a work name
     workUserSelectOne WORK_NAME '' true "$@"
-    
+
     if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
       if [[ "${LIQ_WORK_DB}/curr_work" -ef "${LIQ_WORK_DB}/${WORK_NAME}" ]]; then
         echowarn "'$WORK_NAME' is already the current unit of work."
@@ -3874,6 +3874,10 @@ work-submit() {
     TO_SUBMIT="$INVOLVED_PROJECTS"
   fi
 
+  # grab bugs URL of the primary project
+  local BUGS_URL
+  BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
+
   local IP
   # preflilght check
   for IP in $TO_SUBMIT; do
@@ -3905,15 +3909,13 @@ work-submit() {
 ${MESSAGE}
 
 ## Issues
+
 "
+
     local PROJ_ISSUES=''
     local OTHER_ISSUES=''
 
-    # populate issues lists
-    local BUGS_URL
-    BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
-
-    local ISSUE=''
+    local ISSUE
     for ISSUE in $WORK_ISSUES; do
       if [[ $ISSUE == $BUGS_URL* ]]; then
         local NUMBER=${ISSUE/$BUGS_URL/}
@@ -3926,18 +3928,18 @@ ${MESSAGE}
 
     if [[ -n "$PROJ_ISSUES" ]]; then
       if [[ -z "$NO_CLOSE" ]];then
-        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
+        DESC="${DESC}"$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
       else
-        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* driven by $ISSUE"; done)"
+        DESC="${DESC}"$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* driven by $ISSUE"; done)"
       fi
     fi
     if [[ -n "$OTHER_ISSUES" ]]; then
-      DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
+      DESC="${DESC}"$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
     fi
 
     # check for the 'work-policy-review' extension point
     if [[ $(type -t "work-policy-review" || echo '') == 'function' ]]; then
-      work-policy-review "$TO_SUBMIT"
+      DESC="${DESC}$(work-policy-review "$TO_SUBMIT")"
     fi
 
     local BASE_TARGET # this is the 'org' of the upsteram branch
