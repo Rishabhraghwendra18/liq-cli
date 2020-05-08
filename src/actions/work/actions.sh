@@ -697,6 +697,7 @@ work-submit() {
   done
 
   local DESC
+  local PROJ_ISSUES=''
   DESC="$( cat <<EOF
 Merge ${WORK_BRANCH} to master
 
