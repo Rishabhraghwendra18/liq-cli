@@ -715,6 +715,8 @@ EOF )"
 ## Issues
 "
   for IP in $TO_SUBMIT; do
+    IP=$(workConvertDot "$IP")
+    cd "${LIQ_PLAYGROUND}/${IP}"
     # populate issues lists
     if [[ -n "$PROJ_ISSUES" ]]; then
       if [[ -z "$NO_CLOSE" ]];then
@@ -733,7 +735,7 @@ EOF )"
     if [[ -z "$NO_BROWSE" ]]; then
       PULL_OPTS="$PULL_OPTS --browse"
     fi
+    echo "Submitting PR for '$IP'..."
     hub pull-request $PULL_OPTS -m "${DESC}"
-    # end policy-subshell
   done
 }
