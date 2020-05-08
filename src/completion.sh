@@ -74,11 +74,8 @@ _liq() {
   eval "$(comp-func-builder 'orgs-staff' 'ORGS_STAFF')"
 
   local PROJECTS_ACTIONS="build close create publish qa sync test"
-  local PROJECTS_GROUPS="issues"
+  local PROJECTS_GROUPS=""
   eval "$(comp-func-builder 'projects' 'PROJECTS')"
-
-  local PROJECTS_ISSUES_ACTIONS="show"
-  eval "$(comp-func-builder 'projects-issues' 'PROJECTS_ISSUES')"
 
   local WORK_ACTIONS="diff-master edit ignore-rest involve list merge qa report resume save stage start status stop submit sync"
   local WORK_GROUPS="issues links"
