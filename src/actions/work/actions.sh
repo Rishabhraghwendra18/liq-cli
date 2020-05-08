@@ -717,7 +717,7 @@ ${MESSAGE}
     local PROJ_ISSUES=''
     local OTHER_ISSUES=''
 
-    # grab bugs URL of the primary project
+    # get IP bugs URL in order to figure out what tasks are directly related to this project.
     local BUGS_URL
     BUGS_URL=$(cat "${LIQ_PLAYGROUND}/${IP/@/}/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
 
