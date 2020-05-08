@@ -3905,34 +3905,41 @@ work-submit() {
 ${MESSAGE}
 
 ## Issues
+
 "
+
     local PROJ_ISSUES=''
     local OTHER_ISSUES=''
 
-    # populate issues lists
     local BUGS_URL
-    BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
+    BUGS_URL=$(cat "${LIQ_PLAYGROUND}/${IP/@/}/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
 
-    local ISSUE=''
+    local ISSUE
     for ISSUE in $WORK_ISSUES; do
       if [[ $ISSUE == $BUGS_URL* ]]; then
         local NUMBER=${ISSUE/$BUGS_URL/}
         NUMBER=${NUMBER/\//}
         list-add-item PROJ_ISSUES "#${NUMBER}"
       else
-        list-add-item OTHER_ISSUES "${ISSUE}"
+        local LABEL="$(echo "$ISSUE" | awk -F/ '{ print $4"/"$5"#"$7 }')"
+        list-add-item OTHER_ISSUES "[${LABEL}](${ISSUE})"
       fi
     done
 
     if [[ -n "$PROJ_ISSUES" ]]; then
       if [[ -z "$NO_CLOSE" ]];then
-        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
+        DESC="${DESC}"$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
       else
-        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* driven by $ISSUE"; done)"
+        DESC="${DESC}"$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* driven by $ISSUE"; done)"
       fi
     fi
     if [[ -n "$OTHER_ISSUES" ]]; then
-      DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
+      DESC="${DESC}"$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
+    fi
+
+    # check for the 'work-policy-review' extension point
+    if [[ $(type -t "work-policy-review" || echo '') == 'function' ]]; then
+      DESC="${DESC}$(work-policy-review "$TO_SUBMIT")"
     fi
 
     # check for the 'work-policy-review' extension point
