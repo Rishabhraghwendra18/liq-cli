@@ -235,6 +235,7 @@ workSwitchBranches() {
       source "${LIQ_WORK_DB}/${_BRANCH_NAME}"
 
       for IP in $INVOLVED_PROJECTS; do
+        IP=${IP/@/}
         if [[ ! -d "${LIQ_PLAYGROUND}/${IP}" ]]; then
           echoerr "Project @${IP} is not locally available. Try:\nliq projects import ${IP}\nliq work resume ${WORK_NAME}"
           continue
