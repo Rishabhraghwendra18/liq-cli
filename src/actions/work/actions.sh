@@ -756,7 +756,6 @@ ${MESSAGE}
       PULL_OPTS="$PULL_OPTS --browse"
     fi
     echo "Submitting PR for '$IP'..."
-    # hub pull-request $PULL_OPTS -m "${DESC}"
-    echo "${DESC}"
+    hub pull-request $PULL_OPTS -m "${DESC}"
   done # TO_SUBMIT processing loop
 }
