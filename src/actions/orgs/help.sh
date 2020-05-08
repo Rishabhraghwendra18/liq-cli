@@ -1,4 +1,4 @@
-ORGS_GROUPS="staff"
+ORGS_GROUPS=""
 
 help-orgs() {
   local PREFIX="${1:-}"
