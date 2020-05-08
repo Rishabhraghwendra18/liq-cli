@@ -316,7 +316,7 @@ projects-qa() {
 
 # see: liq help projects sync
 projects-sync() {
-  eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M PROJECT -- "$@")" \
+  eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M PROJECT= -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
   if [[ -z "$PROJECT" ]]; then
