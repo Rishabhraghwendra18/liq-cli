@@ -2538,7 +2538,7 @@ projects-sync() {
     PROJECT="$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name' | tr -d "'")"
   fi
   PROJECT=${PROJECT/@/}
-  local PROJ_DIR="${PROJ_DIR}"
+  local PROJ_DIR="${LIQ_PLAYGROUND}/${PROJECT}"
 
   if [[ -z "$NO_WORK_MASTER_MERGE" ]] && [[ -z "$FETCH_ONLY" ]]; then
     requireCleanRepo "$PROJECT"
