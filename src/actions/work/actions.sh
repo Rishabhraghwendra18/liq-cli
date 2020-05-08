@@ -727,6 +727,8 @@ EOF )"
       DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
     fi
 
+    local BASE_TARGET # this is the 'org' of the upsteram branch
+    BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
     local PULL_OPTS="--push --base=${BASE_TARGET}:master "
     if [[ -z "$NO_BROWSE" ]]; then
       PULL_OPTS="$PULL_OPTS --browse"
