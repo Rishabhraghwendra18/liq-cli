@@ -3910,7 +3910,7 @@ EOF )"
 "
   for IP in $TO_SUBMIT; do
     IP=$(workConvertDot "$IP")
-    cd "${LIQ_PLAYGROUND}/${IP}"
+    cd "${LIQ_PLAYGROUND}/${IP/@/}"
     # populate issues lists
     if [[ -n "$PROJ_ISSUES" ]]; then
       if [[ -z "$NO_CLOSE" ]];then
