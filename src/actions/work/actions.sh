@@ -365,8 +365,9 @@ work-resume() {
   eval "$(setSimpleOptions POP -- "$@")"
   local WORK_NAME
   if [[ -z "$POP" ]]; then
+    # if no args, gives list of availabale work units; otherwise interprets argument as a work name
     workUserSelectOne WORK_NAME '' true "$@"
-
+    
     if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
       if [[ "${LIQ_WORK_DB}/curr_work" -ef "${LIQ_WORK_DB}/${WORK_NAME}" ]]; then
         echowarn "'$WORK_NAME' is already the current unit of work."
@@ -680,6 +681,7 @@ work-submit() {
   fi
 
   local IP
+  # preflilght check
   for IP in $TO_SUBMIT; do
     IP=$(workConvertDot "$IP")
     if ! echo "$INVOLVED_PROJECTS" | grep -qE '(^| +)'$IP'( +|$)'; then
@@ -696,27 +698,38 @@ work-submit() {
     fi
   done
 
-  local DESC
-  local PROJ_ISSUES=''
-  local OTHER_ISSUES=''
-  DESC="Merge ${WORK_BRANCH} to master
+  # OK, let's do it
+  for IP in $TO_SUBMIT; do
+    IP=$(workConvertDot "$IP")
+    cd "${LIQ_PLAYGROUND}/${IP/@/}"
+    echo "Preparing PR for ${IP}..."
+
+    local DESC="Merge ${WORK_BRANCH} to master
 
 ## Summary
 
 ${MESSAGE}
-"
-  if [[ $(type -t "work-policy-review" || echo '') == 'function' ]]; then
-    work-policy-review "$TO_SUBMIT"
-  fi
-
-  DESC="${DESC}
 
 ## Issues
 "
-  for IP in $TO_SUBMIT; do
-    IP=$(workConvertDot "$IP")
-    cd "${LIQ_PLAYGROUND}/${IP/@/}"
+    local PROJ_ISSUES=''
+    local OTHER_ISSUES=''
+
     # populate issues lists
+    local BUGS_URL
+    BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
+
+    local ISSUE=''
+    for ISSUE in $WORK_ISSUES; do
+      if [[ $ISSUE == $BUGS_URL* ]]; then
+        local NUMBER=${ISSUE/$BUGS_URL/}
+        NUMBER=${NUMBER/\//}
+        list-add-item PROJ_ISSUES "#${NUMBER}"
+      else
+        list-add-item OTHER_ISSUES "${ISSUE}"
+      fi
+    done
+
     if [[ -n "$PROJ_ISSUES" ]]; then
       if [[ -z "$NO_CLOSE" ]];then
         DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
@@ -728,6 +741,11 @@ ${MESSAGE}
       DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
     fi
 
+    # check for the 'work-policy-review' extension point
+    if [[ $(type -t "work-policy-review" || echo '') == 'function' ]]; then
+      work-policy-review "$TO_SUBMIT"
+    fi
+
     local BASE_TARGET # this is the 'org' of the upsteram branch
     BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
     local PULL_OPTS="--push --base=${BASE_TARGET}:master "
@@ -736,5 +754,5 @@ ${MESSAGE}
     fi
     echo "Submitting PR for '$IP'..."
     hub pull-request $PULL_OPTS -m "${DESC}"
-  done
+  done # TO_SUBMIT processing loop
 }
