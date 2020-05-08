@@ -3561,7 +3561,7 @@ work-resume() {
   if [[ -z "$POP" ]]; then
     # if no args, gives list of availabale work units; otherwise interprets argument as a work name
     workUserSelectOne WORK_NAME '' true "$@"
-
+    
     if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
       if [[ "${LIQ_WORK_DB}/curr_work" -ef "${LIQ_WORK_DB}/${WORK_NAME}" ]]; then
         echowarn "'$WORK_NAME' is already the current unit of work."
@@ -3911,7 +3911,6 @@ ${MESSAGE}
     local PROJ_ISSUES=''
     local OTHER_ISSUES=''
 
-    # grab bugs URL of the primary project
     local BUGS_URL
     BUGS_URL=$(cat "${LIQ_PLAYGROUND}/${IP/@/}/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
 
@@ -3941,6 +3940,11 @@ ${MESSAGE}
     # check for the 'work-policy-review' extension point
     if [[ $(type -t "work-policy-review" || echo '') == 'function' ]]; then
       DESC="${DESC}$(work-policy-review "$TO_SUBMIT")"
+    fi
+
+    # check for the 'work-policy-review' extension point
+    if [[ $(type -t "work-policy-review" || echo '') == 'function' ]]; then
+      work-policy-review "$TO_SUBMIT"
     fi
 
     local BASE_TARGET # this is the 'org' of the upsteram branch
