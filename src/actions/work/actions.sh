@@ -696,73 +696,40 @@ work-submit() {
     fi
   done
 
-  for IP in $TO_SUBMIT; do
-    IP=$(workConvertDot "$IP")
-    IP="${IP/@/}"
-    cd "${LIQ_PLAYGROUND}/${IP}"
-    orgs-lib-source-settings
-    ( # we source the policy in a subshell because the vars are not reliably refreshed, and so we need them isolated.
-      # TODO: also, if the policy repo is the main repo and there are multiple orgs in[olved], this will overwrite
-      # basic org settings... is that a problem?
-      source "${LIQ_PLAYGROUND}/${ORG_POLICY_REPO/@/}/settings.sh" # this is used in the submission checks
-
-      local SUBMIT_CERTS
-      echo "Checking for submission controls..."
-      workSubmitChecks SUBMIT_CERTS
-
-      echo "Creating PR for ${IP}..."
-
-      local BUGS_URL
-      BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
-
-      local ISSUE=''
-      local PROJ_ISSUES=''
-      local OTHER_ISSUES=''
-      for ISSUE in $WORK_ISSUES; do
-        if [[ $ISSUE == $BUGS_URL* ]]; then
-          local NUMBER=${ISSUE/$BUGS_URL/}
-          NUMBER=${NUMBER/\//}
-          list-add-item PROJ_ISSUES "#${NUMBER}"
-        else
-          list-add-item OTHER_ISSUES "${ISSUE}"
-        fi
-      done
-
-      local BASE_TARGET # this is the 'org' of the upsteram branch
-      BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
-
-      local DESC
-      # recall, the first line is used in the 'summary' (title), the rest goes in the "description"
-      DESC=$(cat <<EOF
+  local DESC
+  DESC="$( cat <<EOF
 Merge ${WORK_BRANCH} to master
 
 ## Summary
 
 $MESSAGE
+EOF )"
+  if [[ $(type -t "work-policy-review" || echo '') == 'function' ]]; then
+    work-policy-review "$TO_SUBMIT"
+  fi
 
-## Submission Certifications
-
-${SUBMIT_CERTS}
+  DESC="${DESC}
 
 ## Issues
-EOF)
-      # populate issues lists
-      if [[ -n "$PROJ_ISSUES" ]]; then
-        if [[ -z "$NO_CLOSE" ]];then
-          DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
-        else
-          DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* driven by $ISSUE"; done)"
-        fi
+"
+  for IP in $TO_SUBMIT; do
+    # populate issues lists
+    if [[ -n "$PROJ_ISSUES" ]]; then
+      if [[ -z "$NO_CLOSE" ]];then
+        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* closes $ISSUE"; done)"
+      else
+        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in $PROJ_ISSUES; do echo "* driven by $ISSUE"; done)"
       fi
-      if [[ -n "$OTHER_ISSUES" ]]; then
-        DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
-      fi
+    fi
+    if [[ -n "$OTHER_ISSUES" ]]; then
+      DESC="${DESC}"$'\n'$'\n'"$( for ISSUE in ${OTHER_ISSUES}; do echo "* involved with $ISSUE"; done)"
+    fi
 
-      local PULL_OPTS="--push --base=${BASE_TARGET}:master "
-      if [[ -z "$NO_BROWSE" ]]; then
-        PULL_OPTS="$PULL_OPTS --browse"
-      fi
-      hub pull-request $PULL_OPTS -m "${DESC}"
-    ) # end policy-subshell
+    local PULL_OPTS="--push --base=${BASE_TARGET}:master "
+    if [[ -z "$NO_BROWSE" ]]; then
+      PULL_OPTS="$PULL_OPTS --browse"
+    fi
+    hub pull-request $PULL_OPTS -m "${DESC}"
+    # end policy-subshell
   done
 }
