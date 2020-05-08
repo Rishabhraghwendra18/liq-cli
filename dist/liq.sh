@@ -3917,12 +3917,13 @@ ${MESSAGE}
 
     local ISSUE
     for ISSUE in $WORK_ISSUES; do
+      local NUMBER=${ISSUE/$BUGS_URL/}
+      NUMBER=${NUMBER/\//}
       if [[ $ISSUE == $BUGS_URL* ]]; then
-        local NUMBER=${ISSUE/$BUGS_URL/}
-        NUMBER=${NUMBER/\//}
         list-add-item PROJ_ISSUES "#${NUMBER}"
       else
-        list-add-item OTHER_ISSUES "${ISSUE}"
+        local LABEL="$(echo "$ISSUE" | awk -F/ '{ print $4"/"$5"#"$7 }')"
+        list-add-item OTHER_ISSUES "[${LABEL}](${ISSUE})"
       fi
     done
 
