@@ -680,10 +680,6 @@ work-submit() {
     TO_SUBMIT="$INVOLVED_PROJECTS"
   fi
 
-  # grab bugs URL of the primary project
-  local BUGS_URL
-  BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
-
   local IP
   # preflilght check
   for IP in $TO_SUBMIT; do
@@ -721,6 +717,10 @@ ${MESSAGE}
     local PROJ_ISSUES=''
     local OTHER_ISSUES=''
 
+    # grab bugs URL of the primary project
+    local BUGS_URL
+    BUGS_URL=$(cat "${LIQ_PLAYGROUND}/${IP/@/}/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
+
     local ISSUE
     for ISSUE in $WORK_ISSUES; do
       if [[ $ISSUE == $BUGS_URL* ]]; then
@@ -755,6 +755,7 @@ ${MESSAGE}
       PULL_OPTS="$PULL_OPTS --browse"
     fi
     echo "Submitting PR for '$IP'..."
-    hub pull-request $PULL_OPTS -m "${DESC}"
+    # hub pull-request $PULL_OPTS -m "${DESC}"
+    echo "${DESC}"
   done # TO_SUBMIT processing loop
 }
