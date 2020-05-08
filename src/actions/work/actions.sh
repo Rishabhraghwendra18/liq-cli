@@ -680,6 +680,10 @@ work-submit() {
     TO_SUBMIT="$INVOLVED_PROJECTS"
   fi
 
+  # grab bugs URL of the primary project
+  local BUGS_URL
+  BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
+
   local IP
   # preflilght check
   for IP in $TO_SUBMIT; do
@@ -713,14 +717,11 @@ ${MESSAGE}
 ## Issues
 
 "
+
     local PROJ_ISSUES=''
     local OTHER_ISSUES=''
 
-    # populate issues lists
-    local BUGS_URL
-    BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
-
-    local ISSUE=''
+    local ISSUE
     for ISSUE in $WORK_ISSUES; do
       if [[ $ISSUE == $BUGS_URL* ]]; then
         local NUMBER=${ISSUE/$BUGS_URL/}
