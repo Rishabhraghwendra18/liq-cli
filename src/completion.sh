@@ -64,14 +64,11 @@ _liq() {
   }
 
   local ORGS_ACTIONS="affiliate create list show select"
-  local ORGS_GROUPS="staff"
+  local ORGS_GROUPS=""
   eval "$(comp-func-builder 'orgs' 'ORGS')"
   comp-liq-orgs-select() {
     COMPREPLY=( $(compgen -W "$(find ~/.liquid-development/orgs -maxdepth 1 -mindepth 1 -type l -exec basename {} \;)" -- ${CUR}) )
   }
-
-  local ORGS_STAFF_ACTIONS="add list remove org-chart"
-  eval "$(comp-func-builder 'orgs-staff' 'ORGS_STAFF')"
 
   local PROJECTS_ACTIONS="build close create publish qa sync test"
   local PROJECTS_GROUPS=""
