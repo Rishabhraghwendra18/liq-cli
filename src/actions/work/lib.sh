@@ -221,17 +221,21 @@ workUserSelectOne() {
 
 workSwitchBranches() {
   local _BRANCH_NAME="$1"
-  requireCleanRepos
 
-  source "${LIQ_WORK_DB}/curr_work"
-  echo "Resetting playground to 'master'..."
-  local IP
-  for IP in $INVOLVED_PROJECTS; do
-    IP="${IP/@/}"
-    git checkout master
-  done
+  if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
+    requireCleanRepos
+    source "${LIQ_WORK_DB}/curr_work"
+    echo "Resetting current work unit repos to 'master'..."
+    local IP
+    for IP in $INVOLVED_PROJECTS; do
+      IP="${IP/@/}"
+      git checkout master
+    done
+  fi
+
   if [[ "$_BRANCH_NAME" != "master" ]]; then
-    ( # we don't wanto overwrite the sourced vars
+    requireCleanRepos "${_BRANCH_NAME}"
+    ( # we don't want overwrite the sourced vars
       source "${LIQ_WORK_DB}/${_BRANCH_NAME}"
 
       for IP in $INVOLVED_PROJECTS; do
