@@ -1524,8 +1524,12 @@ meta-exts() {
 }
 
 meta-exts-install() {
-  eval "$(setSimpleOptions LOCAL -- "$@")" \
+  eval "$(setSimpleOptions LOCAL REGISTRY -- "$@")" \
     || { contextHelp; echoerrandexit "Bad options."; }
+
+  if [[ -n "$LOCAL" ]] && [[ -n "$REGISTRY" ]]; then
+    echoerrandexit "The '--local' and '--registry' options are mutually exclusive."
+  fi
 
   local PKGS="$@"
   PKGS="${PKGS//@/}"
@@ -1586,8 +1590,8 @@ EOF
 }
 
 help-meta-exts-install() {
-  cat <<EOF | _help-func-summary install "[--local] <pkg name[@version]...>"
-Installs the named extension package. The '--local' option will use (aka, link to) the local package rather than installing via npm.
+  cat <<EOF | _help-func-summary install "[--local|-l] [--registry|-r] <pkg name[@version]...>"
+Installs the named extension package. The '--local' option will use (aka, link to) the local package rather than installing via npm. The '--registry' option (which is the default) will install the package from the NPM registry.
 EOF
 }
 

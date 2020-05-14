@@ -9,8 +9,12 @@ meta-exts() {
 }
 
 meta-exts-install() {
-  eval "$(setSimpleOptions LOCAL -- "$@")" \
+  eval "$(setSimpleOptions LOCAL REGISTRY -- "$@")" \
     || { contextHelp; echoerrandexit "Bad options."; }
+
+  if [[ -n "$LOCAL" ]] && [[ -n "$REGISTRY" ]]; then
+    echoerrandexit "The '--local' and '--registry' options are mutually exclusive."
+  fi
 
   local PKGS="$@"
   PKGS="${PKGS//@/}"
