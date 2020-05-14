@@ -7,11 +7,12 @@ _liq() {
   # Using 'GROUPS' was causing errors; set by some magic.
   local ACTION_GROUPS="meta orgs projects work"
 
-  local TOKEN COMP_FUNC CUR OPTS
+  local TOKEN COMP_FUNC CUR OPTS PREV WORK_COUNT TOKEN_COUNT
   CUR="${COMP_WORDS[COMP_CWORD]}"
+  PREV="${COMP_WORDS[COMP_CWORD-1]}"
   COMP_FUNC='comp'
-  local WORD_COUNT=${#COMP_WORDS[@]}
-  local TOKEN_COUNT=0
+  WORD_COUNT=${#COMP_WORDS[@]}
+  TOKEN_COUNT=0
 
   no-opts() {
     COMPREPLY=( $(compgen -W "" -- ${CUR}) )
@@ -32,14 +33,17 @@ _liq() {
   comp-func-builder() {
     local TOKEN_PATH="${1}"
     local VAR_KEY="${2}"
+    local NO_SQUASH="${3:-}"
     local OPT
     local ACTIONS_VAR="${VAR_KEY}_ACTIONS"
     local GROUPS_VAR="${VAR_KEY}_GROUPS"
     echo "comp-liq-${TOKEN_PATH}() { OPTS=\"${!ACTIONS_VAR:-} ${!GROUPS_VAR:-}\"; std-reply; }"
     echo "comp-liq-help-${TOKEN_PATH}() { comp-liq-${TOKEN_PATH}; }"
     for OPT in ${!ACTIONS_VAR}; do
-      echo "function comp-liq-${TOKEN_PATH}-${OPT}() { no-opts; }"
-      echo "function comp-liq-help-${TOKEN_PATH}-${OPT}() { no-opts; }"
+      if [[ -z "$NO_SQUASH" ]] || ! type -t comp-liq-${TOKEN_PATH}-${OPT} | grep -q 'function'; then
+        echo "function comp-liq-${TOKEN_PATH}-${OPT}() { no-opts; }"
+        echo "function comp-liq-help-${TOKEN_PATH}-${OPT}() { no-opts; }"
+      fi
     done
   }
 
@@ -54,6 +58,19 @@ _liq() {
 
   META_EXTS_ACTIONS="install list uninstall"
   eval "$(comp-func-builder 'meta-exts' 'META_EXTS')"
+  comp-liq-meta-exts-install() {
+    if [[ "${PREV}" == 'install' ]]; then
+      COMPREPLY=( $(compgen -W "--local --registry" -- ${CUR}) )
+    elif [[ "${PREV}" == "--local" ]]; then
+      if [[ "${CUR}" != */* ]]; then
+        COMPREPLY=( $(compgen -o nospace -W "$(find ~/playground -type d -maxdepth 1 -mindepth 1 -not -name ".*" | awk -F/ '{ print $NF"/" }')" -- ${CUR}) )
+      else
+        COMPREPLY=( $(compgen -W "$(ls -d ~/playground/liquid-labs/*-ext-* | awk -F/ '{ print $(NF - 1)"/"$NF }')" -- ${CUR}) )
+      fi
+    fi
+    # Currently no completion for registry packages.
+  }
+
   comp-liq-meta-exts-uninstall() {
     # TODO: this is essentially the same logic aas 'liq meta exts list'; change completion to use 'rollup-bash' and share code
     if [[ -f ${HOME}/.liquid-development/exts/exts.sh ]]; then
