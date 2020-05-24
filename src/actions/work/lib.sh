@@ -1,9 +1,9 @@
-workBranchName() {
+work-lib-branch-name() {
   local WORK_DESC="${1:-}"
   requireArgs "$WORK_DESC" || exit $?
   requireArgs "$WORK_STARTED" || exit $?
   requireArgs "$WORK_INITIATOR" || exit $?
-  echo "${WORK_STARTED}-${WORK_INITIATOR}-$(workSafeDesc "$WORK_DESC")"
+  echo "${WORK_STARTED}-${WORK_INITIATOR}-$(work-lib-safe-desc "$WORK_DESC")"
 }
 
 workConvertDot() {
@@ -18,10 +18,20 @@ workCurrentWorkBranch() {
   git branch | (grep '*' || true) | awk '{print $2}'
 }
 
-workSafeDesc() {
+work-lib-safe-desc() {
   local WORK_DESC="${1:-}"
   requireArgs "$WORK_DESC" || exit $?
-  echo "$WORK_DESC" | tr ' -' '_' | tr '[:upper:]' '[:lower:]'
+  # 1) change all spaces and hyphens to underscores.
+  # 2) lower case everything.
+  # 3) Remove any non-alphanumeric characters except '_'.
+  # 4) Extract the first four words.
+  # 5) Remove any trailing underscore.
+  echo "$WORK_DESC" \
+    | tr ' -' '_' \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed -Ee 's/[^[:alnum:]_]//g' \
+      -e 's/(([[:alnum:]]+(_|$)){1,4}).*/\1/' \
+      -e 's/_$//'
 }
 
 # Runs submitter through interactive submit checks specified by company policy. Expects the CWD to be that of or within
@@ -266,19 +276,18 @@ workSwitchBranches() {
   fi
 }
 
-workProcessIssues() {
-  local CSV_ISSUES="${1}"
-  local BUGS_URL="${2}"
+work-lib-process-issues() {
+  local VAR="${1}"
+  local CSV_ISSUES="${2}"
+  local BUGS_URL="${3}"
   local ISSUES ISSUE
-  list-from-csv ISSUES "$CSV_ISSUES"
-  for ISSUE in $ISSUES; do
+  list-from-csv "${VAR}" "$CSV_ISSUES"
+  for ISSUE in ${!VAR}; do
     if [[ "$ISSUE" =~ ^[0-9]+$ ]]; then
       if [[ -z "$BUGS_URL" ]]; then
         echoerrandexit "Cannot ref issue number outside project context. Either issue in context or use full URL."
       fi
-      list-replace-by-string ISSUES $ISSUE "$BUGS_URL/$ISSUE"
+      list-replace-by-string ${VAR} $ISSUE "$BUGS_URL/$ISSUE"
     fi
   done
-
-  echo "$ISSUES"
 }

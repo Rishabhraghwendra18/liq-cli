@@ -3058,14 +3058,14 @@ work-issues() {
 
   if [[ -n "$ADD" ]]; then
     local NEW_ISSUE NEW_ISSUES
-    NEW_ISSUES="$(workProcessIssues "$ADD" "$BUGS_URL")"
+    work-lib-process-issues NEW_ISSUES "$ADD" "$BUGS_URL"
     for NEW_ISSUE in $NEW_ISSUES; do
       list-add-item WORK_ISSUES "$NEW_ISSUE"
     done
   fi
   if [[ -n "$REMOVE" ]]; then
     local RM_ISSUE RM_ISSUES
-    RM_ISSUES="$(workProcessIssues "$REMOVE" "$BUGS_URL")"
+    work-lib-process-issues RM_ISSUES "$REMOVE" "$BUGS_URL"
     for RM_ISSUE in $RM_ISSUES; do
       list-rm-item WORK_ISSUES "$RM_ISSUE"
     done
@@ -3433,7 +3433,7 @@ work-start() {
 
   findBase
 
-  eval "$(setSimpleOptions ISSUES= PUSH -- "$@")"
+  eval "$(setSimpleOptions ISSUES= PUSH DESCRIPTION= -- "$@")"
 
   local CURR_PROJECT ISSUES_URL BUGS_URL WORK_ISSUES
   if [[ -n "$BASE_DIR" ]]; then
@@ -3441,20 +3441,25 @@ work-start() {
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
   fi
 
-  WORK_ISSUES="$(workProcessIssues "$ISSUES" "$BUGS_URL")"
+
+  work-lib-process-issues WORK_ISSUES "$ISSUES" "$BUGS_URL"
 
   if [[ -z "$WORK_ISSUES" ]]; then
     echoerrandexit "Must specify at least 1 issue when starting a new unit of work."
   fi
-  exactUserArgs WORK_DESC -- "$@"
-  local WORK_DESC_SPEC='^[[:alnum:]][[:alnum:] -]+$'
-  # TODO: require a minimum length of 5 alphanumeric characters.
-  echo "$WORK_DESC" | grep -qE "$WORK_DESC_SPEC" \
-    || echoerrandexit "Work description must begin with a letter or number, contain only letters, numbers, dashes and spaces, and have at least 2 characters (/$WORK_DESC_SPEC/). Got: \n${WORK_DESC}"
+
+  if [[ -z "$WORK_DESC" ]]; then
+    local PRIMARY_ISSUE
+    # The issues have been normalized, so his is always a URL
+    PRIMARY_ISSUE=$(list-get-item WORK_ISSUES 0 | sed -Ee 's|.+/([[:digit:]]+)$|\1|')
+
+    WORK_DESC="$(hub issue show $PRIMARY_ISSUE | head -n 1 | sed -E 's/^# *//')" \
+      || echoerrandexit "Error trying to extract issue description from: ${BUGS_URL}/${PRIMARY_ISSUE}\nThe primary issues must be part of the current project."
+  fi
 
   WORK_STARTED=$(date "+%Y.%m.%d")
   WORK_INITIATOR=$(whoami)
-  WORK_BRANCH=`workBranchName "${WORK_DESC}"`
+  WORK_BRANCH=`work-lib-branch-name "${WORK_DESC}"`
 
   if [[ -f "${LIQ_WORK_DB}/${WORK_BRANCH}" ]]; then
     echoerrandexit "Unit of work '${WORK_BRANCH}' aready exists. Bailing out."
@@ -3734,8 +3739,8 @@ EOF
 }
 
 help-work-start() {
-  cat <<EOF | _help-func-summary start "[--issues <# or URL>] [--push] <name>"
-Creates a new unit of work and adds the current repository (if any) to it. You must specify at least one issue. Use a comma separated list to specify mutliple issues. The '--push' option will record the current unit of work which can then be recovered with 'liq work resume --pop'.
+  cat <<EOF | _help-func-summary start "[--issues|-i <# or URL>] [--description|-d <work desc>] [--push|-p]"
+Creates a new unit of work and adds the current repository (if any) to it. You must specify at least one issue. Use a comma separated list to specify mutliple issues. The first issue must be in the current working project and by default the 'work description' is extracted from the issue summary/title. If '--description' is specified, then that description is used instead of the first issue title. The '--push' option will record the current unit of work which can then be recovered with 'liq work resume --pop'.
 EOF
 }
 
@@ -3768,12 +3773,12 @@ help-work-test() {
 Runs tests for each involved project in the current unit of work. See 'project test' for details on options for the 'test' action.
 EOF
 }
-workBranchName() {
+work-lib-branch-name() {
   local WORK_DESC="${1:-}"
   requireArgs "$WORK_DESC" || exit $?
   requireArgs "$WORK_STARTED" || exit $?
   requireArgs "$WORK_INITIATOR" || exit $?
-  echo "${WORK_STARTED}-${WORK_INITIATOR}-$(workSafeDesc "$WORK_DESC")"
+  echo "${WORK_STARTED}-${WORK_INITIATOR}-$(work-lib-safe-desc "$WORK_DESC")"
 }
 
 workConvertDot() {
@@ -3788,10 +3793,20 @@ workCurrentWorkBranch() {
   git branch | (grep '*' || true) | awk '{print $2}'
 }
 
-workSafeDesc() {
+work-lib-safe-desc() {
   local WORK_DESC="${1:-}"
   requireArgs "$WORK_DESC" || exit $?
-  echo "$WORK_DESC" | tr ' -' '_' | tr '[:upper:]' '[:lower:]'
+  # 1) change all spaces and hyphens to underscores.
+  # 2) lower case everything.
+  # 3) Remove any non-alphanumeric characters except '_'.
+  # 4) Extract the first four words.
+  # 5) Remove any trailing underscore.
+  echo "$WORK_DESC" \
+    | tr ' -' '_' \
+    | tr '[:upper:]' '[:lower:]' \
+    | sed -Ee 's/[^[:alnum:]_]//g' \
+      -e 's/(([[:alnum:]]+(_|$)){1,4}).*/\1/' \
+      -e 's/_$//'
 }
 
 # Runs submitter through interactive submit checks specified by company policy. Expects the CWD to be that of or within
@@ -4036,21 +4051,20 @@ workSwitchBranches() {
   fi
 }
 
-workProcessIssues() {
-  local CSV_ISSUES="${1}"
-  local BUGS_URL="${2}"
+work-lib-process-issues() {
+  local VAR="${1}"
+  local CSV_ISSUES="${2}"
+  local BUGS_URL="${3}"
   local ISSUES ISSUE
-  list-from-csv ISSUES "$CSV_ISSUES"
-  for ISSUE in $ISSUES; do
+  list-from-csv "${VAR}" "$CSV_ISSUES"
+  for ISSUE in ${!VAR}; do
     if [[ "$ISSUE" =~ ^[0-9]+$ ]]; then
       if [[ -z "$BUGS_URL" ]]; then
         echoerrandexit "Cannot ref issue number outside project context. Either issue in context or use full URL."
       fi
-      list-replace-by-string ISSUES $ISSUE "$BUGS_URL/$ISSUE"
+      list-replace-by-string ${VAR} $ISSUE "$BUGS_URL/$ISSUE"
     fi
   done
-
-  echo "$ISSUES"
 }
 
 work-links() {

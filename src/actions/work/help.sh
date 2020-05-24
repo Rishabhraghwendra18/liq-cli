@@ -90,8 +90,8 @@ EOF
 }
 
 help-work-start() {
-  cat <<EOF | _help-func-summary start "[--issues <# or URL>] [--push] <name>"
-Creates a new unit of work and adds the current repository (if any) to it. You must specify at least one issue. Use a comma separated list to specify mutliple issues. The '--push' option will record the current unit of work which can then be recovered with 'liq work resume --pop'.
+  cat <<EOF | _help-func-summary start "[--issues|-i <# or URL>] [--description|-d <work desc>] [--push|-p]"
+Creates a new unit of work and adds the current repository (if any) to it. You must specify at least one issue. Use a comma separated list to specify mutliple issues. The first issue must be in the current working project and by default the 'work description' is extracted from the issue summary/title. If '--description' is specified, then that description is used instead of the first issue title. The '--push' option will record the current unit of work which can then be recovered with 'liq work resume --pop'.
 EOF
 }
 

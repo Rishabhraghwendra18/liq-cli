@@ -175,14 +175,14 @@ work-issues() {
 
   if [[ -n "$ADD" ]]; then
     local NEW_ISSUE NEW_ISSUES
-    NEW_ISSUES="$(workProcessIssues "$ADD" "$BUGS_URL")"
+    work-lib-process-issues NEW_ISSUES "$ADD" "$BUGS_URL"
     for NEW_ISSUE in $NEW_ISSUES; do
       list-add-item WORK_ISSUES "$NEW_ISSUE"
     done
   fi
   if [[ -n "$REMOVE" ]]; then
     local RM_ISSUE RM_ISSUES
-    RM_ISSUES="$(workProcessIssues "$REMOVE" "$BUGS_URL")"
+    work-lib-process-issues RM_ISSUES "$REMOVE" "$BUGS_URL"
     for RM_ISSUE in $RM_ISSUES; do
       list-rm-item WORK_ISSUES "$RM_ISSUE"
     done
@@ -550,7 +550,7 @@ work-start() {
 
   findBase
 
-  eval "$(setSimpleOptions ISSUES= PUSH -- "$@")"
+  eval "$(setSimpleOptions ISSUES= PUSH DESCRIPTION= -- "$@")"
 
   local CURR_PROJECT ISSUES_URL BUGS_URL WORK_ISSUES
   if [[ -n "$BASE_DIR" ]]; then
@@ -558,20 +558,25 @@ work-start() {
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
   fi
 
-  WORK_ISSUES="$(workProcessIssues "$ISSUES" "$BUGS_URL")"
+
+  work-lib-process-issues WORK_ISSUES "$ISSUES" "$BUGS_URL"
 
   if [[ -z "$WORK_ISSUES" ]]; then
     echoerrandexit "Must specify at least 1 issue when starting a new unit of work."
   fi
-  exactUserArgs WORK_DESC -- "$@"
-  local WORK_DESC_SPEC='^[[:alnum:]][[:alnum:] -]+$'
-  # TODO: require a minimum length of 5 alphanumeric characters.
-  echo "$WORK_DESC" | grep -qE "$WORK_DESC_SPEC" \
-    || echoerrandexit "Work description must begin with a letter or number, contain only letters, numbers, dashes and spaces, and have at least 2 characters (/$WORK_DESC_SPEC/). Got: \n${WORK_DESC}"
+
+  if [[ -z "$WORK_DESC" ]]; then
+    local PRIMARY_ISSUE
+    # The issues have been normalized, so his is always a URL
+    PRIMARY_ISSUE=$(list-get-item WORK_ISSUES 0 | sed -Ee 's|.+/([[:digit:]]+)$|\1|')
+
+    WORK_DESC="$(hub issue show $PRIMARY_ISSUE | head -n 1 | sed -E 's/^# *//')" \
+      || echoerrandexit "Error trying to extract issue description from: ${BUGS_URL}/${PRIMARY_ISSUE}\nThe primary issues must be part of the current project."
+  fi
 
   WORK_STARTED=$(date "+%Y.%m.%d")
   WORK_INITIATOR=$(whoami)
-  WORK_BRANCH=`workBranchName "${WORK_DESC}"`
+  WORK_BRANCH=`work-lib-branch-name "${WORK_DESC}"`
 
   if [[ -f "${LIQ_WORK_DB}/${WORK_BRANCH}" ]]; then
     echoerrandexit "Unit of work '${WORK_BRANCH}' aready exists. Bailing out."
