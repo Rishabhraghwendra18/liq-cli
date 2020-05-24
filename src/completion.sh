@@ -90,6 +90,13 @@ _liq() {
   local PROJECTS_ACTIONS="build close create publish qa sync test"
   local PROJECTS_GROUPS=""
   eval "$(comp-func-builder 'projects' 'PROJECTS')"
+  comp-liq-projects-create() {
+    if [[ "${PREV}" == "create" ]]; then
+      COMPREPLY=( $(compgen -W "--new --source" -- ${CUR}) )
+    elif [[ "${PREV}" == "--new" ]] || [[ "${PREV}" == "-n" ]]; then
+      COMPREPLY=( $(compgen -W "raw" -- ${CUR}) )
+    fi
+  }
 
   local WORK_ACTIONS="diff-master edit ignore-rest involve list merge qa report resume save stage start status stop submit sync"
   local WORK_GROUPS="issues links"
