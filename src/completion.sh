@@ -33,14 +33,14 @@ _liq() {
   comp-func-builder() {
     local TOKEN_PATH="${1}"
     local VAR_KEY="${2}"
-    local NO_SQUASH="${3:-}"
+    local NO_SQUASH_ACTIONS="${3:-}"
     local OPT
     local ACTIONS_VAR="${VAR_KEY}_ACTIONS"
     local GROUPS_VAR="${VAR_KEY}_GROUPS"
     echo "comp-liq-${TOKEN_PATH}() { OPTS=\"${!ACTIONS_VAR:-} ${!GROUPS_VAR:-}\"; std-reply; }"
     echo "comp-liq-help-${TOKEN_PATH}() { comp-liq-${TOKEN_PATH}; }"
     for OPT in ${!ACTIONS_VAR}; do
-      if [[ -z "$NO_SQUASH" ]] || ! type -t comp-liq-${TOKEN_PATH}-${OPT} | grep -q 'function'; then
+      if [[ -z "$NO_SQUASH_ACTIONS" ]] || ! type -t comp-liq-${TOKEN_PATH}-${OPT} | grep -q 'function'; then
         echo "function comp-liq-${TOKEN_PATH}-${OPT}() { no-opts; }"
         echo "function comp-liq-help-${TOKEN_PATH}-${OPT}() { no-opts; }"
       fi
@@ -111,13 +111,14 @@ _liq() {
     std-reply
   }
 
-  # TODO: Should we use LIQ_EXTS_DB here? We're sidestepping the need to 'build' the completion script...
+  # TODO: Should we use LIQ_EXTS_DB here? This way, we're sidestepping the need to 'build' the completion script...
   source "${HOME}/.liquid-development/exts/comps.sh"
 
+  # Now we've registered all the local and modular completion functions. We'll analyze the token stream to figure out
+  # which completion function to call:
   for TOKEN in ${COMP_WORDS[@]}; do
     if [[ "$TOKEN" != -* ]] && (( $TOKEN_COUNT + 1 < $WORD_COUNT )); then
-      local TYPE="$(type -t "${COMP_FUNC}-${TOKEN}" || echo '')"
-      if [[ "${TYPE}" == 'function' ]]; then
+      if [[ "$(type -t "${COMP_FUNC}-${TOKEN}")" == 'function' ]]; then
         COMP_FUNC="${COMP_FUNC}-${TOKEN}"
         TOKEN_COUNT=$(( $TOKEN_COUNT + 1 ))
       fi
@@ -126,6 +127,7 @@ _liq() {
     fi
   done
 
+  # Execute the compeltion function determined above:
   $COMP_FUNC
   return 0
 }
