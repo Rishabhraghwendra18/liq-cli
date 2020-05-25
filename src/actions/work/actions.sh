@@ -605,6 +605,7 @@ work-start() {
   fi
   touch "${LIQ_WORK_DB}/${WORK_BRANCH}"
   cd ${LIQ_WORK_DB} && ln -s "${WORK_BRANCH}" curr_work
+  local WORK_DESC="$DESCRIPTION"
   workUpdateWorkDb
 
   if [[ -n "$CURR_PROJECT" ]]; then
