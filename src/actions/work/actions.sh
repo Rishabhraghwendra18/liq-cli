@@ -565,18 +565,18 @@ work-start() {
     echoerrandexit "Must specify at least 1 issue when starting a new unit of work."
   fi
 
-  if [[ -z "$WORK_DESC" ]]; then
+  if [[ -z "$DESCRIPTION" ]]; then
     local PRIMARY_ISSUE
     # The issues have been normalized, so his is always a URL
     PRIMARY_ISSUE=$(list-get-item WORK_ISSUES 0 | sed -Ee 's|.+/([[:digit:]]+)$|\1|')
 
-    WORK_DESC="$(hub issue show $PRIMARY_ISSUE | head -n 1 | sed -E 's/^# *//')" \
+    DESCRIPTION="$(hub issue show $PRIMARY_ISSUE | head -n 1 | sed -E 's/^# *//')" \
       || echoerrandexit "Error trying to extract issue description from: ${BUGS_URL}/${PRIMARY_ISSUE}\nThe primary issues must be part of the current project."
   fi
 
   WORK_STARTED=$(date "+%Y.%m.%d")
   WORK_INITIATOR=$(whoami)
-  WORK_BRANCH=`work-lib-branch-name "${WORK_DESC}"`
+  WORK_BRANCH=`work-lib-branch-name "${DESCRIPTION}"`
 
   if [[ -f "${LIQ_WORK_DB}/${WORK_BRANCH}" ]]; then
     echoerrandexit "Unit of work '${WORK_BRANCH}' aready exists. Bailing out."
@@ -677,7 +677,7 @@ work-submit() {
   source "${LIQ_WORK_DB}/curr_work"
 
   if [[ -z "$MESSAGE" ]]; then
-    MESSAGE="$WORK_DESC"
+    MESSAGE="$WORK_DESC" # sourced from current work
   fi
 
   local TO_SUBMIT="$@"
