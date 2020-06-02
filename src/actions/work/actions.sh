@@ -1,8 +1,10 @@
 requirements-work() {
-  findBase
+  :
 }
 
 work-backup() {
+  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+
   eval "$(setSimpleOptions TEST -- "$@")"
 
   if [[ "$TEST" != true ]]; then
@@ -15,6 +17,8 @@ work-backup() {
 }
 
 work-diff-master() {
+  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+
   git diff $(git merge-base master HEAD)..HEAD "$@"
 }
 
@@ -81,6 +85,7 @@ work-close() {
 
 # Helps get users find the right command.
 work-commit() {
+  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
   # The command generator is a bit hackish; do we have a library that handles the quotes correctly?
   echoerrandexit "Invalid action 'commit'; do you want to 'save'?\nRefer to:\nliq help work save\nor try:\nliq work save $(for i in "$@"; do if [[ "$i" == *' '* ]]; then echo -n "'$i' "; else echo -n "$i "; fi; done)"
 }
@@ -93,6 +98,7 @@ work-edit() {
 }
 
 work-ignore-rest() {
+  findBase
   pushd "${BASE_DIR}" > /dev/null
   touch .gitignore
   # first ignore whole directories
@@ -103,6 +109,8 @@ work-ignore-rest() {
 }
 
 work-involve() {
+  findBase # this will be optional once we support '--project'
+
   eval "$(setSimpleOptions NO_LINK:L -- "$@")"
   local PROJECT_NAME WORK_DESC WORK_STARTED WORK_INITIATOR INVOLVED_PROJECTS
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
@@ -163,6 +171,8 @@ work-involve() {
 }
 
 work-issues() {
+  findBase
+
   eval "$(setSimpleOptions LIST ADD= REMOVE= -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
@@ -312,6 +322,8 @@ work-merge() {
 }
 
 work-qa() {
+  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+
   echo "Checking local repo status..."
   work-report
 
@@ -324,6 +336,8 @@ work-qa() {
 } # work merge
 
 work-report() {
+  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+
   local BRANCH_NAME
   statusReport() {
     local COUNT="$1"
@@ -362,6 +376,8 @@ work-report() {
 
 # See 'liq help work resume'
 work-resume() {
+  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+
   eval "$(setSimpleOptions POP -- "$@")"
   local WORK_NAME
   if [[ -z "$POP" ]]; then
@@ -397,6 +413,8 @@ work-resume() {
 work-join() { work-resume "$@"; }
 
 work-save() {
+  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+
   eval "$(setSimpleOptions ALL MESSAGE= DESCRIPTION= NO_BACKUP:B BACKUP_ONLY -- "$@")"
 
   if [[ "$BACKUP_ONLY" == true ]] && [[ "$NO_BACKUP" == true ]]; then
@@ -421,6 +439,8 @@ work-save() {
 }
 
 work-stage() {
+  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+
   eval "$(setSimpleOptions ALL INTERACTIVE REVIEW DRY_RUN -- "$@")"
 
   local OPTIONS
@@ -433,6 +453,8 @@ work-stage() {
 }
 
 work-status() {
+  check-git-access
+
   eval "$(setSimpleOptions SELECT PR_READY: NO_FETCH:F LIST_PROJECTS:p LIST_ISSUES:i -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
@@ -615,6 +637,8 @@ work-start() {
 }
 
 work-stop() {
+  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+
   eval "$(setSimpleOptions KEEP_CHECKOUT -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
@@ -645,8 +669,11 @@ work-sync() {
   local IP OPTS
   if [[ -n "$FETCH_ONLY" ]]; then OPTS="--fetch-only "; fi
   for IP in $INVOLVED_PROJECTS; do
-    echo "Syncing project '${IP}'..."
-    projects-sync ${OPTS} "${IP}"
+    (
+      cd "${LIQ_PLAYGROUND}/${IP/@/}"
+      echo "Syncing project '${IP}'..."
+      projects-sync ${OPTS} "${IP}"
+    )
   done
 }
 
