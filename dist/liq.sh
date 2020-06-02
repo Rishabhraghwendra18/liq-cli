@@ -3514,8 +3514,11 @@ work-start() {
   workUpdateWorkDb
 
   if [[ -n "$CURR_PROJECT" ]]; then
-    echo "Adding current project '$CURR_PROJECT' to unit of work..."
-    work-involve "$CURR_PROJECT"
+    (
+      cd "${LIQ_PLAYGROUND}/${CURR_PROJECT/@/}"
+      echo "Adding current project '$CURR_PROJECT' to unit of work..."
+      work-involve "$CURR_PROJECT"
+    )
   fi
 }
 
