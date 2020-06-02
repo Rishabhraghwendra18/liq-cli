@@ -2217,10 +2217,76 @@ projects-qa() {
   fi
 }
 
+projects-setup() {
+  eval "$(setSimpleOptions PROJECT= -- "$@")" \
+    || { contextHelp; echoerrandexit "Bad options."; }
+
+  if [[ -z "$PROJECT" ]]; then
+    requirePackage
+    PROJECT="${PACKAGE_NAME}"
+  fi
+  PROJECT="${PROJECT/@/}"
+
+  cd "${LIQ_PLAYGROUND}/${PROJECT}"
+  if [[ -z "$PACKAGE_NAME" ]]; then
+    requirePackage
+  fi
+
+  local ORG_BASE ORG_PROJECT
+  ORG_BASE="$(echo "${PACKAGE}" | jq -r '.liquidDev.orgBase' )"
+  if [[ "${ORG_BASE}" == *'github.com'*'git' ]]; then # it's a git URL; convert to project name
+    # separate the path element from the URL
+    ORG_PROJECT="$(echo "${ORG_BASE}" | cut -d: -f2 )"
+    ORG_PROJECT="${ORG_PROJECT:0:$(( ${#ORG_PROJECT} - 4 ))}" # remove '.git'
+    local ORG_BIT PROJ_BIT
+    # TODO: our defacto conventions are all over the place
+    ORG_BIT="$(echo "${ORG_PROJECT}" | cut -d/ -f1 | tr '[:upper:]' '[:lower:]')"
+    PROJ_BIT="$(echo "${ORG_PROJECT}" | cut -d/ -f2)"
+    ORG_PROJECT="${ORG_BIT}/${PROJ_BIT}"
+  else
+    echoerrandexit "'liquidDev.orgBase' from 'package.json' in unknown format."
+  fi
+
+  if ! [[ -d "${LIQ_PLAYGROUND}/${ORG_PROJECT}" ]]; then
+    # TODO: support '--import-org'
+    echoerrandexit "Org def project '${ORG_PROJECT}' not found locally. Try:\nliq projects import ${ORG_BASE}"
+  fi
+  source "${LIQ_PLAYGROUND}/${ORG_PROJECT}/settings.sh"
+  if [[ -z "${PROJECT_LABELS:-}" ]]; then
+    echo "No project labels defined; using default label set..."
+    PROJECT_LABELS=$(cat << EOF
+bounty
+bug
+enhancement
+good first issue
+needs spec
+optimization
+EOF
+    )
+  fi
+
+  local GIT_BASE
+  GIT_BASE="$(echo "${PACKAGE}" | jq -r '.repository.url')"
+  if [[ "${GIT_BASE}" == *'github.com'*'git' ]]; then # it's a git URL
+    GIT_BASE="$(echo "${GIT_BASE}" | awk -F/ '{ print $4"/"$5 }')"
+    GIT_BASE="${GIT_BASE:0:$(( ${#GIT_BASE} - 4 ))}" # remove '.git'
+  else
+    echoerrandexit "'repository.url' from 'package.json' in unknown format; only github currently supported."
+  fi
+
+  local CURR_LABELS
+  CURR_LABELS="$(hub api "/repos/${GIT_BASE}/labels" | jq -r '.[].name')"
+
+  # TODO
+  echo "$PROJECT_LABELS"
+  echo '------------------'
+  echo "$CURR_LABELS"
+}
+
 # see: liq help projects sync
 projects-sync() {
   eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M PROJECT= -- "$@")" \
-    || ( contextHelp; echoerrandexit "Bad options." )
+    || { contextHelp; echoerrandexit "Bad options."; }
 
   if [[ -z "$PROJECT" ]]; then
     [[ -n "${BASE_DIR:-}" ]] || findBase
