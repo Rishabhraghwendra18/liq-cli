@@ -314,10 +314,103 @@ projects-qa() {
   fi
 }
 
+projects-setup() {
+  eval "$(setSimpleOptions PROJECT= SKIP_LABELS:L NO_DELETE_LABELS:D NO_UPDATE_LABELS:U SKIP_MILESTONES:M -- "$@")" \
+    || { contextHelp; echoerrandexit "Bad options."; }
+
+  if [[ -z "$PROJECT" ]]; then
+    requirePackage
+    PROJECT="${PACKAGE_NAME}"
+  fi
+  PROJECT="${PROJECT/@/}"
+
+  cd "${LIQ_PLAYGROUND}/${PROJECT}"
+  if [[ -z "$PACKAGE_NAME" ]]; then
+    requirePackage
+  fi
+
+  local GIT_BASE
+  GIT_BASE="$(echo "${PACKAGE}" | jq -r '.repository.url')"
+  if [[ "${GIT_BASE}" == *'github.com'*'git' ]]; then # it's a git URL
+    GIT_BASE="$(echo "${GIT_BASE}" | awk -F/ '{ print $4"/"$5 }')"
+    GIT_BASE="${GIT_BASE:0:$(( ${#GIT_BASE} - 4 ))}" # remove '.git'
+  else
+    echoerrandexit "'repository.url' from 'package.json' in unknown format; only github currently supported."
+  fi
+
+  [[ -n "$SKIP_LABELS" ]] || projects-lib-setup-labels-sync
+
+  [[ -n "$SKIP_MILESTONES" ]] || {
+    # Expects PACKAGE_NAME
+    local CURR_MILESTONES EXPECTED_MILESTONES TYPICAL_MILESTONES
+    CURR_MILESTONES="$(hub api "/repos/${GIT_BASE}/milestones" | jq -r ".[].title")"
+
+    if [[ -n "$CURR_MILESTONES" ]]; then
+      echo -e "Current milestones:\n$(echo "${CURR_MILESTONES}" | awk '{print "* "$0}')"
+      echo
+    else
+      echo "No existing milestones found."
+    fi
+
+    check-and-add-milestone() {
+      local TITLE="${1}"
+      local PRE_PROMPT="${2}"
+      local DEFAULT="${3}"
+      if [[ -z "$(list-get-index CURR_MILESTONES "${TITLE}")" ]]; then
+        echowarn "${PRE_PROMPT}"
+        if yes-no "Add it?" "${DEFAULT}"; then
+          echo "Attempting to add milestone '${TITLE}'..."
+          # hup api -X POST "/repos/${GIT_BASE}/milestones" -f title="${TITLE}"
+        fi
+      fi
+    }
+
+    semver-to-milestone() {
+      sed -E -e 's/([[:digit:]]+\.[[:digit:]]+)\.[[:digit:]]+/\1/' -e 's/\.[[:digit:]]+$//'
+    }
+
+    EXPECTED_MILESTONES="backlog"
+
+    local CURR_VERSION CURR_PREID
+    CURR_VERSION="$(npm info "${PACKAGE_NAME}" version)"
+    if [[ "${CURR_VERSION}" == *"-"* ]]; then # it's a pre-release version
+      local NEXT_VER NEXT_PREID
+      CURR_PREID="$(echo "${CURR_VERSION}" | cut -d- -f2 | cut -d. -f1)"
+      if [[ "${CURR_PREID}" == 'alpha' ]]; then
+        list-add-item EXPECTED_MILESTONES \
+          "$(semver "$CURR_VERSION" --increment prerelease --preid beta | semver-to-milestone)"
+      elif [[ "${CURR_PREID}" == 'rc' ]] || [[ "${CURR_PREID}" == 'beta' ]]; then
+         # a released ver
+        list-add-item EXPECTED_MILESTONES "$(semver "$CURR_VERSION" --increment | semver-to-milestone)"
+      else
+        echowarn "Unknown pre-release type '${CURR_PREID}'; defaulting to 'beta' as next target release. Consider updating released version to standard 'alpha', 'beta', or 'rc' types."
+        list-add-item EXPECTED_MILESTONES \
+          "$(semver "$CURR_VERSION" --increment prerelease --preid beta | semver-to-milestone)"
+      fi
+    else # it's a released version tag
+      list-add-item TYPICAL_MILESTONES \
+        "$(semver "$CURR_VERSION" --increment premajor --preid alpha | semver-to-milestone)"
+      list-add-item TYPICAL_MILESTONES "$(semver "$CURR_VERSION" --increment minor | semver-to-milestone)"
+    fi
+
+    local TEST_MILESTONE
+    if [[ -n "${EXPECTED_MILESTONES}" ]]; then
+      while read -r TEST_MILESTONE; do
+        check-and-add-milestone "${TEST_MILESTONE}" "Expected milestone '${TEST_MILESTONE}' is missing." Y
+      done <<< "${EXPECTED_MILESTONES}"
+    fi
+    if [[ -n "${TYPICAL_MILESTONES}" ]]; then
+      while read -r TEST_MILESTONE; do
+        check-and-add-milestone "${TEST_MILESTONE}" "Potential next milestone '${TEST_MILESTONE}' not present." Y
+      done <<< "${TYPICAL_MILESTONES}"
+    fi
+  }
+}
+
 # see: liq help projects sync
 projects-sync() {
   eval "$(setSimpleOptions FETCH_ONLY NO_WORK_MASTER_MERGE:M PROJECT= -- "$@")" \
-    || ( contextHelp; echoerrandexit "Bad options." )
+    || { contextHelp; echoerrandexit "Bad options."; }
 
   if [[ -z "$PROJECT" ]]; then
     [[ -n "${BASE_DIR:-}" ]] || findBase
