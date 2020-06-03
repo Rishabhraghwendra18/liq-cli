@@ -58,7 +58,11 @@ projects-close() {
 projects-create() {
   local PKG_ORG_NAME PKG_BASENAME
   # TODO: Support 'NPM_PASSTHRUOGH:P' which will use the NPM default values for version and license.
-  eval "$(setSimpleOptions NEW= SOURCE= FOLLOW NO_FORK:F VERSION= LICENSE= DESCRIPTION= PUBLIC: -- "$@")"
+  eval "$(setSimpleOptions NEW= SOURCE= FOLLOW NO_FORK:F VERSION= LICENSE= DESCRIPTION= PUBLIC: ORG_BASE= -- "$@")"
+
+  if [[ -z "${ORG_BASE}" ]]; then
+    echoerrandexit "Must specify '--org-base' for the project."
+  fi
 
   # first, check that we can access GitHub
   check-git-access
@@ -181,8 +185,14 @@ projects-create() {
     git remote remove source
   fi
 
+  echo "Adding basic liq data to package.json..."
+  cat package.json | jq '. + { "liquidDev": { "orgBase": "git@github.com:'"${ORG_BASE}"'.git" } }' > package.new.json
+  mv package.new.json package.json
+
   cd -
   projectMoveStaged "${PKG_ORG_NAME}/${PKG_BASENAME}" "$PROJ_STAGE"
+  cd "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}/${PKG_BASENAME}"
+  projects-setup
 }
 
 # see: liq help projects deploy
