@@ -2263,7 +2263,7 @@ projects-setup() {
 
   [[ -n "$SKIP_MILESTONES" ]] || {
     # Expects PACKAGE_NAME
-    local CURR_MILESTONES REQ_MILESTONES TYPICAL_MILESTONES
+    local CURR_MILESTONES EXPECTED_MILESTONES TYPICAL_MILESTONES
     CURR_MILESTONES="$(hub api "/repos/${GIT_BASE}/milestones" | jq -r ".[].title")"
 
     if [[ -n "$CURR_MILESTONES" ]]; then
@@ -2287,45 +2287,50 @@ projects-setup() {
     }
 
     semver-to-milestone() {
-      sed -E 's/\.[[:digit:]]+$//'
+      sed -E -e 's/([[:digit:]]+\.[[:digit:]]+)\.[[:digit:]]+/\1/' -e 's/\.[[:digit:]]+$//'
     }
 
-    REQ_MILESTONES="backlog"
+    EXPECTED_MILESTONES="backlog"
 
-    local CURR_VERSION CURR_PREID
-    CURR_VERSION="$(npm info "${PACKAGE_NAME}" version)"
-    if [[ "${CURR_VERSION}" == *"-"* ]]; then # it's a pre-release version
-      local NEXT_VER NEXT_PREID
-      CURR_PREID="$(echo "${CURR_VERSION}" | cut -d- -f2 | cut -d. -f1)"
-      if [[ "${CURR_PREID}" == 'alpha' ]]; then
-        list-add-item REQ_MILESTONES \
-          "$(semver "$CURR_VERSION" --increment prerelease --preid beta | semver-to-milestone)"
-      elif [[ "${CURR_PREID}" == 'rc' ]] || [[ "${CURR_PREID}" == 'beta' ]]; then
-         # a released ver
-        list-add-item REQ_MILESTONES "$(semver "$CURR_VERSION" --increment | semver-to-milestone)"
-      else
-        echowarn "Unknown pre-release type '${CURR_PREID}'; defaulting to 'beta' as next target release. Consider updating released version to standard 'alpha', 'beta', or 'rc' types."
-        list-add-item REQ_MILESTONES \
-          "$(semver "$CURR_VERSION" --increment prerelease --preid beta | semver-to-milestone)"
+    if npm search "${PACKAGE_NAME}" --parseable | grep -q "${PACKAGE_NAME}"; then
+      # The package is published (findable).
+      local CURR_VERSION CURR_PREID
+      CURR_VERSION="$(npm info "${PACKAGE_NAME}" version)"
+      if [[ "${CURR_VERSION}" == *"-"* ]]; then # it's a pre-release version
+        local NEXT_VER NEXT_PREID
+        CURR_PREID="$(echo "${CURR_VERSION}" | cut -d- -f2 | cut -d. -f1)"
+        if [[ "${CURR_PREID}" == 'alpha' ]]; then
+          list-add-item EXPECTED_MILESTONES \
+            "$(semver "$CURR_VERSION" --increment prerelease --preid beta | semver-to-milestone)"
+        elif [[ "${CURR_PREID}" == 'rc' ]] || [[ "${CURR_PREID}" == 'beta' ]]; then
+           # a released ver
+          list-add-item EXPECTED_MILESTONES "$(semver "$CURR_VERSION" --increment | semver-to-milestone)"
+        else
+          echowarn "Unknown pre-release type '${CURR_PREID}'; defaulting to 'beta' as next target release. Consider updating released version to standard 'alpha', 'beta', or 'rc' types."
+          list-add-item EXPECTED_MILESTONES \
+            "$(semver "$CURR_VERSION" --increment prerelease --preid beta | semver-to-milestone)"
+        fi
+      else # it's a released version tag
+        list-add-item TYPICAL_MILESTONES \
+          "$(semver "$CURR_VERSION" --increment premajor --preid alpha | semver-to-milestone)"
+        list-add-item TYPICAL_MILESTONES "$(semver "$CURR_VERSION" --increment minor | semver-to-milestone)"
       fi
-    else # it's a released version tag
-      list-add-item TYPICAL_MILESTONES \
-        "$(semver "$CURR_VERSION" --increment premajor --preid alpha | semver-to-milestone)"
-      list-add-item TYPICAL_MILESTONES "$(semver "$CURR_VERSION" --increment minor | semver-to-milestone)"
-    fi
 
-    local TEST_MILESTONE
-    if [[ -n "${REQ_MILESTONES}" ]]; then
-      while read -r TEST_MILESTONE; do
-        check-and-add-milestone "${TEST_MILESTONE}" "Required milestone '${TEST_MILESTONE}' is missing." Y
-      done <<< "${REQ_MILESTONES}"
+      local TEST_MILESTONE
+      if [[ -n "${EXPECTED_MILESTONES}" ]]; then
+        while read -r TEST_MILESTONE; do
+          check-and-add-milestone "${TEST_MILESTONE}" "Expected milestone '${TEST_MILESTONE}' is missing." Y
+        done <<< "${EXPECTED_MILESTONES}"
+      fi
+      if [[ -n "${TYPICAL_MILESTONES}" ]]; then
+        while read -r TEST_MILESTONE; do
+          check-and-add-milestone "${TEST_MILESTONE}" "Potential next milestone '${TEST_MILESTONE}' not present." Y
+        done <<< "${TYPICAL_MILESTONES}"
+      fi
+    else
+      echowarn "Cannot analyze milestone recommendations. Package '${PACKAGE_NAME}' not publised or not findable. Consider publishing."
     fi
-    if [[ -n "${TYPICAL_MILESTONES}" ]]; then
-      while read -r TEST_MILESTONE; do
-        check-and-add-milestone "${TEST_MILESTONE}" "Potential next milestone '${TEST_MILESTONE}' not present." Y
-      done <<< "${TYPICAL_MILESTONES}"
-    fi
-  }
+  } # end SKIP_MILESTONES check
 }
 
 # see: liq help projects sync
@@ -2882,7 +2887,7 @@ projectsVersionCheckDo() {
   npm-check ${CMD_OPTS} || true
 }
 # Expects:
-# * NO_DELETE, PROJECT, NO_UPDATE_LABELS from options, and
+# * NO_DELETE_LABELS, PROJECT, NO_UPDATE_LABELS from options, and
 # * GIT_BASE and PACKAGE to be set.
 projects-lib-setup-labels-sync() {
   local ORG_BASE ORG_PROJECT
@@ -2941,7 +2946,7 @@ EOF
 
   local LABELS_SYNCED=true
   if [[ -n "${NON_STD_LABELS}" ]]; then
-    if [[ -z "${NO_DELETE}" ]]; then
+    if [[ -z "${NO_DELETE_LABELS}" ]]; then
       while read -r TEST_LABEL; do
         echo "Removing non-standard label '${TEST_LABEL}'..."
         hub api -X DELETE "/repos/${GIT_BASE}/labels/${TEST_LABEL}"
@@ -2959,12 +2964,17 @@ EOF
     COLOR="$(echo "${LABEL_SPEC}" | awk -F: '{print $3}')"
   }
 
+  local LABELS_CREATED
   if [[ -n "${MISSING_LABELS}" ]]; then
     while read -r TEST_LABEL; do
       LABEL_SPEC="$(list-get-item-by-prefix PROJECT_LABELS "${TEST_LABEL}:")"
       set-spec
       echo "Adding label '${TEST_LABEL}'..."
-      hub api -X POST "/repos/${GIT_BASE}/labels" -f name="${NAME}" -f description="${DESC}" -f color="${COLOR}" > /dev/null
+      hub api -X POST "/repos/${GIT_BASE}/labels" \
+        -f name="${NAME}" \
+        -f description="${DESC}" \
+        -f color="${COLOR}" > /dev/null
+      list-add-item LABELS_CREATED "${NAME}"
     done <<< "$MISSING_LABELS"
   fi # missing labels creation
 
@@ -2977,7 +2987,8 @@ EOF
       local CURR_DESC CURR_COLOR
       CURR_DESC="$(echo "$CURR_LABEL_DATA" | jq -r "map(select(.name == \"${NAME}\"))[0].description")"
       CURR_COLOR="$(echo "$CURR_LABEL_DATA" | jq -r "map(select(.name == \"${NAME}\"))[0].color")"
-      if [[ "${CURR_COLOR}" != "${COLOR}" ]] || [[ "$CURR_DESC" != "${DESC}" ]]; then
+      if { [[ "${CURR_COLOR}" != "${COLOR}" ]] || [[ "$CURR_DESC" != "${DESC}" ]]; } \
+         && [[ -z $(list-get-index LABELS_CREATED "${NAME}") ]]; then
         echo "Updating label definition for '${NAME}'..."
         hub api -X PATCH "/repos/${GIT_BASE}/labels/${NAME}" -f description="${DESC}" -f color="${COLOR}" > /dev/null
         LABELS_SYNCED=true

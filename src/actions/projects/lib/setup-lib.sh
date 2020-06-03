@@ -1,5 +1,5 @@
 # Expects:
-# * NO_DELETE, PROJECT, NO_UPDATE_LABELS from options, and
+# * NO_DELETE_LABELS, PROJECT, NO_UPDATE_LABELS from options, and
 # * GIT_BASE and PACKAGE to be set.
 projects-lib-setup-labels-sync() {
   local ORG_BASE ORG_PROJECT
@@ -58,7 +58,7 @@ EOF
 
   local LABELS_SYNCED=true
   if [[ -n "${NON_STD_LABELS}" ]]; then
-    if [[ -z "${NO_DELETE}" ]]; then
+    if [[ -z "${NO_DELETE_LABELS}" ]]; then
       while read -r TEST_LABEL; do
         echo "Removing non-standard label '${TEST_LABEL}'..."
         hub api -X DELETE "/repos/${GIT_BASE}/labels/${TEST_LABEL}"
@@ -76,12 +76,17 @@ EOF
     COLOR="$(echo "${LABEL_SPEC}" | awk -F: '{print $3}')"
   }
 
+  local LABELS_CREATED
   if [[ -n "${MISSING_LABELS}" ]]; then
     while read -r TEST_LABEL; do
       LABEL_SPEC="$(list-get-item-by-prefix PROJECT_LABELS "${TEST_LABEL}:")"
       set-spec
       echo "Adding label '${TEST_LABEL}'..."
-      hub api -X POST "/repos/${GIT_BASE}/labels" -f name="${NAME}" -f description="${DESC}" -f color="${COLOR}" > /dev/null
+      hub api -X POST "/repos/${GIT_BASE}/labels" \
+        -f name="${NAME}" \
+        -f description="${DESC}" \
+        -f color="${COLOR}" > /dev/null
+      list-add-item LABELS_CREATED "${NAME}"
     done <<< "$MISSING_LABELS"
   fi # missing labels creation
 
@@ -94,7 +99,8 @@ EOF
       local CURR_DESC CURR_COLOR
       CURR_DESC="$(echo "$CURR_LABEL_DATA" | jq -r "map(select(.name == \"${NAME}\"))[0].description")"
       CURR_COLOR="$(echo "$CURR_LABEL_DATA" | jq -r "map(select(.name == \"${NAME}\"))[0].color")"
-      if [[ "${CURR_COLOR}" != "${COLOR}" ]] || [[ "$CURR_DESC" != "${DESC}" ]]; then
+      if { [[ "${CURR_COLOR}" != "${COLOR}" ]] || [[ "$CURR_DESC" != "${DESC}" ]]; } \
+         && [[ -z $(list-get-index LABELS_CREATED "${NAME}") ]]; then
         echo "Updating label definition for '${NAME}'..."
         hub api -X PATCH "/repos/${GIT_BASE}/labels/${NAME}" -f description="${DESC}" -f color="${COLOR}" > /dev/null
         LABELS_SYNCED=true

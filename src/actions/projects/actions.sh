@@ -371,40 +371,45 @@ projects-setup() {
 
     EXPECTED_MILESTONES="backlog"
 
-    local CURR_VERSION CURR_PREID
-    CURR_VERSION="$(npm info "${PACKAGE_NAME}" version)"
-    if [[ "${CURR_VERSION}" == *"-"* ]]; then # it's a pre-release version
-      local NEXT_VER NEXT_PREID
-      CURR_PREID="$(echo "${CURR_VERSION}" | cut -d- -f2 | cut -d. -f1)"
-      if [[ "${CURR_PREID}" == 'alpha' ]]; then
-        list-add-item EXPECTED_MILESTONES \
-          "$(semver "$CURR_VERSION" --increment prerelease --preid beta | semver-to-milestone)"
-      elif [[ "${CURR_PREID}" == 'rc' ]] || [[ "${CURR_PREID}" == 'beta' ]]; then
-         # a released ver
-        list-add-item EXPECTED_MILESTONES "$(semver "$CURR_VERSION" --increment | semver-to-milestone)"
-      else
-        echowarn "Unknown pre-release type '${CURR_PREID}'; defaulting to 'beta' as next target release. Consider updating released version to standard 'alpha', 'beta', or 'rc' types."
-        list-add-item EXPECTED_MILESTONES \
-          "$(semver "$CURR_VERSION" --increment prerelease --preid beta | semver-to-milestone)"
+    if npm search "${PACKAGE_NAME}" --parseable | grep -q "${PACKAGE_NAME}"; then
+      # The package is published (findable).
+      local CURR_VERSION CURR_PREID
+      CURR_VERSION="$(npm info "${PACKAGE_NAME}" version)"
+      if [[ "${CURR_VERSION}" == *"-"* ]]; then # it's a pre-release version
+        local NEXT_VER NEXT_PREID
+        CURR_PREID="$(echo "${CURR_VERSION}" | cut -d- -f2 | cut -d. -f1)"
+        if [[ "${CURR_PREID}" == 'alpha' ]]; then
+          list-add-item EXPECTED_MILESTONES \
+            "$(semver "$CURR_VERSION" --increment prerelease --preid beta | semver-to-milestone)"
+        elif [[ "${CURR_PREID}" == 'rc' ]] || [[ "${CURR_PREID}" == 'beta' ]]; then
+           # a released ver
+          list-add-item EXPECTED_MILESTONES "$(semver "$CURR_VERSION" --increment | semver-to-milestone)"
+        else
+          echowarn "Unknown pre-release type '${CURR_PREID}'; defaulting to 'beta' as next target release. Consider updating released version to standard 'alpha', 'beta', or 'rc' types."
+          list-add-item EXPECTED_MILESTONES \
+            "$(semver "$CURR_VERSION" --increment prerelease --preid beta | semver-to-milestone)"
+        fi
+      else # it's a released version tag
+        list-add-item TYPICAL_MILESTONES \
+          "$(semver "$CURR_VERSION" --increment premajor --preid alpha | semver-to-milestone)"
+        list-add-item TYPICAL_MILESTONES "$(semver "$CURR_VERSION" --increment minor | semver-to-milestone)"
       fi
-    else # it's a released version tag
-      list-add-item TYPICAL_MILESTONES \
-        "$(semver "$CURR_VERSION" --increment premajor --preid alpha | semver-to-milestone)"
-      list-add-item TYPICAL_MILESTONES "$(semver "$CURR_VERSION" --increment minor | semver-to-milestone)"
-    fi
 
-    local TEST_MILESTONE
-    if [[ -n "${EXPECTED_MILESTONES}" ]]; then
-      while read -r TEST_MILESTONE; do
-        check-and-add-milestone "${TEST_MILESTONE}" "Expected milestone '${TEST_MILESTONE}' is missing." Y
-      done <<< "${EXPECTED_MILESTONES}"
+      local TEST_MILESTONE
+      if [[ -n "${EXPECTED_MILESTONES}" ]]; then
+        while read -r TEST_MILESTONE; do
+          check-and-add-milestone "${TEST_MILESTONE}" "Expected milestone '${TEST_MILESTONE}' is missing." Y
+        done <<< "${EXPECTED_MILESTONES}"
+      fi
+      if [[ -n "${TYPICAL_MILESTONES}" ]]; then
+        while read -r TEST_MILESTONE; do
+          check-and-add-milestone "${TEST_MILESTONE}" "Potential next milestone '${TEST_MILESTONE}' not present." Y
+        done <<< "${TYPICAL_MILESTONES}"
+      fi
+    else
+      echowarn "Cannot analyze milestone recommendations. Package '${PACKAGE_NAME}' not publised or not findable. Consider publishing."
     fi
-    if [[ -n "${TYPICAL_MILESTONES}" ]]; then
-      while read -r TEST_MILESTONE; do
-        check-and-add-milestone "${TEST_MILESTONE}" "Potential next milestone '${TEST_MILESTONE}' not present." Y
-      done <<< "${TYPICAL_MILESTONES}"
-    fi
-  }
+  } # end SKIP_MILESTONES check
 }
 
 # see: liq help projects sync
