@@ -342,7 +342,7 @@ projects-setup() {
 
   [[ -n "$SKIP_MILESTONES" ]] || {
     # Expects PACKAGE_NAME
-    local CURR_MILESTONES REQ_MILESTONES TYPICAL_MILESTONES
+    local CURR_MILESTONES EXPECTED_MILESTONES TYPICAL_MILESTONES
     CURR_MILESTONES="$(hub api "/repos/${GIT_BASE}/milestones" | jq -r ".[].title")"
 
     if [[ -n "$CURR_MILESTONES" ]]; then
@@ -369,7 +369,7 @@ projects-setup() {
       sed -E -e 's/([[:digit:]]+\.[[:digit:]]+)\.[[:digit:]]+/\1/' -e 's/\.[[:digit:]]+$//'
     }
 
-    REQ_MILESTONES="backlog"
+    EXPECTED_MILESTONES="backlog"
 
     local CURR_VERSION CURR_PREID
     CURR_VERSION="$(npm info "${PACKAGE_NAME}" version)"
@@ -377,14 +377,14 @@ projects-setup() {
       local NEXT_VER NEXT_PREID
       CURR_PREID="$(echo "${CURR_VERSION}" | cut -d- -f2 | cut -d. -f1)"
       if [[ "${CURR_PREID}" == 'alpha' ]]; then
-        list-add-item REQ_MILESTONES \
+        list-add-item EXPECTED_MILESTONES \
           "$(semver "$CURR_VERSION" --increment prerelease --preid beta | semver-to-milestone)"
       elif [[ "${CURR_PREID}" == 'rc' ]] || [[ "${CURR_PREID}" == 'beta' ]]; then
          # a released ver
-        list-add-item REQ_MILESTONES "$(semver "$CURR_VERSION" --increment | semver-to-milestone)"
+        list-add-item EXPECTED_MILESTONES "$(semver "$CURR_VERSION" --increment | semver-to-milestone)"
       else
         echowarn "Unknown pre-release type '${CURR_PREID}'; defaulting to 'beta' as next target release. Consider updating released version to standard 'alpha', 'beta', or 'rc' types."
-        list-add-item REQ_MILESTONES \
+        list-add-item EXPECTED_MILESTONES \
           "$(semver "$CURR_VERSION" --increment prerelease --preid beta | semver-to-milestone)"
       fi
     else # it's a released version tag
@@ -394,10 +394,10 @@ projects-setup() {
     fi
 
     local TEST_MILESTONE
-    if [[ -n "${REQ_MILESTONES}" ]]; then
+    if [[ -n "${EXPECTED_MILESTONES}" ]]; then
       while read -r TEST_MILESTONE; do
-        check-and-add-milestone "${TEST_MILESTONE}" "Required milestone '${TEST_MILESTONE}' is missing." Y
-      done <<< "${REQ_MILESTONES}"
+        check-and-add-milestone "${TEST_MILESTONE}" "Expected milestone '${TEST_MILESTONE}' is missing." Y
+      done <<< "${EXPECTED_MILESTONES}"
     fi
     if [[ -n "${TYPICAL_MILESTONES}" ]]; then
       while read -r TEST_MILESTONE; do
