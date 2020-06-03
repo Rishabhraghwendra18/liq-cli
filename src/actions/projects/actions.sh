@@ -362,6 +362,8 @@ projects-setup() {
       echo "No existing milestones found."
     fi
 
+    local EXPECTED_MILESTONES_PRESENT=false
+    local MILESTONES_SYNCED=true
     check-and-add-milestone() {
       local TITLE="${1}"
       local PRE_PROMPT="${2}"
@@ -371,6 +373,8 @@ projects-setup() {
         if yes-no "Add it?" "${DEFAULT}"; then
           echo "Attempting to add milestone '${TITLE}'..."
           # hup api -X POST "/repos/${GIT_BASE}/milestones" -f title="${TITLE}"
+        else
+          MILESTONES_SYNCED=false
         fi
       fi
     }
@@ -381,44 +385,51 @@ projects-setup() {
 
     EXPECTED_MILESTONES="backlog"
 
+    local CURR_VERSION CURR_PREID
     if npm search "${PACKAGE_NAME}" --parseable | grep -q "${PACKAGE_NAME}"; then
-      # The package is published (findable).
-      local CURR_VERSION CURR_PREID
       CURR_VERSION="$(npm info "${PACKAGE_NAME}" version)"
-      if [[ "${CURR_VERSION}" == *"-"* ]]; then # it's a pre-release version
-        local NEXT_VER NEXT_PREID
-        CURR_PREID="$(echo "${CURR_VERSION}" | cut -d- -f2 | cut -d. -f1)"
-        if [[ "${CURR_PREID}" == 'alpha' ]]; then
-          list-add-item EXPECTED_MILESTONES \
-            "$(semver "$CURR_VERSION" --increment prerelease --preid beta | semver-to-milestone)"
-        elif [[ "${CURR_PREID}" == 'rc' ]] || [[ "${CURR_PREID}" == 'beta' ]]; then
-           # a released ver
-          list-add-item EXPECTED_MILESTONES "$(semver "$CURR_VERSION" --increment | semver-to-milestone)"
-        else
-          echowarn "Unknown pre-release type '${CURR_PREID}'; defaulting to 'beta' as next target release. Consider updating released version to standard 'alpha', 'beta', or 'rc' types."
-          list-add-item EXPECTED_MILESTONES \
-            "$(semver "$CURR_VERSION" --increment prerelease --preid beta | semver-to-milestone)"
-        fi
-      else # it's a released version tag
-        list-add-item TYPICAL_MILESTONES \
-          "$(semver "$CURR_VERSION" --increment premajor --preid alpha | semver-to-milestone)"
-        list-add-item TYPICAL_MILESTONES "$(semver "$CURR_VERSION" --increment minor | semver-to-milestone)"
-      fi
-
-      local TEST_MILESTONE
-      if [[ -n "${EXPECTED_MILESTONES}" ]]; then
-        while read -r TEST_MILESTONE; do
-          check-and-add-milestone "${TEST_MILESTONE}" "Expected milestone '${TEST_MILESTONE}' is missing." Y
-        done <<< "${EXPECTED_MILESTONES}"
-      fi
-      if [[ -n "${TYPICAL_MILESTONES}" ]]; then
-        while read -r TEST_MILESTONE; do
-          check-and-add-milestone "${TEST_MILESTONE}" "Potential next milestone '${TEST_MILESTONE}' not present." Y
-        done <<< "${TYPICAL_MILESTONES}"
-      fi
     else
-      echowarn "Cannot analyze milestone recommendations. Package '${PACKAGE_NAME}' not publised or not findable. Consider publishing."
+      # The package is not-published/not-findable.
+      echowarn "Package '${PACKAGE_NAME}' not publised or not findable. Consider publishing."
+      echowarn "Current version will be read locally."
+      CURR_VERSION="$(echo "$PACKAGE" | jq -r '.version')"
     fi
+
+    if [[ "${CURR_VERSION}" == *"-"* ]]; then # it's a pre-release version
+      local NEXT_VER NEXT_PREID
+      CURR_PREID="$(echo "${CURR_VERSION}" | cut -d- -f2 | cut -d. -f1)"
+      if [[ "${CURR_PREID}" == 'alpha' ]]; then
+        list-add-item EXPECTED_MILESTONES \
+          "$(semver "$CURR_VERSION" --increment prerelease --preid beta | semver-to-milestone)"
+      elif [[ "${CURR_PREID}" == 'rc' ]] || [[ "${CURR_PREID}" == 'beta' ]]; then
+         # a released ver
+        list-add-item EXPECTED_MILESTONES "$(semver "$CURR_VERSION" --increment | semver-to-milestone)"
+      else
+        echowarn "Unknown pre-release type '${CURR_PREID}'; defaulting to 'beta' as next target release. Consider updating released version to standard 'alpha', 'beta', or 'rc' types."
+        list-add-item EXPECTED_MILESTONES \
+          "$(semver "$CURR_VERSION" --increment prerelease --preid beta | semver-to-milestone)"
+      fi
+    else # it's a released version tag
+      list-add-item TYPICAL_MILESTONES \
+        "$(semver "$CURR_VERSION" --increment premajor --preid alpha | semver-to-milestone)"
+      list-add-item TYPICAL_MILESTONES "$(semver "$CURR_VERSION" --increment minor | semver-to-milestone)"
+    fi
+
+    local TEST_MILESTONE
+    if [[ -n "${EXPECTED_MILESTONES}" ]]; then
+      while read -r TEST_MILESTONE; do
+        check-and-add-milestone "${TEST_MILESTONE}" "Expected milestone '${TEST_MILESTONE}' is missing." Y
+        [[ "${MILESTONES_SYNCED}" != true ]] || EXPECTED_MILESTONES_PRESENT=true
+      done <<< "${EXPECTED_MILESTONES}"
+    fi
+    if [[ -n "${TYPICAL_MILESTONES}" ]]; then
+      while read -r TEST_MILESTONE; do
+        check-and-add-milestone "${TEST_MILESTONE}" "Potential next milestone '${TEST_MILESTONE}' not present." Y
+      done <<< "${TYPICAL_MILESTONES}"
+    fi
+
+    [[ "${EXPECTED_MILESTONES_PRESENT}" != true ]] || echo "All expected milestones are present."
+    [[ "${EXPECTED_MILESTONES_PRESENT}" == true ]] || echowarn "Expected milestones are missing."
   } # end SKIP_MILESTONES check
 }
 
