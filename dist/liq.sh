@@ -2338,7 +2338,7 @@ EOF
       LABEL_SPEC="$(list-get-item-by-prefix PROJECT_LABELS "${TEST_LABEL}:")"
       set-spec
       echo "Adding label '${TEST_LABEL}'..."
-      hub api -X POST "/repos/${GIT_BASE}/labels" -f name="${NAME}" -f description="${DESC}" -f color="${COLOR}"
+      hub api -X POST "/repos/${GIT_BASE}/labels" -f name="${NAME}" -f description="${DESC}" -f color="${COLOR}" > /dev/null
     done <<< "$MISSING_LABELS"
   fi # missing labels creation
 
