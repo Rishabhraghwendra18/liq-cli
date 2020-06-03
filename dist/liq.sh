@@ -2236,7 +2236,7 @@ projects-qa() {
 }
 
 projects-setup() {
-  eval "$(setSimpleOptions DELETE PROJECT= NO_UPDATE:U FORCE_UPDATE: -- "$@")" \
+  eval "$(setSimpleOptions PROJECT= SKIP_LABELS:L NO_DELETE_LABELS:D NO_UPDATE_LABELS:U SKIP_MILESTONES:M -- "$@")" \
     || { contextHelp; echoerrandexit "Bad options."; }
 
   if [[ -z "$PROJECT" ]]; then
@@ -2250,39 +2250,6 @@ projects-setup() {
     requirePackage
   fi
 
-  local ORG_BASE ORG_PROJECT
-  ORG_BASE="$(echo "${PACKAGE}" | jq -r '.liquidDev.orgBase' )"
-  if [[ "${ORG_BASE}" == *'github.com'*'git' ]]; then # it's a git URL; convert to project name
-    # separate the path element from the URL
-    ORG_PROJECT="$(echo "${ORG_BASE}" | cut -d: -f2 )"
-    ORG_PROJECT="${ORG_PROJECT:0:$(( ${#ORG_PROJECT} - 4 ))}" # remove '.git'
-    local ORG_BIT PROJ_BIT
-    # TODO: our defacto conventions are all over the place
-    ORG_BIT="$(echo "${ORG_PROJECT}" | cut -d/ -f1 | tr '[:upper:]' '[:lower:]')"
-    PROJ_BIT="$(echo "${ORG_PROJECT}" | cut -d/ -f2)"
-    ORG_PROJECT="${ORG_BIT}/${PROJ_BIT}"
-  else
-    echoerrandexit "'liquidDev.orgBase' from 'package.json' in unknown format."
-  fi
-
-  if ! [[ -d "${LIQ_PLAYGROUND}/${ORG_PROJECT}" ]]; then
-    # TODO: support '--import-org'
-    echoerrandexit "Org def project '${ORG_PROJECT}' not found locally. Try:\nliq projects import ${ORG_BASE}"
-  fi
-  source "${LIQ_PLAYGROUND}/${ORG_PROJECT}/settings.sh"
-  if [[ -z "${PROJECT_LABELS:-}" ]]; then
-    echo "No project labels defined; using default label set..."
-    PROJECT_LABELS=$(cat <<EOF
-bounty:This task offers a bounty:209020
-bug:Something is broken:d73a4a
-enhancement:New feature or request:a2eeef
-good first issue:Good for newcomers:7050ff
-needs spec:The task as-is is not fully specified:ff4040
-optimization:Make better without changing behavior:00dd70
-EOF
-    )
-  fi
-
   local GIT_BASE
   GIT_BASE="$(echo "${PACKAGE}" | jq -r '.repository.url')"
   if [[ "${GIT_BASE}" == *'github.com'*'git' ]]; then # it's a git URL
@@ -2292,77 +2259,73 @@ EOF
     echoerrandexit "'repository.url' from 'package.json' in unknown format; only github currently supported."
   fi
 
-  local CURR_LABEL_DATA CURR_LABELS TEST_LABEL INDEX PROJECT_LABEL_NAMES
-  PROJECT_LABEL_NAMES="$(echo "${PROJECT_LABELS}" | awk -F: '{print $1}')"
-  CURR_LABEL_DATA="$(hub api "/repos/${GIT_BASE}/labels")"
-  CURR_LABELS="$(echo "$CURR_LABEL_DATA" | jq -r '.[].name' )"
+  [[ -n "$SKIP_LABELS" ]] || projects-lib-setup-labels-sync
 
-  local NON_STD_LABELS="${CURR_LABELS}"
-  while read -r TEST_LABEL; do
-    INDEX=$(list-get-index NON_STD_LABELS "${TEST_LABEL}")
-    if [[ -n "${INDEX}" ]]; then
-      list-rm-item NON_STD_LABELS "${TEST_LABEL}"
-    fi
-  done <<< "${PROJECT_LABEL_NAMES}"
+  [[ -n "$SKIP_MILESTONES" ]] || {
+    # Expects PACKAGE_NAME
+    local CURR_MILESTONES REQ_MILESTONES TYPICAL_MILESTONES
+    CURR_MILESTONES="$(hub api "/repos/${GIT_BASE}/milestones" | jq -r ".[].title")"
 
-  MISSING_LABELS="${PROJECT_LABEL_NAMES}"
-  while read -r TEST_LABEL; do
-    INDEX=$(list-get-index MISSING_LABELS "${TEST_LABEL}")
-    if [[ -n "${INDEX}" ]]; then
-      list-rm-item MISSING_LABELS "${TEST_LABEL}"
-    fi
-  done <<< "${CURR_LABELS}"
-
-  local LABELS_SYNCED=true
-  if [[ -n "${NON_STD_LABELS}" ]]; then
-    if [[ -n "${DELETE}" ]]; then
-      while read -r TEST_LABEL; do
-        echo "Removing non-standard label '${TEST_LABEL}'..."
-        hub api -X DELETE "/repos/${GIT_BASE}/labels/${TEST_LABEL}"
-      done <<< "${NON_STD_LABELS}"
+    if [[ -n "$CURR_MILESTONES" ]]; then
+      echo -e "Current milestones:\n$(echo "${CURR_MILESTONES}" | awk '{print "* "$0}')"
+      echo
     else
-      echowarn "The following non-standard labels where found in ${PROJECT}:\n$(echo "${NON_STD_LABELS}" | awk '{ print "* "$0 }')\n\nInclude the '--delete' option to attempt removal."
-      LABELS_SYNCED=false
+      echo "No existing milestones found."
     fi
-  fi # non-standard label check; potential deletion
 
-  local LABEL_SPEC NAME COLOR DESC
-  set-spec() {
-    NAME="$(echo "${LABEL_SPEC}" | awk -F: '{print $1}')"
-    DESC="$(echo "${LABEL_SPEC}" | awk -F: '{print $2}')"
-    COLOR="$(echo "${LABEL_SPEC}" | awk -F: '{print $3}')"
-  }
-
-  if [[ -n "${MISSING_LABELS}" ]]; then
-    while read -r TEST_LABEL; do
-      LABEL_SPEC="$(list-get-item-by-prefix PROJECT_LABELS "${TEST_LABEL}:")"
-      set-spec
-      echo "Adding label '${TEST_LABEL}'..."
-      hub api -X POST "/repos/${GIT_BASE}/labels" -f name="${NAME}" -f description="${DESC}" -f color="${COLOR}" > /dev/null
-    done <<< "$MISSING_LABELS"
-  fi # missing labels creation
-
-  if [[ -z "$NO_UPDATE" ]] && [[ "${LABELS_SYNCED}" == true ]] || [[ -n "$FORCE_UPDATE" ]]; then
-    [[ "${LABELS_SYNCED}" != true ]] || echo "Label names synchronized."
-    echo "Checking label definitions..."
-    LABELS_SYNCED=false
-    while read -r LABEL_SPEC; do
-      set-spec
-      local CURR_DESC CURR_COLOR
-      CURR_DESC="$(echo "$CURR_LABEL_DATA" | jq -r "map(select(.name == \"${NAME}\"))[0].description")"
-      CURR_COLOR="$(echo "$CURR_LABEL_DATA" | jq -r "map(select(.name == \"${NAME}\"))[0].color")"
-      if [[ "${CURR_COLOR}" != "${COLOR}" ]] || [[ "$CURR_DESC" != "${DESC}" ]]; then
-        echo "Updating label definition for '${NAME}'..."
-        hub api -X PATCH "/repos/${GIT_BASE}/labels/${NAME}" -f description="${DESC}" -f color="${COLOR}" > /dev/null
-        LABELS_SYNCED=true
+    check-and-add-milestone() {
+      local TITLE="${1}"
+      local PRE_PROMPT="${2}"
+      local DEFAULT="${3}"
+      if [[ -z "$(list-get-index CURR_MILESTONES "${TITLE}")" ]]; then
+        echowarn "${PRE_PROMPT}"
+        if yes-no "Add it?" "${DEFAULT}"; then
+          echo "Attempting to add milestone '${TITLE}'..."
+          # hup api -X POST "/repos/${GIT_BASE}/milestones" -f title="${TITLE}"
+        fi
       fi
-    done <<< "${PROJECT_LABELS}"
+    }
 
-    [[ "$LABELS_SYNCED" == true ]] && echo "Label definitions updated." || echo "Labels already up-to-date."
-  else
-    [[ "${LABELS_SYNCED}" != true ]] || [[ -n "$NO_UPDATE" ]] || echo "Labels not synchronized; skipping update."
-    [[ -z "${NO_UPDATE}" ]] || echo "Skipping update."
-  fi # labels definition check and update
+    semver-to-milestone() {
+      sed -E 's/\.[[:digit:]]+$//'
+    }
+
+    REQ_MILESTONES="backlog"
+
+    local CURR_VERSION CURR_PREID
+    CURR_VERSION="$(npm info "${PACKAGE_NAME}" version)"
+    if [[ "${CURR_VERSION}" == *"-"* ]]; then # it's a pre-release version
+      local NEXT_VER NEXT_PREID
+      CURR_PREID="$(echo "${CURR_VERSION}" | cut -d- -f2 | cut -d. -f1)"
+      if [[ "${CURR_PREID}" == 'alpha' ]]; then
+        list-add-item REQ_MILESTONES \
+          "$(semver "$CURR_VERSION" --increment prerelease --preid beta | semver-to-milestone)"
+      elif [[ "${CURR_PREID}" == 'rc' ]] || [[ "${CURR_PREID}" == 'beta' ]]; then
+         # a released ver
+        list-add-item REQ_MILESTONES "$(semver "$CURR_VERSION" --increment | semver-to-milestone)"
+      else
+        echowarn "Unknown pre-release type '${CURR_PREID}'; defaulting to 'beta' as next target release. Consider updating released version to standard 'alpha', 'beta', or 'rc' types."
+        list-add-item REQ_MILESTONES \
+          "$(semver "$CURR_VERSION" --increment prerelease --preid beta | semver-to-milestone)"
+      fi
+    else # it's a released version tag
+      list-add-item TYPICAL_MILESTONES \
+        "$(semver "$CURR_VERSION" --increment premajor --preid alpha | semver-to-milestone)"
+      list-add-item TYPICAL_MILESTONES "$(semver "$CURR_VERSION" --increment minor | semver-to-milestone)"
+    fi
+
+    local TEST_MILESTONE
+    if [[ -n "${REQ_MILESTONES}" ]]; then
+      while read -r TEST_MILESTONE; do
+        check-and-add-milestone "${TEST_MILESTONE}" "Required milestone '${TEST_MILESTONE}' is missing." Y
+      done <<< "${REQ_MILESTONES}"
+    fi
+    if [[ -n "${TYPICAL_MILESTONES}" ]]; then
+      while read -r TEST_MILESTONE; do
+        check-and-add-milestone "${TEST_MILESTONE}" "Potential next milestone '${TEST_MILESTONE}' not present." Y
+      done <<< "${TYPICAL_MILESTONES}"
+    fi
+  }
 }
 
 # see: liq help projects sync
@@ -2917,6 +2880,115 @@ projectsVersionCheckDo() {
     CMD_OPTS="${CMD_OPTS} -u"
   fi
   npm-check ${CMD_OPTS} || true
+}
+# Expects:
+# * NO_DELETE, PROJECT, NO_UPDATE_LABELS from options, and
+# * GIT_BASE and PACKAGE to be set.
+projects-lib-setup-labels-sync() {
+  local ORG_BASE ORG_PROJECT
+  ORG_BASE="$(echo "${PACKAGE}" | jq -r '.liquidDev.orgBase' )"
+  if [[ "${ORG_BASE}" == *'github.com'*'git' ]]; then # it's a git URL; convert to project name
+    # separate the path element from the URL
+    ORG_PROJECT="$(echo "${ORG_BASE}" | cut -d: -f2 )"
+    ORG_PROJECT="${ORG_PROJECT:0:$(( ${#ORG_PROJECT} - 4 ))}" # remove '.git'
+    local ORG_BIT PROJ_BIT
+    # TODO: our defacto conventions are all over the place
+    ORG_BIT="$(echo "${ORG_PROJECT}" | cut -d/ -f1 | tr '[:upper:]' '[:lower:]')"
+    PROJ_BIT="$(echo "${ORG_PROJECT}" | cut -d/ -f2)"
+    ORG_PROJECT="${ORG_BIT}/${PROJ_BIT}"
+  else
+    echoerrandexit "'liquidDev.orgBase' from 'package.json' in unknown format."
+  fi
+
+  if ! [[ -d "${LIQ_PLAYGROUND}/${ORG_PROJECT}" ]]; then
+    # TODO: support '--import-org'
+    echoerrandexit "Org def project '${ORG_PROJECT}' not found locally. Try:\nliq projects import ${ORG_BASE}"
+  fi
+  source "${LIQ_PLAYGROUND}/${ORG_PROJECT}/settings.sh"
+  if [[ -z "${PROJECT_LABELS:-}" ]]; then
+    echo "No project labels defined; using default label set..."
+    PROJECT_LABELS=$(cat <<EOF
+bounty:This task offers a bounty:209020
+bug:Something is broken:d73a4a
+enhancement:New feature or request:a2eeef
+good first issue:Good for newcomers:7050ff
+needs spec:The task as-is is not fully specified:ff4040
+optimization:Make better without changing behavior:00dd70
+EOF
+    )
+  fi
+
+  local CURR_LABEL_DATA CURR_LABELS TEST_LABEL INDEX PROJECT_LABEL_NAMES
+  PROJECT_LABEL_NAMES="$(echo "${PROJECT_LABELS}" | awk -F: '{print $1}')"
+  CURR_LABEL_DATA="$(hub api "/repos/${GIT_BASE}/labels")"
+  CURR_LABELS="$(echo "$CURR_LABEL_DATA" | jq -r '.[].name' )"
+
+  local NON_STD_LABELS="${CURR_LABELS}"
+  while read -r TEST_LABEL; do
+    INDEX=$(list-get-index NON_STD_LABELS "${TEST_LABEL}")
+    if [[ -n "${INDEX}" ]]; then
+      list-rm-item NON_STD_LABELS "${TEST_LABEL}"
+    fi
+  done <<< "${PROJECT_LABEL_NAMES}"
+
+  MISSING_LABELS="${PROJECT_LABEL_NAMES}"
+  while read -r TEST_LABEL; do
+    INDEX=$(list-get-index MISSING_LABELS "${TEST_LABEL}")
+    if [[ -n "${INDEX}" ]]; then
+      list-rm-item MISSING_LABELS "${TEST_LABEL}"
+    fi
+  done <<< "${CURR_LABELS}"
+
+  local LABELS_SYNCED=true
+  if [[ -n "${NON_STD_LABELS}" ]]; then
+    if [[ -z "${NO_DELETE}" ]]; then
+      while read -r TEST_LABEL; do
+        echo "Removing non-standard label '${TEST_LABEL}'..."
+        hub api -X DELETE "/repos/${GIT_BASE}/labels/${TEST_LABEL}"
+      done <<< "${NON_STD_LABELS}"
+    else
+      echowarn "The following non-standard labels where found in ${PROJECT}:\n$(echo "${NON_STD_LABELS}" | awk '{ print "* "$0 }')\n\nInclude the '--delete' option to attempt removal."
+      LABELS_SYNCED=false
+    fi
+  fi # non-standard label check; potential deletion
+
+  local LABEL_SPEC NAME COLOR DESC
+  set-spec() {
+    NAME="$(echo "${LABEL_SPEC}" | awk -F: '{print $1}')"
+    DESC="$(echo "${LABEL_SPEC}" | awk -F: '{print $2}')"
+    COLOR="$(echo "${LABEL_SPEC}" | awk -F: '{print $3}')"
+  }
+
+  if [[ -n "${MISSING_LABELS}" ]]; then
+    while read -r TEST_LABEL; do
+      LABEL_SPEC="$(list-get-item-by-prefix PROJECT_LABELS "${TEST_LABEL}:")"
+      set-spec
+      echo "Adding label '${TEST_LABEL}'..."
+      hub api -X POST "/repos/${GIT_BASE}/labels" -f name="${NAME}" -f description="${DESC}" -f color="${COLOR}" > /dev/null
+    done <<< "$MISSING_LABELS"
+  fi # missing labels creation
+
+  if [[ -z "$NO_UPDATE_LABELS" ]] && [[ "${LABELS_SYNCED}" == true ]]; then
+    [[ "${LABELS_SYNCED}" != true ]] || echo "Label names synchronized."
+    echo "Checking label definitions..."
+    LABELS_SYNCED=false
+    while read -r LABEL_SPEC; do
+      set-spec
+      local CURR_DESC CURR_COLOR
+      CURR_DESC="$(echo "$CURR_LABEL_DATA" | jq -r "map(select(.name == \"${NAME}\"))[0].description")"
+      CURR_COLOR="$(echo "$CURR_LABEL_DATA" | jq -r "map(select(.name == \"${NAME}\"))[0].color")"
+      if [[ "${CURR_COLOR}" != "${COLOR}" ]] || [[ "$CURR_DESC" != "${DESC}" ]]; then
+        echo "Updating label definition for '${NAME}'..."
+        hub api -X PATCH "/repos/${GIT_BASE}/labels/${NAME}" -f description="${DESC}" -f color="${COLOR}" > /dev/null
+        LABELS_SYNCED=true
+      fi
+    done <<< "${PROJECT_LABELS}"
+
+    [[ "$LABELS_SYNCED" == true ]] && echo "Label definitions updated." || echo "Labels already up-to-date."
+  else
+    [[ "${LABELS_SYNCED}" != true ]] || [[ -n "$NO_UPDATE_LABELS" ]] || echo "Labels not synchronized; skipping update."
+    [[ -z "${NO_UPDATE_LABELS}" ]] || echo "Skipping update."
+  fi # labels definition check and update
 }
 
 # TODO: deprecated
