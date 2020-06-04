@@ -24,7 +24,7 @@ orgsPolicyRepo() {
 }
 
 # Sources the named base org settings or will infer org context. If the base org cannot be found, the execution will
-# halt and the user will be advised to import it.
+# halt and the user will be advised to timport it.
 orgs-lib-source-settings() {
   local NPM_ORG="${1:-}"
 
