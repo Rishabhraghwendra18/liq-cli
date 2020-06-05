@@ -174,14 +174,24 @@ orgs-list() {
 
 # see `liq help orgs show`
 orgs-show() {
+  eval "$(setSimpleOptions DIR PROJECT SETTINGS -- "$@")"
   findBase
   cd "${BASE_DIR}/.."
   local NPM_ORG
   NPM_ORG="$(basename "$PWD")"
 
-  if [[ -e "${LIQ_ORG_DB}/${NPM_ORG}" ]]; then
-    cat "${LIQ_ORG_DB}/${NPM_ORG}/settings.sh"
-  else
-    echowarn "No base package found for '${NPM_ORG}'. Try:\nliq orgs import <base pkg|URL>"
+  if ! [[ -e "${LIQ_ORG_DB}/${NPM_ORG}" ]]; then
+    echoerrandexit "No base package found for '${NPM_ORG}'. Try:\nliq orgs import <base pkg|URL>"
   fi
+
+  # Recall the org DB links the npm org name to the repo.
+  { { [[ -n "$DIR" ]] && readlink "${LIQ_ORG_DB}/${NPM_ORG}"; } \
+  || { [[ -n "$PROJECT" ]] && cat "${LIQ_ORG_DB}/${NPM_ORG}/package.json" | jq -r '.name'; } \
+  || { [[ -n "$SETTINGS" ]] && cat "${LIQ_ORG_DB}/${NPM_ORG}/settings.sh"; } } || \
+  { # the no specific format option
+    cat <<EOF
+Project: $(cat "${LIQ_ORG_DB}/${NPM_ORG}/package.json" | jq -r '.name')
+Local dir:  $(readlink "${LIQ_ORG_DB}/${NPM_ORG}")
+EOF
+  }
 }
