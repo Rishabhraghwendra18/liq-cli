@@ -25,6 +25,7 @@ work-diff-master() {
 work-close() {
   eval "$(setSimpleOptions POP TEST NO_SYNC -- "$@")"
   source "${LIQ_WORK_DB}/curr_work"
+  findBase
 
   local PROJECTS
   if (( $# > 0 )); then
@@ -700,6 +701,8 @@ work-test() {
 work-submit() {
   eval "$(setSimpleOptions MESSAGE= NOT_CLEAN:C NO_CLOSE:X NO_BROWSE:B -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
+
+  findBase
 
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "No current unit of work. Try:\nliq work select."
