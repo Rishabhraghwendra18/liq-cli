@@ -96,8 +96,8 @@ EOF
 }
 
 help-work-status() {
-  cat <<EOF | _help-func-summary status "[-s|--select] [--list-projects|-p] [--list-issues|-i] [<name>]"
-Shows details for the current or named unit of work. Will enter interactive selection if no option and no current work or the '--select' option is given. The '--list-projects' and '--list-issues' options are meant to be used on their own and will just list the involved projects or associated issues respectively.
+  cat <<EOF | _help-func-summary status "[--list-projects|-p] [--list-issues|-i] [--no-fetch|-F] [--pr-ready] [<name>]"
+Shows details for the current or named unit of work. Will enter interactive selection if no option and no current work or the '--select' option is given. The '--list-projects' and '--list-issues' options are meant to be used on their own and will just list the involved projects or associated issues respectively. '--no-fetch' skips updating the local repositories. '--pr-ready' suppresses all output and just return (bash) true or false.
 EOF
 }
 

@@ -456,11 +456,15 @@ work-stage() {
 work-status() {
   check-git-access
 
-  eval "$(setSimpleOptions SELECT PR_READY: NO_FETCH:F LIST_PROJECTS:p LIST_ISSUES:i -- "$@")" \
+  eval "$(setSimpleOptions PR_READY: NO_FETCH:F LIST_PROJECTS:p LIST_ISSUES:i -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
   local WORK_NAME LOCAL_COMMITS REMOTE_COMMITS
-  workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
+  WORK_NAME="${1:-}"
+  # Set WORK_NAME to curr work if present
+  [[ -n "${WORK_NAME}" ]] || ! [[ -f "${LIQ_WORK_DB}/curr_work" ]] \
+    || WORK_NAME="$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))"
+  [[ -n "${WORK_NAME}" ]] || echoerrandexit "No current work. You must specify work to show status."
 
   if [[ "$PR_READY" == true ]]; then
     git fetch workspace "${WORK_NAME}:remotes/workspace/${WORK_NAME}"
