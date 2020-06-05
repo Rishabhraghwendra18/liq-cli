@@ -1897,7 +1897,7 @@ orgsPolicyRepo() {
 }
 
 # Sources the named base org settings or will infer org context. If the base org cannot be found, the execution will
-# halt and the user will be advised to import it.
+# halt and the user will be advised to timport it.
 orgs-lib-source-settings() {
   local NPM_ORG="${1:-}"
 
@@ -1912,6 +1912,7 @@ orgs-lib-source-settings() {
     [[ -f "$LIQ_ORG_DB/${NPM_ORG}/settings.sh" ]] || echoerrandexit "Could not locate settings file for '${NPM_ORG}'."
     source "$LIQ_ORG_DB/${NPM_ORG}/settings.sh"
 
+    ORG_ROLES="${ORG_ROLES/\~/$LIQ_PLAYGROUND}"
     ORG_STRUCTURE="${ORG_STRUCTURE/\~/$LIQ_PLAYGROUND}"
     ORG_CHART_TEMPLATE="${ORG_CHART_TEMPLATE/\~/$LIQ_PLAYGROUND}"
   else
@@ -3160,6 +3161,7 @@ work-diff-master() {
 work-close() {
   eval "$(setSimpleOptions POP TEST NO_SYNC -- "$@")"
   source "${LIQ_WORK_DB}/curr_work"
+  findBase
 
   local PROJECTS
   if (( $# > 0 )); then
@@ -3835,6 +3837,8 @@ work-test() {
 work-submit() {
   eval "$(setSimpleOptions MESSAGE= NOT_CLEAN:C NO_CLOSE:X NO_BROWSE:B -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
+
+  findBase
 
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "No current unit of work. Try:\nliq work select."
