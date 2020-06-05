@@ -39,6 +39,7 @@ orgs-lib-source-settings() {
     [[ -f "$LIQ_ORG_DB/${NPM_ORG}/settings.sh" ]] || echoerrandexit "Could not locate settings file for '${NPM_ORG}'."
     source "$LIQ_ORG_DB/${NPM_ORG}/settings.sh"
 
+    ORG_ROLES="${ORG_ROLES/\~/$LIQ_PLAYGROUND}"
     ORG_STRUCTURE="${ORG_STRUCTURE/\~/$LIQ_PLAYGROUND}"
     ORG_CHART_TEMPLATE="${ORG_CHART_TEMPLATE/\~/$LIQ_PLAYGROUND}"
   else
