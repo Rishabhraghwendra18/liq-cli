@@ -3600,11 +3600,15 @@ work-stage() {
 work-status() {
   check-git-access
 
-  eval "$(setSimpleOptions SELECT PR_READY: NO_FETCH:F LIST_PROJECTS:p LIST_ISSUES:i -- "$@")" \
+  eval "$(setSimpleOptions PR_READY: NO_FETCH:F LIST_PROJECTS:p LIST_ISSUES:i -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
   local WORK_NAME LOCAL_COMMITS REMOTE_COMMITS
-  workUserSelectOne WORK_NAME "$((test -n "$SELECT" && echo '') || echo "true")" '' "$@"
+  WORK_NAME="${1:-}"
+  # Set WORK_NAME to curr work if present
+  [[ -n "${WORK_NAME}" ]] || ! [[ -f "${LIQ_WORK_DB}/curr_work" ]] \
+    || WORK_NAME="$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))"
+  [[ -n "${WORK_NAME}" ]] || echoerrandexit "No current work. You must specify work to show status."
 
   if [[ "$PR_READY" == true ]]; then
     git fetch workspace "${WORK_NAME}:remotes/workspace/${WORK_NAME}"
@@ -4040,8 +4044,8 @@ EOF
 }
 
 help-work-status() {
-  cat <<EOF | _help-func-summary status "[-s|--select] [--list-projects|-p] [--list-issues|-i] [<name>]"
-Shows details for the current or named unit of work. Will enter interactive selection if no option and no current work or the '--select' option is given. The '--list-projects' and '--list-issues' options are meant to be used on their own and will just list the involved projects or associated issues respectively.
+  cat <<EOF | _help-func-summary status "[--list-projects|-p] [--list-issues|-i] [--no-fetch|-F] [--pr-ready] [<name>]"
+Shows details for the current or named unit of work. Will enter interactive selection if no option and no current work or the '--select' option is given. The '--list-projects' and '--list-issues' options are meant to be used on their own and will just list the involved projects or associated issues respectively. '--no-fetch' skips updating the local repositories. '--pr-ready' suppresses all output and just return (bash) true or false.
 EOF
 }
 

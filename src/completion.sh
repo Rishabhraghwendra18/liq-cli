@@ -117,6 +117,32 @@ _liq() {
     OPTS="$(echo "$OPTS" | awk -F: '{print $2}' | tr "'" '"' | jq -r '.[]')"
     std-reply
   }
+  comp-liq-work-status() {
+    local EX_OPTS="--list-projects --list-issues --pr-ready"
+    local COMMON_OPTS="--no-fetch"
+
+    local i
+    for i in $COMMON_OPTS; do
+      [[ $COMP_LINE != *" ${i}"* ]]  && OPTS="${i} ${OPTS}"
+    done
+
+    local EXES=false
+    for i in $EX_OPTS; do
+      if [[ $COMP_LINE == *" ${i}"* ]]; then EXES=true; break; fi
+    done
+    [[ "${EXES}" == 'false' ]] && OPTS="${EX_OPTS} ${OPTS}"
+
+    # have they specified work?
+    local AFTER
+    AFTER="${COMP_LINE/* status/}"
+    AFTER="${AFTER%$CUR}"
+
+    if [[ "${PREV}" == 'status' ]] || ! { echo "${AFTER}" | grep -qE '(^| )[a-zA-Z0-9][a-zA-Z0-9_.-]*( |$)'; }; then
+      OPTS="${OPTS} $(find "${HOME}/.liquid-development/work" -type f -maxdepth 1 -exec basename {} \;)"
+    fi
+
+    std-reply
+  }
 
   # TODO: Should we use LIQ_EXTS_DB here? This way, we're sidestepping the need to 'build' the completion script...
   source "${HOME}/.liquid-development/exts/comps.sh"
