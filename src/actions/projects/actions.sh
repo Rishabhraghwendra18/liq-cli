@@ -539,18 +539,20 @@ projects-test() {
   if [[ -z "${NO_SERVICE_CHECK}" ]] \
      && ( [[ -z "${TEST_TYPES:-}" ]] \
        || echo "$TEST_TYPES" | grep -qE '(^|, *| +)int(egration)?(, *| +|$)' ); then
-    requireEnvironment
-    echo -n "Checking services... "
-    if ! services-list --show-status --exit-on-stopped --quiet > /dev/null; then
-      if [[ -z "${NO_START:-}" ]]; then
-        services-start || echoerrandexit "Could not start services for testing."
+    if type -t projects-services-list | grep -q 'function'; then
+      requireEnvironment
+      echo -n "Checking services... "
+      if ! projects-services-list --show-status --exit-on-stopped --quiet > /dev/null; then
+        if [[ -z "${NO_START:-}" ]]; then
+          services-start || echoerrandexit "Could not start services for testing."
+        else
+          echo "${red}necessary services not running.${reset}"
+          echoerrandexit "Some services are not running. You can either run unit tests are start services. Try one of the following:\nliq projects test --types=unit\nliq services start"
+        fi
       else
-        echo "${red}necessary services not running.${reset}"
-        echoerrandexit "Some services are not running. You can either run unit tests are start services. Try one of the following:\nliq projects test --types=unit\nliq services start"
+        echo "${green}looks good.${reset}"
       fi
-    else
-      echo "${green}looks good.${reset}"
-    fi
+    fi # check if runtime extesions present
   fi
 
   # note this entails 'pretest' and 'posttest' as well
