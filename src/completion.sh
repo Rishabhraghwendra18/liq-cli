@@ -106,7 +106,7 @@ _liq() {
     COMPREPLY=( $(compgen -o nospace -W "$(for d in ${CUR}*; do [[ -d "$d" ]] && echo "$d/" || echo "$d"; done)" -- ${CUR}) )
   }
 
-  local WORK_ISSUES_ACTIONS="add list remove"
+  local WORK_ISSUES_ACTIONS="--add --list --remove"
   eval "$(comp-func-builder 'work-issues' 'WORK_ISSUES')"
 
   local WORK_LINKS_ACTIONS="add list remove"
