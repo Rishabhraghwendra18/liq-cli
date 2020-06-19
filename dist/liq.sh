@@ -1990,8 +1990,17 @@ projects-create() {
   # TODO: Support 'NPM_PASSTHRUOGH:P' which will use the NPM default values for version and license.
   eval "$(setSimpleOptions NEW= SOURCE= FOLLOW NO_FORK:F VERSION= LICENSE= DESCRIPTION= PUBLIC: ORG_BASE= -- "$@")"
 
+  __PROJ_NAME="${1:-}"
   if [[ -z "${ORG_BASE}" ]]; then
-    echoerrandexit "Must specify '--org-base' for the project."
+    local ORG_BIT=$(dirname "${__PROJ_NAME/@/}")
+    local ORG_LINK="${HOME}/.liquid-development/orgs/${ORG_BIT}"
+    if [[ -L "$ORG_LINK" ]]; then
+      ORG_BASE="$(cat "${ORG_LINK}/package.json" \
+        | jq -r '.repository.url' \
+        | sed -E -e 's|^[^/]*//[^/]+/||' -e 's/\.git$//')"
+    else
+      echoerrandexit "Could not determine org base through local checkouts; specify '--org-base <github org/repo>' for the project."
+    fi
   fi
 
   # first, check that we can access GitHub
@@ -2004,7 +2013,6 @@ projects-create() {
     echoerrandexit "You must specify one of the '--new' or '--source' options when creating a project.Please refer to:\nliq help projects create"
   fi
 
-  __PROJ_NAME="${1:-}"
   if [[ -z "${__PROJ_NAME:-}" ]]; then
     if [[ -n "$SOURCE" ]]; then
       __PROJ_NAME=$(basename "$SOURCE" | sed -e 's/\.[a-zA-Z0-9]*$//')
