@@ -3861,6 +3861,7 @@ work-submit() {
     || ( contextHelp; echoerrandexit "Bad options." )
 
   findBase
+  check-git-access
 
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "No current unit of work. Try:\nliq work select."
