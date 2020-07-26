@@ -703,7 +703,7 @@ work-test() {
 }
 
 work-submit() {
-  eval "$(setSimpleOptions MESSAGE= NOT_CLEAN:C NO_CLOSE:X NO_BROWSE:B -- "$@")" \
+  eval "$(setSimpleOptions MESSAGE= NOT_CLEAN:C NO_CLOSE:X NO_BROWSE:B FORCE -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
 
   findBase
@@ -798,6 +798,9 @@ ${MESSAGE}
     local PULL_OPTS="--push --base=${BASE_TARGET}:master "
     if [[ -z "$NO_BROWSE" ]]; then
       PULL_OPTS="$PULL_OPTS --browse"
+    fi
+    if [[ -n "$FORCE" ]]; then
+      PULL_OPTS="$PULL_OPTS --force"
     fi
     echo "Submitting PR for '$IP'..."
     hub pull-request $PULL_OPTS -m "${DESC}"
