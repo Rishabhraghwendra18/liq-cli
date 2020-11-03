@@ -13,6 +13,9 @@ projects-build() {
 projects-close() {
   eval "$(setSimpleOptions FORCE -- "$@")"
 
+  # check that we can access GitHub
+  check-git-access
+
   local PROJECT_NAME="${1:-}"
 
   # first figure out what to close
@@ -25,7 +28,7 @@ projects-close() {
 
   deleteLocal() {
     cd "${LIQ_PLAYGROUND}" \
-      && rm -rf "$PROJECT_NAME" && echo "Removed project '@${PROJECT_NAME}'."
+      && rm -rf "$PROJECT_NAME" && echo "Removed local work directory for project '@${PROJECT_NAME}'."
     # now check to see if we have an empty "org" dir
     local ORG_NAME
     ORG_NAME=$(dirname "${PROJECT_NAME}")
@@ -44,7 +47,7 @@ projects-close() {
     cd "$PROJECT_NAME"
     # Are remotes setup as expected?
     if ! git remote | grep -q '^upstream$'; then
-      echoerrandexit "Did not find expected 'upstream' remote. Verify everything saved+pushed and try:\nliq projects close --force '${PROJECT_NAME}'"
+      echoerrandexit "Did not find expected 'upstream' remote. Try:\n\ncd '$LIQ_PLAYGROUND'\n\nThen manually verify everything has been saved and pushed to the canonical remote. Then you can force local deletion with:\n\nliq projects close --force '${PROJECT_NAME}' #use-with-extreme-caution"
     fi
     requireCleanRepo --check-all-branches "$PROJECT_NAME" # exits if not clean + branches saved to remotes
     deleteLocal # didn't exit? OK to delete
