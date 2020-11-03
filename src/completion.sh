@@ -87,7 +87,7 @@ _liq() {
     COMPREPLY=( $(compgen -W "$(find ~/.liquid-development/orgs -maxdepth 1 -mindepth 1 -type l -exec basename {} \;)" -- ${CUR}) )
   }
 
-  local PROJECTS_ACTIONS="build close create publish qa sync test"
+  local PROJECTS_ACTIONS="build close create edit publish qa sync test"
   local PROJECTS_GROUPS=""
   eval "$(comp-func-builder 'projects' 'PROJECTS')"
   comp-liq-projects-create() {

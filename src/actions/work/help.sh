@@ -23,7 +23,7 @@ EOF
 
 help-work-edit() {
   cat <<EOF | _help-func-summary edit
-Opens a local project editor for all involved repositories.
+Opens a local project editor for all involved repositories. See `liq help projects edit`.
 EOF
 }
 

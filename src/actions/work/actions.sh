@@ -91,11 +91,28 @@ work-commit() {
   echoerrandexit "Invalid action 'commit'; do you want to 'save'?\nRefer to:\nliq help work save\nor try:\nliq work save $(for i in "$@"; do if [[ "$i" == *' '* ]]; then echo -n "'$i' "; else echo -n "$i "; fi; done)"
 }
 
+# `liq help work edit`
+# TODO: untested
 work-edit() {
-  # TODO: make editor configurable
-  local EDITOR_CMD='atom'
-  local OPEN_PROJ_CMD="${EDITOR_CMD} ."
-  cd "${BASE_DIR}" && ${OPEN_PROJ_CMD}
+  source "${LIQ_WORK_DB}/curr_work"
+  findBase
+
+  local PROJECTS
+  if (( $# > 0 )); then
+    PROJECTS="$@"
+  else
+    PROJECTS="$INVOLVED_PROJECTS"
+  fi
+
+  local PROJECT
+  # TODO: first, do the checks
+  ( for PROJECT in $PROJECTS; do
+    PROJECT=$(workConvertDot "$PROJECT")
+    PROJECT="${PROJECT/@/}"
+    cd "${LIQ_PLAYGROUND}/${PROJECT}"
+
+    projects-edit
+  done )
 }
 
 work-ignore-rest() {

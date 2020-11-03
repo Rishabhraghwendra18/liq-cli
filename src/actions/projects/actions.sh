@@ -212,6 +212,15 @@ projects-deploy() {
   colorerr "GOPATH=$GOPATH bash -c 'cd $GOPATH/src/$REL_GOAPP_PATH; gcloud app deploy'"
 }
 
+# see: liq help projects edit
+projects-edit() {
+  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+
+  local EDITOR_CMD="${LIQ_EDITOR_CMD:-}"
+  [[ -n "${EDITOR_CMD}" ]] || EDITOR_CMD="atom ."
+  cd "${BASE_DIR}" && ${EDITOR_CMD}
+}
+
 # see: liq help projects import; The '--set-name' and '--set-url' options are for internal use and each take a var name
 # which will be 'eval'-ed to contain the project name and URL.
 projects-import() {

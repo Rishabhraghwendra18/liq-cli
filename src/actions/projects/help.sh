@@ -55,6 +55,16 @@ Deploys the current or named project(s).
 EOF
 }
 
+help-projects-edit() {
+  cat <<EOF | _help-func-summary edit
+Opens a local project editor from the project root directory. Users may set `LIQ_EDITOR_CMD` to launch their project editor. The command is:
+
+atom .
+
+The command is run from the project root.
+EOF
+}
+
 help-projects-import() {
   cat <<EOF | _help-func-summary import "[--no-install] <package or URL>"
 Imports the indicated package into your playground. The newly imported package will be installed unless '--no-install' is given.
