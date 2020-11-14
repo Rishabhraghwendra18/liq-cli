@@ -22,6 +22,18 @@ _liq() {
     COMPREPLY=( $(compgen -W "${OPTS}" -- ${CUR}) )
   }
 
+  proj-paths-reply() {
+    local MATCH="${1}"
+
+    if [[ "${CUR}" != */* ]]; then
+      COMPREPLY=( $(compgen -o nospace -W "$(find ~/playground -type d -maxdepth 1 -mindepth 1 -not -name ".*" | awk -F/ '{ print $NF"/" }')" -- ${CUR}) )
+    else
+      # TODO: check that 'MATCH' matches /^[a-z0-9-_ *?]$/i
+      # TODO: source and use LIQ_PLAYGROUND
+      COMPREPLY=( $(compgen -W "$(ls -d "${HOME}/playground/${CUR}"${MATCH} | awk -F/ '{ print $(NF - 1)"/"$NF }')" -- ${CUR}) )
+    fi
+  }
+
   comp-liq() {
     OPTS="${GLOBAL_ACTIONS} ${ACTION_GROUPS}"; std-reply
   }
@@ -62,11 +74,7 @@ _liq() {
     if [[ "${PREV}" == 'install' ]]; then
       COMPREPLY=( $(compgen -W "--local --registry" -- ${CUR}) )
     elif [[ "${PREV}" == "--local" ]]; then
-      if [[ "${CUR}" != */* ]]; then
-        COMPREPLY=( $(compgen -o nospace -W "$(find ~/playground -type d -maxdepth 1 -mindepth 1 -not -name ".*" | awk -F/ '{ print $NF"/" }')" -- ${CUR}) )
-      else
-        COMPREPLY=( $(compgen -W "$(ls -d ~/playground/liquid-labs/*-ext-* | awk -F/ '{ print $(NF - 1)"/"$NF }')" -- ${CUR}) )
-      fi
+      proj-paths-reply "*-ext-*"
     fi
     # Currently no completion for registry packages.
   }
@@ -95,6 +103,12 @@ _liq() {
       COMPREPLY=( $(compgen -W "--new --source" -- ${CUR}) )
     elif [[ "${PREV}" == "--new" ]] || [[ "${PREV}" == "-n" ]]; then
       COMPREPLY=( $(compgen -W "raw" -- ${CUR}) )
+    fi
+  }
+  comp-liq-projects-close() {
+
+    if [[ "${COMP_LINE}" != *'/'? ]]; then
+      proj-paths-reply '*'
     fi
   }
 
