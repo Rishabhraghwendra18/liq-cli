@@ -3,7 +3,7 @@
 
 # TODO: we could generate this from the help docs... make the spec central!
 _liq() {
-  local GLOBAL_ACTIONS="help"
+  local GLOBAL_ACTIONS="help ?"
   # Using 'GROUPS' was causing errors; set by some magic.
   local ACTION_GROUPS="meta orgs projects work"
 
@@ -13,6 +13,10 @@ _liq() {
   COMP_FUNC='comp'
   WORD_COUNT=${#COMP_WORDS[@]}
   TOKEN_COUNT=0
+
+  if [[ "$CUR" == '?' ]]; then
+    CUR='help'
+  fi
 
   no-opts() {
     COMPREPLY=( $(compgen -W "" -- ${CUR}) )

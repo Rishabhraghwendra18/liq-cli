@@ -1,10 +1,14 @@
 if (( $# == 0 )); then
   echoerrandexit "No arguments provided. Try:\nliq help"
 fi
+LAST_ARG="${@: -1}"
 GROUP="${1:-}"; shift # or global command
+
+if [[ "$LAST_ARG" == 'help' ]]
+
 case "$GROUP" in
   # global actions
-  help)
+  help|?)
     help "$@";;
   # components and actionsprojct
   *)

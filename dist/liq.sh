@@ -1372,6 +1372,7 @@ Usage:
   liq ${cyan_u}help${reset} [<group or resource> [<action>]
 EOF
 
+    # This bits is what generates the list of locally installed groups, and printing their info.
     local GROUP
     for GROUP in $CATALYST_COMMAND_GROUPS; do
       echo
@@ -4578,7 +4579,7 @@ fi
 GROUP="${1:-}"; shift # or global command
 case "$GROUP" in
   # global actions
-  help)
+  help|?)
     help "$@";;
   # components and actionsprojct
   *)
