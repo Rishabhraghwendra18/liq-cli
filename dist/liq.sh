@@ -4576,7 +4576,16 @@ fi
 if (( $# == 0 )); then
   echoerrandexit "No arguments provided. Try:\nliq help"
 fi
-GROUP="${1:-}"; shift # or global command
+
+# support for trailing 'help'
+LAST_ARG="${@: -1}"
+if [[ "${LAST_ARG}" == 'help' ]] || [[ "${LAST_ARG}" == '?' ]]; then
+  GROUP='help'
+  set -- "${@:1:$(($#-1))}" # 'pops' the last arg
+else
+  GROUP="${1:-}"; shift # or global command
+fi
+
 case "$GROUP" in
   # global actions
   help|?)
