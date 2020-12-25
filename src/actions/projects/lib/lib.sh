@@ -113,6 +113,7 @@ projectMoveStaged() {
   NPM_ORG="$(dirname "$PROJ_NAME")"
   NPM_ORG="${NPM_ORG/@/}"
   mkdir -p "${LIQ_PLAYGROUND}/${NPM_ORG}"
+  echo "Moving staging dir to playground..."
   mv "$PROJ_STAGE" "$LIQ_PLAYGROUND/${NPM_ORG}" \
     || echoerrandexit "Could not moved staged '$PROJ_NAME' to playground. See above for details."
 }

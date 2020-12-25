@@ -165,6 +165,11 @@ projects-create() {
     git commit -m "setup and/or updated package.json"
   fi
 
+  echo "Adding basic liq data to package.json..."
+  cat package.json | jq '. + { "liquidDev": { "orgBase": "git@github.com:'"${ORG_BASE}"'.git" } }' > package.new.json
+  mv package.new.json package.json
+  git commit -am "Added basic liq data to package.json"
+
   echo "Creating upstream repo..."
   local CREATE_OPTS="--remote-name upstream"
   if [[ -z "$PUBLIC" ]]; then CREATE_OPTS="${CREATE_OPTS} --private"; fi
@@ -195,10 +200,6 @@ projects-create() {
     echo "Un-following source repo..."
     git remote remove source
   fi
-
-  echo "Adding basic liq data to package.json..."
-  cat package.json | jq '. + { "liquidDev": { "orgBase": "git@github.com:'"${ORG_BASE}"'.git" } }' > package.new.json
-  mv package.new.json package.json
 
   cd - > /dev/null
   projectMoveStaged "${PKG_ORG_NAME}/${PKG_BASENAME}" "$PROJ_STAGE"
