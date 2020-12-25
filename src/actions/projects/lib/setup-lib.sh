@@ -2,6 +2,7 @@
 # * NO_DELETE_LABELS, PROJECT, NO_UPDATE_LABELS from options, and
 # * GIT_BASE and PACKAGE to be set.
 projects-lib-setup-labels-sync() {
+  echo "Setting up labels..."
   local ORG_BASE ORG_PROJECT
   ORG_BASE="$(echo "${PACKAGE}" | jq -r '.liquidDev.orgBase' )"
   if [[ "${ORG_BASE}" == *'github.com'*'git' ]]; then # it's a git URL; convert to project name
@@ -23,7 +24,7 @@ projects-lib-setup-labels-sync() {
   fi
   source "${LIQ_PLAYGROUND}/${ORG_PROJECT}/settings.sh"
   if [[ -z "${PROJECT_LABELS:-}" ]]; then
-    echo "No project labels defined; using default label set..."
+    echo "  No project labels defined; using default label set..."
     PROJECT_LABELS=$(cat <<EOF
 bounty:This task offers a bounty:209020
 bug:Something is broken:d73a4a
@@ -60,11 +61,11 @@ EOF
   if [[ -n "${NON_STD_LABELS}" ]]; then
     if [[ -z "${NO_DELETE_LABELS}" ]]; then
       while read -r TEST_LABEL; do
-        echo "Removing non-standard label '${TEST_LABEL}'..."
+        echo "  Removing non-standard label '${TEST_LABEL}'..."
         hub api -X DELETE "/repos/${GIT_BASE}/labels/${TEST_LABEL}"
       done <<< "${NON_STD_LABELS}"
     else
-      echowarn "The following non-standard labels where found in ${PROJECT}:\n$(echo "${NON_STD_LABELS}" | awk '{ print "* "$0 }')\n\nInclude the '--delete' option to attempt removal."
+      echowarn "  The following non-standard labels where found in ${PROJECT}:\n$(echo "${NON_STD_LABELS}" | awk '{ print "* "$0 }')\n\nInclude the '--delete' option to attempt removal."
       LABELS_SYNCED=false
     fi
   fi # non-standard label check; potential deletion
@@ -81,7 +82,7 @@ EOF
     while read -r TEST_LABEL; do
       LABEL_SPEC="$(list-get-item-by-prefix PROJECT_LABELS "${TEST_LABEL}:")"
       set-spec
-      echo "Adding label '${TEST_LABEL}'..."
+      echo "  Adding label '${TEST_LABEL}'..."
       hub api -X POST "/repos/${GIT_BASE}/labels" \
         -f name="${NAME}" \
         -f description="${DESC}" \
@@ -91,8 +92,8 @@ EOF
   fi # missing labels creation
 
   if [[ -z "$NO_UPDATE_LABELS" ]] && [[ "${LABELS_SYNCED}" == true ]]; then
-    [[ "${LABELS_SYNCED}" != true ]] || echo "Label names synchronized."
-    echo "Checking label definitions..."
+    [[ "${LABELS_SYNCED}" != true ]] || echo "  Label names synchronized..."
+    echo "  Checking label definitions..."
     LABELS_SYNCED=false
     while read -r LABEL_SPEC; do
       set-spec
@@ -101,7 +102,7 @@ EOF
       CURR_COLOR="$(echo "$CURR_LABEL_DATA" | jq -r "map(select(.name == \"${NAME}\"))[0].color")"
       if { [[ "${CURR_COLOR}" != "${COLOR}" ]] || [[ "$CURR_DESC" != "${DESC}" ]]; } \
          && [[ -z $(list-get-index LABELS_CREATED "${NAME}") ]]; then
-        echo "Updating label definition for '${NAME}'..."
+        echo "  Updating label definition for '${NAME}'..."
         hub api -X PATCH "/repos/${GIT_BASE}/labels/${NAME}" -f description="${DESC}" -f color="${COLOR}" > /dev/null
         LABELS_SYNCED=true
       fi
@@ -110,6 +111,6 @@ EOF
     [[ "$LABELS_SYNCED" == true ]] && echo "Label definitions updated." || echo "Labels already up-to-date."
   else
     [[ "${LABELS_SYNCED}" != true ]] || [[ -n "$NO_UPDATE_LABELS" ]] || echo "Labels not synchronized; skipping update."
-    [[ -z "${NO_UPDATE_LABELS}" ]] || echo "Skipping update."
+    [[ -z "${NO_UPDATE_LABELS}" ]] || echo "Skipping labels update."
   fi # labels definition check and update
 }

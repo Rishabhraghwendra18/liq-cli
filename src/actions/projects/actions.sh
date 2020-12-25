@@ -200,10 +200,10 @@ projects-create() {
   cat package.json | jq '. + { "liquidDev": { "orgBase": "git@github.com:'"${ORG_BASE}"'.git" } }' > package.new.json
   mv package.new.json package.json
 
-  cd -
+  cd - > /dev/null
   projectMoveStaged "${PKG_ORG_NAME}/${PKG_BASENAME}" "$PROJ_STAGE"
   cd "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}/${PKG_BASENAME}"
-  projects-setup
+  projects-setup --unpublished
 }
 
 # see: liq help projects deploy
@@ -345,7 +345,8 @@ projects-qa() {
 }
 
 projects-setup() {
-  eval "$(setSimpleOptions PROJECT= SKIP_LABELS:L NO_DELETE_LABELS:D NO_UPDATE_LABELS:U SKIP_MILESTONES:M -- "$@")" \
+  local OPTIONS="PROJECT= SKIP_LABELS:L NO_DELETE_LABELS:D NO_UPDATE_LABELS:U SKIP_MILESTONES:M UNPUBLISHED:P"
+  eval "$(setSimpleOptions $OPTIONS -- "$@")" \
     || { contextHelp; echoerrandexit "Bad options."; }
 
   if [[ -z "$PROJECT" ]]; then
@@ -371,31 +372,39 @@ projects-setup() {
   [[ -n "$SKIP_LABELS" ]] || projects-lib-setup-labels-sync
 
   [[ -n "$SKIP_MILESTONES" ]] || {
+    echo "Setting up milestones..."
     # Expects PACKAGE_NAME
     local CURR_MILESTONES EXPECTED_MILESTONES TYPICAL_MILESTONES
     CURR_MILESTONES="$(hub api "/repos/${GIT_BASE}/milestones" | jq -r ".[].title")"
 
     if [[ -n "$CURR_MILESTONES" ]]; then
-      echo -e "Current milestones:\n$(echo "${CURR_MILESTONES}" | awk '{print "* "$0}')"
+      echo -e "  Current milestones:\n$(echo "${CURR_MILESTONES}" | awk '{print "    * "$0}')"
       echo
     else
-      echo "No existing milestones found."
+      echo "  No existing milestones found."
     fi
 
     local EXPECTED_MILESTONES_PRESENT=false
     local MILESTONES_SYNCED=true
     check-and-add-milestone() {
       local TITLE="${1}"
-      local PRE_PROMPT="${2}"
-      local DEFAULT="${3}"
+      local RESULT TITLE_OUT NUMBER
       if [[ -z "$(list-get-index CURR_MILESTONES "${TITLE}")" ]]; then
-        echowarn "${PRE_PROMPT}"
-        if yes-no "Add it?" "${DEFAULT}"; then
-          echo "Attempting to add milestone '${TITLE}'..."
-          # hup api -X POST "/repos/${GIT_BASE}/milestones" -f title="${TITLE}"
-        else
+        echo "  Attempting to add milestone '${TITLE}'..."
+        RESULT="$(hub api -X POST "/repos/${GIT_BASE}/milestones" -f title="${TITLE}")" && \
+        { # milestone create success
+          TITLE_OUT="$(echo "${RESULT}" | jq -r '.title')"
+          [[ "${TITLE_OUT}" == "${TITLE}" ]] || \
+            echowarn "  Created title '${TITLE_OUT}' does not match input title '${TITLE}'"
+          NUMBER="$(echo "${RESULT}" | jq -r '.number')"
+          echo "  Created milestone '${TITLE}' (milestone number: ${NUMBER})..."
+        } || \
+        { # milestone create failed
+          echoerr "  Failed to create milestone '${TITLE}' (probably); check and add manually."
           MILESTONES_SYNCED=false
-        fi
+        }
+      else
+        echo "  Milestone '${TITLE}' already present."
       fi
     }
 
@@ -406,12 +415,14 @@ projects-setup() {
     EXPECTED_MILESTONES="backlog"
 
     local CURR_VERSION CURR_PREID
-    if npm search "${PACKAGE_NAME}" --parseable | grep -q "${PACKAGE_NAME}"; then
+    if [[ -z "${UNPUBLISHED}" ]] && npm search "${PACKAGE_NAME}" --parseable | grep -q "${PACKAGE_NAME}"; then
       CURR_VERSION="$(npm info "${PACKAGE_NAME}" version)"
     else
       # The package is not-published/not-findable.
-      echowarn "Package '${PACKAGE_NAME}' not publised or not findable. Consider publishing."
-      echowarn "Current version will be read locally."
+      if [[ -z "${UNPUBLISHED}" ]]; then
+        echowarn "Package '${PACKAGE_NAME}' not publised or not findable. Consider publishing."
+        echowarn "Current version will be read locally."
+      fi
       CURR_VERSION="$(echo "$PACKAGE" | jq -r '.version')"
     fi
 
@@ -435,21 +446,21 @@ projects-setup() {
       list-add-item TYPICAL_MILESTONES "$(semver "$CURR_VERSION" --increment minor | semver-to-milestone)"
     fi
 
-    local TEST_MILESTONE
     if [[ -n "${EXPECTED_MILESTONES}" ]]; then
+      local TEST_MILESTONE
       while read -r TEST_MILESTONE; do
-        check-and-add-milestone "${TEST_MILESTONE}" "Expected milestone '${TEST_MILESTONE}' is missing." Y
-        [[ "${MILESTONES_SYNCED}" != true ]] || EXPECTED_MILESTONES_PRESENT=true
+        check-and-add-milestone "${TEST_MILESTONE}"
       done <<< "${EXPECTED_MILESTONES}"
     fi
     if [[ -n "${TYPICAL_MILESTONES}" ]]; then
       while read -r TEST_MILESTONE; do
-        check-and-add-milestone "${TEST_MILESTONE}" "Potential next milestone '${TEST_MILESTONE}' not present." Y
+        check-and-add-milestone "${TEST_MILESTONE}"
       done <<< "${TYPICAL_MILESTONES}"
     fi
 
-    [[ "${EXPECTED_MILESTONES_PRESENT}" != true ]] || echo "All expected milestones are present."
-    [[ "${EXPECTED_MILESTONES_PRESENT}" == true ]] || echowarn "Expected milestones are missing."
+    [[ "${MILESTONES_SYNCED}" != true ]] || echo "Milestone setup complete."
+    [[ "${MILESTONES_SYNCED}" == true ]] || \
+      echowarn "One or more expected milestones may be missing. Check above output for additional informaiton."
   } # end SKIP_MILESTONES check
 }
 
