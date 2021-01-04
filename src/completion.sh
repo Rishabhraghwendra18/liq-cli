@@ -3,6 +3,10 @@
 
 # TODO: we could generate this from the help docs... make the spec central!
 _liq() {
+  # TODO: include 'global-vars.sh' (and maybe break into 'common' and 'runtime'?) once we build this file.
+  local LIQ_DB_BASENAME=".liq"
+  local LIQ_DB="${HOME}/${LIQ_DB_BASENAME}"
+
   local GLOBAL_ACTIONS="help ?"
   # Using 'GROUPS' was causing errors; set by some magic.
   local ACTION_GROUPS="meta orgs projects work"
@@ -85,8 +89,8 @@ _liq() {
 
   comp-liq-meta-exts-uninstall() {
     # TODO: this is essentially the same logic aas 'liq meta exts list'; change completion to use 'rollup-bash' and share code
-    if [[ -f ${HOME}/.liquid-development/exts/exts.sh ]]; then
-      COMPREPLY=( $(compgen -W "$(cat "${HOME}/.liquid-development/exts/exts.sh" | awk -F/ 'NF { print $(NF-3)"/"$(NF-2) }')" -- ${CUR}) )
+    if [[ -f ${LIQ_DB}/exts/exts.sh ]]; then
+      COMPREPLY=( $(compgen -W "$(cat "${LIQ_DB}/exts/exts.sh" | awk -F/ 'NF { print $(NF-3)"/"$(NF-2) }')" -- ${CUR}) )
     else
       return 0
     fi
@@ -96,7 +100,7 @@ _liq() {
   local ORGS_GROUPS=""
   eval "$(comp-func-builder 'orgs' 'ORGS')"
   comp-liq-orgs-select() {
-    COMPREPLY=( $(compgen -W "$(find ~/.liquid-development/orgs -maxdepth 1 -mindepth 1 -type l -exec basename {} \;)" -- ${CUR}) )
+    COMPREPLY=( $(compgen -W "$(find ~/${LIQ_DB_BASENAME}/orgs -maxdepth 1 -mindepth 1 -type l -exec basename {} \;)" -- ${CUR}) )
   }
 
   local PROJECTS_ACTIONS="build close create edit publish qa sync test"
@@ -156,14 +160,14 @@ _liq() {
     AFTER="${AFTER%$CUR}"
 
     if [[ "${PREV}" == 'status' ]] || ! { echo "${AFTER}" | grep -qE '(^| )[a-zA-Z0-9][a-zA-Z0-9_.-]*( |$)'; }; then
-      OPTS="${OPTS} $(find "${HOME}/.liquid-development/work" -type f -maxdepth 1 -exec basename {} \;)"
+      OPTS="${OPTS} $(find "${LIQ_DB}/work" -type f -maxdepth 1 -exec basename {} \;)"
     fi
 
     std-reply
   }
 
   # TODO: Should we use LIQ_EXTS_DB here? This way, we're sidestepping the need to 'build' the completion script...
-  source "${HOME}/.liquid-development/exts/comps.sh"
+  source "${LIQ_DB}/exts/comps.sh"
 
   # Now we've registered all the local and modular completion functions. We'll analyze the token stream to figure out
   # which completion function to call:

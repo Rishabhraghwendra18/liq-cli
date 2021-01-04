@@ -10,12 +10,15 @@ const execOpts = {
 describe(`Command 'liq projects import'`, () => {
   let testConfig
   let playground
+
   beforeEach(() => {
     testConfig = testing.setup()
     testConfig.metaInit()
     playground = `${testConfig.home}/playground`
   })
   afterEach(() => testConfig.cleanup())
+
+  // afterAll(() => shell.exit(0))
 
   test.each([
         // TODO: provide a case that's not part of an org

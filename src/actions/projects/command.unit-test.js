@@ -8,6 +8,8 @@ const execOpts = {
 }
 
 describe('liq project', () => {
+  // afterAll(() => shell.exit(0))
+
   test('no action results in error and project help', () => {
     console.error = jest.fn() // supresses err echo from shelljs
     const result = shell.exec(`${testing.LIQ} projects`, execOpts)

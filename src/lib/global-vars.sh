@@ -1,5 +1,6 @@
 # Global constants.
-LIQ_DB="${HOME}/.liquid-development"
+LIQ_DB_BASENAME=".liq"
+LIQ_DB="${HOME}/${LIQ_DB_BASENAME}"
 LIQ_SETTINGS="${LIQ_DB}/settings.sh"
 LIQ_ENV_DB="${LIQ_DB}/environments"
 LIQ_ORG_DB="${LIQ_DB}/orgs"

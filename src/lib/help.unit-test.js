@@ -10,6 +10,8 @@ const execOpts = {
 const expectedUsage = new RegExp(`Usage`)
 
 describe(`Command 'liq'`, () => {
+  // afterAll(() => shell.exit(0))
+
   test('with no arguments results in help and error.', () => {
     console.error = jest.fn() // supresses err echo from shelljs
     const result = shell.exec(`${testing.LIQ}`, execOpts)

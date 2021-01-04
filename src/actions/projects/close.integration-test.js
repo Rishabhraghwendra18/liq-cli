@@ -11,12 +11,15 @@ describe(`Command 'liq projects close'`, () => {
   const uncleanErrorCode = 10
   let setupConfig
   let playground
+
   beforeEach(() => {
     setupConfig = testing.setup()
     setupConfig.metaInit()
     setupConfig.localCheckout()
   })
   afterEach(() => setupConfig.cleanup())
+
+  // afterAll(() => shell.exit(0))
 
   const closeFailureTests = [
     [ /*desc*/ `should do nothing and emit warning if there are untracked files.`,
@@ -52,7 +55,7 @@ describe(`Command 'liq projects close'`, () => {
   test(`should remove current project when no changes present`, () => {
     // console.error = jest.fn() // supresses err echo from shelljs
     const expectedOutput =
-      /^Checking liquid-labs\/lc-entities-model\.\.\.\s*Removed project '@liquid-labs\/lc-entities-model'/m
+      /^Checking liquid-labs\/lc-entities-model\.\.\.\s*Removed local work directory for project '@liquid-labs\/lc-entities-model'/m
     const result = shell.exec(`cd ${setupConfig.localRepoCheckout} && HOME=${setupConfig.home} ${testing.LIQ} projects close`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.stdout).toMatch(expectedOutput)
@@ -63,7 +66,7 @@ describe(`Command 'liq projects close'`, () => {
   test(`should remove specified project when no changes present`, () => {
     console.error = jest.fn() // supresses err echo from shelljs
     const expectedOutput =
-      /^Checking liquid-labs\/lc-entities-model\.\.\.\s*Removed project '@liquid-labs\/lc-entities-model'/m
+      /^Checking liquid-labs\/lc-entities-model\.\.\.\s*Removed local work directory for project '@liquid-labs\/lc-entities-model'/m
     const result = shell.exec(`HOME=${setupConfig.home} ${testing.LIQ} projects close @liquid-labs/lc-entities-model`, execOpts)
     expect(result.stderr).toEqual('')
     expect(result.stdout).toMatch(expectedOutput)

@@ -66,7 +66,7 @@ projects-create() {
   __PROJ_NAME="${1:-}"
   if [[ -z "${ORG_BASE}" ]]; then
     local ORG_BIT=$(dirname "${__PROJ_NAME/@/}")
-    local ORG_LINK="${HOME}/.liquid-development/orgs/${ORG_BIT}"
+    local ORG_LINK="${LIQ_DB}/orgs/${ORG_BIT}"
     if [[ -L "$ORG_LINK" ]]; then
       ORG_BASE="$(cat "${ORG_LINK}/package.json" \
         | jq -r '.repository.url' \

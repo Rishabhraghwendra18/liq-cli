@@ -33,11 +33,14 @@ export const cleanupLocalRepos = () => {
 }
 
 export const setup = () => {
+  // TODO: make a note on what the random thing does specificlaly...
   const setupSuffix = Math.floor((1 + Math.random()) * 0x1000000000000)
     .toString(16)
     .substring(1)
 
   const home = `${tmpDir}/liq-cli-test-${setupSuffix}`
+  const liqDbBaseName = `.liq`
+
   const playground = `${home}/playground`
   // only valid if 'localCheckout' is called
   const localRepoCheckout = `${playground}/liquid-labs/lc-entities-model`
@@ -61,6 +64,7 @@ export const setup = () => {
 
   return {
     home,
+    liqDbBaseName,
     playground,
     localRepoCheckout,
     // testOriginDir,
@@ -68,6 +72,6 @@ export const setup = () => {
     metaInit,
     localCheckout,
     // TODO: don't cleanup if errors? (and mention the fact)
-    cleanup: () => { shell.rm('-rf', home) }
+    cleanup: () => { shell.rm('-rf', home); }
   }
 }

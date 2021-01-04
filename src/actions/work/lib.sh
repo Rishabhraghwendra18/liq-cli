@@ -210,7 +210,7 @@ workUserSelectOne() {
     _WORK_NAME=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
   else
     local _OPTIONS
-    if ls "${LIQ_WORK_DB}/"* > /dev/null 2>&1; then
+    if ls "${LIQ_WORK_DB}/"* > /dev/null 2> /dev/null; then
       if [[ -n "$_TRIM_CURR" ]] && [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
         local _CURR_WORK=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
         _OPTIONS=$(find "${LIQ_WORK_DB}" -maxdepth 1 -not -name "*~" -not -name "$_CURR_WORK" -type f -exec basename '{}' \; | sort || true)
