@@ -4,7 +4,7 @@
 projects-lib-setup-labels-sync() {
   echo "Setting up labels..."
   local ORG_BASE ORG_PROJECT
-  ORG_BASE="$(echo "${PACKAGE}" | jq -r '.liquidDev.orgBase' )"
+  ORG_BASE="$(echo "${PACKAGE}" | jq -r ".${LIQ_NPM_KEY}.orgBase" )"
   if [[ "${ORG_BASE}" == *'github.com'*'git' ]]; then # it's a git URL; convert to project name
     # separate the path element from the URL
     ORG_PROJECT="$(echo "${ORG_BASE}" | cut -d: -f2 )"
@@ -15,7 +15,7 @@ projects-lib-setup-labels-sync() {
     PROJ_BIT="$(echo "${ORG_PROJECT}" | cut -d/ -f2)"
     ORG_PROJECT="${ORG_BIT}/${PROJ_BIT}"
   else
-    echoerrandexit "'liquidDev.orgBase' from 'package.json' in unknown format."
+    echoerrandexit "'${LIQ_NPM_KEY}.orgBase' from 'package.json' in unknown format."
   fi
 
   if ! [[ -d "${LIQ_PLAYGROUND}/${ORG_PROJECT}" ]]; then

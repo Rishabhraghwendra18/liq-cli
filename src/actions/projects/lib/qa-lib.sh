@@ -31,12 +31,12 @@ projectsLiqCheck() {
   fi
   local ORG_BASE
 
-  ORG_BASE="$(cat "${BASE_DIR}/package.json" | jq ".liquidDev.orgBase" | tr -d '"')"
+  ORG_BASE="$(cat "${BASE_DIR}/package.json" | jq ".${LIQ_NPM_KEY}.orgBase" | tr -d '"')"
   # no idea why, but this is outputting 'null' on blanks, even though direct testing doesn't
   ORG_BASE=${ORG_BASE/null/}
   if [[ -z "$ORG_BASE" ]]; then
     # TODO: provide reference to docs.
-    echoerr "Did not find '.liquidDev.orgBase' in 'package.json'. Add this to your 'package.json' to define the NPM package name or URL pointing to the base, public org repository."
+    echoerr "Did not find '.${LIQ_NPM_KEY}.orgBase' in 'package.json'. Add this to your 'package.json' to define the NPM package name or URL pointing to the base, public org repository."
   fi
 }
 

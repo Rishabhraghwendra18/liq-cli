@@ -42,7 +42,7 @@ workSubmitChecks() {
   local POLICY_DIR CC_TYPE CHECKS_FILE QUESTION RECORD
 
   requirePackage
-  local CC_QUERY='.liquidDev.changeControl.type'
+  local CC_QUERY=".${LIQ_NPM_KEY}.changeControl.type"
   CC_TYPE="$(echo "$PACKAGE" | jq --raw-output "$CC_QUERY" | tr -d "'")"
   if [[ -z "$CC_TYPE" ]] || [[ "$CC_TYPE" == 'null' ]]; then
     echoerrandexit "Package '$PACKAGE_NAME' does not define '$CC_QUERY'; bailing out."

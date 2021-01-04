@@ -1,5 +1,6 @@
 # Global constants.
-LIQ_DB_BASENAME=".liq"
+LIQ_NPM_KEY="liq"
+LIQ_DB_BASENAME=".${LIQ_NPM_KEY}"
 LIQ_DB="${HOME}/${LIQ_DB_BASENAME}"
 LIQ_SETTINGS="${LIQ_DB}/settings.sh"
 LIQ_ENV_DB="${LIQ_DB}/environments"

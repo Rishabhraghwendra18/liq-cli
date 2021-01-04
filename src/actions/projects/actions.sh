@@ -166,7 +166,7 @@ projects-create() {
   fi
 
   echo "Adding basic liq data to package.json..."
-  cat package.json | jq '. + { "liquidDev": { "orgBase": "git@github.com:'"${ORG_BASE}"'.git" } }' > package.new.json
+  cat package.json | jq '. + { "'"${LIQ_NPM_KEY}"'": { "orgBase": "git@github.com:'"${ORG_BASE}"'.git" } }' > package.new.json
   mv package.new.json package.json
   git commit -am "Added basic liq data to package.json"
 
