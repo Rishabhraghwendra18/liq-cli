@@ -1253,7 +1253,8 @@ defineParameters() {
   done
 }
 # Global constants.
-LIQ_DB_BASENAME=".liq"
+LIQ_NPM_KEY="liq"
+LIQ_DB_BASENAME=".${LIQ_NPM_KEY}"
 LIQ_DB="${HOME}/${LIQ_DB_BASENAME}"
 LIQ_SETTINGS="${LIQ_DB}/settings.sh"
 LIQ_ENV_DB="${LIQ_DB}/environments"
@@ -2098,7 +2099,7 @@ projects-create() {
   fi
 
   echo "Adding basic liq data to package.json..."
-  cat package.json | jq '. + { "liquidDev": { "orgBase": "git@github.com:'"${ORG_BASE}"'.git" } }' > package.new.json
+  cat package.json | jq '. + { "'"${LIQ_NPM_KEY}"'": { "orgBase": "git@github.com:'"${ORG_BASE}"'.git" } }' > package.new.json
   mv package.new.json package.json
   git commit -am "Added basic liq data to package.json"
 
@@ -2812,12 +2813,12 @@ projectsLiqCheck() {
   fi
   local ORG_BASE
 
-  ORG_BASE="$(cat "${BASE_DIR}/package.json" | jq ".liquidDev.orgBase" | tr -d '"')"
+  ORG_BASE="$(cat "${BASE_DIR}/package.json" | jq ".${LIQ_NPM_KEY}.orgBase" | tr -d '"')"
   # no idea why, but this is outputting 'null' on blanks, even though direct testing doesn't
   ORG_BASE=${ORG_BASE/null/}
   if [[ -z "$ORG_BASE" ]]; then
     # TODO: provide reference to docs.
-    echoerr "Did not find '.liquidDev.orgBase' in 'package.json'. Add this to your 'package.json' to define the NPM package name or URL pointing to the base, public org repository."
+    echoerr "Did not find '.${LIQ_NPM_KEY}.orgBase' in 'package.json'. Add this to your 'package.json' to define the NPM package name or URL pointing to the base, public org repository."
   fi
 }
 
@@ -2969,7 +2970,7 @@ projectsVersionCheckDo() {
 projects-lib-setup-labels-sync() {
   echo "Setting up labels..."
   local ORG_BASE ORG_PROJECT
-  ORG_BASE="$(echo "${PACKAGE}" | jq -r '.liquidDev.orgBase' )"
+  ORG_BASE="$(echo "${PACKAGE}" | jq -r ".${LIQ_NPM_KEY}.orgBase" )"
   if [[ "${ORG_BASE}" == *'github.com'*'git' ]]; then # it's a git URL; convert to project name
     # separate the path element from the URL
     ORG_PROJECT="$(echo "${ORG_BASE}" | cut -d: -f2 )"
@@ -2980,7 +2981,7 @@ projects-lib-setup-labels-sync() {
     PROJ_BIT="$(echo "${ORG_PROJECT}" | cut -d/ -f2)"
     ORG_PROJECT="${ORG_BIT}/${PROJ_BIT}"
   else
-    echoerrandexit "'liquidDev.orgBase' from 'package.json' in unknown format."
+    echoerrandexit "'${LIQ_NPM_KEY}.orgBase' from 'package.json' in unknown format."
   fi
 
   if ! [[ -d "${LIQ_PLAYGROUND}/${ORG_PROJECT}" ]]; then
@@ -2997,6 +2998,7 @@ enhancement:New feature or request:a2eeef
 good first issue:Good for newcomers:7050ff
 needs spec:The task as-is is not fully specified:ff4040
 optimization:Make better without changing behavior:00dd70
+security:Tag security related tasks:ff0000
 EOF
     )
   fi
@@ -4185,7 +4187,7 @@ workSubmitChecks() {
   local POLICY_DIR CC_TYPE CHECKS_FILE QUESTION RECORD
 
   requirePackage
-  local CC_QUERY='.liquidDev.changeControl.type'
+  local CC_QUERY=".${LIQ_NPM_KEY}.changeControl.type"
   CC_TYPE="$(echo "$PACKAGE" | jq --raw-output "$CC_QUERY" | tr -d "'")"
   if [[ -z "$CC_TYPE" ]] || [[ "$CC_TYPE" == 'null' ]]; then
     echoerrandexit "Package '$PACKAGE_NAME' does not define '$CC_QUERY'; bailing out."
