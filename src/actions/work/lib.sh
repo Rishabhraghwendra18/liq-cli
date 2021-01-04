@@ -42,7 +42,7 @@ workSubmitChecks() {
   local POLICY_DIR CC_TYPE CHECKS_FILE QUESTION RECORD
 
   requirePackage
-  local CC_QUERY='.liquidDev.changeControl.type'
+  local CC_QUERY=".${LIQ_NPM_KEY}.changeControl.type"
   CC_TYPE="$(echo "$PACKAGE" | jq --raw-output "$CC_QUERY" | tr -d "'")"
   if [[ -z "$CC_TYPE" ]] || [[ "$CC_TYPE" == 'null' ]]; then
     echoerrandexit "Package '$PACKAGE_NAME' does not define '$CC_QUERY'; bailing out."
@@ -210,7 +210,7 @@ workUserSelectOne() {
     _WORK_NAME=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
   else
     local _OPTIONS
-    if ls "${LIQ_WORK_DB}/"* > /dev/null 2>&1; then
+    if ls "${LIQ_WORK_DB}/"* > /dev/null 2> /dev/null; then
       if [[ -n "$_TRIM_CURR" ]] && [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
         local _CURR_WORK=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
         _OPTIONS=$(find "${LIQ_WORK_DB}" -maxdepth 1 -not -name "*~" -not -name "$_CURR_WORK" -type f -exec basename '{}' \; | sort || true)

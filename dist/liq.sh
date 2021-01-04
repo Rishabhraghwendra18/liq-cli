@@ -1253,7 +1253,8 @@ defineParameters() {
   done
 }
 # Global constants.
-LIQ_DB="${HOME}/.liquid-development"
+LIQ_DB_BASENAME=".liq"
+LIQ_DB="${HOME}/${LIQ_DB_BASENAME}"
 LIQ_SETTINGS="${LIQ_DB}/settings.sh"
 LIQ_ENV_DB="${LIQ_DB}/environments"
 LIQ_ORG_DB="${LIQ_DB}/orgs"
@@ -1451,8 +1452,8 @@ meta-next() {
   local COLOR="green"
   [[ -z "$ERROR" ]] || COLOR="red"
 
-  if [ ! -d "$HOME/.liquid-development" ]; then
-    [[ -z "$TECH_DETAIL" ]] || TECH_DETAIL=" (expected ~/.liquid-development)"
+  if [ ! -d "${LIQ_DB}" ]; then
+    [[ -z "$TECH_DETAIL" ]] || TECH_DETAIL=" (expected ~/${LIQ_DB_BASENAME})"
     echofmt $COLOR "It looks like liq CLI hasn't been setup yet$TECH_DETAIL. Try:\nliq meta init"
   elif [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     source "${LIQ_WORK_DB}/curr_work"
@@ -1997,7 +1998,7 @@ projects-create() {
   __PROJ_NAME="${1:-}"
   if [[ -z "${ORG_BASE}" ]]; then
     local ORG_BIT=$(dirname "${__PROJ_NAME/@/}")
-    local ORG_LINK="${HOME}/.liquid-development/orgs/${ORG_BIT}"
+    local ORG_LINK="${LIQ_DB}/orgs/${ORG_BIT}"
     if [[ -L "$ORG_LINK" ]]; then
       ORG_BASE="$(cat "${ORG_LINK}/package.json" \
         | jq -r '.repository.url' \
@@ -4352,7 +4353,7 @@ workUserSelectOne() {
     _WORK_NAME=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
   else
     local _OPTIONS
-    if ls "${LIQ_WORK_DB}/"* > /dev/null 2>&1; then
+    if ls "${LIQ_WORK_DB}/"* > /dev/null 2> /dev/null; then
       if [[ -n "$_TRIM_CURR" ]] && [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
         local _CURR_WORK=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
         _OPTIONS=$(find "${LIQ_WORK_DB}" -maxdepth 1 -not -name "*~" -not -name "$_CURR_WORK" -type f -exec basename '{}' \; | sort || true)

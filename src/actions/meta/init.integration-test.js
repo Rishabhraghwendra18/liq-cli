@@ -8,13 +8,13 @@ const execOpts = {
 }
 
 const checkDbFiles = (testConfig, playground) => {
-  expect(shell.test('-d', `${testConfig.home}/.liquid-development`)).toBe(true)
-  expect(shell.test('-d', `${testConfig.home}/.liquid-development/environments`)).toBe(true)
-  expect(shell.test('-d', `${testConfig.home}/.liquid-development/work`)).toBe(true)
+  expect(shell.test('-d', `${testConfig.home}/${testConfig.liqDbBaseName}`)).toBe(true)
+  expect(shell.test('-d', `${testConfig.home}/${testConfig.liqDbBaseName}/environments`)).toBe(true)
+  expect(shell.test('-d', `${testConfig.home}/${testConfig.liqDbBaseName}/work`)).toBe(true)
   expect(shell.test('-d', `${testConfig.home}/${playground}`)).toBe(true)
-  expect(shell.test('-f', `${testConfig.home}/.liquid-development/settings.sh`)).toBe(true)
+  expect(shell.test('-f', `${testConfig.home}/${testConfig.liqDbBaseName}/settings.sh`)).toBe(true)
 
-  const result = shell.exec(`source "${testConfig.home}/.liquid-development/settings.sh"; echo -n $LIQ_PLAYGROUND`, execOpts)
+  const result = shell.exec(`source "${testConfig.home}/${testConfig.liqDbBaseName}/settings.sh"; echo -n $LIQ_PLAYGROUND`, execOpts)
   expect(result.stderr).toEqual('')
   expect(result.stdout).toEqual(`${testConfig.home}/${playground}`)
   expect(result.code).toEqual(0)
@@ -22,8 +22,11 @@ const checkDbFiles = (testConfig, playground) => {
 
 describe(`'liq meta init'`, () =>{
   let testConfig
+
   beforeEach(() => { testConfig = testing.setup() })
   afterEach(() => testConfig.cleanup())
+
+  // afterAll(() => shell.exit(0))
 
   test(`with no argument should ask for playground and initialize the liq DB and playground`, () => {
     const result = shell.exec(`HOME=${testConfig.home} ${testing.LIQ} meta init <<< $(echo)`, execOpts)

@@ -36,8 +36,8 @@ meta-next() {
   local COLOR="green"
   [[ -z "$ERROR" ]] || COLOR="red"
 
-  if [ ! -d "$HOME/.liquid-development" ]; then
-    [[ -z "$TECH_DETAIL" ]] || TECH_DETAIL=" (expected ~/.liquid-development)"
+  if [ ! -d "${LIQ_DB}" ]; then
+    [[ -z "$TECH_DETAIL" ]] || TECH_DETAIL=" (expected ~/${LIQ_DB_BASENAME})"
     echofmt $COLOR "It looks like liq CLI hasn't been setup yet$TECH_DETAIL. Try:\nliq meta init"
   elif [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     source "${LIQ_WORK_DB}/curr_work"

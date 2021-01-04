@@ -27,7 +27,7 @@
   },
   "homepage": "https://liquid-labs.github.io/liq-cli/",
   "dependencies": {
-    "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.28",
+    "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.29",
     "@liquid-labs/orgs-model": "^1.0.0-beta.12"
   },
   "bin": {
@@ -45,7 +45,7 @@
       "options": "--skip-unused"
     }
   },
-  "liquidDev": {
+  "liq": {
     "orgBase": "git@github.com:Liquid-Labs/Liquid-Labs.git",
     "changeControl": {
       "type": "code"
