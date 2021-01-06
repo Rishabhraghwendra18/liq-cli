@@ -113,7 +113,7 @@ _liq() {
       if [[ "${COMP_LINE}" != *--org* ]]; then
         OPTS="${ORGS_ACTIONS} ${ORGS_GROUPS} --org"
       else
-        OPTS="${ORGS_ACTIONS} ${ORGS_GROUPS}"]
+        OPTS="${ORGS_ACTIONS} ${ORGS_GROUPS}"
       fi
       std-reply
     fi
