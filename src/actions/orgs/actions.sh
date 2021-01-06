@@ -1,5 +1,13 @@
-requirements-orgs() {
-  :
+dispatch-orgs() {
+  eval "$(setSimpleOptions ORG:= -- "$@")"
+
+  local ACTION="${1}"; shift
+
+  if [[ $(type -t "orgs-${ACTION}" || echo '') == 'function' ]]; then
+    orgs-${ACTION} "$@"
+  else
+    exitUnknownHelpTopic "$ACTION" meta exts
+  fi
 }
 
 # see `liq help orgs close`

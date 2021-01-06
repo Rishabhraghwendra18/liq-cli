@@ -1628,8 +1628,16 @@ Removes the installed package. If the package is locally installed, the local pa
 EOF
 }
 
-requirements-orgs() {
-  :
+dispatch-orgs() {
+  eval "$(setSimpleOptions ORG:= -- "$@")"
+
+  local ACTION="${1}"; shift
+
+  if [[ $(type -t "orgs-${ACTION}" || echo '') == 'function' ]]; then
+    orgs-${ACTION} "$@"
+  else
+    exitUnknownHelpTopic "$ACTION" meta exts
+  fi
 }
 
 # see `liq help orgs close`
@@ -1924,11 +1932,22 @@ orgs-lib-source-settings() {
   if [[ -e "$LIQ_ORG_DB/${NPM_ORG}" ]]; then
     [[ -f "$LIQ_ORG_DB/${NPM_ORG}/settings.sh" ]] || echoerrandexit "Could not locate settings file for '${NPM_ORG}'."
     source "$LIQ_ORG_DB/${NPM_ORG}/settings.sh"
-    
+
     ORG_CHART_TEMPLATE="${ORG_CHART_TEMPLATE/\~/$LIQ_PLAYGROUND}"
   else
     echoerrandexit "Did not find expected base org package. Try:\nliq orgs import <pkg || URL>"
   fi
+}
+
+# Takes a CLI friendly org ID (as found in ~/.liq/orgs) and resolves that to the path to the primary org repo.
+lib-orgs-resolve-path() {
+  local ORG_ID="${1:-}"
+  (
+    cd "${LIQ_DB}/orgs"
+    [[ -L "${ORG_ID}" ]] || echoerrandexit "Unknown org reference. Try:\nliq orgs list\nliq orgs import"
+
+    real_path "${LIQ_DB}/orgs/${ORG_ID}"
+  )
 }
 
 requirements-projects() {
@@ -4603,33 +4622,37 @@ else
   GROUP="${1:-}"; shift # or global command
 fi
 
-case "$GROUP" in
-  # global actions
-  help|?)
-    help "$@";;
-  # components and actionsprojct
-  *)
-    if (( $# == 0 )); then
-      help $GROUP
-      echoerrandexit "\nNo action argument provided. See valid actions above."
-		elif [[ $(type -t "requirements-${GROUP}" || echo '') != 'function' ]]; then
-			exitUnknownHelpTopic "$GROUP"
-    fi
-    ACTION="${1:-}"; shift
-    if [[ $(type -t "${GROUP}-${ACTION}" || echo '') == 'function' ]]; then
-      # the only exception to requiring a playground configuration is the
-      # 'playground init' command
-      if [[ "$GROUP" != 'meta' ]] || [[ "$ACTION" != 'init' ]]; then
-        # source is not like other commands (?) and the attempt to replace possible source error with friendlier
-        # message fails. The 'or' never gets evaluated, even when source fails.
-        source "${LIQ_SETTINGS}" \ #2> /dev/null \
-          # || echoerrandexit "Could not source global Catalyst settings. Try:\nliq meta init"
+if (( $# > 0 )) && [[ $(type -t "dispatch-${GROUP}" || echo '') == 'function' ]]; then
+  dispatch-${GROUP} "$@"
+else
+  case "$GROUP" in
+    # global actions
+    help|?)
+      help "$@";;
+    # components and actionsprojct
+    *)
+      if (( $# == 0 )); then
+        help $GROUP
+        echoerrandexit "\nNo action argument provided. See valid actions above."
+  		elif [[ $(type -t "requirements-${GROUP}" || echo '') != 'function' ]]; then
+  			exitUnknownHelpTopic "$GROUP"
       fi
-      requirements-${GROUP}
-      ${GROUP}-${ACTION} "$@"
-    else
-      exitUnknownHelpTopic "$ACTION" "$GROUP"
-    fi;;
-esac
+      ACTION="${1:-}"; shift
+      if [[ $(type -t "${GROUP}-${ACTION}" || echo '') == 'function' ]]; then
+        # the only exception to requiring a playground configuration is the
+        # 'playground init' command
+        if [[ "$GROUP" != 'meta' ]] || [[ "$ACTION" != 'init' ]]; then
+          # source is not like other commands (?) and the attempt to replace possible source error with friendlier
+          # message fails. The 'or' never gets evaluated, even when source fails.
+          source "${LIQ_SETTINGS}" \ #2> /dev/null \
+            # || echoerrandexit "Could not source global Catalyst settings. Try:\nliq meta init"
+        fi
+        requirements-${GROUP}
+        ${GROUP}-${ACTION} "$@"
+      else
+        exitUnknownHelpTopic "$ACTION" "$GROUP"
+      fi;;
+  esac
+fi
 
 exit 0
