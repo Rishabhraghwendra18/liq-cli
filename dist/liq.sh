@@ -1924,11 +1924,22 @@ orgs-lib-source-settings() {
   if [[ -e "$LIQ_ORG_DB/${NPM_ORG}" ]]; then
     [[ -f "$LIQ_ORG_DB/${NPM_ORG}/settings.sh" ]] || echoerrandexit "Could not locate settings file for '${NPM_ORG}'."
     source "$LIQ_ORG_DB/${NPM_ORG}/settings.sh"
-    
+
     ORG_CHART_TEMPLATE="${ORG_CHART_TEMPLATE/\~/$LIQ_PLAYGROUND}"
   else
     echoerrandexit "Did not find expected base org package. Try:\nliq orgs import <pkg || URL>"
   fi
+}
+
+# Takes a CLI friendly org ID (as found in ~/.liq/orgs) and resolves that to the path to the primary org repo.
+lib-orgs-resolve-path() {
+  local ORG_ID="${1:-}"
+  (
+    cd "${LIQ_DB}/orgs"
+    [[ -L "${ORG_ID}" ]] || echoerrandexit "Unknown org reference. Try:\nliq orgs list\nliq orgs import"
+
+    real_path "${LIQ_DB}/orgs/${ORG_ID}"
+  )
 }
 
 requirements-projects() {
