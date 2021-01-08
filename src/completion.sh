@@ -58,12 +58,13 @@ _liq() {
     local ACTIONS_VAR="${VAR_KEY}_ACTIONS"
     local GROUPS_VAR="${VAR_KEY}_GROUPS"
     # These functions are dynamic based on the ACTION and GROUP vars so don't need to be overriden; doing so may kill
-    # custom completion functions.
+    # custom completion functions. Note that this means that a previously defined function with a new def needs to be
+    # unset first.
     if ! type -t comp-liq-${TOKEN_PATH} | grep -q 'function'; then
-      echo "comp-liq-${TOKEN_PATH}() { OPTS=\"${!ACTIONS_VAR:-} ${!GROUPS_VAR:-}\"; std-reply; }"
+      echo "comp-liq-${TOKEN_PATH}() { OPTS=\"\${${ACTIONS_VAR}:-} \${${GROUPS_VAR}:-}\"; std-reply; }"
     fi
     if ! type -t comp-liq-help-${TOKEN_PATH} | grep -q 'function'; then
-      echo "comp-liq-help-${TOKEN_PATH}() { OPTS=\"${!ACTIONS_VAR:-} ${!GROUPS_VAR:-}\"; std-reply; }"
+      echo "comp-liq-help-${TOKEN_PATH}() { OPTS=\"\${${ACTIONS_VAR}:-} \${${GROUPS_VAR}:-}\"; std-reply; }"
     fi
     for OPT in ${!ACTIONS_VAR}; do
       if [[ -z "$NO_SQUASH_ACTIONS" ]] || ! type -t comp-liq-${TOKEN_PATH}-${OPT} | grep -q 'function'; then
@@ -106,20 +107,9 @@ _liq() {
   local ORGS_GROUPS=""
   # will override the 'comp-liq-orgs', but want to generate the 'help' completer
   eval "$(comp-func-builder 'orgs' 'ORGS')"
-  comp-liq-orgs() {
-    if [[ "$PREV" == "--org" ]]; then
-      COMPREPLY=( $(compgen -W "$(find ~/${LIQ_DB_BASENAME}/orgs -maxdepth 1 -mindepth 1 -type l -exec basename {} \;)" -- ${CUR}) )
-    else
-      if [[ "${COMP_LINE}" != *--org* ]]; then
-        OPTS="${ORGS_ACTIONS} ${ORGS_GROUPS} --org"
-      else
-        OPTS="${ORGS_ACTIONS} ${ORGS_GROUPS}"
-      fi
-      std-reply
-    fi
-  }
 
-  comp-liq-orgs-select() {
+  # helper funtion for '--org' option values
+  comp-selector-orgs() {
     COMPREPLY=( $(compgen -W "$(find ~/${LIQ_DB_BASENAME}/orgs -maxdepth 1 -mindepth 1 -type l -exec basename {} \;)" -- ${CUR}) )
   }
 
