@@ -1273,9 +1273,11 @@ _PROJECT_PUB_CONFIG='.catalyst-pub'
 _ORG_ID_URL='https://console.cloud.google.com/iam-admin/settings'
 _BILLING_ACCT_URL='https://console.cloud.google.com/billing?folder=&organizationId='
 
-# Global variables.
+# Global context variables.
 CURR_ENV_FILE='' # set by 'requireEnvironment'
 CURR_ENV='' # set by 'requireEnvironment'
+CURR_ORG='' # set by post-options-liq-orgs
+CURR_ORG_PATH='' # set by post-options-liq-orgs
 # 'requireEnvironment' calls 'requirePackage'
 PACKAGE='' # set by 'requirePackage'
 PACKAGE_NAME='' # set by 'requirePackage'
@@ -1304,48 +1306,6 @@ AUDITS_COMPLETE_PATH="${AUDITS_PATH}/complete"
 KEYS_PATH="${RECORDS_PATH}/keys"
 KEYS_ACTIVE_PATH="${KEYS_PATH}/active"
 KEYS_EXPIRED_PATH="${KEYS_PATH}/expired"
-set -o errtrace # inherits trap on ERR in function and subshell
-
-trap 'traperror $? $LINENO $BASH_LINENO "$BASH_COMMAND" $(printf "::%s" ${FUNCNAME[@]:-})' ERR
-# trap 'trapexit $? $LINENO' EXIT
-
-function trapexit() {
-  echo "$(date) $(hostname) $0: EXIT on line $2 (exit status $1)"
-}
-
-function traperror () {
-    local err=$1 # error status
-    local line=$2 # LINENO
-    local linecallfunc=$3
-    local command="$4"
-    local funcstack="$5"
-
-    # for a log use
-    # $(date) $(hostname) $0: ERROR '$command' failed at line $line - exited with status: $err'
-    # for dev
-    echo "${red}ERROR '$command' failed at line $line - exited with status: $err${reset}" >&2
-
-    if [ "$funcstack" != "::" ]; then
-      # if generating logs directly, the following is useful:
-      # echo -n "$(date) $(hostname) $0: DEBUG Error in ${funcstack} "
-      echo "$0: DEBUG Error in ${funcstack} "
-      if [ "$linecallfunc" != "" ]; then
-        echo "called at line $linecallfunc"
-      else
-        echo
-      fi
-    fi
-    # echo "'$command' failed at line $line - exited with status: $err" | mail -s "ERROR: $0 on $(hostname) at $(date)" xxx@xxx.com
-}
-
-function log() {
-    local msg=$1
-    now=$(date)
-    i=${#FUNCNAME[@]}
-    lineno=${BASH_LINENO[$i-2]}
-    file=${BASH_SOURCE[$i-1]}
-    echo "${now} $(hostname) $0:${lineno} ${msg}"
-}
 CATALYST_COMMAND_GROUPS="help meta meta-exts orgs projects work work-links"
 
 # display help on help
@@ -1414,6 +1374,58 @@ exitUnknownHelpTopic() {
   help $*
   echo
   echoerrandexit "No such command or group: $BAD_SPEC"
+}
+# Echoes common options for all liq commands.
+pre-options-liq() {
+  echo -n "QUIET VERBOSE: DEBUG:"
+}
+
+# Processes common options for liq commands. Currently, all options are "just" flags that other functions will check, so
+# there's nothing for us to do here.
+post-options-liq() {
+  :
+}
+set -o errtrace # inherits trap on ERR in function and subshell
+
+trap 'traperror $? $LINENO $BASH_LINENO "$BASH_COMMAND" $(printf "::%s" ${FUNCNAME[@]:-})' ERR
+# trap 'trapexit $? $LINENO' EXIT
+
+function trapexit() {
+  echo "$(date) $(hostname) $0: EXIT on line $2 (exit status $1)"
+}
+
+function traperror () {
+    local err=$1 # error status
+    local line=$2 # LINENO
+    local linecallfunc=$3
+    local command="$4"
+    local funcstack="$5"
+
+    # for a log use
+    # $(date) $(hostname) $0: ERROR '$command' failed at line $line - exited with status: $err'
+    # for dev
+    echo "${red}ERROR '$command' failed at line $line - exited with status: $err${reset}" >&2
+
+    if [ "$funcstack" != "::" ]; then
+      # if generating logs directly, the following is useful:
+      # echo -n "$(date) $(hostname) $0: DEBUG Error in ${funcstack} "
+      echo "$0: DEBUG Error in ${funcstack} "
+      if [ "$linecallfunc" != "" ]; then
+        echo "called at line $linecallfunc"
+      else
+        echo
+      fi
+    fi
+    # echo "'$command' failed at line $line - exited with status: $err" | mail -s "ERROR: $0 on $(hostname) at $(date)" xxx@xxx.com
+}
+
+function log() {
+    local msg=$1
+    now=$(date)
+    i=${#FUNCNAME[@]}
+    lineno=${BASH_LINENO[$i-2]}
+    file=${BASH_SOURCE[$i-1]}
+    echo "${now} $(hostname) $0:${lineno} ${msg}"
 }
 # TODO: share this with '/install.sh'
 COMPLETION_PATH="/usr/local/etc/bash_completion.d"
@@ -1884,6 +1896,14 @@ help-orgs-show() {
 Displays info on the currently active or named org.
 EOF
 }
+# Takes a CLI friendly org ID (as found in ~/.liq/orgs) and resolves that to the path to the primary org repo.
+lib-orgs-resolve-path() {
+  local ORG_ID="${1:-}"
+  [[ -L "${LIQ_ORG_DB}/${ORG_ID}" ]] || echoerrandexit "Unknown org reference. Try:\nliq orgs list\nliq orgs import"
+
+  real_path "${LIQ_ORG_DB}/${ORG_ID}"
+}
+
 # deprecated; use orgs-lib-source-settings
 # sourceCurrentOrg() {
 
@@ -1895,6 +1915,7 @@ orgsPolicyRepo() {
   echo "${LIQ_PLAYGROUND}/${ORG_POLICY_REPO/@/}"
 }
 
+# TODO: rename 'lib-ogs-source-settings'
 # Sources the named base org settings or will infer org context. If the base org cannot be found, the execution will
 # halt and the user will be advised to timport it.
 orgs-lib-source-settings() {
@@ -1917,16 +1938,24 @@ orgs-lib-source-settings() {
     echoerrandexit "Did not find expected base org package. Try:\nliq orgs import <pkg || URL>"
   fi
 }
+pre-options-liq-orgs() {
+  echo -n "$(pre-options-liq) ORG:="
+}
 
-# Takes a CLI friendly org ID (as found in ~/.liq/orgs) and resolves that to the path to the primary org repo.
-lib-orgs-resolve-path() {
-  local ORG_ID="${1:-}"
-  (
-    cd "${LIQ_DB}/orgs"
-    [[ -L "${ORG_ID}" ]] || echoerrandexit "Unknown org reference. Try:\nliq orgs list\nliq orgs import"
+# Sets CURR_ORG and CURR_ORG_PATH
+post-options-liq-orgs() {
+  post-options-liq
 
-    real_path "${LIQ_DB}/orgs/${ORG_ID}"
-  )
+  # TODO: Check if the project 'class' is correct; https://github.com/Liquid-Labs/liq-cli/issues/238
+  if [[ -z "${ORG:-}" ]]; then
+    findBase
+    CURR_ORG_PATH="${BASE_DIR}"
+    CURR_ORG="$( cat "${CURRE_ORG_PATH}/package.json" | jq -r '.name' )"
+    CURR_ORG="${CURR_ORG/@/}"
+  else
+    CURR_ORG="${ORG}"
+    CURR_ORG_PATH="$(lib-orgs-resolve-path "${CURR_ORG}")"
+  fi
 }
 
 requirements-projects() {

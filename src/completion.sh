@@ -3,6 +3,8 @@
 
 # TODO: we could generate this from the help docs... make the spec central!
 _liq() {
+  # Most of this fuction is setup for various handler functions. The actual dispatch is at the very end.
+
   # TODO: include 'global-vars.sh' (and maybe break into 'common' and 'runtime'?) once we build this file.
   local LIQ_DB_BASENAME=".liq"
   local LIQ_DB="${HOME}/${LIQ_DB_BASENAME}"
@@ -61,10 +63,12 @@ _liq() {
     # custom completion functions. Note that this means that a previously defined function with a new def needs to be
     # unset first.
     if ! type -t comp-liq-${TOKEN_PATH} | grep -q 'function'; then
-      echo "comp-liq-${TOKEN_PATH}() { OPTS=\"\${${ACTIONS_VAR}:-} \${${GROUPS_VAR}:-}\"; std-reply; }"
+      # tThe double escape is first for this string, and then when it goes through 'eval'. This way we keep the function
+      # response dynamic rather than freezing it at the point in time when it's built.
+      echo "comp-liq-${TOKEN_PATH}() { OPTS=\"\\\${${ACTIONS_VAR}:-} \\\${${GROUPS_VAR}:-}\"; std-reply; }"
     fi
     if ! type -t comp-liq-help-${TOKEN_PATH} | grep -q 'function'; then
-      echo "comp-liq-help-${TOKEN_PATH}() { OPTS=\"\${${ACTIONS_VAR}:-} \${${GROUPS_VAR}:-}\"; std-reply; }"
+      echo "comp-liq-help-${TOKEN_PATH}() { OPTS=\"\\\${${ACTIONS_VAR}:-} \\\${${GROUPS_VAR}:-}\"; std-reply; }"
     fi
     for OPT in ${!ACTIONS_VAR}; do
       if [[ -z "$NO_SQUASH_ACTIONS" ]] || ! type -t comp-liq-${TOKEN_PATH}-${OPT} | grep -q 'function'; then
