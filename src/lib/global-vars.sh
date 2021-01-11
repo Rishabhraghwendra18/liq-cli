@@ -19,9 +19,11 @@ _PROJECT_PUB_CONFIG='.catalyst-pub'
 _ORG_ID_URL='https://console.cloud.google.com/iam-admin/settings'
 _BILLING_ACCT_URL='https://console.cloud.google.com/billing?folder=&organizationId='
 
-# Global variables.
+# Global context variables.
 CURR_ENV_FILE='' # set by 'requireEnvironment'
 CURR_ENV='' # set by 'requireEnvironment'
+CURR_ORG='' # set by post-options-liq-orgs
+CURR_ORG_PATH='' # set by post-options-liq-orgs
 # 'requireEnvironment' calls 'requirePackage'
 PACKAGE='' # set by 'requirePackage'
 PACKAGE_NAME='' # set by 'requirePackage'
