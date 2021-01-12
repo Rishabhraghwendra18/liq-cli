@@ -1720,16 +1720,18 @@ orgs-create() {
   commit-settings() {
     local REPO_TYPE="${1}"; shift
     local FIELD
+    local SETTINGS='data/orgs/settings.sh'
 
     echofmt "Initializing ${REPO_TYPE} repository..."
     git init --quiet .
 
+    mkdir $(dirname "${SETTINGS}")
     for FIELD in "$@"; do
       FIELD=${FIELD/:/}
-      echo "ORG_${FIELD}='$(echo "${!FIELD}" | sed "s/'/'\"'\"'/g")'" >> settings.sh
+      echo "ORG_${FIELD}='$(echo "${!FIELD}" | sed "s/'/'\"'\"'/g")'" >> "${SETTINGS}"
     done
 
-    git add settings.sh
+    git add "${SETTINGS}"
     git commit -m "initial org settings"
     git push --set-upstream upstream master
   }
@@ -1829,7 +1831,7 @@ orgs-show() {
   # Recall the org DB links the npm org name to the repo.
   { { [[ -n "$DIR" ]] && readlink "${LIQ_ORG_DB}/${NPM_ORG}"; } \
   || { [[ -n "$PROJECT" ]] && cat "${LIQ_ORG_DB}/${NPM_ORG}/package.json" | jq -r '.name'; } \
-  || { [[ -n "$SETTINGS" ]] && cat "${LIQ_ORG_DB}/${NPM_ORG}/settings.sh"; } } || \
+  || { [[ -n "$SETTINGS" ]] && cat "${LIQ_ORG_DB}/${NPM_ORG}/data/orgs/settings.sh"; } } || \
   { # the no specific format option
     cat <<EOF
 Project: $(cat "${LIQ_ORG_DB}/${NPM_ORG}/package.json" | jq -r '.name')
@@ -1904,9 +1906,6 @@ lib-orgs-resolve-path() {
   real_path "${LIQ_ORG_DB}/${ORG_ID}"
 }
 
-# deprecated; use orgs-lib-source-settings
-# sourceCurrentOrg() {
-
 # Retrieves the policy dir for the named NPM org or will infer from context. Org base and, when private, policy projects
 # must be locally available.
 orgsPolicyRepo() {
@@ -1919,18 +1918,22 @@ orgsPolicyRepo() {
 # Sources the named base org settings or will infer org context. If the base org cannot be found, the execution will
 # halt and the user will be advised to timport it.
 orgs-lib-source-settings() {
-  local NPM_ORG="${1:-}"
+  local ORG_ID="${1:-}"
 
-  if [[ -z "$NPM_ORG" ]]; then
-    findBase
-    NPM_ORG="$(cd "${BASE_DIR}/.."; basename "$PWD")"
+  if [[ -z "$ORG_ID" ]]; then
+    if [[ -n "${CURR_ORG}" ]]; then
+      ORG_ID="${CURR_ORG}"
+    else
+      findBase
+      ORG_ID="$(cd "${BASE_DIR}/.."; basename "$PWD")"
+    fi
   else
-    NPM_ORG=${NPM_ORG/@/}
+    ORG_ID=${ORG_ID/@/}
   fi
 
-  if [[ -e "$LIQ_ORG_DB/${NPM_ORG}" ]]; then
-    local SETTINGS="${LIQ_ORG_DB}/${NPM_ORG}/data/orgs/settings.sh"
-    [[ -f "${SETTINGS}" ]] || echoerrandexit "Could not locate settings file for '${NPM_ORG}' (${SETTINGS})."
+  if [[ -e "$LIQ_ORG_DB/${ORG_ID}" ]]; then
+    local SETTINGS="${LIQ_ORG_DB}/${ORG_ID}/data/orgs/settings.sh"
+    [[ -f "${SETTINGS}" ]] || echoerrandexit "Could not locate settings file for '${ORG_ID}' (${SETTINGS})."
     source "${SETTINGS}"
 
     ORG_CHART_TEMPLATE="${ORG_CHART_TEMPLATE/\~/$LIQ_PLAYGROUND}" # TODO: huh? explain this...
@@ -2061,7 +2064,7 @@ projects-create() {
   fi
 
   if [[ -e "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]]; then
-    source "${LIQ_ORG_DB}/${PKG_ORG_NAME}/settings.sh"
+    source "${LIQ_ORG_DB}/${PKG_ORG_NAME}/data/orgs/settings.sh"
   else
     echoerrandexit "Did not find base org repo for '$PKG_ORG_NAME'. Try:\nliq orgs import <base org pkg or URL>"
   fi
@@ -3015,7 +3018,7 @@ projects-lib-setup-labels-sync() {
     # TODO: support '--import-org'
     echoerrandexit "Org def project '${ORG_PROJECT}' not found locally. Try:\nliq projects import ${ORG_BASE}"
   fi
-  source "${LIQ_PLAYGROUND}/${ORG_PROJECT}/settings.sh"
+  source "${LIQ_PLAYGROUND}/${ORG_PROJECT}/data/orgs/settings.sh"
   if [[ -z "${PROJECT_LABELS:-}" ]]; then
     echo "  No project labels defined; using default label set..."
     PROJECT_LABELS=$(cat <<EOF

@@ -78,16 +78,18 @@ orgs-create() {
   commit-settings() {
     local REPO_TYPE="${1}"; shift
     local FIELD
+    local SETTINGS='data/orgs/settings.sh'
 
     echofmt "Initializing ${REPO_TYPE} repository..."
     git init --quiet .
 
+    mkdir $(dirname "${SETTINGS}")
     for FIELD in "$@"; do
       FIELD=${FIELD/:/}
-      echo "ORG_${FIELD}='$(echo "${!FIELD}" | sed "s/'/'\"'\"'/g")'" >> settings.sh
+      echo "ORG_${FIELD}='$(echo "${!FIELD}" | sed "s/'/'\"'\"'/g")'" >> "${SETTINGS}"
     done
 
-    git add settings.sh
+    git add "${SETTINGS}"
     git commit -m "initial org settings"
     git push --set-upstream upstream master
   }
@@ -187,7 +189,7 @@ orgs-show() {
   # Recall the org DB links the npm org name to the repo.
   { { [[ -n "$DIR" ]] && readlink "${LIQ_ORG_DB}/${NPM_ORG}"; } \
   || { [[ -n "$PROJECT" ]] && cat "${LIQ_ORG_DB}/${NPM_ORG}/package.json" | jq -r '.name'; } \
-  || { [[ -n "$SETTINGS" ]] && cat "${LIQ_ORG_DB}/${NPM_ORG}/settings.sh"; } } || \
+  || { [[ -n "$SETTINGS" ]] && cat "${LIQ_ORG_DB}/${NPM_ORG}/data/orgs/settings.sh"; } } || \
   { # the no specific format option
     cat <<EOF
 Project: $(cat "${LIQ_ORG_DB}/${NPM_ORG}/package.json" | jq -r '.name')
