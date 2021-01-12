@@ -101,7 +101,7 @@ projects-create() {
   fi
 
   if [[ -e "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]]; then
-    source "${LIQ_ORG_DB}/${PKG_ORG_NAME}/settings.sh"
+    source "${LIQ_ORG_DB}/${PKG_ORG_NAME}/data/orgs/settings.sh"
   else
     echoerrandexit "Did not find base org repo for '$PKG_ORG_NAME'. Try:\nliq orgs import <base org pkg or URL>"
   fi

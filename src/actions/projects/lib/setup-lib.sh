@@ -22,7 +22,7 @@ projects-lib-setup-labels-sync() {
     # TODO: support '--import-org'
     echoerrandexit "Org def project '${ORG_PROJECT}' not found locally. Try:\nliq projects import ${ORG_BASE}"
   fi
-  source "${LIQ_PLAYGROUND}/${ORG_PROJECT}/settings.sh"
+  source "${LIQ_PLAYGROUND}/${ORG_PROJECT}/data/orgs/settings.sh"
   if [[ -z "${PROJECT_LABELS:-}" ]]; then
     echo "  No project labels defined; using default label set..."
     PROJECT_LABELS=$(cat <<EOF

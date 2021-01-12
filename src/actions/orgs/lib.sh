@@ -6,9 +6,6 @@ lib-orgs-resolve-path() {
   real_path "${LIQ_ORG_DB}/${ORG_ID}"
 }
 
-# deprecated; use orgs-lib-source-settings
-# sourceCurrentOrg() {
-
 # Retrieves the policy dir for the named NPM org or will infer from context. Org base and, when private, policy projects
 # must be locally available.
 orgsPolicyRepo() {
@@ -21,18 +18,22 @@ orgsPolicyRepo() {
 # Sources the named base org settings or will infer org context. If the base org cannot be found, the execution will
 # halt and the user will be advised to timport it.
 orgs-lib-source-settings() {
-  local NPM_ORG="${1:-}"
+  local ORG_ID="${1:-}"
 
-  if [[ -z "$NPM_ORG" ]]; then
-    findBase
-    NPM_ORG="$(cd "${BASE_DIR}/.."; basename "$PWD")"
+  if [[ -z "$ORG_ID" ]]; then
+    if [[ -n "${CURR_ORG}" ]]; then
+      ORG_ID="${CURR_ORG}"
+    else
+      findBase
+      ORG_ID="$(cd "${BASE_DIR}/.."; basename "$PWD")"
+    fi
   else
-    NPM_ORG=${NPM_ORG/@/}
+    ORG_ID=${ORG_ID/@/}
   fi
 
-  if [[ -e "$LIQ_ORG_DB/${NPM_ORG}" ]]; then
-    local SETTINGS="${LIQ_ORG_DB}/${NPM_ORG}/data/orgs/settings.sh"
-    [[ -f "${SETTINGS}" ]] || echoerrandexit "Could not locate settings file for '${NPM_ORG}' (${SETTINGS})."
+  if [[ -e "$LIQ_ORG_DB/${ORG_ID}" ]]; then
+    local SETTINGS="${LIQ_ORG_DB}/${ORG_ID}/data/orgs/settings.sh"
+    [[ -f "${SETTINGS}" ]] || echoerrandexit "Could not locate settings file for '${ORG_ID}' (${SETTINGS})."
     source "${SETTINGS}"
 
     ORG_CHART_TEMPLATE="${ORG_CHART_TEMPLATE/\~/$LIQ_PLAYGROUND}" # TODO: huh? explain this...
