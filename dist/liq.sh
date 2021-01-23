@@ -1953,7 +1953,7 @@ post-options-liq-orgs() {
   if [[ -z "${ORG:-}" ]]; then
     findBase
     CURR_ORG_PATH="${BASE_DIR}"
-    CURR_ORG="$( cat "${CURRE_ORG_PATH}/package.json" | jq -r '.name' )"
+    CURR_ORG="$( cat "${CURR_ORG_PATH}/package.json" | jq -r '.name' )"
     CURR_ORG="${CURR_ORG/@/}"
   else
     CURR_ORG="${ORG}"
