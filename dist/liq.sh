@@ -1898,6 +1898,28 @@ help-orgs-show() {
 Displays info on the currently active or named org.
 EOF
 }
+# Ensures that policy repo can be resolved or errors out with a useful message. Can even try to import the necessary
+# project.
+lib-orgs-ensure-policy-repo() {
+  [[ -n "${ORG_POLICY_REPO}" ]] || echoerrandexit "Try setting company parameter 'ORG_POLICY_REPO'."
+  ORG_POLICY_REPO="${ORG_POLICY_REPO/@/}" # TODO: standardize sans '@'
+  if ! [[ -d "${LIQ_PLAYGROUND}/${ORG_POLICY_REPO}" ]]; then
+    if yes-no "Did not find local '${ORG_POLICY_REPO}'. Would you like to attempt import? " Y; then
+      projects-import --source "${ORG_POLICY_REPO}" \
+        echoerrandexit "Project import failed. See above."
+    else
+      echowarnandexit "Try manual import:\nliq projects import --source '${ORG_POLICY_REPO}'"
+    fi
+  fi
+}
+
+# Calls lib-orgs-ensure-policy-repo and then echoes an absolute path if successful.
+lib-orgs-policy-repo-path() {
+  lib-orgs-ensure-policy-repo
+
+  echo "${LIQ_PLAYGROUND}/${ORG_POLICY_REPO/@/}"
+}
+
 # Takes a CLI friendly org ID (as found in LIQ_ORGS_DB) and resolves that to the path to the primary org repo.
 lib-orgs-resolve-path() {
   # expects ORG_ID to be set (by post-options-liq-orgs)
@@ -1910,6 +1932,8 @@ lib-orgs-resolve-path() {
 
 # Retrieves the policy dir for the named NPM org or will infer from context. Org base and, when private, policy projects
 # must be locally available.
+#
+# @deprecated: prefer lib-orgs-policy-repo-path
 orgsPolicyRepo() {
   [[ -n "${ORG_POLICY_REPO}" ]] || orgs-lib-source-settings
 
