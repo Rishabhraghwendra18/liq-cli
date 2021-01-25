@@ -812,7 +812,10 @@ ${MESSAGE}
 
     local BASE_TARGET # this is the 'org' of the upsteram branch
     BASE_TARGET=$(git remote -v | grep '^upstream' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
-    local PULL_OPTS="--push --base=${BASE_TARGET}:master "
+    # Some research indicates that explicitly specifying head can work around some bugs...
+    # local BASE_HEAD
+    # BASE_HEAD=$(git remote -v | grep '^workspace' | grep '(push)' | sed -E 's|.+[/:]([^/]+)/[^/]+$|\1|')
+    local PULL_OPTS="--push --base=${BASE_TARGET}:master" #--head=${BASE_HEAD}:${WORK_BRANCH}"
     if [[ -z "$NO_BROWSE" ]]; then
       PULL_OPTS="$PULL_OPTS --browse"
     fi
@@ -820,6 +823,8 @@ ${MESSAGE}
       PULL_OPTS="$PULL_OPTS --force"
     fi
     echo "Submitting PR for '$IP'..."
-    hub pull-request $PULL_OPTS -m "${DESC}"
+    hub pull-request $PULL_OPTS -m "${DESC}" || {
+      echoerrandexit "Submission failed. If you see an error mentioning 'Invalid value for \"head\"', check to see if your forked working repository has become detached. If this is the case, you can delete the working repo on GitHub, refork from the source, and then 'liq work save --backup-only' from your local checkout. This will update the new forked repo with your workbranch changes and you should be able to submit after that."
+    }
   done # TO_SUBMIT processing loop
 }
