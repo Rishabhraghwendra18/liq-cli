@@ -6,14 +6,20 @@ pre-options-liq-orgs() {
 post-options-liq-orgs() {
   post-options-liq
 
+  # 'ORG' is the parameter set by the user (or not)
+  # 'ORG_ID' is the resolved ORG_ID
+  # 'CURR_ORG' is the base org package name; e.g., liquid-labs/liquid-labs TODO: rename to 'CURR_ORG'?
+  # 'CURR_ORG_PATH' is the absolute path to the CURR_ORG project
+
   # TODO: Check if the project 'class' is correct; https://github.com/Liquid-Labs/liq-cli/issues/238
   if [[ -z "${ORG:-}" ]]; then
     findBase
-    CURR_ORG_PATH="${BASE_DIR}"
-    CURR_ORG="$( cat "${CURR_ORG_PATH}/package.json" | jq -r '.name' )"
-    CURR_ORG="${CURR_ORG/@/}"
+    ORG_ID="$(cd "${BASE_DIR}/.."; basename "$PWD")"
   else
-    CURR_ORG="${ORG}"
-    CURR_ORG_PATH="$(lib-orgs-resolve-path "${CURR_ORG}")"
+    ORG_ID="${ORG}"
   fi
+  # the following will exit if the ORG_ID cannot be resolved to a local checkout
+  CURR_ORG_PATH="$(lib-orgs-resolve-path "${ORG_ID}")"
+  CURR_ORG="$( cat "${CURR_ORG_PATH}/package.json" | jq -r '.name' )"
+  CURR_ORG="${CURR_ORG/@/}"
 }
