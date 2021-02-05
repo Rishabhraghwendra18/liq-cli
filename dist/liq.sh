@@ -3053,9 +3053,10 @@ bounty:This task offers a bounty:209020
 bug:Something is broken:d73a4a
 enhancement:New feature or request:a2eeef
 good first issue:Good for newcomers:7050ff
-needs spec:The task as-is is not fully specified:ff4040
-optimization:Make better without changing behavior:00dd70
-security:Tag security related tasks:ff0000
+needs spec:Task not fully specified:ff4040
+optimization:Non-behavior changing improvement:00dd70
+security:A security related tasks:ff0000
+task:General task:009900
 EOF
     )
   fi
