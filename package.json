@@ -9,7 +9,7 @@
     "liq-shell": "dist/liq-shell.sh"
   },
   "files": [
-    "./dist"
+    "dist/*"
   ],
   "scripts": {
     "prebuild": "command -v rollup-bash >/dev/null && rm -rf ./dist",
