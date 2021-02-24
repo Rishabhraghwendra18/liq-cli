@@ -180,6 +180,7 @@ __bp_in_prompt_command() {
 # environment to attempt to detect if the current command is being invoked
 # interactively, and invoke 'preexec' if so.
 __bp_preexec_invoke_exec() {
+
     # Save the contents of $_ so that it can be restored later on.
     # https://stackoverflow.com/questions/40944532/bash-preserve-in-a-debug-trap#40944702
     __bp_last_argument_prev_command="${1:-}"
@@ -199,12 +200,6 @@ __bp_preexec_invoke_exec() {
     if [[ -n "${COMP_LINE:-}" ]]; then
         # We're in the middle of a completer. This obviously can't be
         # an interactively issued command.
-        if (( 0 )); then
-          echo "CL: ${COMP_LINE}"
-          echo "CW@: ${COMP_WORDS[@]}"
-          echo "CW@: ${COMP_WORDS[*]}"
-          echo "CCW: ${COMP_CWORD}"
-        fi
         return
     fi
     if [[ -z "${__bp_preexec_interactive_mode:-}" ]]; then
