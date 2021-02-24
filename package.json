@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "module": "dist/index.es.js",
   "bin": {
-    "liq": "./dist/liq.sh"
+    "liq": "./dist/liq.sh",
     "liq-shell": "./dist/liq-shell.sh"
   },
   "files": [ "./dist" ],
