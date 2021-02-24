@@ -1,30 +1,42 @@
+FROM ubuntu AS build
+
+# install necessary packages for build
+RUN apt-get update && apt-get install -y \
+  gcc \
+  make \
+  wget \
+  && rm -rf /var/lib/apt/lists/*
+
+# build and install bash 5
+WORKDIR /tmp
+RUN wget https://ftp.gnu.org/gnu/bash/bash-5.1.tar.gz \
+  && tar xf bash-5.1.tar.gz
+WORKDIR /tmp/bash-5.1
+RUN ./configure \
+  && make
+
+# Start new, reduced layer image
 FROM ubuntu
 
-RUN apt-get update
-# RUN apt-get install bash-completion -y
-RUN apt-get install make wget -y # build-essential -y
-
-RUN wget https://ftp.gnu.org/gnu/bash/bash-5.1.tar.gz
-RUN tar xf bash-5.1.tar.gz
-RUN echo $PWD
-WORKDIR ./bash-5.1
-RUN apt-get install gcc -y
-RUN ./configure
-RUN make
+# install bash 5.1
+COPY --from=build /tmp/bash-5.1 /tmp/bash-5.1
+WORKDIR /tmp/bash-5.1
 RUN make install
 
-ADD ./dist/liq.sh /usr/bin/liq
-ADD ./src/liq-shell.sh /usr/bin/liq-shell
+# install necessary system packages
+RUN apt-get update && apt-get install -y \
+  jq \
+  git \
+  nodjs \
+  npm \
+  && rm -rf /var/lib/apt/lists/*
 
-RUN chmod +x /usr/bin/liq
-RUN chmod +x /usr/bin/liq-shell
-
+# setup liq user
 RUN useradd -ms /bin/bash liq
 USER liq
-WORKDIR /home/liq
 
-RUN mkdir src playground .liq
-ADD ./bash-preexec.sh /home/liq/bash-preexec.sh
-ADD ./src/completion.sh /home/liq/src/completion.sh
+# install liq and liq-shell
+WORKDIR /home/liq
+RUN npm -i @liquid-labs/liq-cli
 
 ENTRYPOINT ["/usr/bin/liq-shell"]

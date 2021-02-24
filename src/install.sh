@@ -40,6 +40,22 @@ brewInstall() {
   fi
 }
 
+APT_UPDATED=false
+function apt-install() {
+  local EXEC="$1"
+  local INSTALL_TEST="$2"
+
+  if ! ${INSTALL_TEST}; then
+    if [[ "${APT_UPDATED}"  == 'false' ]]; then
+      apt-get -q update
+      APT_UPDATED=false
+    fi
+    apt-get -qqy "${EXEC}"
+  else
+    echo "Found '${EXEC}'..."
+  fi
+}
+
 if [[ $(uname) == 'Darwin' ]]; then
   brewInstall jq 'which -s jq'
   # Without the 'eval', the tick quotes are treated as part of the filename.
@@ -48,12 +64,19 @@ if [[ $(uname) == 'Darwin' ]]; then
     "eval test -f '$(brew --prefix gnu-getopt)/bin/getopt'" \
     "addLineIfNotPresentInFile ~/.bash_profile 'alias gnu-getopt=\"\$(brew --prefix gnu-getopt)/bin/getopt\"'"
 else
-  apt-get -q update
-  apt-get install -qqy jq
+  apt-install jq 'which -s jq'
+  apt-install nodejs 'which -s nodejs'
 fi
 
-cp ./src/completion.sh "${COMPLETION_PATH}/liq"
-addLineIfNotPresentInFile ~/.bash_profile "[ -d '$COMPLETION_PATH' ] && . '${COMPLETION_PATH}/liq'"
+cp ./dist/completion.sh "${COMPLETION_PATH}/liq"
+# TODO: Macs use '.bash_profile', which sources '.profile' (? always, or is that my change?)
+if [[ -e "${HOME}/.bash_profile" ]]; then
+  addLineIfNotPresentInFile "${HOME}/.bash_profile" "[ -d '$COMPLETION_PATH' ] && . '${COMPLETION_PATH}/liq'"
+elif [[ -e "${HOME}/.profile" ]]; then
+  addLineIfNotPresentInFile "${HOME}/.profile" "[ -d '$COMPLETION_PATH' ] && . '${COMPLETION_PATH}/liq'"
+else
+  echoerr "Could not find '.profile' or '.bash_profile' to set up autocompletion."
+fi
 # TODO: accept '-e' option which exchos the source command so user can do 'eval ./install.sh -e'
 # TODO: only echo if lines added (here or in POST_INSTALL)
 echo "You must open a new shell or 'source ~/.bash_profile' to enable completion updates."

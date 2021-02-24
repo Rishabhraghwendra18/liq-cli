@@ -6,8 +6,7 @@ source "${HOME}/.profile"
 PS4='$(echo $(date +"%Y/%m/%d (%H:%M)") $(history 1) >> /tmp/trace.txt)'
 PS1='liq> '
 set show-all-if-ambiguous on
-. ./src/completion.sh
-# complete -E -F _liq
+# the _liq function should have been sourced as part of the users
 complete -D -F _liq
 complete -I -F _liq
 
@@ -21,7 +20,7 @@ preexec() {
   fi
 
   if [[ "${1}" == '\'* ]]; then
-    ${1:1}
+    eval ${1:1}
   else
     # echo -e "executing:\nliq ${1}"
     liq $1

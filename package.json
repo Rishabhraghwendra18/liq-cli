@@ -4,9 +4,14 @@
   "description": "A process aware development, testing, and deployment management tool.",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
+  "bin": {
+    "liq": "./dist/liq.sh"
+    "liq-shell": "./dist/liq-shell.sh"
+  },
+  "files": [ "./dist" ],
   "scripts": {
     "prebuild": "command -v rollup-bash >/dev/null && rm -rf ./dist",
-    "build": "mkdir -p dist && rollup-bash ./src/cli.sh ./dist/liq.sh && rollup-bash ./src/install.sh ./dist/install.sh",
+    "build": "mkdir -p dist && rollup-bash ./src/cli.sh ./dist/liq.sh && rollup-bash ./src/install.sh ./dist/install.sh && rollup-bash ./src/completion.sh ./dist/completion.sh && rollup-bash ./src/liq-shell.sh ./dist/liq-shell.sh",
     "watch": "watch 'npm run build' ./src",
     "pretest": "catalyst-scripts pretest && babel --source-maps inline src -d test-staging",
     "test": "catalyst-scripts test",
@@ -29,9 +34,6 @@
   "dependencies": {
     "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.30",
     "@liquid-labs/orgs-model": "^1.0.0-beta.19"
-  },
-  "bin": {
-    "liq": "./dist/liq.sh"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.12.1",
