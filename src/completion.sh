@@ -11,7 +11,7 @@ _liq() {
   #  COMP_CWORD=0
   # fi
 
-  if (( 1 )); then
+  if (( 0 )); then
     echo "COMP_LINE: '$COMP_LINE'"
     echo "COMP_WORDS: '${COMP_WORDS[@]}'"
     echo "COMP_CWORD: '$COMP_CWORD'"
