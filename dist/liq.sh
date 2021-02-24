@@ -4653,6 +4653,17 @@ if [[ $# -lt 1 ]]; then
   exit 1
 fi
 
+if [[ "$1" == '--interactive' ]]; then
+  while read -p 'liq>' -r COMMAND; do
+    case "$COMMAND" in
+      q|quit)
+        exit 0;;
+      *)
+        echo "$COMMAND";;
+    esac
+    # source ./dispatch
+  done
+else
 if (( $# == 0 )); then
   echoerrandexit "No arguments provided. Try:\nliq help"
 fi
@@ -4694,5 +4705,6 @@ case "$GROUP" in
       exitUnknownHelpTopic "$ACTION" "$GROUP"
     fi;;
 esac
+fi
 
 exit 0

@@ -1,0 +1,7 @@
+/.yalc
+/yalc.lock
+node_modules/
+/test-staging/
+/lib
+/coverage
+/.git

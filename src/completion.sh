@@ -5,6 +5,18 @@
 _liq() {
   # Most of this fuction is setup for various handler functions. The actual dispatch is at the very end.
 
+  # if [[ -z "${COMP_LINE}" ]]; then # we are in the 'shell' case, which omits the leading 'liq'
+  #  COMP_LINE='liq '
+  #  COMP_WORDS+=('liq ')
+  #  COMP_CWORD=0
+  # fi
+
+  if (( 1 )); then
+    echo "COMP_LINE: '$COMP_LINE'"
+    echo "COMP_WORDS: '${COMP_WORDS[@]}'"
+    echo "COMP_CWORD: '$COMP_CWORD'"
+  fi
+
   # TODO: include 'global-vars.sh' (and maybe break into 'common' and 'runtime'?) once we build this file.
   local LIQ_DB_BASENAME=".liq"
   local LIQ_DB="${HOME}/${LIQ_DB_BASENAME}"
@@ -13,12 +25,16 @@ _liq() {
   # Using 'GROUPS' was causing errors; set by some magic.
   local ACTION_GROUPS="meta orgs projects work"
 
-  local TOKEN COMP_FUNC CUR OPTS PREV WORK_COUNT TOKEN_COUNT
-  CUR="${COMP_WORDS[COMP_CWORD]}"
-  PREV="${COMP_WORDS[COMP_CWORD-1]}"
-  COMP_FUNC='comp'
-  WORD_COUNT=${#COMP_WORDS[@]}
-  TOKEN_COUNT=0
+  local TOKEN COMP_FUNC CUR OPTS PREV WORK_COUNT TOKEN_COUNT IS_LIQ_ENV
+  if [[ -n "${COMP_WORDS}" ]]; then
+    CUR="${COMP_WORDS[COMP_CWORD]}"
+    PREV="${COMP_WORDS[COMP_CWORD-1]}"
+  fi
+  if [[ -n "${COMP_WORDS}" ]]; then
+    WORD_COUNT=${#COMP_WORDS[@]}
+  else
+    WORD_COUND=0
+  fi
 
   if [[ "$CUR" == '?' ]]; then
     CUR='help'
@@ -45,7 +61,9 @@ _liq() {
   }
 
   comp-liq() {
-    OPTS="${GLOBAL_ACTIONS} ${ACTION_GROUPS}"; std-reply
+    OPTS="${GLOBAL_ACTIONS} ${ACTION_GROUPS}"
+    [[ "${IS_LIQ_ENV}" == true ]] && OPTS="${OPTS} quit"
+    std-reply
   }
 
   comp-liq-help() {
@@ -203,10 +221,19 @@ _liq() {
   # TODO: Should we use LIQ_EXTS_DB here? This way, we're sidestepping the need to 'build' the completion script...
   source "${LIQ_DB}/exts/comps.sh"
 
+  TOKEN_COUNT=0
+  if [[ "${COMP_LINE}" != 'liq '* ]]; then # we are in the 'shell' case, which omits the leading 'liq'
+    COMP_FUNC='comp-liq'
+    IS_LIQ_ENV=true
+  else
+    COMP_FUNC='comp'
+    IS_LIQ_ENV=false
+  fi
+
   # Now we've registered all the local and modular completion functions. We'll analyze the token stream to figure out
   # which completion function to call:
-  for TOKEN in ${COMP_WORDS[@]}; do
-    if [[ "$TOKEN" != -* ]] && (( $TOKEN_COUNT + 1 < $WORD_COUNT )); then
+  [[ -n "${COMP_WORDS}" ]] && for TOKEN in ${COMP_WORDS[@]}; do
+    if [[ "$TOKEN" != -* ]] && { (( $TOKEN_COUNT + 1 < $WORD_COUNT )) || [[ "${TOKEN}" == 'liq' ]]; }; then
       if [[ "$(type -t "${COMP_FUNC}-${TOKEN}")" == 'function' ]]; then
         COMP_FUNC="${COMP_FUNC}-${TOKEN}"
         TOKEN_COUNT=$(( $TOKEN_COUNT + 1 ))
@@ -222,3 +249,4 @@ _liq() {
 }
 
 complete -F _liq liq
+# complete -F _liq
