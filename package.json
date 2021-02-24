@@ -1,6 +1,6 @@
 {
   "name": "@liquid-labs/liq-cli",
-  "version": "1.0.0-prototype.11",
+  "version": "1.0.0-prototype.12",
   "description": "A process aware development, testing, and deployment management tool.",
   "main": "dist/index.js",
   "module": "dist/index.es.js",
