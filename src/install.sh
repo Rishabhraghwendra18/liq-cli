@@ -2,9 +2,9 @@
 
 import echoerr
 
-source ./lib/_utils.sh
+echo "Starting liq install..."
 
-COMPLETION_PATH="/usr/local/etc/bash_completion.d"
+source ./lib/_utils.sh
 
 BREW_UPDATED=''
 brewInstall() {
@@ -46,11 +46,12 @@ function apt-install() {
   local INSTALL_TEST="$2"
 
   if ! ${INSTALL_TEST}; then
+    echo "Installing '${EXEC}'..."
     if [[ "${APT_UPDATED}"  == 'false' ]]; then
-      apt-get -q update
+      sudo apt-get -q update || echoerrandexit "Could not install '${EXEC}' while performing 'apt-get update'."
       APT_UPDATED=false
     fi
-    apt-get -qqy "${EXEC}"
+    sudo apt-get -qqy "${EXEC}" || echoerrandexit "Could not install  '${EXEC}' while performing 'apt-get install'."
   else
     echo "Found '${EXEC}'..."
   fi
@@ -64,19 +65,30 @@ if [[ $(uname) == 'Darwin' ]]; then
     "eval test -f '$(brew --prefix gnu-getopt)/bin/getopt'" \
     "addLineIfNotPresentInFile ~/.bash_profile 'alias gnu-getopt=\"\$(brew --prefix gnu-getopt)/bin/getopt\"'"
 else
-  apt-install jq 'which -s jq'
-  apt-install nodejs 'which -s nodejs'
+  apt-install jq 'which jq' # '-s' is not supported on linux and a /dev/null redirect doesn't interpret correctly (?)
+  apt-install nodejs 'which nodejs'
 fi
 
+for i in /etc/bash_completion.d /usr/local/etc/bash_completion.d; do
+  if [[ -e "${i}" ]]; then
+    COMPLETION_PATH="${i}"
+    break
+  fi
+done
 cp ./dist/completion.sh "${COMPLETION_PATH}/liq"
-# TODO: Macs use '.bash_profile', which sources '.profile' (? always, or is that my change?)
-if [[ -e "${HOME}/.bash_profile" ]]; then
-  addLineIfNotPresentInFile "${HOME}/.bash_profile" "[ -d '$COMPLETION_PATH' ] && . '${COMPLETION_PATH}/liq'"
-elif [[ -e "${HOME}/.profile" ]]; then
-  addLineIfNotPresentInFile "${HOME}/.profile" "[ -d '$COMPLETION_PATH' ] && . '${COMPLETION_PATH}/liq'"
-else
-  echoerr "Could not find '.profile' or '.bash_profile' to set up autocompletion."
+
+COMPLETION_SETUP=false
+for i in /etc/bash.bashrc "${HOME}/.bash_profile" "${HOME}/.profile"; do
+  if [[ -e "${i}" ]]; then
+    addLineIfNotPresentInFile "${i}" "[ -d '$COMPLETION_PATH' ] && . '${COMPLETION_PATH}/liq'"
+    COMPLETION_SETUP=true
+    break
+  fi
+done
+
+if [[ "${COMPLETION_SETUP}" == 'false' ]]; then
+  echoerr "Completion support not set up; could not find likely bash profile/rc."
 fi
 # TODO: accept '-e' option which exchos the source command so user can do 'eval ./install.sh -e'
 # TODO: only echo if lines added (here or in POST_INSTALL)
-echo "You must open a new shell or 'source ~/.bash_profile' to enable completion updates."
+[[ -z "${PS1}" ]] || echo "You must open a new shell or 'source ~/.bash_profile' to enable completion updates."
