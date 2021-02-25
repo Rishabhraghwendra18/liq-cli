@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
 SETUP=$(cat <<'EOF'
-source "${HOME}/.bashrc"
-source "${HOME}/.profile"
+[[ -e /etc/bash.bashrc ]] && source /etc/bash.bashrc
+[[ -e "${HOME}/.bashrc" ]] && source "${HOME}/.bashrc"
+[[ -e "${HOME}/.profile" ]] && source "${HOME}/.profile"
 PS4='$(echo $(date +"%Y/%m/%d (%H:%M)") $(history 1) >> /tmp/trace.txt)'
 PS1='liq> '
 set show-all-if-ambiguous on
