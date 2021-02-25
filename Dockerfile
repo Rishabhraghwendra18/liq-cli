@@ -16,21 +16,31 @@ RUN ./configure \
   && make
 
 # Start new, reduced layer image
-FROM ubuntu
+FROM ubuntu:latest
 
 # install necessary system packages
 RUN apt-get update && apt-get install -y \
+  curl \
   jq \
   git \
   make \
-  nodejs \
   npm \
   && rm -rf /var/lib/apt/lists/*
+# To get node 12 (instead of 8)
+RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
+RUN apt-get install -y nodejs
 
 # install bash 5.1
-COPY --from=build /tmp/bash-5.1 /tmp/bash-5.1
-WORKDIR /tmp/bash-5.1
+COPY --from=build /tmp/bash-5.1 /root/bash-5.1
+WORKDIR /root/bash-5.1
 RUN make install
+
+# install liq and liq-shell
+WORKDIR /root
+# TODO: in the next step, we'll make the Dockerfile ephemerally generated from a template and insert the current version here, using make to create a local pack file
+COPY ./liquid-labs-liq-cli-1.0.0-prototype.15.tgz /root/liquid-labs-liq-cli-1.0.0-prototype.15.tgz
+RUN npm install -g --unsafe-perm ./liquid-labs-liq-cli-1.0.0-prototype.15.tgz
+# RUN npm install @liquid-labs/liq-cli
 
 # we could remove 'make' here...
 
@@ -38,8 +48,5 @@ RUN make install
 RUN useradd -ms /bin/bash liq
 USER liq
 
-# install liq and liq-shell
-WORKDIR /home/liq
-RUN npm i @liquid-labs/liq-cli
-
 ENTRYPOINT ["/usr/bin/liq-shell"]
+# ENTRYPOINT ["/bin/bash"]
