@@ -18,7 +18,7 @@
     "pretest": "catalyst-scripts pretest && babel --source-maps inline src -d test-staging",
     "test": "catalyst-scripts test",
     "posttest": "rm -rf test-tmp/",
-    "install": "./dist/install.sh",
+    "install": "TERM=xterm ./dist/install.sh",
     "lint": "catalyst-scripts lint",
     "lint-fix": "catalyst-scripts lint-fix",
     "clean": "rm -rf package-lock.json node_modules/ dist/"
