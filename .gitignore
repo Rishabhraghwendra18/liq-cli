@@ -4,3 +4,7 @@ node_modules/
 /test-staging/
 /lib
 /coverage
+/.ver-cache
+/.docker-img-marker
+# the pack file which may be hanging around
+/*.tgz
