@@ -5,18 +5,6 @@
 _liq() {
   # Most of this fuction is setup for various handler functions. The actual dispatch is at the very end.
 
-  # if [[ -z "${COMP_LINE}" ]]; then # we are in the 'shell' case, which omits the leading 'liq'
-  #  COMP_LINE='liq '
-  #  COMP_WORDS+=('liq ')
-  #  COMP_CWORD=0
-  # fi
-
-  if (( 0 )); then
-    echo "COMP_LINE: '$COMP_LINE'"
-    echo "COMP_WORDS: '${COMP_WORDS[@]}'"
-    echo "COMP_CWORD: '$COMP_CWORD'"
-  fi
-
   # TODO: include 'global-vars.sh' (and maybe break into 'common' and 'runtime'?) once we build this file.
   local LIQ_DB_BASENAME=".liq"
   local LIQ_DB="${HOME}/${LIQ_DB_BASENAME}"
