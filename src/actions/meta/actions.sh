@@ -6,23 +6,20 @@ requirements-meta() {
 }
 
 meta-init() {
-  eval "$(setSimpleOptions PLAYGROUND= SILENT -- "$@")" \
+  eval "$(setSimpleOptions NO_PLAYGROUND:P PLAYGROUND= SILENT -- "$@")" \
     || { contextHelp; echoerrandexit "Bad options."; }
 
-  if [[ -z "$PLAYGROUND" ]]; then
-    # TODO: require-answer-matching (or something) to force absolute path here
-    require-answer "Liquid playground location: " LIQ_PLAYGROUND "${HOME}/playground"
-  else
-    LIQ_PLAYGROUND="$PLAYGROUND"
-  fi
-  if [[ "$LIQ_PLAYGROUND" != /* ]]; then
-    echoerrandexit "Playground path must be absolute."
-  fi
+  [[ -n "${PLAYGROUND}" ]] || PLAYGROUND="${HOME}/playground"
+  [[ "${PLAYGROUND}" == /* ]] || echoerrandexit "Playground path must be absolute."
 
-  if [[ -n "$SILENT" ]]; then
+  if [[ -n "${SILENT}" ]]; then
     meta-lib-setup-liq-db > /dev/null
   else
     meta-lib-setup-liq-db
+  fi
+
+  if [[ -z "${NO_PLAYGROUND}" ]]; then
+    ln -s "${LIQ_DB}/playground" "${PLAYGROUND}"
   fi
 }
 

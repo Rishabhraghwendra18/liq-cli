@@ -19,8 +19,8 @@ EOF
 }
 
 help-meta-init() {
-  cat <<EOF | _help-func-summary init "[--silent|-s] [--playground|-p <absolute path>]"
-Creates the Liquid Development DB (a local directory) and playground.
+  cat <<EOF | _help-func-summary init "[--silent|-s] [--playground|-p <absolute path>] [--no-playground|-P]"
+Initialize the liq database in ~/.liq. By default, will expose the "playground" as ~/playground. The playground can be relocated with the '--playground' parameter. Alternatively, you can supress exposing the playground with the '--no-playground' option. In that case, ~/.liq/playground will still be created and used by liq, it just won't be "exposed" as a non-hidden link. If --no-playground is set, then --playground is ignored.
 EOF
 }
 
