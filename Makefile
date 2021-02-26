@@ -42,4 +42,4 @@ dist/liq.sh: src/cli.sh $(PKG_FILES)
 docker-img: .docker-img-marker
 
 docker-run: .docker-img-marker
-	docker run --interactive --tty --mount type=bind,source="${HOME}"/.liq,target=/home/liq/.liq
+	docker run --interactive --tty --mount type=bind,source="${HOME}"/.liq,target=/home/liq/.liq liq
