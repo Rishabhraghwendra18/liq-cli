@@ -1435,23 +1435,20 @@ requirements-meta() {
 }
 
 meta-init() {
-  eval "$(setSimpleOptions PLAYGROUND= SILENT -- "$@")" \
+  eval "$(setSimpleOptions NO_PLAYGROUND:P PLAYGROUND= SILENT -- "$@")" \
     || { contextHelp; echoerrandexit "Bad options."; }
 
-  if [[ -z "$PLAYGROUND" ]]; then
-    # TODO: require-answer-matching (or something) to force absolute path here
-    require-answer "Liquid playground location: " LIQ_PLAYGROUND "${HOME}/playground"
-  else
-    LIQ_PLAYGROUND="$PLAYGROUND"
-  fi
-  if [[ "$LIQ_PLAYGROUND" != /* ]]; then
-    echoerrandexit "Playground path must be absolute."
-  fi
+  [[ -n "${PLAYGROUND}" ]] || PLAYGROUND="${HOME}/playground"
+  [[ "${PLAYGROUND}" == /* ]] || echoerrandexit "Playground path must be absolute."
 
-  if [[ -n "$SILENT" ]]; then
+  if [[ -n "${SILENT}" ]]; then
     meta-lib-setup-liq-db > /dev/null
   else
     meta-lib-setup-liq-db
+  fi
+
+  if [[ -z "${NO_PLAYGROUND}" ]]; then
+    ln -s "${LIQ_DB}/playground" "${PLAYGROUND}"
   fi
 }
 
@@ -1513,8 +1510,8 @@ EOF
 }
 
 help-meta-init() {
-  cat <<EOF | _help-func-summary init "[--silent|-s] [--playground|-p <absolute path>]"
-Creates the Liquid Development DB (a local directory) and playground.
+  cat <<EOF | _help-func-summary init "[--silent|-s] [--playground|-p <absolute path>] [--no-playground|-P]"
+Initialize the liq database in ~/.liq. By default, will expose the "playground" as ~/playground. The playground can be relocated with the '--playground' parameter. Alternatively, you can supress exposing the playground with the '--no-playground' option. In that case, ~/.liq/playground will still be created and used by liq, it just won't be "exposed" as a non-hidden link. If --no-playground is set, then --playground is ignored.
 EOF
 }
 
@@ -1529,9 +1526,9 @@ meta-lib-setup-liq-db() {
   # TODO: check LIQ_PLAYGROUND is set
   create-dir() {
     local DIR="${1}"
-    echo -n "Creating Liquid Dev DB ('${DIR}')... "
+    echo -n "Creating local liq DB ('${DIR}')... "
     mkdir -p "$DIR" \
-      || (echo "${red}failed${reset}"; echoerrandexit "Error creating Liquid Development DB (${DIR})\nSee above for further details.")
+      || echoerrandexit "Failed!\nError creating liq DB directory '${DIR}'.\nSee above for further details."
     echo "${green}success${reset}"
   }
   create-dir "$LIQ_DB"
@@ -1539,10 +1536,9 @@ meta-lib-setup-liq-db() {
   create-dir "$LIQ_WORK_DB"
   create-dir "$LIQ_EXTS_DB"
   create-dir "$LIQ_ENV_LOGS"
-  create-dir "$LIQ_PLAYGROUND"
-  echo -n "Initializing Liquid Dev settings... "
-  cat <<EOF > "${LIQ_DB}/settings.sh" || (echo "${red}failed${reset}"; echoerrandexit "Error creating Liquid Development settings.")
-LIQ_PLAYGROUND="$LIQ_PLAYGROUND"
+  echo -n "Initializing local liq DB settings... "
+  cat <<EOF > "${LIQ_DB}/settings.sh" || echoerrandexit "Failed!\nError creating local liq settings."
+LIQ_PLAYGROUND="${LIQ_DB}/.liq"
 EOF
   echo "${green}success${reset}"
 }
