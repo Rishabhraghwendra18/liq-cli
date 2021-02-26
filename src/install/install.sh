@@ -4,7 +4,7 @@ import echoerr
 
 echo "Starting liq install..."
 
-source ./lib/_utils.sh
+source ../liq/lib/_utils.sh
 
 BREW_UPDATED=''
 brewInstall() {
