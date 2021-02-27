@@ -56,4 +56,5 @@ docker-test: .docker-test-img-marker
 	docker run --tty liq-test
 
 docker-debug: .docker-test-img-marker
-	docker run --interactive --tty --entrypoint /bin/bash liq-test
+	mkdir -p docker-tmp
+	docker run --interactive --tty --mount type=bind,source="${PWD}/docker-tmp",target=/home/liq/docker-tmp --entrypoint /bin/bash liq-test
