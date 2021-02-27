@@ -5,6 +5,17 @@ load "lib/bats-assert/load"
 
 ORIG_HOME="${HOME}"
 
+setup() {
+  HOME="${ORIG_HOME}/$(uuidgen)"
+}
+
+teardown() {
+  # let's be a little cautios and not delete the real HOME or /
+  [[ "${HOME}" == "${ORIG_HOME}" ]] \
+    || [[ "${HOME}" == "/" ]] \
+    || rm -rf "${HOME}"
+}
+
 verify-setup() {
   local PLAYGROUND="${1:-}"
 
@@ -18,18 +29,6 @@ verify-setup() {
   assert [ -f "${HOME}/.liq/settings.sh" ]
   [ -z "${PLAYGROUND}" ] || assert [ -L "${HOME}/${PLAYGROUND}" ]
   [ -n "${PLAYGROUND}" ] || refute [ -e "${HOME}/playground" ]
-}
-export -f verify-setup
-
-setup() {
-  HOME="${ORIG_HOME}/$(uuidgen)"
-}
-
-teardown() {
-  # let's be a little cautios and not delete the real HOME or /
-  [[ "${HOME}" == "${ORIG_HOME}" ]] \
-    || [[ "${HOME}" == "/" ]] \
-    || rm -rf "${HOME}"
 }
 
 @test 'meta init : should initialize default local liq DB' {
