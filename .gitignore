@@ -5,6 +5,7 @@ node_modules/
 /lib
 /coverage
 /.ver-cache
-/.docker-img-marker
+/.docker-*-marker
 # the pack file which may be hanging around
 /*.tgz
+/npmrc.tmp

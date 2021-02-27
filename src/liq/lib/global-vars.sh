@@ -8,11 +8,9 @@ LIQ_ORG_DB="${LIQ_DB}/orgs"
 LIQ_WORK_DB="${LIQ_DB}/work"
 LIQ_EXTS_DB="${LIQ_DB}/exts"
 LIQ_ENV_LOGS="${LIQ_DB}/logs"
+LIQ_PLAYGROUND="${LIQ_DB}/playground"
 
 LIQ_DIST_DIR="$(dirname "$(real_path "${0}")")"
-
-# defined in $CATALYST_SETTING; during load in dispatch.sh
-LIQ_PLAYGROUND=''
 
 _PROJECT_CONFIG='.catalyst-project' #TODO: current file '.catalyst' and the code doesn't make reference to this constant; convert that to 'catalyst-project'
 _PROJECT_PUB_CONFIG='.catalyst-pub'

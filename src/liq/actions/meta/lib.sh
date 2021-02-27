@@ -12,9 +12,11 @@ meta-lib-setup-liq-db() {
   create-dir "$LIQ_WORK_DB"
   create-dir "$LIQ_EXTS_DB"
   create-dir "$LIQ_ENV_LOGS"
+  create-dir "${LIQ_PLAYGROUND}"
+
   echo -n "Initializing local liq DB settings... "
   cat <<EOF > "${LIQ_DB}/settings.sh" || echoerrandexit "Failed!\nError creating local liq settings."
-LIQ_PLAYGROUND="${LIQ_DB}/.liq"
+:
 EOF
   echo "${green}success${reset}"
 }

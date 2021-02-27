@@ -1,3 +1,6 @@
+###
+# build image
+###
 FROM ubuntu AS build
 
 # install necessary packages for build
@@ -15,8 +18,11 @@ WORKDIR /tmp/bash-5.1
 RUN ./configure \
   && make
 
-# Start new, reduced layer image
-FROM ubuntu:latest
+
+###
+# distro image
+###
+FROM ubuntu:latest AS distro
 
 # install necessary system packages
 RUN apt-get update && apt-get install -y \
@@ -24,11 +30,11 @@ RUN apt-get update && apt-get install -y \
   jq \
   git \
   make \
-  npm \
-  && rm -rf /var/lib/apt/lists/*
+  npm
 # To get node 12 (instead of 8)
 RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
 RUN apt-get install -y nodejs
+RUN apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 
 # install bash 5.1
 COPY --from=build /tmp/bash-5.1 /root/bash-5.1
@@ -49,4 +55,28 @@ RUN useradd -ms /bin/bash liq
 USER liq
 
 ENTRYPOINT ["/usr/bin/liq-shell"]
-# ENTRYPOINT ["/bin/bash"]
+
+###
+# test image
+###
+FROM distro AS test
+
+USER root
+RUN apt-get update && apt-get install -y \
+  parallel \
+  uuid-runtime
+RUN apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+COPY ./npmrc.tmp /root/.npmrc
+COPY --chown=liq:liq ./npmrc.tmp /home/liq/.npmrc
+RUN npm install -g @bats-core/bats
+RUN rm /root/.npmrc /home/liq/.npmrc
+
+USER liq
+WORKDIR /home/liq
+RUN mkdir -p ./test/lib \
+  && git clone https://github.com/bats-core/bats-support.git test/lib/bats-support \
+  && git clone https://github.com/bats-core/bats-assert.git test/lib/bats-assert
+# copy tests last as they are mast likely to change
+COPY ./src/test/* ./test/
+
+ENTRYPOINT ["/usr/bin/bats", "--jobs", "2", "--report-formatter", "junit", "--output" , ".", "test"]
