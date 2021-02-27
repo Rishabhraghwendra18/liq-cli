@@ -8,4 +8,7 @@ node_modules/
 /.docker-*-marker
 # the pack file which may be hanging around
 /*.tgz
+# SENSITIVE DATA -------------------------------
+# TODO: https://github.com/Liquid-Labs/liq-cli/issues/250
 /npmrc.tmp
+# END SENSITIVE DATA ---------------------------

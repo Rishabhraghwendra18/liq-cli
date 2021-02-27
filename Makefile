@@ -1,11 +1,12 @@
+.DELETE_ON_ERROR:
+
+STAGING:=.build
 NPM_BIN:=$(shell npm bin)
 BASH_ROLLUP:=$(NPM_BIN)/rollup-bash
 PKG_FILES:=package.json package-lock.json
 LIQ_SRC:=$(shell find src/liq -name "*.sh" -not -name "cli.sh")
 TEST_SRC:=$(shell find src/test -name "*.bats")
 DIST_FILES:=dist/completion.sh dist/install.sh dist/liq.sh dist/liq-shell.sh
-
-.DELETE_ON_ERROR:
 
 all: $(DIST_FILES)
 
@@ -46,11 +47,16 @@ docker-img: .docker-distro-img-marker
 docker-run: .docker-distro-img-marker
 	docker run --interactive --tty --mount type=bind,source="${HOME}"/.liq,target=/home/liq/.liq liq
 
+$(STAGING)/
+
 .docker-test-img-marker: .docker-distro-img-marker $(TEST_SRC)
-	cp "${HOME}"/.npmrc npmrc.tmp
-	docker build . --target test --file src/docker/Dockerfile -t liq-test
-	# rm npmrc.tmp
+	# SENSITIVE DATA -----------------------------------------
+	# TODO: https://github.com/Liquid-Labs/liq-cli/issues/250
+	ln -s "${HOME}"/.npmrc ./npmrc.tmp
+	docker build . --target test --file src/docker/Dockerfile -t liq-test || { rm npmrc.tmp; exit 1; }
+	rm npmrc.tmp
 	touch $@
+	# END SENSITIVE DATA -------------------------------------
 
 docker-test: .docker-test-img-marker
 	docker run --tty liq-test

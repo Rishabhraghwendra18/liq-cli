@@ -72,8 +72,10 @@ RUN apt-get update && apt-get install -y \
 #  ruby # part of apt-get install
 # RUN gem install bashcov
 
+# nmprc reference: https://docs.npmjs.com/cli/v7/configuring-npm/npmrc
 # SENSITIVE DATA ---------------------------------
-COPY ./npmrc.tmp /root/.npmrc
+# TODO: https://github.com/Liquid-Labs/liq-cli/issues/250
+COPY ./npmrc.tmp /root/.npmrc # this is staged by the makefile
 COPY --chown=liq:liq ./npmrc.tmp /home/liq/.npmrc
 RUN npm install -g @bats-core/bats
 RUN rm /root/.npmrc /home/liq/.npmrc
