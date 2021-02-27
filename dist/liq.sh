@@ -1262,11 +1262,9 @@ LIQ_ORG_DB="${LIQ_DB}/orgs"
 LIQ_WORK_DB="${LIQ_DB}/work"
 LIQ_EXTS_DB="${LIQ_DB}/exts"
 LIQ_ENV_LOGS="${LIQ_DB}/logs"
+LIQ_PLAYGROUND="${LIQ_DB}/playground"
 
 LIQ_DIST_DIR="$(dirname "$(real_path "${0}")")"
-
-# defined in $CATALYST_SETTING; during load in dispatch.sh
-LIQ_PLAYGROUND=''
 
 _PROJECT_CONFIG='.catalyst-project' #TODO: current file '.catalyst' and the code doesn't make reference to this constant; convert that to 'catalyst-project'
 _PROJECT_PUB_CONFIG='.catalyst-pub'
@@ -1536,9 +1534,11 @@ meta-lib-setup-liq-db() {
   create-dir "$LIQ_WORK_DB"
   create-dir "$LIQ_EXTS_DB"
   create-dir "$LIQ_ENV_LOGS"
+  create-dir "${LIQ_PLAYGROUND}"
+
   echo -n "Initializing local liq DB settings... "
   cat <<EOF > "${LIQ_DB}/settings.sh" || echoerrandexit "Failed!\nError creating local liq settings."
-LIQ_PLAYGROUND="${LIQ_DB}/.liq"
+:
 EOF
   echo "${green}success${reset}"
 }
@@ -1635,7 +1635,6 @@ help-meta-exts-uninstall() {
 Removes the installed package. If the package is locally installed, the local package installation is untouched and it is simply no longer used by liq.
 EOF
 }
-
 requirements-orgs() {
   :
 }
@@ -1983,7 +1982,6 @@ post-options-liq-orgs() {
   CURR_ORG="$( cat "${CURR_ORG_PATH}/package.json" | jq -r '.name' )"
   CURR_ORG="${CURR_ORG/@/}"
 }
-
 requirements-projects() {
   :
 }
@@ -3135,117 +3133,6 @@ EOF
     [[ -z "${NO_UPDATE_LABELS}" ]] || echo "Skipping labels update."
   fi # labels definition check and update
 }
-
-# TODO: deprecated
-requirements-required-services() {
-  requirePackage
-}
-
-required-services-add() {
-  local IFACE_CLASS
-  if [[ $# -eq 0 ]]; then # interactive add
-    local NEW_SERVICES="$STD_IFACE_CLASSES"
-    local EXISTING_SERVICES=$(required-services-list)
-    local EXISTING_SERVICE
-    for EXISTING_SERVICE in $EXISTING_SERVICES; do
-      NEW_SERVICES=`echo "$NEW_SERVICES" | sed -Ee "s/(^| +)${EXISTING_SERVICE}( +|\$)/\1\2/"`
-    done
-    local REQ_SERVICES
-    PS3="Required service interface: "
-    selectOneCancelOther REQ_SERVICES NEW_SERVICES
-    for IFACE_CLASS in $REQ_SERVICES; do
-      reqServDefine "$IFACE_CLASS"
-    done
-  else
-    while (($# > 0)); do
-      IFACE_CLASS="$1"; shift
-      reqServDefine "$IFACE_CLASS"
-    done
-  fi
-  echo "$PACKAGE" | jq > "$PACKAGE_FILE"
-}
-
-required-services-delete() {
-  if [[ $# -eq 0 ]]; then # interactive delete
-    local DEL
-    while [[ $DEL != '...quit...' ]]; do
-      local OPTIONS=`required-services-list`
-      # TODO: rework to support canctel; add and use 'selectDone'?
-      if [[ -z "$OPTIONS" ]]; then
-        echo "Nothing left to delete."
-        DEL='...quit...'
-      else
-        select DEL in '<done>' $OPTIONS; do
-          case $DEL in
-            '<done>')
-              DEL='...quit...'
-              break;;
-            *)
-              required-services-delete "$DEL"
-              PACKAGE=`cat "$PACKAGE_FILE"`
-              break;;
-          esac
-        done # select
-      fi
-    done # while
-  else
-    while (($# > 0)); do
-      local IFACE_CLASS="$1"; shift
-      if ! echo "$PACKAGE" | jq -e "(.catalyst.requires | map(select(.iface == \"$IFACE_CLASS\")) | length) > 0" > /dev/null; then
-        echoerr "No such requirement '$IFACE_CLASS' found."
-      else
-        PACKAGE=`echo "$PACKAGE" | jq ".catalyst + { requires: [ .catalyst.requires | .[] | select(.iface != \"$IFACE_CLASS\") ] }"`
-      fi
-    done
-  fi
-  # cleanup .catalyst.requires if empty
-  if echo "$PACKAGE" | jq -e "(.catalyst.requires | length) == 0" > /dev/null; then
-    PACKAGE=`echo "$PACKAGE" | jq "del(.catalyst.requires)"`
-  fi
-  echo "$PACKAGE" | jq > "$PACKAGE_FILE"
-}
-
-required-services-list() {
-  if echo "$PACKAGE" | jq -e "(.catalyst.requires | length) > 0" > /dev/null; then
-    echo "$PACKAGE" | jq --raw-output ".catalyst.requires | .[] | .iface | @sh" | tr -d "'"
-  fi
-}
-help-required-services() {
-  local PREFIX="${1:-}"
-
-  handleSummary "${PREFIX}${red_b}(deprated)${reset} ${cyan_u}required-services${reset} <action>: Configures runtime service requirements." || cat <<EOF
-${PREFIX}${cyan_u}required-services${reset} <action>:
-  ${underline}list${reset} [<project name>...]: Lists the services required by the named current or named project.
-  ${underline}add${reset} [<package name>]: Add a required service.
-  ${underline}delete${reset} [<package name>] <name>: Deletes a required service.
-
-${red_b}Deprated: These commands will migrate under 'project'.${reset}
-
-The 'add' action works interactively. Non-interactive alternatives will be
-provided in future versions.
-
-The ${underline}package name${reset} parameter in the 'add' and 'delete' actions is optional if
-there is a single package in the current repository.
-EOF
-}
-reqServDefine() {
-  local IFACE_CLASS="$1"
-  local SERVICE_DEF=$(cat <<EOF
-{
-  "iface": "${IFACE_CLASS}",
-  "params-req": [],
-  "params-opt": [],
-  "config-const": {}
-}
-EOF
-)
-
-  defineParameters SERVICE_DEF
-
-  PACKAGE=`echo "$PACKAGE" | jq ".catalyst + { \"requires\" : ( .catalyst.requires + [ $SERVICE_DEF ] ) }"`
-  echo "$PACKAGE" | jq > "$PACKAGE_FILE"
-}
-
 requirements-work() {
   :
 }
@@ -4632,6 +4519,116 @@ work-links-lib-working-set() {
     source "${LIQ_WORK_DB}/curr_work"
     PROJECTS="${INVOLVED_PROJECTS}"
   fi
+}
+
+# TODO: deprecated
+requirements-required-services() {
+  requirePackage
+}
+
+required-services-add() {
+  local IFACE_CLASS
+  if [[ $# -eq 0 ]]; then # interactive add
+    local NEW_SERVICES="$STD_IFACE_CLASSES"
+    local EXISTING_SERVICES=$(required-services-list)
+    local EXISTING_SERVICE
+    for EXISTING_SERVICE in $EXISTING_SERVICES; do
+      NEW_SERVICES=`echo "$NEW_SERVICES" | sed -Ee "s/(^| +)${EXISTING_SERVICE}( +|\$)/\1\2/"`
+    done
+    local REQ_SERVICES
+    PS3="Required service interface: "
+    selectOneCancelOther REQ_SERVICES NEW_SERVICES
+    for IFACE_CLASS in $REQ_SERVICES; do
+      reqServDefine "$IFACE_CLASS"
+    done
+  else
+    while (($# > 0)); do
+      IFACE_CLASS="$1"; shift
+      reqServDefine "$IFACE_CLASS"
+    done
+  fi
+  echo "$PACKAGE" | jq > "$PACKAGE_FILE"
+}
+
+required-services-delete() {
+  if [[ $# -eq 0 ]]; then # interactive delete
+    local DEL
+    while [[ $DEL != '...quit...' ]]; do
+      local OPTIONS=`required-services-list`
+      # TODO: rework to support canctel; add and use 'selectDone'?
+      if [[ -z "$OPTIONS" ]]; then
+        echo "Nothing left to delete."
+        DEL='...quit...'
+      else
+        select DEL in '<done>' $OPTIONS; do
+          case $DEL in
+            '<done>')
+              DEL='...quit...'
+              break;;
+            *)
+              required-services-delete "$DEL"
+              PACKAGE=`cat "$PACKAGE_FILE"`
+              break;;
+          esac
+        done # select
+      fi
+    done # while
+  else
+    while (($# > 0)); do
+      local IFACE_CLASS="$1"; shift
+      if ! echo "$PACKAGE" | jq -e "(.catalyst.requires | map(select(.iface == \"$IFACE_CLASS\")) | length) > 0" > /dev/null; then
+        echoerr "No such requirement '$IFACE_CLASS' found."
+      else
+        PACKAGE=`echo "$PACKAGE" | jq ".catalyst + { requires: [ .catalyst.requires | .[] | select(.iface != \"$IFACE_CLASS\") ] }"`
+      fi
+    done
+  fi
+  # cleanup .catalyst.requires if empty
+  if echo "$PACKAGE" | jq -e "(.catalyst.requires | length) == 0" > /dev/null; then
+    PACKAGE=`echo "$PACKAGE" | jq "del(.catalyst.requires)"`
+  fi
+  echo "$PACKAGE" | jq > "$PACKAGE_FILE"
+}
+
+required-services-list() {
+  if echo "$PACKAGE" | jq -e "(.catalyst.requires | length) > 0" > /dev/null; then
+    echo "$PACKAGE" | jq --raw-output ".catalyst.requires | .[] | .iface | @sh" | tr -d "'"
+  fi
+}
+help-required-services() {
+  local PREFIX="${1:-}"
+
+  handleSummary "${PREFIX}${red_b}(deprated)${reset} ${cyan_u}required-services${reset} <action>: Configures runtime service requirements." || cat <<EOF
+${PREFIX}${cyan_u}required-services${reset} <action>:
+  ${underline}list${reset} [<project name>...]: Lists the services required by the named current or named project.
+  ${underline}add${reset} [<package name>]: Add a required service.
+  ${underline}delete${reset} [<package name>] <name>: Deletes a required service.
+
+${red_b}Deprated: These commands will migrate under 'project'.${reset}
+
+The 'add' action works interactively. Non-interactive alternatives will be
+provided in future versions.
+
+The ${underline}package name${reset} parameter in the 'add' and 'delete' actions is optional if
+there is a single package in the current repository.
+EOF
+}
+reqServDefine() {
+  local IFACE_CLASS="$1"
+  local SERVICE_DEF=$(cat <<EOF
+{
+  "iface": "${IFACE_CLASS}",
+  "params-req": [],
+  "params-opt": [],
+  "config-const": {}
+}
+EOF
+)
+
+  defineParameters SERVICE_DEF
+
+  PACKAGE=`echo "$PACKAGE" | jq ".catalyst + { \"requires\" : ( .catalyst.requires + [ $SERVICE_DEF ] ) }"`
+  echo "$PACKAGE" | jq > "$PACKAGE_FILE"
 }
 # process global overrides of the form 'key="value"'
 while (( $# > 0 )) && [[ $1 == *"="* ]]; do

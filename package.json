@@ -14,10 +14,7 @@
   "scripts": {
     "prebuild": "command -v rollup-bash >/dev/null && rm -rf ./dist",
     "build": "make all",
-    "watch": "watch 'npm run build' ./src",
-    "pretest": "catalyst-scripts pretest && babel --source-maps inline src -d test-staging",
-    "test": "catalyst-scripts test",
-    "posttest": "rm -rf test-tmp/",
+    "test": "make test",
     "install": "TERM=xterm ./dist/install.sh",
     "lint": "catalyst-scripts lint",
     "lint-fix": "catalyst-scripts lint-fix",
@@ -34,12 +31,7 @@
   },
   "homepage": "https://liquid-labs.github.io/liq-cli/",
   "devDependencies": {
-    "@babel/preset-env": "^7.12.1",
-    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.42",
-    "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.33",
-    "npm-run-all": "^4.1.5",
-    "shelljs": "^0.8.4",
-    "watch": "^1.0.2"
+    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.42"
   },
   "catalyst": {
     "version-check": {
