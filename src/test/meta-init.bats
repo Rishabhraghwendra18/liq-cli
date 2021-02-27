@@ -8,6 +8,7 @@ ORIG_HOME="${HOME}"
 verify-setup() {
   local PLAYGROUND="${1:-}"
 
+  assert_success
   refute_output --partial 'Playground path must be absolute.'
 
   local DIR
@@ -25,8 +26,10 @@ setup() {
 }
 
 teardown() {
-  [[ "${HOME}" != "${ORIG_HOME}" ]] \
-    && rm -rf "${HOME}"
+  # let's be a little cautios and not delete the real HOME or /
+  [[ "${HOME}" == "${ORIG_HOME}" ]] \
+    || [[ "${HOME}" == "/" ]] \
+    || rm -rf "${HOME}"
 }
 
 @test 'meta init : should initialize default local liq DB' {
@@ -57,4 +60,11 @@ teardown() {
 @test 'meta init -p sandbox : should fail with non-absolute path' {
   run liq meta init -p sandbox
   assert_output --partial 'Playground path must be absolute.'
+}
+
+@test 'initializing unwritable HOME will result in an error' {
+  HOME=/
+  run liq meta init
+  assert_failure
+  assert_output --partial 'Permission denied'
 }
