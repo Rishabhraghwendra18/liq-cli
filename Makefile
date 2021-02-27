@@ -15,7 +15,7 @@ clean:
 	rm dist/*
 	rm npmrc.tmp
 
-.PHONY: all docker-img docker-run docker-test docker-debug clean
+.PHONY: all test clean docker-run docker-debug
 
 dist/completion.sh: src/completion/completion.sh $(PKG_FILES)
 	mkdir -p dist
@@ -41,8 +41,6 @@ dist/liq.sh: src/liq/cli.sh $(LIQ_SRC) $(PKG_FILES)
 	# TODO: change Dockerfile to a template and inject the version in .ver-cache
 	docker build . --target distro --file src/docker/Dockerfile -t liq
 	touch $@
-
-docker-img: .docker-distro-img-marker
 
 docker-run: .docker-distro-img-marker
 	docker run --interactive --tty --mount type=bind,source="${HOME}"/.liq,target=/home/liq/.liq liq
@@ -70,7 +68,7 @@ ${HOME}/.npmrc:
 	# END SENSITIVE DATA -------------------------------------
 	touch $@
 
-docker-test: .docker-test-img-marker
+test: .docker-test-img-marker
 	docker run --tty liq-test
 
 docker-debug: .docker-test-img-marker
