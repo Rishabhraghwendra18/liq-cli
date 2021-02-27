@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 
-load "lib/bats-support/load"
-load "lib/bats-assert/load"
+load "../lib/bats-support/load"
+load "../lib/bats-assert/load"
 
 ORIG_HOME="${HOME}"
 

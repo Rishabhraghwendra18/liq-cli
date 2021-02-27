@@ -64,19 +64,29 @@ FROM distro AS test
 USER root
 RUN apt-get update && apt-get install -y \
   parallel \
-  uuid-runtime
-RUN apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+  uuid-runtime \
+  && apt-get autoremove -y \
+  && rm -rf /var/lib/apt/lists/*
+
+# When trying to get bash test coverage support, we installed ruby and bashconv here:
+#  ruby # part of apt-get install
+# RUN gem install bashcov
+
+# SENSITIVE DATA ---------------------------------
 COPY ./npmrc.tmp /root/.npmrc
 COPY --chown=liq:liq ./npmrc.tmp /home/liq/.npmrc
 RUN npm install -g @bats-core/bats
 RUN rm /root/.npmrc /home/liq/.npmrc
+# END SENSITIVE DATA -----------------------------
 
 USER liq
 WORKDIR /home/liq
-RUN mkdir -p ./test/lib \
-  && git clone https://github.com/bats-core/bats-support.git test/lib/bats-support \
-  && git clone https://github.com/bats-core/bats-assert.git test/lib/bats-assert
-# copy tests last as they are mast likely to change
-COPY ./src/test/* ./test/
+RUN mkdir -p ./lib \
+  && git clone https://github.com/bats-core/bats-support.git lib/bats-support \
+  && git clone https://github.com/bats-core/bats-assert.git lib/bats-assert
+
+# Copy tests last as they are mast likely to change
+COPY --chown=liq:liq ./src/test/* ./test/
+
 
 ENTRYPOINT ["/usr/bin/bats", "--jobs", "2", "--report-formatter", "junit", "--output" , ".", "test"]
