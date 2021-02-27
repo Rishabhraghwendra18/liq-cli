@@ -47,16 +47,28 @@ docker-img: .docker-distro-img-marker
 docker-run: .docker-distro-img-marker
 	docker run --interactive --tty --mount type=bind,source="${HOME}"/.liq,target=/home/liq/.liq liq
 
-$(STAGING)/
+# The @bats-core/bats NPM package is hosted on github, so we check to make sure that we (at least try) to have access
+# setup.
+NPMRC_BATS_MARKER:=$(STAGING)/checks/npmrc-bats
+NPMRC_BATS_CHECK:=src/build-support/npmrc-bats-config.check.sh
+$(NPMRC_BATS_MARKER): $(NPMRC_BATS_CHECK) ${HOME}/.npmrc
+	$<
+	mkdir -p $(dir $@)
+	touch $@
 
-.docker-test-img-marker: .docker-distro-img-marker $(TEST_SRC)
+# This has the effect of printing out advice on how to set up the file. So, it's a cure, just not an automated one.
+# TODO: We could try to generate this token programatically if they've set up general account access.
+${HOME}/.npmrc:
+	$(NPMRC_BATS_CHECK)
+
+.docker-test-img-marker: .docker-distro-img-marker $(TEST_SRC) $(NPMRC_BATS_MARKER)
 	# SENSITIVE DATA -----------------------------------------
 	# TODO: https://github.com/Liquid-Labs/liq-cli/issues/250
-	ln -s "${HOME}"/.npmrc ./npmrc.tmp
+	[ -e "$${HOME}/.npmrc" ] && cp "$${HOME}"/.npmrc ./npmrc.tmp # not possible to follow symlinks from Dockerfile :(
 	docker build . --target test --file src/docker/Dockerfile -t liq-test || { rm npmrc.tmp; exit 1; }
 	rm npmrc.tmp
-	touch $@
 	# END SENSITIVE DATA -------------------------------------
+	touch $@
 
 docker-test: .docker-test-img-marker
 	docker run --tty liq-test

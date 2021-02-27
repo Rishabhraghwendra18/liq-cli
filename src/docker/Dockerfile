@@ -74,11 +74,14 @@ RUN apt-get update && apt-get install -y \
 
 # nmprc reference: https://docs.npmjs.com/cli/v7/configuring-npm/npmrc
 # SENSITIVE DATA ---------------------------------
+# Note npmrc.tmp is staged by the Makefile prior to the test image build.
 # TODO: https://github.com/Liquid-Labs/liq-cli/issues/250
-COPY ./npmrc.tmp /root/.npmrc # this is staged by the makefile
+
+COPY npmrc.tmp /root/.npmrc
 COPY --chown=liq:liq ./npmrc.tmp /home/liq/.npmrc
 RUN npm install -g @bats-core/bats
 RUN rm /root/.npmrc /home/liq/.npmrc
+
 # END SENSITIVE DATA -----------------------------
 
 USER liq

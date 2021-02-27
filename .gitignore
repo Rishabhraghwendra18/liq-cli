@@ -6,6 +6,7 @@ node_modules/
 /coverage
 /.ver-cache
 /.docker-*-marker
+/.build
 # the pack file which may be hanging around
 /*.tgz
 # SENSITIVE DATA -------------------------------
