@@ -2,7 +2,7 @@
 
 STAGING:=.build
 NPM_BIN:=$(shell npm bin)
-BASH_ROLLUP:=$(NPM_BIN)/rollup-bash
+BASH_ROLLUP:=$(NPM_BIN)/bash-rollup
 PKG_FILES:=package.json package-lock.json
 LIQ_SRC:=$(shell find src/liq -name "*.sh" -not -name "cli.sh")
 TEST_SRC:=$(shell find src/test -name "*.bats")
@@ -11,9 +11,9 @@ DIST_FILES:=dist/completion.sh dist/install.sh dist/liq.sh dist/liq-shell.sh
 all: $(DIST_FILES)
 
 clean:
-	rm liquid-labs-liq-cli-*.tgz
-	rm dist/*
-	rm npmrc.tmp
+	rm -f liquid-labs-liq-cli-*.tgz
+	rm -f dist/*
+	rm -f npmrc.tmp
 
 .PHONY: all test clean docker-run docker-debug
 
