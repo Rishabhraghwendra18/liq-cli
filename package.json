@@ -12,7 +12,7 @@
     "dist/*"
   ],
   "scripts": {
-    "prebuild": "command -v rollup-bash >/dev/null && rm -rf ./dist",
+    "prebuild": "rm -rf ./dist",
     "build": "make all",
     "test": "make test",
     "install": "TERM=xterm ./dist/install.sh",
