@@ -6,6 +6,10 @@ pre-options-liq-orgs() {
 post-options-liq-orgs() {
   post-options-liq
 
+  orgs-lib-process-org-opt
+}
+
+orgs-lib-process-org-opt() {
   # 'ORG' is the parameter set by the user (or not)
   # 'ORG_ID' is the resolved ORG_ID
   # 'CURR_ORG' is the base org package name; e.g., liquid-labs/liquid-labs TODO: rename to 'CURR_ORG'?

@@ -3053,6 +3053,10 @@ pre-options-liq-orgs() {
 post-options-liq-orgs() {
   post-options-liq
 
+  orgs-lib-process-org-opt
+}
+
+orgs-lib-process-org-opt() {
   # 'ORG' is the parameter set by the user (or not)
   # 'ORG_ID' is the resolved ORG_ID
   # 'CURR_ORG' is the base org package name; e.g., liquid-labs/liquid-labs TODO: rename to 'CURR_ORG'?
@@ -3378,6 +3382,72 @@ projects-import() {
     echo "Installing project..."
     npm install || echoerrandexit "Installation failed."
     echo "Install complete."
+  fi
+}
+
+projects-list() {
+  local OPTIONS="ORG:= LOCAL ALL NAMES_ONLY"
+  eval "$(setSimpleOptions ${OPTIONS} -- "$@")"
+
+  orgs-lib-process-org-opt
+
+  echo-header() { echo -e "Name\tPub/Priv\tVersion"; }
+
+  process-data() {
+    local PROJ_NAME="${1}"
+    local PROJ_DATA="$(cat -)"
+
+    # Name; col 1
+    echo -en "${PROJ_NAME}\t"
+
+    # Pub/priv status cos 2
+    local PUBLIC_STATUS
+    PUBLIC_STATUS="$(echo "${PROJ_DATA}" | jq '.liq.public')"
+    if [[ -n "${PUBLIC_STATUS}" ]] && [[ "${PUBLIC_STATUS}" == 'public' ]]; then
+      echo -en "private\t"
+    else
+      echo -en "public\t"
+    fi
+
+    # Version cols 3
+    local VERSION # we do these extra steps so echo, which is known to provide the newline, does the output
+    VERSION="$(echo "${PROJ_DATA}" | jq -r '.version')"
+    echo "${VERSION}"
+  }
+
+  if [[ -n "${ALL}" ]] || [[ -z "${LOCAL}" ]]; then # all is the default
+    local DATA_PATH
+    [[ -z "${ORG_PROJECTS_REPO:-}" ]] || DATA_PATH="${LIQ_PLAYGROUND}/${ORG_PROJECTS_REPO/@/}"
+    [[ -n "${DATA_PATH:-}" ]] || DATA_PATH="${CURR_ORG_PATH}"
+    DATA_PATH="${DATA_PATH}/data/orgs/projects.json"
+
+    [[ -f "${DATA_PATH}" ]] || echoerrandexit "Did not find expected project definition '${DATA_PATH}'. Try:\nliq projects refresh"
+
+    if [[ -n "${NAMES_ONLY}" ]]; then
+      cat "${DATA_PATH}" | jq 'keys'
+    else
+      local PROJ_DATA="$(cat "${DATA_PATH}")"
+      local PROJ_NAME
+      {
+        echo-header
+        while read -r PROJ_NAME; do
+          echo "${PROJ_DATA}" | jq ".[\"${PROJ_NAME}\"]" | process-data "${PROJ_NAME}"
+        done < <(echo "${PROJ_DATA}" | jq -r 'keys | .[]')
+      } | column -s $'\t' -t
+    fi
+  else # list local projects
+    local LOCAL_PROJECTS
+    LOCAL_PROJECTS="$(find "${CURR_ORG_PATH}" -maxdepth 1 -type d)"
+    if [[ -n "${NAMES_ONLY}" ]]; then
+      echo "${LOCAL_PROJECTS}"
+    else
+      {
+        echo-header
+        while read -r PROJ_NAME; do
+          (cd "${LIQ_PLAYGROUND}/${ORG_ID}/${PROJ_NAME}" && cat package.json | process-data "${PROJ_NAME}")
+        done <<<${LOCAL_PROJECTS}
+      } | column -s $'\t' -t
+    fi
   fi
 }
 
