@@ -31,7 +31,8 @@
   },
   "homepage": "https://liquid-labs.github.io/liq-cli/",
   "devDependencies": {
-    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.42"
+    "@liquid-labs/bash-rollup": "^1.0.0-alpha.3",
+    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.43"
   },
   "catalyst": {
     "version-check": {
