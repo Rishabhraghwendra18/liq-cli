@@ -12,6 +12,9 @@ LIQ_PLAYGROUND="${LIQ_DB}/playground"
 
 LIQ_DIST_DIR="$(dirname "$(real_path "${0}")")"
 
+# Really just a constant at this point, but at some point may allow override at org and project levels.
+PRODUCTION_TAG=production
+
 _PROJECT_CONFIG='.catalyst-project' #TODO: current file '.catalyst' and the code doesn't make reference to this constant; convert that to 'catalyst-project'
 _PROJECT_PUB_CONFIG='.catalyst-pub'
 _ORG_ID_URL='https://console.cloud.google.com/iam-admin/settings'

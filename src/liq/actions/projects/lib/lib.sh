@@ -153,3 +153,16 @@ projectsSetPkgNameComponents() {
   PKG_ORG_NAME="$(dirname ${1/@/})"
   PKG_BASENAME="$(basename "$1")"
 }
+
+projects-lib-is-at-production() {
+  local REPO_PATH="${1}"
+
+  (
+    cd "${REPO_PATH}"
+
+   # DEBUG
+   if [[ $(git rev-parse HEAD) == $(git rev-parse ${PRODUCTION_TAG}) ]]; then echo 'on production'; else echo 'not on production'; fi
+
+    [[ $(git rev-parse HEAD) == $(git rev-parse ${PRODUCTION_TAG}) ]]
+  )
+}

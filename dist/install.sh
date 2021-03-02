@@ -48,7 +48,7 @@ list-add-item() {
         eval $LIST_VAR='"$ITEM"'
       else
         # echo $LIST_VAR='"${!LIST_VAR}"$'"'"'\n'"'"'"${ITEM}"'
-        eval $LIST_VAR='"${!LIST_VAR}"$'"'"'\n'"'"'"${ITEM}"'
+        eval $LIST_VAR='"${!LIST_VAR:-}"$'"'"'\n'"'"'"${ITEM}"'
       fi
     fi
   done
@@ -86,7 +86,7 @@ list-from-csv() {
   local CSV="${2:-}"
 
   if [[ -z "$CSV" ]]; then
-    CSV="${!LIST_VAR}"
+    CSV="${!LIST_VAR:-}"
     unset ${LIST_VAR}
   fi
 
@@ -128,7 +128,7 @@ list-get-item() {
       return
     fi
     CURR_INDEX=$(($CURR_INDEX + 1))
-  done <<< "${!LIST_VAR}"
+  done <<< "${!LIST_VAR:-}"
 }
 
 # Echoes the frist item in the named list matching the given prefix.
@@ -146,7 +146,7 @@ list-get-item-by-prefix() {
       echo -n "${ITEM%\\n}"
       return
     fi
-  done <<< "${!LIST_VAR}"
+  done <<< "${!LIST_VAR:-}"
 }
 
 # Joins a list with a given string and echos the result. We use 'echo -e' for the join string, so '\n', '\t', etc. will
@@ -170,7 +170,7 @@ list-join() {
     if (( $CURR_INDEX < $COUNT )) ; then
       echo -ne "$JOIN_STRING"
     fi
-  done <<< "${!LIST_VAR}"
+  done <<< "${!LIST_VAR:-}"
 }
 
 list-replace-by-string() {
@@ -209,7 +209,7 @@ list-rm-item() {
     ITEM=${ITEM//./\\.}
     ITEM=${ITEM//[/\\[}
     # echo "ITEM: $ITEM" >&2
-    NEW_ITEMS="$(echo "${!LIST_VAR}" | sed -e '\#^'"${ITEM}"'$#d')"
+    NEW_ITEMS="$(echo "${!LIST_VAR:-}" | sed -e '\#^'"${ITEM}"'$#d')"
     eval $LIST_VAR='"'"$NEW_ITEMS"'"'
   done
 }
@@ -348,65 +348,99 @@ fi
 EOF
 }
 
-echoerr() {
-  local TMP
-  TMP=$(setSimpleOptions NO_FOLD:F -- "$@")
-  eval "$TMP"
+# Formats and echoes the the message.
+#
+# * Will process special chars the same as 'echo -e' (so \t, \n, etc. can be used in the message).
+# * Treats all arguments as the message. 'echofmt "foo bar"' and 'echofmt foo bar' are equivalent.
+# * Error and warning messages are directed towards stderr (unless modified by options).
+# * Default message width is the lesser of 82 columns or the terminal column width.
+# * Environment variable 'ECHO_WIDTH' will set the width. The '--width' option will override the environment variable.
+# * Environment variable 'ECHO_QUIET' will suppress all non-error, non-warning messages if set to any non-empty value.
+# * Environment variable 'ECHO_SILENT' will suppress all non-error messages if set to any non-empty value.
+# * Environment variable 'ECHO_STDERR' will cause all output to be directed to stderr unless '--stderr' or '--stdout'
+#   is specified.
+# * Environment variable 'ECHO_STDOUT' will cause all output to be directed to stdout unless '--stderr' or '--stdout'
+#   is specified.
+echofmt() {
+  local OPTIONS='INFO WARN ERROR WIDTH NO_FOLD:F STDERR STDOUT'
+  eval "$(setSimpleOptions ${OPTIONS} -- "$@")"
 
-  if [[ -z "$NO_FOLD" ]]; then
-    echo -e "${red}$*${reset}" | fold -sw 82 >&2
-  else
-    echo -e "${red}$*${reset}"
+  # First, let's check to see of the message is suppressed. The 'return 0' is explicitly necessary. 'return' sends
+  # along $?, which, if it gets there, is 1 due to the failed previous test.
+  ! { [[ -n "${ECHO_SILENT:-}" ]] && [[ -z "${ERROR:-}" ]]; } || return 0
+  ! { [[ -n "${ECHO_QUIET:-}" ]] && [[ -z "${ERROR:-}" ]] && [[ -z "${WARN}" ]]; } || return 0
+
+  # Examine environment to see if the redirect controls are set.
+  if [[ -z "${STDERR:-}" ]] && [[ -z "${STDOUT:-}" ]]; then
+    [[ -z "${ECHO_STDERR:-}" ]] || STDERR=true
+    [[ -z "${ECHO_STDOUT:-}" ]] || STDOUT=true
   fi
+
+  # Determine width... if folding
+  [[ -z "${NO_FOLD:-}" ]] && [[ -n "${WIDTH:-}" ]] || { # If width is set as an option, then that's the end of story.
+    local DEFAULT_WIDTH=82
+    local WIDTH="${ECHO_WIDTH:-}"
+    [[ -n "${WIDTH:-}" ]] || WIDTH=$DEFAULT_WIDTH
+    # ECHO_WIDTH and DEFAULT_WIDTH are both subject to actual terminal width limitations.
+    local TERM_WIDITH
+    TERM_WIDTH=$(tput cols)
+    (( ${TERM_WIDTH} >= ${WIDTH} )) || WIDTH=${TERM_WIDTH}
+  }
+
+  # Determine output color, if any.
+  # internal helper function; set's 'STDERR' true unless target has already been set with '--stderr' or '--stdout'
+  default-stderr() {
+    [[ -n "${STDERR:-}" ]] || [[ -n "${STDOUT:-}" ]] || STDERR=true
+  }
+  local COLOR=''
+  if [[ -n "${ERROR:-}" ]]; then
+    COLOR="${red}"
+    default-stderr
+  elif [[ -n "${WARN:-}" ]]; then
+    COLOR="${yellow}"
+    default-stderr
+  elif [[ -n "${INFO:-}" ]]; then
+    COLOR="${green}"
+  fi
+
+  # we don't want to use an eval, and the way bash is evaluated means we can't do 'echo ... ${REDIRECT}' or something.
+  if [[ -n "${STDERR:-}" ]]; then
+    if [[ -z "$NO_FOLD" ]]; then
+      echo -e "${COLOR:-}$*${reset}" | fold -sw "${WIDTH}" >&2
+    else
+      echo -e "${COLOR:-}$*${reset}" >&2
+    fi
+  else
+    if [[ -z "${NO_FOLD:-}" ]]; then
+      echo -e "${COLOR:-}$*${reset}" | fold -sw "${WIDTH}"
+    else
+      echo -e "${COLOR:-}$*${reset}"
+    fi
+  fi
+}
+
+echoerr() {
+  echofmt --error "$@"
 }
 
 echowarn() {
-  local TMP
-  TMP=$(setSimpleOptions NO_FOLD:F -- "$@")
-  eval "$TMP"
-
-  if [[ -z "$NO_FOLD" ]]; then
-    echo -e "${yellow}$*${reset}" | fold -sw 82 >&2
-  else
-    echo -e "${yellow}$*${reset}"
-  fi
+  echofmt --warn "$@"
 }
 
+# Echoes a formatted message to STDERR. The default exit code is '1', but if 'EXIT_CODE', then that will be used. E.g.:
+#
+#    EXIT_CODE=5
+#    echoerrandexit "Fatal code 5!"
+#
+# See echofmt for further options and details.
 echoerrandexit() {
-  local TMP
-  TMP=$(setSimpleOptions NO_FOLD:F -- "$@") || $(echo "Bad options: $*"; exit -10)
-  eval "$TMP"
+  echofmt --error "$@"
 
-  local MSG="$1"
-  local EXIT_CODE="${2:-10}"
-  # TODO: consider providing 'passopts' method which coordites with 'setSimpleOptions' to recreate option string
-  if [[ -n "$NO_FOLD" ]]; then
-    echoerr --no-fold "$MSG"
-  else
-    echoerr "$MSG"
-  fi
-  exit $EXIT_CODE
+  [[ -z "${EXIT_CODE:-}" ]] || exit ${EXIT_CODE}
+  exit 1
 }
 
 echo "Starting liq install..."
-
-# TODO: move to bash-toolkit
-
-# Prints line with any standard format. First arg is the format name, everything else, along with any options, are
-# passed through to echo.
-echofmt() {
-  eval "$(setSimpleOptions NO_NEWLINE -- "$@")"
-  local COLOR="${1}"; shift
-  [[ -n "${!COLOR}" ]]
-  OPTS="-e"
-  if [[ -n "$NO_NEWLINE" ]]; then OPTS="$OPTS -n"; fi
-  echo ${OPTS} "${!COLOR}$*${reset}" | fold -sw 82
-}
-
-# Prints the line in green. Any options are passed through to echo.
-echogreen() {
-  echofmt green "$@"
-}
 
 # Basic indent of a line.
 indent() {

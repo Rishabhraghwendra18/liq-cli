@@ -65,7 +65,7 @@ workSubmitChecks() {
       unset FIRST_REASON
 
       echo
-      echofmt "reset" "(Your explanation may use markdown format, but it is not required.)"
+      echofmt "(Your explanation may use markdown format, but it is not required.)"
       echo
     fi
 
@@ -75,13 +75,13 @@ workSubmitChecks() {
     DEF_REASON="${REASON}"
     DEF_MITIGATION="${MITIGATION}"
 
-    echofmt yellow "You will now be asked to review and confirm your answers. (Hit enter to continue.)"
+    echofmt --warn "You will now be asked to review and confirm your answers. (Hit enter to continue.)"
     read
-    echofmt green_b "Reason for the exception:"
+    echofmt --info "Reason for the exception:"
     echo "${REASON}"
     echo "(Hit enter to continue)"
     read
-    echofmt green_b "Steps taken to mitigate exception:"
+    echofmt --info "Steps taken to mitigate exception:"
     echo "${MITIGATION}"
     echo
 
@@ -156,7 +156,7 @@ workSubmitChecks() {
       local QUESTION_COUNT=1
       while read -u 12 QUESTION; do
         echo
-        echofmt yellow "${QUESTION_COUNT}) $QUESTION"
+        echofmt --warn "${QUESTION_COUNT}) $QUESTION"
         if [[ -z "$RECORD" ]]; then
           RECORD="### $QUESTION"
         else

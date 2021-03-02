@@ -373,6 +373,10 @@ projects-list() {
       } | column -s $'\t' -t
     fi
   fi
+
+  if [[ -n "${PS1:-}" ]] && ! projects-lib-projects-lib-is-at-production "${CURR_ORG_PATH}"; then
+    echowarn "\nWARNING: Non-production data."
+  fi
 }
 
 # see: liq help projects publish
