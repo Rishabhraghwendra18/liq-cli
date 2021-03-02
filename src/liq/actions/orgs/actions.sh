@@ -171,7 +171,7 @@ orgs-import() {
 
 # see `liq help orgs list`
 orgs-list() {
-  find "${LIQ_ORG_DB}" -maxdepth 1 -mindepth 1 -type d -exec basename '{}' \; | sort
+  find "${LIQ_ORG_DB}" -maxdepth 1 -mindepth 1 -type l -exec basename '{}' \; | sort
 }
 
 # see `liq help orgs show`

@@ -159,10 +159,7 @@ projects-lib-is-at-production() {
 
   (
     cd "${REPO_PATH}"
-
-   # DEBUG
-   if [[ $(git rev-parse HEAD) == $(git rev-parse ${PRODUCTION_TAG}) ]]; then echo 'on production'; else echo 'not on production'; fi
-
-    [[ $(git rev-parse HEAD) == $(git rev-parse ${PRODUCTION_TAG}) ]]
+    # Redirect stderr since production tag may not exist. That's OK for the test logic, but generates unwanted output.
+    [[ $(git rev-parse HEAD) == $(git rev-parse ${PRODUCTION_TAG} 2> /dev/null || true) ]]
   )
 }

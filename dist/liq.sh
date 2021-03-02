@@ -1848,7 +1848,7 @@ orgs-import() {
 
 # see `liq help orgs list`
 orgs-list() {
-  find "${LIQ_ORG_DB}" -maxdepth 1 -mindepth 1 -type d -exec basename '{}' \; | sort
+  find "${LIQ_ORG_DB}" -maxdepth 1 -mindepth 1 -type l -exec basename '{}' \; | sort
 }
 
 # see `liq help orgs show`
@@ -2015,7 +2015,7 @@ orgs-lib-process-org-opt() {
   # 'CURR_ORG_PATH' is the absolute path to the CURR_ORG project
 
   # TODO: Check if the project 'class' is correct; https://github.com/Liquid-Labs/liq-cli/issues/238
-  if [[ -z "${ORG:-}" ]]; then
+  if [[ -z "${ORG:-}" ]] || [[ "${ORG}" == '.' ]]; then
     findBase
     ORG_ID="$(cd "${BASE_DIR}/.."; basename "$PWD")"
   else
@@ -2338,14 +2338,19 @@ projects-import() {
 }
 
 projects-list() {
-  local OPTIONS="ORG:= LOCAL ALL NAMES_ONLY"
+  local OPTIONS="ORG:= LOCAL ALL_ORGS NAMES_ONLY"
   eval "$(setSimpleOptions ${OPTIONS} -- "$@")"
 
   orgs-lib-process-org-opt
 
-  echo-header() { echo -e "Name\tPub/Priv\tVersion"; }
+  [[ -n "${ORG}" ]] || ALL_ORGS=true # ALL_ORGS is default
 
-  process-data() {
+  # INTERNAL HELPERS
+  local NON_PROD_ORGS='' # gather up non-prod so we can issue warnings
+  echo-header() { echo -e "Name\tPub/Priv\tVersion"; }
+  # Extracts data to display from package.json data embedded in the projects.json or from the package.json file itself
+  # in the local checkouts.
+  process-pkg-data() {
     local PROJ_NAME="${1}"
     local PROJ_DATA="$(cat -)"
 
@@ -2367,44 +2372,60 @@ projects-list() {
     echo "${VERSION}"
   }
 
-  if [[ -n "${ALL}" ]] || [[ -z "${LOCAL}" ]]; then # all is the default
-    local DATA_PATH
-    [[ -z "${ORG_PROJECTS_REPO:-}" ]] || DATA_PATH="${LIQ_PLAYGROUND}/${ORG_PROJECTS_REPO/@/}"
-    [[ -n "${DATA_PATH:-}" ]] || DATA_PATH="${CURR_ORG_PATH}"
-    DATA_PATH="${DATA_PATH}/data/orgs/projects.json"
+  process-org() {
+    if [[ -z "${LOCAL}" ]]; then # list projects from the 'projects.json' file
+      local DATA_PATH
+      [[ -z "${ORG_PROJECTS_REPO:-}" ]] || DATA_PATH="${LIQ_PLAYGROUND}/${ORG_PROJECTS_REPO/@/}"
+      [[ -n "${DATA_PATH:-}" ]] || DATA_PATH="${CURR_ORG_PATH}"
+      DATA_PATH="${DATA_PATH}/data/orgs/projects.json"
 
-    [[ -f "${DATA_PATH}" ]] || echoerrandexit "Did not find expected project definition '${DATA_PATH}'. Try:\nliq projects refresh"
+      [[ -f "${DATA_PATH}" ]] || echoerrandexit "Did not find expected project definition '${DATA_PATH}'. Try:\nliq projects refresh"
 
-    if [[ -n "${NAMES_ONLY}" ]]; then
-      cat "${DATA_PATH}" | jq 'keys'
-    else
-      local PROJ_DATA="$(cat "${DATA_PATH}")"
-      local PROJ_NAME
-      {
-        echo-header
-        while read -r PROJ_NAME; do
-          echo "${PROJ_DATA}" | jq ".[\"${PROJ_NAME}\"]" | process-data "${PROJ_NAME}"
-        done < <(echo "${PROJ_DATA}" | jq -r 'keys | .[]')
-      } | column -s $'\t' -t
+      if [[ -n "${NAMES_ONLY}" ]]; then
+        cat "${DATA_PATH}" | jq 'keys'
+      else
+        local PROJ_DATA="$(cat "${DATA_PATH}")"
+        local PROJ_NAME
+        {
+          while read -r PROJ_NAME; do
+            echo "${PROJ_DATA}" | jq ".[\"${PROJ_NAME}\"]" | process-pkg-data "${PROJ_NAME}"
+          done < <(echo "${PROJ_DATA}" | jq -r 'keys | .[]')
+        } | column -s $'\t' -t
+      fi
+    else # list local projects
+      local LOCAL_PROJECTS
+      LOCAL_PROJECTS="$(find "${CURR_ORG_PATH}" -maxdepth 1 -type d)"
+      if [[ -n "${NAMES_ONLY}" ]]; then
+        echo "${LOCAL_PROJECTS}"
+      else
+        {
+          while read -r PROJ_NAME; do
+            (cd "${LIQ_PLAYGROUND}/${ORG_ID}/${PROJ_NAME}" && cat package.json | process-pkg-data "${PROJ_NAME}")
+          done <<<${LOCAL_PROJECTS}
+        } | column -s $'\t' -t
+      fi
     fi
-  else # list local projects
-    local LOCAL_PROJECTS
-    LOCAL_PROJECTS="$(find "${CURR_ORG_PATH}" -maxdepth 1 -type d)"
-    if [[ -n "${NAMES_ONLY}" ]]; then
-      echo "${LOCAL_PROJECTS}"
-    else
-      {
-        echo-header
-        while read -r PROJ_NAME; do
-          (cd "${LIQ_PLAYGROUND}/${ORG_ID}/${PROJ_NAME}" && cat package.json | process-data "${PROJ_NAME}")
-        done <<<${LOCAL_PROJECTS}
-      } | column -s $'\t' -t
+
+    if ! projects-lib-is-at-production "${CURR_ORG_PATH}"; then
+      list-add-item NON_PROD_ORGS "${ORG}"
     fi
+  }
+
+  [[ -z "${NAMES_ONLY:-}" ]] || echo-header
+  if [[ -n "${ALL_ORGS}" ]]; then # all is the default
+    for ORG in $(orgs-list); do
+      orgs-lib-process-org-opt
+      process-org
+    done
+  else
+    process-org
   fi
 
-  if [[ -n "${PS1:-}" ]] && ! projects-lib-projects-lib-is-at-production "${CURR_ORG_PATH}"; then
-    echowarn "\nWARNING: Non-production data."
-  fi
+  # finally, issue non-prod warnings if any
+  local NP_ORG
+  while read -r NP_ORG; do
+    echowarn "\nWARNING: Non-production data shown for '${NP_ORG}'."
+  done <<<${NON_PROD_ORGS}
 }
 
 # see: liq help projects publish
@@ -2951,11 +2972,8 @@ projects-lib-is-at-production() {
 
   (
     cd "${REPO_PATH}"
-
-   # DEBUG
-   if [[ $(git rev-parse HEAD) == $(git rev-parse ${PRODUCTION_TAG}) ]]; then echo 'on production'; else echo 'not on production'; fi
-
-    [[ $(git rev-parse HEAD) == $(git rev-parse ${PRODUCTION_TAG}) ]]
+    # Redirect stderr since production tag may not exist. That's OK for the test logic, but generates unwanted output.
+    [[ $(git rev-parse HEAD) == $(git rev-parse ${PRODUCTION_TAG} 2> /dev/null || true) ]]
   )
 }
 _QA_OPTIONS_SPEC="UPDATE OPTIONS="
