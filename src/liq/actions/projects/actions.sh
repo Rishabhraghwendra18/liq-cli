@@ -311,7 +311,7 @@ projects-import() {
 
 projects-list() {
   local OPTIONS
-  OPTIONS="$(pre-options-liq-projects) ORG:= LOCAL ALL_ORGS NAMES_ONLY"
+  OPTIONS="$(pre-options-liq-projects) ORG:= LOCAL ALL_ORGS NAMES_ONLY FILTER="
   eval "$(setSimpleOptions ${OPTIONS} -- "$@")"
   post-options-liq-projects
   orgs-lib-process-org-opt
@@ -382,7 +382,8 @@ projects-list() {
     fi
   }
 
-  { # All the table output is generated here, so it's grouped together and fed to the 'column' command.
+  # This is where all the data/output is generated, which gets fed to the filter and formatter
+  process-cmd() {
     [[ -n "${NAMES_ONLY:-}" ]] || echo-header
     if [[ -n "${ALL_ORGS}" ]]; then # all is the default
       for ORG in $(orgs-list); do
@@ -392,8 +393,14 @@ projects-list() {
     else
       process-org
     fi
-  } | column -s $'\t' -t
+  }
 
+  if [[ -n "${FILTER}" ]]; then
+    process-cmd | awk "\$1~/.*${FILTER}.*/" | column -s $'\t' -t
+  else
+    process-cmd | column -s $'\t' -t
+  fi
+  
   # finally, issue non-prod warnings if any
   local NP_ORG
   while read -r NP_ORG; do
