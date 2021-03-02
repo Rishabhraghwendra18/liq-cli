@@ -113,7 +113,7 @@ _liq() {
     fi
   }
 
-  local ORGS_ACTIONS="affiliate create list show select"
+  local ORGS_ACTIONS="affiliate create list refresh show select"
   local ORGS_GROUPS=""
   # will override the 'comp-liq-orgs', but want to generate the 'help' completer
   eval "$(comp-func-builder 'orgs' 'ORGS')"
@@ -143,7 +143,7 @@ _liq() {
     fi
   }
 
-  local PROJECTS_ACTIONS="build close create edit publish qa sync test"
+  local PROJECTS_ACTIONS="build close create edit list publish qa sync test"
   local PROJECTS_GROUPS=""
   eval "$(comp-func-builder 'projects' 'PROJECTS')"
   comp-liq-projects-create() {
