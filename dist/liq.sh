@@ -1415,13 +1415,18 @@ exitUnknownHelpTopic() {
 }
 # Echoes common options for all liq commands.
 pre-options-liq() {
-  echo -n "QUIET VERBOSE: DEBUG:" # TODO: we don't actually support these yet; but wanted to preserve the idea.
+  # TODO: VERBOSE and DEBUG are not currently supported; need to add to echofmt (and then derive echodebug and also
+  # change the implicatino of information from 'something highlighted' to 'secondary info')
+  echo -n "QUIET SILENT: VERBOSE: DEBUG:"
 }
 
 # Processes common options for liq commands. Currently, all options are "just" flags that other functions will check, so
 # there's nothing for us to do here.
 post-options-liq() {
-  :
+  ECHO_QUIET="${QUIET}"
+  ECHO_SILENT="${SILENT}"
+  ECHO_VERBOSE="${VERBOSE}"
+  ECHO_DEBUG="${DEBUG}"
 }
 set -o errtrace # inherits trap on ERR in function and subshell
 
@@ -2338,9 +2343,10 @@ projects-import() {
 }
 
 projects-list() {
-  local OPTIONS="ORG:= LOCAL ALL_ORGS NAMES_ONLY"
+  local OPTIONS
+  OPTIONS="$(pre-options-liq-projects) ORG:= LOCAL ALL_ORGS NAMES_ONLY"
   eval "$(setSimpleOptions ${OPTIONS} -- "$@")"
-
+  post-options-liq-projects
   orgs-lib-process-org-opt
 
   [[ -n "${ORG}" ]] || ALL_ORGS=true # ALL_ORGS is default
@@ -2382,15 +2388,13 @@ projects-list() {
       [[ -f "${DATA_PATH}" ]] || echoerrandexit "Did not find expected project definition '${DATA_PATH}'. Try:\nliq projects refresh"
 
       if [[ -n "${NAMES_ONLY}" ]]; then
-        cat "${DATA_PATH}" | jq 'keys'
+        cat "${DATA_PATH}" | jq -r 'keys | .[]'
       else
         local PROJ_DATA="$(cat "${DATA_PATH}")"
         local PROJ_NAME
-        {
-          while read -r PROJ_NAME; do
-            echo "${PROJ_DATA}" | jq ".[\"${PROJ_NAME}\"]" | process-pkg-data "${PROJ_NAME}"
-          done < <(echo "${PROJ_DATA}" | jq -r 'keys | .[]')
-        } | column -s $'\t' -t
+        while read -r PROJ_NAME; do
+          echo "${PROJ_DATA}" | jq ".[\"${PROJ_NAME}\"]" | process-pkg-data "${PROJ_NAME}"
+        done < <(echo "${PROJ_DATA}" | jq -r 'keys | .[]')
       fi
     else # list local projects
       local LOCAL_PROJECTS
@@ -2398,11 +2402,9 @@ projects-list() {
       if [[ -n "${NAMES_ONLY}" ]]; then
         echo "${LOCAL_PROJECTS}"
       else
-        {
-          while read -r PROJ_NAME; do
-            (cd "${LIQ_PLAYGROUND}/${ORG_ID}/${PROJ_NAME}" && cat package.json | process-pkg-data "${PROJ_NAME}")
-          done <<<${LOCAL_PROJECTS}
-        } | column -s $'\t' -t
+        while read -r PROJ_NAME; do
+          (cd "${LIQ_PLAYGROUND}/${ORG_ID}/${PROJ_NAME}" && cat package.json | process-pkg-data "${PROJ_NAME}")
+        done <<<${LOCAL_PROJECTS}
       fi
     fi
 
@@ -2411,15 +2413,17 @@ projects-list() {
     fi
   }
 
-  [[ -z "${NAMES_ONLY:-}" ]] || echo-header
-  if [[ -n "${ALL_ORGS}" ]]; then # all is the default
-    for ORG in $(orgs-list); do
-      orgs-lib-process-org-opt
+  { # All the table output is generated here, so it's grouped together and fed to the 'column' command.
+    [[ -n "${NAMES_ONLY:-}" ]] || echo-header
+    if [[ -n "${ALL_ORGS}" ]]; then # all is the default
+      for ORG in $(orgs-list); do
+        orgs-lib-process-org-opt
+        process-org
+      done
+    else
       process-org
-    done
-  else
-    process-org
-  fi
+    fi
+  } | column -s $'\t' -t
 
   # finally, issue non-prod warnings if any
   local NP_ORG
@@ -2810,6 +2814,13 @@ Runs unit tests the current or named projects.
 * '--no-service-check' will skip checking service status. This is useful when re-running tests and the services are known to be running.
 * '--go-run' will only run those tests matching the provided regex (per go '-run' standards).
 EOF
+}
+pre-options-liq-projects() {
+  pre-options-liq
+}
+
+post-options-liq-projects() {
+  post-options-liq
 }
 projectCheckIfInPlayground() {
   local PROJ_NAME="${1/@/}"
