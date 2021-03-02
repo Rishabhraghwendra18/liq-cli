@@ -317,7 +317,7 @@ projects-list() {
 
   echo-header() { echo -e "Name\tPub/Priv\tVersion"; }
 
-  process-data() {
+  process-pkg-data() {
     local PROJ_NAME="${1}"
     local PROJ_DATA="$(cat -)"
 
@@ -355,7 +355,7 @@ projects-list() {
       {
         echo-header
         while read -r PROJ_NAME; do
-          echo "${PROJ_DATA}" | jq ".[\"${PROJ_NAME}\"]" | process-data "${PROJ_NAME}"
+          echo "${PROJ_DATA}" | jq ".[\"${PROJ_NAME}\"]" | process-pkg-data "${PROJ_NAME}"
         done < <(echo "${PROJ_DATA}" | jq -r 'keys | .[]')
       } | column -s $'\t' -t
     fi
@@ -368,7 +368,7 @@ projects-list() {
       {
         echo-header
         while read -r PROJ_NAME; do
-          (cd "${LIQ_PLAYGROUND}/${ORG_ID}/${PROJ_NAME}" && cat package.json | process-data "${PROJ_NAME}")
+          (cd "${LIQ_PLAYGROUND}/${ORG_ID}/${PROJ_NAME}" && cat package.json | process-pkg-data "${PROJ_NAME}")
         done <<<${LOCAL_PROJECTS}
       } | column -s $'\t' -t
     fi
