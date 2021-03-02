@@ -2397,8 +2397,10 @@ projects-list() {
         done < <(echo "${PROJ_DATA}" | jq -r 'keys | .[]')
       fi
     else # list local projects
-      local LOCAL_PROJECTS
-      LOCAL_PROJECTS="$(find "${CURR_ORG_PATH}" -maxdepth 1 -type d)"
+      local LOCAL_PROJECTS PROJ
+      LOCAL_PROJECTS="$(find "${CURR_ORG_PATH}/.." -maxdepth 1 -type d -not -name '.*' -exec basename {} \; \
+        | while read -r PROJ; do ! [[ -f "${CURR_ORG_PATH}/../${PROJ}/package.json" ]] || echo "${PROJ}"; done)"
+
       if [[ -n "${NAMES_ONLY}" ]]; then
         echo "${LOCAL_PROJECTS}"
       else
