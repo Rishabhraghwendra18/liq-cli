@@ -309,6 +309,103 @@ projects-import() {
   fi
 }
 
+projects-list() {
+  local OPTIONS
+  OPTIONS="$(pre-options-liq-projects) ORG:= LOCAL ALL_ORGS NAMES_ONLY FILTER="
+  eval "$(setSimpleOptions ${OPTIONS} -- "$@")"
+  post-options-liq-projects
+  orgs-lib-process-org-opt
+
+  [[ -z "${LOCAL}" ]] || [[ -n "${NAMES_ONLY}" ]] || NAMES_ONLY=true # local implies '--names-only'
+  [[ -n "${ORG}" ]] || ALL_ORGS=true # ALL_ORGS is default
+
+  # INTERNAL HELPERS
+  local NON_PROD_ORGS # gather up non-prod so we can issue warnings
+  function echo-header() { echo -e "Name\tRepo scope\tPublished scope\tVersion"; }
+  # Extracts data to display from package.json data embedded in the projects.json or from the package.json file itself
+  # in the local checkouts.
+  function process-proj-data() {
+    local PROJ_NAME="${1}"
+    local PROJ_DATA="$(cat -)"
+
+    # Name; col 1
+    echo -en "${PROJ_NAME}\t"
+
+    # Repo scope status cos 2
+    echo -en "$(echo "${PROJ_DATA}" | jq -r 'if .repository.private then "private" else "public" end')\t"
+
+    # Published scope status cos 3
+    echo -en "$(echo "${PROJ_DATA}" | jq -r 'if .package then if .package.liq.public then "public" else "private" end else "-" end')\t"
+
+    # Version cols 4
+    local VERSION # we do these extra steps so echo, which is known to provide the newline, does the output
+    VERSION="$(echo "${PROJ_DATA}" | jq -r '.package.version // "-"')"
+    echo "${VERSION}"
+  }
+
+  function process-org() {
+    if [[ -z "${LOCAL}" ]]; then # list projects from the 'projects.json' file
+      local DATA_PATH
+      [[ -z "${ORG_PROJECTS_REPO:-}" ]] || DATA_PATH="${LIQ_PLAYGROUND}/${ORG_PROJECTS_REPO/@/}"
+      [[ -n "${DATA_PATH:-}" ]] || DATA_PATH="${CURR_ORG_PATH}"
+      DATA_PATH="${DATA_PATH}/data/orgs/projects.json"
+
+      [[ -f "${DATA_PATH}" ]] || echoerrandexit "Did not find expected project definition '${DATA_PATH}'. Try:\nliq orgs refresh --projects"
+
+      if [[ -n "${NAMES_ONLY}" ]]; then
+        cat "${DATA_PATH}" | jq -r 'keys | .[]'
+      else
+        local PROJ_DATA="$(cat "${DATA_PATH}")"
+        local PROJ_NAME
+        while read -r PROJ_NAME; do
+          echo "${PROJ_DATA}" | jq ".[\"${PROJ_NAME}\"]" | process-proj-data "${PROJ_NAME}"
+        done < <(echo "${PROJ_DATA}" | jq -r 'keys | .[]')
+      fi
+
+      # The non-production source is only a concern if we're looking at the org repo.
+      if ! projects-lib-is-at-production "${CURR_ORG_PATH}"; then
+        list-add-item NON_PROD_ORGS "${ORG}"
+      fi
+    else # list local projects; recall this is limited to '--name-only'
+      local PROJ
+      find "${CURR_ORG_PATH}/.." -maxdepth 1 -type d -not -name '.*' -exec basename {} \; \
+        | while read -r PROJ; do ! [[ -f "${CURR_ORG_PATH}/../${PROJ}/package.json" ]] || echo "${PROJ}"; done \
+        | sort
+    fi
+  }
+
+  # This is where all the data/output is generated, which gets fed to the filter and formatter
+  function process-cmd() {
+    [[ -n "${NAMES_ONLY:-}" ]] || echo-header
+    if [[ -n "${ALL_ORGS}" ]]; then # all is the default
+      for ORG in $(orgs-list); do
+        orgs-lib-process-org-opt
+        process-org
+      done
+    else
+      process-org
+    fi
+  }
+
+  if [[ -n "${FILTER}" ]]; then
+    process-cmd > >(awk "\$1~/.*${FILTER}.*/" | column -s $'\t' -t)
+  else
+    process-cmd > >(column -s $'\t' -t)
+  fi
+
+  # finally, issue non-prod warnings if any
+  exec 10< <(echo "$NON_PROD_ORGS") # this craziness is because if we do 'process-cmd | column...' above, then
+  # 'process-cmd' would get run in a sub-shell and NON_PROD_ORGS updates get trapped. So, we have to rewrite without
+  # pipes. BUT that causes 'read -r NP_ORG; do... done<<<${NON_PROD_ORGS}' to fail with a 'cannot create temp file for
+  # here document: Interrupted system call'. I *think* the <<< creates the heredoc but the redirect to column still has
+  # a handle on STDIN... Really, I'm not clear, but this seems to work.
+  local NP_ORG
+  [[ -z "${NON_PROD_ORGS}" ]] || while read -u 10 -r NP_ORG; do
+    echowarn "\nWARNING: Non-production data shown for '${NP_ORG}'."
+  done
+  exec 10<&-
+}
+
 # see: liq help projects publish
 projects-publish() {
   echoerrandexit "The 'publish' action is not yet implemented."

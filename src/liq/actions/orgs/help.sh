@@ -52,6 +52,12 @@ Lists the currently affiliated orgs.
 EOF
 }
 
+help-orgs-refresh() {
+  cat <<EOF | _help-func-summray refresh "[--projects]"
+Refreshes the compiled/generated company data.
+EOF
+}
+
 help-orgs-show() {
   cat <<EOF | _help-func-summary show "[--sensitive] [<org nick>]"
 Displays info on the currently active or named org.

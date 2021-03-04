@@ -12,7 +12,7 @@
     "dist/*"
   ],
   "scripts": {
-    "prebuild": "command -v rollup-bash >/dev/null && rm -rf ./dist",
+    "prebuild": "rm -rf ./dist",
     "build": "make all",
     "test": "make test",
     "install": "TERM=xterm ./dist/install.sh",
@@ -31,7 +31,8 @@
   },
   "homepage": "https://liquid-labs.github.io/liq-cli/",
   "devDependencies": {
-    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.42"
+    "@liquid-labs/bash-rollup": "^1.0.0-alpha.4",
+    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.46"
   },
   "catalyst": {
     "version-check": {

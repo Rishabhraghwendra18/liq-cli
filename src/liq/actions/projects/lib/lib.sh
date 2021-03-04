@@ -153,3 +153,13 @@ projectsSetPkgNameComponents() {
   PKG_ORG_NAME="$(dirname ${1/@/})"
   PKG_BASENAME="$(basename "$1")"
 }
+
+projects-lib-is-at-production() {
+  local REPO_PATH="${1}"
+
+  (
+    cd "${REPO_PATH}"
+    # Redirect stderr since production tag may not exist. That's OK for the test logic, but generates unwanted output.
+    [[ $(git rev-parse HEAD) == $(git rev-parse ${PRODUCTION_TAG} 2> /dev/null || true) ]]
+  )
+}

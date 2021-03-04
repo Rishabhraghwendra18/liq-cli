@@ -7,6 +7,7 @@ set -o pipefail
 
 import colors
 import echoerr
+import echofmt
 import lists
 import options
 import prompt

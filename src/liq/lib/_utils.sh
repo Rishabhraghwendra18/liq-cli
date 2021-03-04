@@ -1,21 +1,3 @@
-# TODO: move to bash-toolkit
-
-# Prints line with any standard format. First arg is the format name, everything else, along with any options, are
-# passed through to echo.
-echofmt() {
-  eval "$(setSimpleOptions NO_NEWLINE -- "$@")"
-  local COLOR="${1}"; shift
-  [[ -n "${!COLOR}" ]]
-  OPTS="-e"
-  if [[ -n "$NO_NEWLINE" ]]; then OPTS="$OPTS -n"; fi
-  echo ${OPTS} "${!COLOR}$*${reset}" | fold -sw 82
-}
-
-# Prints the line in green. Any options are passed through to echo.
-echogreen() {
-  echofmt green "$@"
-}
-
 # Basic indent of a line.
 indent() {
   cat | sed -e 's/^/  /'

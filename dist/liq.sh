@@ -53,7 +53,7 @@ list-add-item() {
         eval $LIST_VAR='"$ITEM"'
       else
         # echo $LIST_VAR='"${!LIST_VAR}"$'"'"'\n'"'"'"${ITEM}"'
-        eval $LIST_VAR='"${!LIST_VAR}"$'"'"'\n'"'"'"${ITEM}"'
+        eval $LIST_VAR='"${!LIST_VAR:-}"$'"'"'\n'"'"'"${ITEM}"'
       fi
     fi
   done
@@ -91,7 +91,7 @@ list-from-csv() {
   local CSV="${2:-}"
 
   if [[ -z "$CSV" ]]; then
-    CSV="${!LIST_VAR}"
+    CSV="${!LIST_VAR:-}"
     unset ${LIST_VAR}
   fi
 
@@ -133,7 +133,7 @@ list-get-item() {
       return
     fi
     CURR_INDEX=$(($CURR_INDEX + 1))
-  done <<< "${!LIST_VAR}"
+  done <<< "${!LIST_VAR:-}"
 }
 
 # Echoes the frist item in the named list matching the given prefix.
@@ -151,7 +151,7 @@ list-get-item-by-prefix() {
       echo -n "${ITEM%\\n}"
       return
     fi
-  done <<< "${!LIST_VAR}"
+  done <<< "${!LIST_VAR:-}"
 }
 
 # Joins a list with a given string and echos the result. We use 'echo -e' for the join string, so '\n', '\t', etc. will
@@ -175,7 +175,7 @@ list-join() {
     if (( $CURR_INDEX < $COUNT )) ; then
       echo -ne "$JOIN_STRING"
     fi
-  done <<< "${!LIST_VAR}"
+  done <<< "${!LIST_VAR:-}"
 }
 
 list-replace-by-string() {
@@ -214,7 +214,7 @@ list-rm-item() {
     ITEM=${ITEM//./\\.}
     ITEM=${ITEM//[/\\[}
     # echo "ITEM: $ITEM" >&2
-    NEW_ITEMS="$(echo "${!LIST_VAR}" | sed -e '\#^'"${ITEM}"'$#d')"
+    NEW_ITEMS="$(echo "${!LIST_VAR:-}" | sed -e '\#^'"${ITEM}"'$#d')"
     eval $LIST_VAR='"'"$NEW_ITEMS"'"'
   done
 }
@@ -353,44 +353,96 @@ fi
 EOF
 }
 
-echoerr() {
-  local TMP
-  TMP=$(setSimpleOptions NO_FOLD:F -- "$@")
-  eval "$TMP"
+# Formats and echoes the the message.
+#
+# * Will process special chars the same as 'echo -e' (so \t, \n, etc. can be used in the message).
+# * Treats all arguments as the message. 'echofmt "foo bar"' and 'echofmt foo bar' are equivalent.
+# * Error and warning messages are directed towards stderr (unless modified by options).
+# * Default message width is the lesser of 82 columns or the terminal column width.
+# * Environment variable 'ECHO_WIDTH' will set the width. The '--width' option will override the environment variable.
+# * Environment variable 'ECHO_QUIET' will suppress all non-error, non-warning messages if set to any non-empty value.
+# * Environment variable 'ECHO_SILENT' will suppress all non-error messages if set to any non-empty value.
+# * Environment variable 'ECHO_STDERR' will cause all output to be directed to stderr unless '--stderr' or '--stdout'
+#   is specified.
+# * Environment variable 'ECHO_STDOUT' will cause all output to be directed to stdout unless '--stderr' or '--stdout'
+#   is specified.
+echofmt() {
+  local OPTIONS='INFO WARN ERROR WIDTH NO_FOLD:F STDERR STDOUT'
+  eval "$(setSimpleOptions ${OPTIONS} -- "$@")"
 
-  if [[ -z "$NO_FOLD" ]]; then
-    echo -e "${red}$*${reset}" | fold -sw 82 >&2
-  else
-    echo -e "${red}$*${reset}"
+  # First, let's check to see of the message is suppressed. The 'return 0' is explicitly necessary. 'return' sends
+  # along $?, which, if it gets there, is 1 due to the failed previous test.
+  ! { [[ -n "${ECHO_SILENT:-}" ]] && [[ -z "${ERROR:-}" ]]; } || return 0
+  ! { [[ -n "${ECHO_QUIET:-}" ]] && [[ -z "${ERROR:-}" ]] && [[ -z "${WARN}" ]]; } || return 0
+
+  # Examine environment to see if the redirect controls are set.
+  if [[ -z "${STDERR:-}" ]] && [[ -z "${STDOUT:-}" ]]; then
+    [[ -z "${ECHO_STDERR:-}" ]] || STDERR=true
+    [[ -z "${ECHO_STDOUT:-}" ]] || STDOUT=true
   fi
+
+  # Determine width... if folding
+  [[ -z "${NO_FOLD:-}" ]] && [[ -n "${WIDTH:-}" ]] || { # If width is set as an option, then that's the end of story.
+    local DEFAULT_WIDTH=82
+    local WIDTH="${ECHO_WIDTH:-}"
+    [[ -n "${WIDTH:-}" ]] || WIDTH=$DEFAULT_WIDTH
+    # ECHO_WIDTH and DEFAULT_WIDTH are both subject to actual terminal width limitations.
+    local TERM_WIDITH
+    TERM_WIDTH=$(tput cols)
+    (( ${TERM_WIDTH} >= ${WIDTH} )) || WIDTH=${TERM_WIDTH}
+  }
+
+  # Determine output color, if any.
+  # internal helper function; set's 'STDERR' true unless target has already been set with '--stderr' or '--stdout'
+  default-stderr() {
+    [[ -n "${STDERR:-}" ]] || [[ -n "${STDOUT:-}" ]] || STDERR=true
+  }
+  local COLOR=''
+  if [[ -n "${ERROR:-}" ]]; then
+    COLOR="${red}"
+    default-stderr
+  elif [[ -n "${WARN:-}" ]]; then
+    COLOR="${yellow}"
+    default-stderr
+  elif [[ -n "${INFO:-}" ]]; then
+    COLOR="${green}"
+  fi
+
+  # we don't want to use an eval, and the way bash is evaluated means we can't do 'echo ... ${REDIRECT}' or something.
+  if [[ -n "${STDERR:-}" ]]; then
+    if [[ -z "$NO_FOLD" ]]; then
+      echo -e "${COLOR:-}$*${reset}" | fold -sw "${WIDTH}" >&2
+    else
+      echo -e "${COLOR:-}$*${reset}" >&2
+    fi
+  else
+    if [[ -z "${NO_FOLD:-}" ]]; then
+      echo -e "${COLOR:-}$*${reset}" | fold -sw "${WIDTH}"
+    else
+      echo -e "${COLOR:-}$*${reset}"
+    fi
+  fi
+}
+
+echoerr() {
+  echofmt --error "$@"
 }
 
 echowarn() {
-  local TMP
-  TMP=$(setSimpleOptions NO_FOLD:F -- "$@")
-  eval "$TMP"
-
-  if [[ -z "$NO_FOLD" ]]; then
-    echo -e "${yellow}$*${reset}" | fold -sw 82 >&2
-  else
-    echo -e "${yellow}$*${reset}"
-  fi
+  echofmt --warn "$@"
 }
 
+# Echoes a formatted message to STDERR. The default exit code is '1', but if 'EXIT_CODE', then that will be used. E.g.:
+#
+#    EXIT_CODE=5
+#    echoerrandexit "Fatal code 5!"
+#
+# See echofmt for further options and details.
 echoerrandexit() {
-  local TMP
-  TMP=$(setSimpleOptions NO_FOLD:F -- "$@") || $(echo "Bad options: $*"; exit -10)
-  eval "$TMP"
+  echofmt --error "$@"
 
-  local MSG="$1"
-  local EXIT_CODE="${2:-10}"
-  # TODO: consider providing 'passopts' method which coordites with 'setSimpleOptions' to recreate option string
-  if [[ -n "$NO_FOLD" ]]; then
-    echoerr --no-fold "$MSG"
-  else
-    echoerr "$MSG"
-  fi
-  exit $EXIT_CODE
+  [[ -z "${EXIT_CODE:-}" ]] || exit ${EXIT_CODE}
+  exit 1
 }
 
 field-to-label() {
@@ -503,7 +555,7 @@ yes-no() {
   default-yes() { return 0; }
   default-no() { return 1; } # bash false-y
 
-  local PROMPT="$1"
+  local PROMPT="${1:-}"
   local DEFAULT="${2:-}"
   local HANDLE_YES="${3:-default-yes}"
   local HANDLE_NO="${4:-default-no}" # default to noop
@@ -535,7 +587,7 @@ yes-no() {
 
 gather-answers() {
   eval "$(setSimpleOptions VERIFY PROMPTER= SELECTOR= DEFAULTER= -- "$@")"
-  local FIELDS="${1}"
+  local FIELDS="${1:-}"
 
   local FIELD VERIFIED
   while [[ "${VERIFIED}" != true ]]; do
@@ -660,6 +712,8 @@ _commonSelectHelper() {
   local _SELECTION
   local _QUIT='false'
 
+  set +o nounset
+
   local _OPTIONS="${!_OPTIONS_LIST_NAME:-}"
   # TODO: would be nice to have a 'prepend-' or 'unshift-' items.
   if [[ -n "$_PRE_OPTS" ]]; then
@@ -678,7 +732,7 @@ _commonSelectHelper() {
   while [[ $_QUIT == 'false' ]]; do
     local OLDIFS="$IFS"
     IFS=$'\n'
-    echo >&2
+    echo >&2 # TODO: why? Select prints to stderr (?) and we want space?
     select _SELECTION in $_OPTIONS; do
       case "$_SELECTION" in
         '<cancel>')
@@ -730,6 +784,7 @@ _commonSelectHelper() {
     done # end select
     IFS="$OLDIFS"
   done
+  set -o nounset
 }
 
 selectOneCancel() {
@@ -802,24 +857,6 @@ selectDoneCancelNewDefault() {
 selectDoneCancelAll() {
   _commonSelectHelper '' "$1" '<done>'$'\n''<cancel>' '<all>' "$2"
 }
-# TODO: move to bash-toolkit
-
-# Prints line with any standard format. First arg is the format name, everything else, along with any options, are
-# passed through to echo.
-echofmt() {
-  eval "$(setSimpleOptions NO_NEWLINE -- "$@")"
-  local COLOR="${1}"; shift
-  [[ -n "${!COLOR}" ]]
-  OPTS="-e"
-  if [[ -n "$NO_NEWLINE" ]]; then OPTS="$OPTS -n"; fi
-  echo ${OPTS} "${!COLOR}$*${reset}" | fold -sw 82
-}
-
-# Prints the line in green. Any options are passed through to echo.
-echogreen() {
-  echofmt green "$@"
-}
-
 # Basic indent of a line.
 indent() {
   cat | sed -e 's/^/  /'
@@ -1266,6 +1303,9 @@ LIQ_PLAYGROUND="${LIQ_DB}/playground"
 
 LIQ_DIST_DIR="$(dirname "$(real_path "${0}")")"
 
+# Really just a constant at this point, but at some point may allow override at org and project levels.
+PRODUCTION_TAG=production
+
 _PROJECT_CONFIG='.catalyst-project' #TODO: current file '.catalyst' and the code doesn't make reference to this constant; convert that to 'catalyst-project'
 _PROJECT_PUB_CONFIG='.catalyst-pub'
 _ORG_ID_URL='https://console.cloud.google.com/iam-admin/settings'
@@ -1375,13 +1415,18 @@ exitUnknownHelpTopic() {
 }
 # Echoes common options for all liq commands.
 pre-options-liq() {
-  echo -n "QUIET VERBOSE: DEBUG:" # TODO: we don't actually support these yet; but wanted to preserve the idea.
+  # TODO: VERBOSE and DEBUG are not currently supported; need to add to echofmt (and then derive echodebug and also
+  # change the implicatino of information from 'something highlighted' to 'secondary info')
+  echo -n "QUIET SILENT: VERBOSE: DEBUG:"
 }
 
 # Processes common options for liq commands. Currently, all options are "just" flags that other functions will check, so
 # there's nothing for us to do here.
 post-options-liq() {
-  :
+  ECHO_QUIET="${QUIET}"
+  ECHO_SILENT="${SILENT}"
+  ECHO_VERBOSE="${VERBOSE}"
+  ECHO_DEBUG="${DEBUG}"
 }
 set -o errtrace # inherits trap on ERR in function and subshell
 
@@ -1457,12 +1502,12 @@ meta-bash-config() {
 meta-next() {
   eval "$(setSimpleOptions TECH_DETAIL ERROR -- "$@")"
 
-  local COLOR="green"
-  [[ -z "$ERROR" ]] || COLOR="red"
+  local STATUS="--info"
+  [[ -z "$ERROR" ]] || STATUS="--error"
 
   if [ ! -d "${LIQ_DB}" ]; then
     [[ -z "$TECH_DETAIL" ]] || TECH_DETAIL=" (expected ~/${LIQ_DB_BASENAME})"
-    echofmt $COLOR "It looks like liq CLI hasn't been setup yet$TECH_DETAIL. Try:\nliq meta init"
+    echofmt $STATUS "It looks like liq CLI hasn't been setup yet$TECH_DETAIL. Try:\nliq meta init"
   elif [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     source "${LIQ_WORK_DB}/curr_work"
     local PROJ DONE
@@ -1471,18 +1516,18 @@ meta-next() {
       PROJ=${PROJ/@/}
       cd "$LIQ_PLAYGROUND/${PROJ}"
       if [[ -n "$(git status --porcelain)" ]]; then
-        echofmt $COLOR "It looks like you were worknig on '${WORK_DESC}' and have uncommitted changes in '${PROJ}'. Try:\n\nliq work save -m 'commit message' --project $PROJ\n\nOr, to use 'liq work stage' with 'liq work save' to save sets of files with different messages.\n\nOr, to get an overview of all work status, try:\n\nliq work status."
+        echofmt $STATUS "It looks like you were worknig on '${WORK_DESC}' and have uncommitted changes in '${PROJ}'. Try:\n\nliq work save -m 'commit message' --project $PROJ\n\nOr, to use 'liq work stage' with 'liq work save' to save sets of files with different messages.\n\nOr, to get an overview of all work status, try:\n\nliq work status."
         DONE=true
         break
       fi
     done
     if [[ "$DONE" != "true" ]]; then
-      echofmt $COLOR "It looks like you were worknig on '${WORK_DESC}' and everything is committed. If ready to submit changes, try:\nliq work submit"
+      echofmt $STATUS "It looks like you were worknig on '${WORK_DESC}' and everything is committed. If ready to submit changes, try:\nliq work submit"
     fi
   elif requirePackage; then
-    echofmt $COLOR "Looks like you're currently in project '$PACKAGE_NAME'. You could start working on an issue. Try:\nliq work start ..."
+    echofmt $STATUS "Looks like you're currently in project '$PACKAGE_NAME'. You could start working on an issue. Try:\nliq work start ..."
   else
-    echofmt $COLOR "Choose a project and 'cd' there."
+    echofmt $STATUS "Choose a project and 'cd' there."
   fi
 
   [[ -z "$ERROR" ]] || exit 1
@@ -1808,7 +1853,20 @@ orgs-import() {
 
 # see `liq help orgs list`
 orgs-list() {
-  find "${LIQ_ORG_DB}" -maxdepth 1 -mindepth 1 -type d -exec basename '{}' \; | sort
+  find "${LIQ_ORG_DB}" -maxdepth 1 -mindepth 1 -type l -exec basename '{}' \; | sort
+}
+
+orgs-refresh() {
+  local OPTIONS
+  OPTIONS="$(pre-options-liq-orgs) PROJECTS"
+  eval "$(setSimpleOptions ${OPTIONS} -- "$@")"
+  post-options-liq-orgs
+
+  # This is silly at the moment, but in future when there are other things to refresh, this set's up a 'refresh all' as
+  # the default if specific targets are not specified
+  [[ -n "${PROJECTS}" ]] || PROJECTS=true
+
+  [[ -z "${PROJECTS}" ]] || org-lib-refresh-projects
 }
 
 # see `liq help orgs show`
@@ -1885,6 +1943,12 @@ EOF
 help-orgs-list() {
   cat <<EOF | _help-func-summary list
 Lists the currently affiliated orgs.
+EOF
+}
+
+help-orgs-refresh() {
+  cat <<EOF | _help-func-summray refresh "[--projects]"
+Refreshes the compiled/generated company data.
 EOF
 }
 
@@ -1965,13 +2029,17 @@ pre-options-liq-orgs() {
 post-options-liq-orgs() {
   post-options-liq
 
+  orgs-lib-process-org-opt
+}
+
+orgs-lib-process-org-opt() {
   # 'ORG' is the parameter set by the user (or not)
   # 'ORG_ID' is the resolved ORG_ID
   # 'CURR_ORG' is the base org package name; e.g., liquid-labs/liquid-labs TODO: rename to 'CURR_ORG'?
   # 'CURR_ORG_PATH' is the absolute path to the CURR_ORG project
 
   # TODO: Check if the project 'class' is correct; https://github.com/Liquid-Labs/liq-cli/issues/238
-  if [[ -z "${ORG:-}" ]]; then
+  if [[ -z "${ORG:-}" ]] || [[ "${ORG}" == '.' ]]; then
     findBase
     ORG_ID="$(cd "${BASE_DIR}/.."; basename "$PWD")"
   else
@@ -1981,6 +2049,71 @@ post-options-liq-orgs() {
   CURR_ORG_PATH="$(lib-orgs-resolve-path "${ORG_ID}")"
   CURR_ORG="$( cat "${CURR_ORG_PATH}/package.json" | jq -r '.name' )"
   CURR_ORG="${CURR_ORG/@/}"
+}
+
+org-lib-refresh-projects() {
+  local PROJECTS_NAMES PROJECT_NAME
+
+  local PAGE_COUNT=1 # starts at 1
+  local STAGING_DIR="/tmp/liq.tmp.projects-refresh"
+  local STAGED_JSON="${STAGING_DIR}/projects.json"
+  local PER_PAGE=50
+
+  rm -rf "${STAGING_DIR}"
+  mkdir -p "${STAGING_DIR}"
+
+  echo '{' > "${STAGED_JSON}"
+  while true; do # we break to end
+    echofmt "\n---------\nPage ${PAGE_COUNT}...\n---------"
+    REPOS_DATA="$(hub api -X GET orgs/${ORG}/repos \
+      -f sort=full_name -f direction=asc -f per_page=${PER_PAGE} -f page=${PAGE_COUNT} \
+      | jq -r '[ .[] | with_entries(select([.key] | inside(["name", "full_name", "private"]))) ]')"
+    # Repos data now has trimmed down entries with only what we care about
+
+    echo "${REPOS_DATA}" > "${STAGING_DIR}/repos-data.json"
+
+    [[ "${REPOS_DATA}" != '[]' ]] || { echofmt "No more results."; break; }
+
+    local RESULT_COUNT=0
+    local PROJECT_NAMES
+    PROJECT_NAMES=$(echo "${REPOS_DATA}" | jq -r '.[] | .name')
+    for PROJECT_NAME in $PROJECT_NAMES; do
+      # TODO: add '-n' support to echofmt and use it here.
+      echo -n "Processing ${ORG}/${PROJECT_NAME}... "
+      local STAGED_PACKAGE_JSON="${STAGING_DIR}/${PROJECT_NAME}.package.json"
+      # the 'jq' step is to catch invalid package.json files...
+      hub api -X GET /repos/${ORG}/${PROJECT_NAME}/contents/package.json \
+          | jq -r '.content' \
+          | base64 --decode > "${STAGED_PACKAGE_JSON}" \
+        && echofmt "staged!" \
+        || { echofmt "no package.json (or cannot be parsed)."; rm "${STAGED_PACKAGE_JSON}"; }
+        # ^^ the file is always generated, so we delete it if it's invalid.
+    done
+
+    for PROJECT_NAME in $PROJECT_NAMES; do
+      local PACKAGE_FILE="${STAGING_DIR}/${PROJECT_NAME}.package.json"
+      echo "\"${PROJECT_NAME}\": {" >> "${STAGED_JSON}"
+      if [[ -f "${PACKAGE_FILE}" ]]; then
+        echo -n '"package": ' >> "${STAGED_JSON}"
+        cat "${PACKAGE_FILE}" >> "${STAGED_JSON}"
+        echo "," >> "${STAGED_JSON}"
+      fi
+      echo '"repository": {' >> "${STAGED_JSON}"
+      echo "\"private\": $(echo "${REPOS_DATA}" \
+        | jq -r ".[] | if select(.name==\"${PROJECT_NAME}\").private then true else false end")" \
+        >> "${STAGED_JSON}"
+      echo -e "}\n}," >> ${STAGED_JSON} # -n so easier to remove in a bit; eventually all reformatted anyway
+    done
+
+    PAGE_COUNT=$(( ${PAGE_COUNT} + 1 ))
+  done # the paging loop
+  # remove last comma
+  sed -i tmp '$ s/,$//' "${STAGED_JSON}"
+  echo '}' >> "${STAGED_JSON}"
+
+  local PROJECTS_JSON="${CURR_ORG_PATH}/data/orgs/projects.json"
+  # pipe through jq to format
+  cat "${STAGED_JSON}" | jq > "${PROJECTS_JSON}"
 }
 requirements-projects() {
   :
@@ -2291,6 +2424,103 @@ projects-import() {
     npm install || echoerrandexit "Installation failed."
     echo "Install complete."
   fi
+}
+
+projects-list() {
+  local OPTIONS
+  OPTIONS="$(pre-options-liq-projects) ORG:= LOCAL ALL_ORGS NAMES_ONLY FILTER="
+  eval "$(setSimpleOptions ${OPTIONS} -- "$@")"
+  post-options-liq-projects
+  orgs-lib-process-org-opt
+
+  [[ -z "${LOCAL}" ]] || [[ -n "${NAMES_ONLY}" ]] || NAMES_ONLY=true # local implies '--names-only'
+  [[ -n "${ORG}" ]] || ALL_ORGS=true # ALL_ORGS is default
+
+  # INTERNAL HELPERS
+  local NON_PROD_ORGS # gather up non-prod so we can issue warnings
+  function echo-header() { echo -e "Name\tRepo scope\tPublished scope\tVersion"; }
+  # Extracts data to display from package.json data embedded in the projects.json or from the package.json file itself
+  # in the local checkouts.
+  function process-proj-data() {
+    local PROJ_NAME="${1}"
+    local PROJ_DATA="$(cat -)"
+
+    # Name; col 1
+    echo -en "${PROJ_NAME}\t"
+
+    # Repo scope status cos 2
+    echo -en "$(echo "${PROJ_DATA}" | jq -r 'if .repository.private then "private" else "public" end')\t"
+
+    # Published scope status cos 3
+    echo -en "$(echo "${PROJ_DATA}" | jq -r 'if .package then if .package.liq.public then "public" else "private" end else "-" end')\t"
+
+    # Version cols 4
+    local VERSION # we do these extra steps so echo, which is known to provide the newline, does the output
+    VERSION="$(echo "${PROJ_DATA}" | jq -r '.package.version // "-"')"
+    echo "${VERSION}"
+  }
+
+  function process-org() {
+    if [[ -z "${LOCAL}" ]]; then # list projects from the 'projects.json' file
+      local DATA_PATH
+      [[ -z "${ORG_PROJECTS_REPO:-}" ]] || DATA_PATH="${LIQ_PLAYGROUND}/${ORG_PROJECTS_REPO/@/}"
+      [[ -n "${DATA_PATH:-}" ]] || DATA_PATH="${CURR_ORG_PATH}"
+      DATA_PATH="${DATA_PATH}/data/orgs/projects.json"
+
+      [[ -f "${DATA_PATH}" ]] || echoerrandexit "Did not find expected project definition '${DATA_PATH}'. Try:\nliq orgs refresh --projects"
+
+      if [[ -n "${NAMES_ONLY}" ]]; then
+        cat "${DATA_PATH}" | jq -r 'keys | .[]'
+      else
+        local PROJ_DATA="$(cat "${DATA_PATH}")"
+        local PROJ_NAME
+        while read -r PROJ_NAME; do
+          echo "${PROJ_DATA}" | jq ".[\"${PROJ_NAME}\"]" | process-proj-data "${PROJ_NAME}"
+        done < <(echo "${PROJ_DATA}" | jq -r 'keys | .[]')
+      fi
+
+      # The non-production source is only a concern if we're looking at the org repo.
+      if ! projects-lib-is-at-production "${CURR_ORG_PATH}"; then
+        list-add-item NON_PROD_ORGS "${ORG}"
+      fi
+    else # list local projects; recall this is limited to '--name-only'
+      local PROJ
+      find "${CURR_ORG_PATH}/.." -maxdepth 1 -type d -not -name '.*' -exec basename {} \; \
+        | while read -r PROJ; do ! [[ -f "${CURR_ORG_PATH}/../${PROJ}/package.json" ]] || echo "${PROJ}"; done \
+        | sort
+    fi
+  }
+
+  # This is where all the data/output is generated, which gets fed to the filter and formatter
+  function process-cmd() {
+    [[ -n "${NAMES_ONLY:-}" ]] || echo-header
+    if [[ -n "${ALL_ORGS}" ]]; then # all is the default
+      for ORG in $(orgs-list); do
+        orgs-lib-process-org-opt
+        process-org
+      done
+    else
+      process-org
+    fi
+  }
+
+  if [[ -n "${FILTER}" ]]; then
+    process-cmd > >(awk "\$1~/.*${FILTER}.*/" | column -s $'\t' -t)
+  else
+    process-cmd > >(column -s $'\t' -t)
+  fi
+
+  # finally, issue non-prod warnings if any
+  exec 10< <(echo "$NON_PROD_ORGS") # this craziness is because if we do 'process-cmd | column...' above, then
+  # 'process-cmd' would get run in a sub-shell and NON_PROD_ORGS updates get trapped. So, we have to rewrite without
+  # pipes. BUT that causes 'read -r NP_ORG; do... done<<<${NON_PROD_ORGS}' to fail with a 'cannot create temp file for
+  # here document: Interrupted system call'. I *think* the <<< creates the heredoc but the redirect to column still has
+  # a handle on STDIN... Really, I'm not clear, but this seems to work.
+  local NP_ORG
+  [[ -z "${NON_PROD_ORGS}" ]] || while read -u 10 -r NP_ORG; do
+    echowarn "\nWARNING: Non-production data shown for '${NP_ORG}'."
+  done
+  exec 10<&-
 }
 
 # see: liq help projects publish
@@ -2648,6 +2878,14 @@ Imports the indicated package into your playground. The newly imported package w
 EOF
 }
 
+help-projects-list() {
+  cat <<EOF | _help-func-summary list "[--all-orgs|-a] [--org <org id>] [--names-only|-n] [--local|-l] [--filter|-f <match string>]"
+Lists org projects. '--all-orgs' is the default and will list all projects for all locally imported orgs. Specifying an '--org' will list projects for the indicated org only. The result is a table with each project name, scope of the project repository (public/private), scope of the published packages, and version. The '--name-only' limits the output to listing the names only, without a header. Results may be filtered against the project names. The filter will match partial strings.
+
+The '--local' option implies '--name-only' and will list the locally imported projects. With this method, the playground directory is examined and the effect is to list the imported projects. Note that any directories manually created under an org will be understood as a project here and so may lead to misleading results.
+EOF
+}
+
 help-projects-publish() {
   cat <<EOF | _help-func-summary publish
 Performs verification tests, updates package version, and publishes package.
@@ -2675,6 +2913,13 @@ Runs unit tests the current or named projects.
 * '--no-service-check' will skip checking service status. This is useful when re-running tests and the services are known to be running.
 * '--go-run' will only run those tests matching the provided regex (per go '-run' standards).
 EOF
+}
+pre-options-liq-projects() {
+  pre-options-liq
+}
+
+post-options-liq-projects() {
+  post-options-liq
 }
 projectCheckIfInPlayground() {
   local PROJ_NAME="${1/@/}"
@@ -2830,6 +3075,16 @@ projectsRunPackageScript() {
 projectsSetPkgNameComponents() {
   PKG_ORG_NAME="$(dirname ${1/@/})"
   PKG_BASENAME="$(basename "$1")"
+}
+
+projects-lib-is-at-production() {
+  local REPO_PATH="${1}"
+
+  (
+    cd "${REPO_PATH}"
+    # Redirect stderr since production tag may not exist. That's OK for the test logic, but generates unwanted output.
+    [[ $(git rev-parse HEAD) == $(git rev-parse ${PRODUCTION_TAG} 2> /dev/null || true) ]]
+  )
 }
 _QA_OPTIONS_SPEC="UPDATE OPTIONS="
 
@@ -4156,7 +4411,7 @@ workSubmitChecks() {
       unset FIRST_REASON
 
       echo
-      echofmt "reset" "(Your explanation may use markdown format, but it is not required.)"
+      echofmt "(Your explanation may use markdown format, but it is not required.)"
       echo
     fi
 
@@ -4166,13 +4421,13 @@ workSubmitChecks() {
     DEF_REASON="${REASON}"
     DEF_MITIGATION="${MITIGATION}"
 
-    echofmt yellow "You will now be asked to review and confirm your answers. (Hit enter to continue.)"
+    echofmt --warn "You will now be asked to review and confirm your answers. (Hit enter to continue.)"
     read
-    echofmt green_b "Reason for the exception:"
+    echofmt --info "Reason for the exception:"
     echo "${REASON}"
     echo "(Hit enter to continue)"
     read
-    echofmt green_b "Steps taken to mitigate exception:"
+    echofmt --info "Steps taken to mitigate exception:"
     echo "${MITIGATION}"
     echo
 
@@ -4247,7 +4502,7 @@ workSubmitChecks() {
       local QUESTION_COUNT=1
       while read -u 12 QUESTION; do
         echo
-        echofmt yellow "${QUESTION_COUNT}) $QUESTION"
+        echofmt --warn "${QUESTION_COUNT}) $QUESTION"
         if [[ -z "$RECORD" ]]; then
           RECORD="### $QUESTION"
         else

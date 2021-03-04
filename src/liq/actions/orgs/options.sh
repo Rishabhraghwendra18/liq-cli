@@ -6,13 +6,17 @@ pre-options-liq-orgs() {
 post-options-liq-orgs() {
   post-options-liq
 
+  orgs-lib-process-org-opt
+}
+
+orgs-lib-process-org-opt() {
   # 'ORG' is the parameter set by the user (or not)
   # 'ORG_ID' is the resolved ORG_ID
   # 'CURR_ORG' is the base org package name; e.g., liquid-labs/liquid-labs TODO: rename to 'CURR_ORG'?
   # 'CURR_ORG_PATH' is the absolute path to the CURR_ORG project
 
   # TODO: Check if the project 'class' is correct; https://github.com/Liquid-Labs/liq-cli/issues/238
-  if [[ -z "${ORG:-}" ]]; then
+  if [[ -z "${ORG:-}" ]] || [[ "${ORG}" == '.' ]]; then
     findBase
     ORG_ID="$(cd "${BASE_DIR}/.."; basename "$PWD")"
   else
