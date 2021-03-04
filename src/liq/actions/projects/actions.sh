@@ -316,6 +316,7 @@ projects-list() {
   post-options-liq-projects
   orgs-lib-process-org-opt
 
+  [[ -n "${LOCAL}" ]] && [[ -n "${NAMES_ONLY}" ]] || NAMES_ONLY=true # local implies '--names-only'
   [[ -n "${ORG}" ]] || ALL_ORGS=true # ALL_ORGS is default
 
   # INTERNAL HELPERS
@@ -360,22 +361,16 @@ projects-list() {
           echo "${PROJ_DATA}" | jq ".[\"${PROJ_NAME}\"]" | process-proj-data "${PROJ_NAME}"
         done < <(echo "${PROJ_DATA}" | jq -r 'keys | .[]')
       fi
-    else # list local projects
-      local LOCAL_PROJECTS PROJ
-      LOCAL_PROJECTS="$(find "${CURR_ORG_PATH}/.." -maxdepth 1 -type d -not -name '.*' -exec basename {} \; \
-        | while read -r PROJ; do ! [[ -f "${CURR_ORG_PATH}/../${PROJ}/package.json" ]] || echo "${PROJ}"; done)"
 
-      if [[ -n "${NAMES_ONLY}" ]]; then
-        echo "${LOCAL_PROJECTS}"
-      else
-        while read -r PROJ_NAME; do
-          (cd "${LIQ_PLAYGROUND}/${ORG_ID}/${PROJ_NAME}" && cat package.json | process-proj-data "${PROJ_NAME}")
-        done <<<${LOCAL_PROJECTS}
+      # The non-production source is only a concern if we're looking at the org repo.
+      if ! projects-lib-is-at-production "${CURR_ORG_PATH}"; then
+        list-add-item NON_PROD_ORGS "${ORG}"
       fi
-    fi
-
-    if ! projects-lib-is-at-production "${CURR_ORG_PATH}"; then
-      list-add-item NON_PROD_ORGS "${ORG}"
+    else # list local projects; recall this is limited to '--name-only'
+      local PROJ
+      find "${CURR_ORG_PATH}/.." -maxdepth 1 -type d -not -name '.*' -exec basename {} \; \
+        | while read -r PROJ; do ! [[ -f "${CURR_ORG_PATH}/../${PROJ}/package.json" ]] || echo "${PROJ}"; done \
+        | sort
     fi
   }
 
