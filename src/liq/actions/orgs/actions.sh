@@ -174,6 +174,19 @@ orgs-list() {
   find "${LIQ_ORG_DB}" -maxdepth 1 -mindepth 1 -type l -exec basename '{}' \; | sort
 }
 
+orgs-refresh() {
+  local OPTIONS
+  OPTIONS="$(pre-options-liq-orgs) PROJECTS"
+  eval "$(setSimpleOptions ${OPTIONS} -- "$@")"
+  post-options-liq-orgs
+
+  # This is silly at the moment, but in future when there are other things to refresh, this set's up a 'refresh all' as
+  # the default if specific targets are not specified
+  [[ -n "${PROJECTS}" ]] || PROJECTS=true
+
+  [[ -z "${PROJECTS}" ]] || org-lib-refresh-projects
+}
+
 # see `liq help orgs show`
 orgs-show() {
   eval "$(setSimpleOptions DIR PROJECT SETTINGS -- "$@")"

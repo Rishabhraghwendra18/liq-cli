@@ -320,7 +320,7 @@ projects-list() {
 
   # INTERNAL HELPERS
   local NON_PROD_ORGS='' # gather up non-prod so we can issue warnings
-  echo-header() { echo -e "Name\tPub/Priv\tVersion"; }
+  echo-header() { echo -e "Name\tPublished scope\tVersion"; }
   # Extracts data to display from package.json data embedded in the projects.json or from the package.json file itself
   # in the local checkouts.
   process-pkg-data() {
@@ -330,7 +330,7 @@ projects-list() {
     # Name; col 1
     echo -en "${PROJ_NAME}\t"
 
-    # Pub/priv status cos 2
+    # Published scope status cos 2
     local PUBLIC_STATUS
     PUBLIC_STATUS="$(echo "${PROJ_DATA}" | jq '.liq.public')"
     if [[ -n "${PUBLIC_STATUS}" ]] && [[ "${PUBLIC_STATUS}" == 'public' ]]; then
@@ -352,7 +352,7 @@ projects-list() {
       [[ -n "${DATA_PATH:-}" ]] || DATA_PATH="${CURR_ORG_PATH}"
       DATA_PATH="${DATA_PATH}/data/orgs/projects.json"
 
-      [[ -f "${DATA_PATH}" ]] || echoerrandexit "Did not find expected project definition '${DATA_PATH}'. Try:\nliq projects refresh"
+      [[ -f "${DATA_PATH}" ]] || echoerrandexit "Did not find expected project definition '${DATA_PATH}'. Try:\nliq orgs refresh --projects"
 
       if [[ -n "${NAMES_ONLY}" ]]; then
         cat "${DATA_PATH}" | jq -r 'keys | .[]'
@@ -400,7 +400,7 @@ projects-list() {
   else
     process-cmd | column -s $'\t' -t
   fi
-  
+
   # finally, issue non-prod warnings if any
   local NP_ORG
   while read -r NP_ORG; do
