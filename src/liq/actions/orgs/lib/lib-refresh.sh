@@ -17,6 +17,8 @@ org-lib-refresh-projects() {
       | jq -r '[ .[] | with_entries(select([.key] | inside(["name", "full_name", "private"]))) ]')"
     # Repos data now has trimmed down entries with only what we care about
 
+    echo "${REPOS_DATA}" > "${STAGING_DIR}/repos-data.json"
+
     [[ "${REPOS_DATA}" != '[]' ]] || { echofmt "No more results."; break; }
 
     local RESULT_COUNT=0
@@ -38,9 +40,17 @@ org-lib-refresh-projects() {
     for PACKAGE_FILE in $(ls "${STAGING_DIR}"/*.package.json); do
       PROJECT_NAME=$(basename "${PACKAGE_FILE}")
       PROJECT_NAME="${PROJECT_NAME/.package.json/}"
-      echo -n "\"${PROJECT_NAME}\": " >> "${STAGED_JSON}"
+      echo "\"${PROJECT_NAME}\": {" >> "${STAGED_JSON}"
+      echo -n '"package": ' >> "${STAGED_JSON}"
       cat "${PACKAGE_FILE}" >> "${STAGED_JSON}"
-      echo -n "," >> ${STAGED_JSON} # -n so easier to remove in a bit; eventually all reformatted anyway
+      echo "," >> "${STAGED_JSON}"
+      echo '"repository": {' >> "${STAGED_JSON}"
+      echo "\"private\": $(echo "${REPOS_DATA}" \
+        | jq -r ".[] | if select(.name==\"${PROJECT_NAME}\").private then true else false end")" \
+        >> "${STAGED_JSON}"
+      echo -e "}\n}," >> ${STAGED_JSON} # -n so easier to remove in a bit; eventually all reformatted anyway
+
+      rm "${PACKAGE_FILE}" # clean up to avoid contaminating the next loop
     done
 
     PAGE_COUNT=$(( ${PAGE_COUNT} + 1 ))

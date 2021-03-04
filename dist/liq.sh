@@ -2063,7 +2063,8 @@ org-lib-refresh-projects() {
       -f sort=full_name -f direction=asc -f per_page=${PER_PAGE} -f page=${PAGE_COUNT} \
       | jq -r '[ .[] | with_entries(select([.key] | inside(["name", "full_name", "private"]))) ]')"
     # Repos data now has trimmed down entries with only what we care about
-    echo "${REPOS_DATA}"
+
+    echo "${REPOS_DATA}" > "${STAGING_DIR}/repos-data.json"
 
     [[ "${REPOS_DATA}" != '[]' ]] || { echofmt "No more results."; break; }
 
@@ -2086,9 +2087,17 @@ org-lib-refresh-projects() {
     for PACKAGE_FILE in $(ls "${STAGING_DIR}"/*.package.json); do
       PROJECT_NAME=$(basename "${PACKAGE_FILE}")
       PROJECT_NAME="${PROJECT_NAME/.package.json/}"
-      echo -n "\"${PROJECT_NAME}\": " >> "${STAGED_JSON}"
+      echo "\"${PROJECT_NAME}\": {" >> "${STAGED_JSON}"
+      echo -n '"package": ' >> "${STAGED_JSON}"
       cat "${PACKAGE_FILE}" >> "${STAGED_JSON}"
-      echo -n "," >> ${STAGED_JSON} # -n so easier to remove in a bit; eventually all reformatted anyway
+      echo "," >> "${STAGED_JSON}"
+      echo '"repository": {' >> "${STAGED_JSON}"
+      echo "\"private\": $(echo "${REPOS_DATA}" \
+        | jq -r ".[] | if select(.name==\"${PROJECT_NAME}\").private then true else false end")" \
+        >> "${STAGED_JSON}"
+      echo -e "}\n}," >> ${STAGED_JSON} # -n so easier to remove in a bit; eventually all reformatted anyway
+
+      rm "${PACKAGE_FILE}" # clean up to avoid contaminating the next loop
     done
 
     PAGE_COUNT=$(( ${PAGE_COUNT} + 1 ))
@@ -2422,33 +2431,30 @@ projects-list() {
   [[ -n "${ORG}" ]] || ALL_ORGS=true # ALL_ORGS is default
 
   # INTERNAL HELPERS
-  local NON_PROD_ORGS='' # gather up non-prod so we can issue warnings
-  echo-header() { echo -e "Name\tPublished scope\tVersion"; }
+  local NON_PROD_ORGS # gather up non-prod so we can issue warnings
+  function echo-header() { echo -e "Name\tRepo scope\tPublished scope\tVersion"; }
   # Extracts data to display from package.json data embedded in the projects.json or from the package.json file itself
   # in the local checkouts.
-  process-pkg-data() {
+  function process-proj-data() {
     local PROJ_NAME="${1}"
     local PROJ_DATA="$(cat -)"
 
     # Name; col 1
     echo -en "${PROJ_NAME}\t"
 
-    # Published scope status cos 2
-    local PUBLIC_STATUS
-    PUBLIC_STATUS="$(echo "${PROJ_DATA}" | jq '.liq.public')"
-    if [[ -n "${PUBLIC_STATUS}" ]] && [[ "${PUBLIC_STATUS}" == 'public' ]]; then
-      echo -en "private\t"
-    else
-      echo -en "public\t"
-    fi
+    # Repo scope status cos 2
+    echo -en "$(echo "${PROJ_DATA}" | jq -r 'if .repository.private then "private" else "public" end')\t"
 
-    # Version cols 3
+    # Published scope status cos 3
+    echo -en "$(echo "${PROJ_DATA}" | jq -r 'if .package.liq.public then "public" else "private" end')\t"
+
+    # Version cols 4
     local VERSION # we do these extra steps so echo, which is known to provide the newline, does the output
-    VERSION="$(echo "${PROJ_DATA}" | jq -r '.version')"
+    VERSION="$(echo "${PROJ_DATA}" | jq -r '.package.version')"
     echo "${VERSION}"
   }
 
-  process-org() {
+  function process-org() {
     if [[ -z "${LOCAL}" ]]; then # list projects from the 'projects.json' file
       local DATA_PATH
       [[ -z "${ORG_PROJECTS_REPO:-}" ]] || DATA_PATH="${LIQ_PLAYGROUND}/${ORG_PROJECTS_REPO/@/}"
@@ -2463,7 +2469,7 @@ projects-list() {
         local PROJ_DATA="$(cat "${DATA_PATH}")"
         local PROJ_NAME
         while read -r PROJ_NAME; do
-          echo "${PROJ_DATA}" | jq ".[\"${PROJ_NAME}\"]" | process-pkg-data "${PROJ_NAME}"
+          echo "${PROJ_DATA}" | jq ".[\"${PROJ_NAME}\"]" | process-proj-data "${PROJ_NAME}"
         done < <(echo "${PROJ_DATA}" | jq -r 'keys | .[]')
       fi
     else # list local projects
@@ -2475,7 +2481,7 @@ projects-list() {
         echo "${LOCAL_PROJECTS}"
       else
         while read -r PROJ_NAME; do
-          (cd "${LIQ_PLAYGROUND}/${ORG_ID}/${PROJ_NAME}" && cat package.json | process-pkg-data "${PROJ_NAME}")
+          (cd "${LIQ_PLAYGROUND}/${ORG_ID}/${PROJ_NAME}" && cat package.json | process-proj-data "${PROJ_NAME}")
         done <<<${LOCAL_PROJECTS}
       fi
     fi
@@ -2486,7 +2492,7 @@ projects-list() {
   }
 
   # This is where all the data/output is generated, which gets fed to the filter and formatter
-  process-cmd() {
+  function process-cmd() {
     [[ -n "${NAMES_ONLY:-}" ]] || echo-header
     if [[ -n "${ALL_ORGS}" ]]; then # all is the default
       for ORG in $(orgs-list); do
@@ -2499,16 +2505,22 @@ projects-list() {
   }
 
   if [[ -n "${FILTER}" ]]; then
-    process-cmd | awk "\$1~/.*${FILTER}.*/" | column -s $'\t' -t
+    process-cmd > >(awk "\$1~/.*${FILTER}.*/" | column -s $'\t' -t)
   else
-    process-cmd | column -s $'\t' -t
+    process-cmd > >(column -s $'\t' -t)
   fi
 
   # finally, issue non-prod warnings if any
+  exec 10< <(echo "$NON_PROD_ORGS") # this craziness is because if we do 'process-cmd | column...' above, then
+  # 'process-cmd' would get run in a sub-shell and NON_PROD_ORGS updates get trapped. So, we have to rewrite without
+  # pipes. BUT that causes 'read -r NP_ORG; do... done<<<${NON_PROD_ORGS}' to fail with a 'cannot create temp file for
+  # here document: Interrupted system call'. I *think* the <<< creates the heredoc but the redirect to column still has
+  # a handle on STDIN... Really, I'm not clear, but this seems to work.
   local NP_ORG
-  while read -r NP_ORG; do
+  [[ -z "${NON_PROD_ORGS}" ]] || while read -u 10 -r NP_ORG; do
     echowarn "\nWARNING: Non-production data shown for '${NP_ORG}'."
-  done <<<${NON_PROD_ORGS}
+  done
+  exec 10<&-
 }
 
 # see: liq help projects publish
