@@ -1,10 +1,10 @@
 org-lib-refresh-projects() {
   local PROJECTS_NAMES PROJECT_NAME
 
-  local PAGE_COUNT=39 # starts at 1
+  local PAGE_COUNT=1 # starts at 1
   local STAGING_DIR="/tmp/liq.tmp.projects-refresh"
   local STAGED_JSON="${STAGING_DIR}/projects.json"
-  local PER_PAGE=3 # 50
+  local PER_PAGE=50
 
   rm -rf "${STAGING_DIR}"
   mkdir -p "${STAGING_DIR}"
@@ -22,7 +22,9 @@ org-lib-refresh-projects() {
     [[ "${REPOS_DATA}" != '[]' ]] || { echofmt "No more results."; break; }
 
     local RESULT_COUNT=0
-    for PROJECT_NAME in $(echo "${REPOS_DATA}" | jq -r '.[] | .name'); do
+    local PROJECT_NAMES
+    PROJECT_NAMES=$(echo "${REPOS_DATA}" | jq -r '.[] | .name')
+    for PROJECT_NAME in $PROJECT_NAMES; do
       # TODO: add '-n' support to echofmt and use it here.
       echo -n "Processing ${ORG}/${PROJECT_NAME}... "
       local STAGED_PACKAGE_JSON="${STAGING_DIR}/${PROJECT_NAME}.package.json"
@@ -30,27 +32,24 @@ org-lib-refresh-projects() {
       hub api -X GET /repos/${ORG}/${PROJECT_NAME}/contents/package.json \
           | jq -r '.content' \
           | base64 --decode > "${STAGED_PACKAGE_JSON}" \
-          | jq \
         && echofmt "staged!" \
-        || { echofmt "skipping; package.json missing or invalid."; rm "${STAGED_PACKAGE_JSON}"; }
+        || { echofmt "no package.json (or cannot be parsed)."; rm "${STAGED_PACKAGE_JSON}"; }
+        # ^^ the file is always generated, so we delete it if it's invalid.
     done
 
-
-    local PACKAGE_FILE
-    for PACKAGE_FILE in $(ls "${STAGING_DIR}"/*.package.json); do
-      PROJECT_NAME=$(basename "${PACKAGE_FILE}")
-      PROJECT_NAME="${PROJECT_NAME/.package.json/}"
+    for PROJECT_NAME in $PROJECT_NAMES; do
+      local PACKAGE_FILE="${STAGING_DIR}/${PROJECT_NAME}.package.json"
       echo "\"${PROJECT_NAME}\": {" >> "${STAGED_JSON}"
-      echo -n '"package": ' >> "${STAGED_JSON}"
-      cat "${PACKAGE_FILE}" >> "${STAGED_JSON}"
-      echo "," >> "${STAGED_JSON}"
+      if [[ -f "${PACKAGE_FILE}" ]]; then
+        echo -n '"package": ' >> "${STAGED_JSON}"
+        cat "${PACKAGE_FILE}" >> "${STAGED_JSON}"
+        echo "," >> "${STAGED_JSON}"
+      fi
       echo '"repository": {' >> "${STAGED_JSON}"
       echo "\"private\": $(echo "${REPOS_DATA}" \
         | jq -r ".[] | if select(.name==\"${PROJECT_NAME}\").private then true else false end")" \
         >> "${STAGED_JSON}"
       echo -e "}\n}," >> ${STAGED_JSON} # -n so easier to remove in a bit; eventually all reformatted anyway
-
-      rm "${PACKAGE_FILE}" # clean up to avoid contaminating the next loop
     done
 
     PAGE_COUNT=$(( ${PAGE_COUNT} + 1 ))

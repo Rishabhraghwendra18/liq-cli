@@ -316,7 +316,7 @@ projects-list() {
   post-options-liq-projects
   orgs-lib-process-org-opt
 
-  [[ -n "${LOCAL}" ]] && [[ -n "${NAMES_ONLY}" ]] || NAMES_ONLY=true # local implies '--names-only'
+  [[ -z "${LOCAL}" ]] || [[ -n "${NAMES_ONLY}" ]] || NAMES_ONLY=true # local implies '--names-only'
   [[ -n "${ORG}" ]] || ALL_ORGS=true # ALL_ORGS is default
 
   # INTERNAL HELPERS
@@ -335,11 +335,11 @@ projects-list() {
     echo -en "$(echo "${PROJ_DATA}" | jq -r 'if .repository.private then "private" else "public" end')\t"
 
     # Published scope status cos 3
-    echo -en "$(echo "${PROJ_DATA}" | jq -r 'if .package.liq.public then "public" else "private" end')\t"
+    echo -en "$(echo "${PROJ_DATA}" | jq -r 'if .package then if .package.liq.public then "public" else "private" end else "-" end')\t"
 
     # Version cols 4
     local VERSION # we do these extra steps so echo, which is known to provide the newline, does the output
-    VERSION="$(echo "${PROJ_DATA}" | jq -r '.package.version')"
+    VERSION="$(echo "${PROJ_DATA}" | jq -r '.package.version // "-"')"
     echo "${VERSION}"
   }
 
