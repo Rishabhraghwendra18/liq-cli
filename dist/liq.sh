@@ -1946,6 +1946,12 @@ Lists the currently affiliated orgs.
 EOF
 }
 
+help-orgs-refresh() {
+  cat <<EOF | _help-func-summray refresh "[--projects]"
+Refreshes the compiled/generated company data.
+EOF
+}
+
 help-orgs-show() {
   cat <<EOF | _help-func-summary show "[--sensitive] [<org nick>]"
 Displays info on the currently active or named org.
@@ -2869,6 +2875,14 @@ EOF
 help-projects-import() {
   cat <<EOF | _help-func-summary import "[--no-install] <package or URL>"
 Imports the indicated package into your playground. The newly imported package will be installed unless '--no-install' is given.
+EOF
+}
+
+help-projects-list() {
+  cat <<EOF | _help-func-summary list "[--all-orgs|-a] [--org <org id>] [--names-only|-n] [--local|-l] [--filter|-f <match string>]"
+Lists org projects. '--all-orgs' is the default and will list all projects for all locally imported orgs. Specifying an '--org' will list projects for the indicated org only. The result is a table with each project name, scope of the project repository (public/private), scope of the published packages, and version. The '--name-only' limits the output to listing the names only, without a header. Results may be filtered against the project names. The filter will match partial strings.
+
+The '--local' option implies '--name-only' and will list the locally imported projects. With this method, the playground directory is examined and the effect is to list the imported projects. Note that any directories manually created under an org will be understood as a project here and so may lead to misleading results.
 EOF
 }
 
