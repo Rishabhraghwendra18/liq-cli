@@ -2059,17 +2059,16 @@ org-lib-refresh-projects() {
   echo '{' > "${STAGED_JSON}"
   while true; do # we break to end
     echofmt "\n---------\nPage ${PAGE_COUNT}...\n---------"
-    PROJECT_NAMES="$(hub api -X GET orgs/${ORG}/repos \
+    REPOS_DATA="$(hub api -X GET orgs/${ORG}/repos \
       -f sort=full_name -f direction=asc -f per_page=${PER_PAGE} -f page=${PAGE_COUNT} \
-      | jq -r '.[] | .name')"
+      | jq -r '[ .[] | with_entries(select([.key] | inside(["name", "full_name", "private"]))) ]')"
+    # Repos data now has trimmed down entries with only what we care about
+    echo "${REPOS_DATA}"
 
-    [[ -n "${PROJECT_NAMES}" ]] || { echofmt "No more results."; break; }
-    # Note, to get a list with inside fields trimmed, you can do:
-    # jq '.[] | with_entries(select([.key] | inside(["name", "full_name", "private"])))'
-    # also, maybe check... does the GitHub API have a field selection or limiting option?
+    [[ "${REPOS_DATA}" != '[]' ]] || { echofmt "No more results."; break; }
 
     local RESULT_COUNT=0
-    for PROJECT_NAME in ${PROJECT_NAMES}; do
+    for PROJECT_NAME in $(echo "${REPOS_DATA}" | jq -r '.[] | .name'); do
       # TODO: add '-n' support to echofmt and use it here.
       echo -n "Processing ${ORG}/${PROJECT_NAME}... "
       local STAGED_PACKAGE_JSON="${STAGING_DIR}/${PROJECT_NAME}.package.json"
@@ -2424,7 +2423,7 @@ projects-list() {
 
   # INTERNAL HELPERS
   local NON_PROD_ORGS='' # gather up non-prod so we can issue warnings
-  echo-header() { echo -e "Name\tPub/Priv\tVersion"; }
+  echo-header() { echo -e "Name\tPublished scope\tVersion"; }
   # Extracts data to display from package.json data embedded in the projects.json or from the package.json file itself
   # in the local checkouts.
   process-pkg-data() {
@@ -2434,7 +2433,7 @@ projects-list() {
     # Name; col 1
     echo -en "${PROJ_NAME}\t"
 
-    # Pub/priv status cos 2
+    # Published scope status cos 2
     local PUBLIC_STATUS
     PUBLIC_STATUS="$(echo "${PROJ_DATA}" | jq '.liq.public')"
     if [[ -n "${PUBLIC_STATUS}" ]] && [[ "${PUBLIC_STATUS}" == 'public' ]]; then
