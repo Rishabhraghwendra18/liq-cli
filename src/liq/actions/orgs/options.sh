@@ -15,7 +15,7 @@ orgs-lib-process-org-opt() {
   # 'CURR_ORG' is the base org package name; e.g., liquid-labs/liquid-labs TODO: rename to 'CURR_ORG'?
   # 'CURR_ORG_PATH' is the absolute path to the CURR_ORG project
 
-  # TODO: Check if the project 'class' is correct; https://github.com/Liquid-Labs/liq-cli/issues/238
+  # TODO: Check if the project 'class' is correct; https://github.com/liquid-labs/liq-cli/issues/238
   if [[ -z "${ORG:-}" ]] || [[ "${ORG}" == '.' ]]; then
     findBase
     ORG_ID="$(cd "${BASE_DIR}/.."; basename "$PWD")"
