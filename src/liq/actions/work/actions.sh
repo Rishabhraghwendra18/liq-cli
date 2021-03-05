@@ -16,6 +16,28 @@ work-backup() {
   git push workspace HEAD
 }
 
+work-diff() {
+  eval "$(setSimpleOptions MASTER -- "$@")"
+
+  source "${LIQ_WORK_DB}/curr_work"
+
+  local PROJECTS="$INVOLVED_PROJECTS"
+
+  for PROJECT in $PROJECTS; do
+    PROJECT="${PROJECT/@/}"
+    PROJECT=$(workConvertDot "$PROJECT")
+    (
+      cd "${LIQ_PLAYGROUND}/${PROJECT}"
+
+      if [[ -n "${MASTER}" ]]; then
+        git diff $(git merge-base master HEAD)..HEAD
+      else
+        git diff
+      fi
+    )
+  done
+}
+
 work-diff-master() {
   findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
 
@@ -40,14 +62,16 @@ work-close() {
     PROJECT=$(workConvertDot "$PROJECT")
     PROJECT="${PROJECT/@/}"
     local CURR_BRANCH
-    cd "${LIQ_PLAYGROUND}/${PROJECT}"
-    CURR_BRANCH=$(workCurrentWorkBranch)
+    (
+      cd "${LIQ_PLAYGROUND}/${PROJECT}"
+      CURR_BRANCH=$(workCurrentWorkBranch)
 
-    if [[ "$CURR_BRANCH" != "$WORK_BRANCH" ]]; then
-      echoerrandexit "Local project '$PROJECT' repo branch does not match expected work branch."
-    fi
+      if [[ "$CURR_BRANCH" != "$WORK_BRANCH" ]]; then
+        echoerrandexit "Local project '$PROJECT' repo branch does not match expected work branch."
+      fi
 
-    requireCleanRepo "$PROJECT"
+      requireCleanRepo "$PROJECT"
+    )
   done
 
   # now actually do the closures
@@ -236,7 +260,7 @@ work-list() {
 
 # see liq help work merge
 work-merge() {
-  # TODO: https://github.com/Liquid-Labs/liq-cli/issues/57 support org-level config to default allow unforced merge
+  # TODO: https://github.com/liquid-labs/liq-cli/issues/57 support org-level config to default allow unforced merge
   eval "$(setSimpleOptions FORCE CLOSE PUSH_UPSTREAM -- "$@")"
 
   if [[ "${PUSH_UPSTREAM}" == true ]] && [[ "$FORCE" != true ]]; then
@@ -627,7 +651,7 @@ work-start() {
   fi
 
   # TODO: check that current work branch is clean before switching away from it
-  # https://github.com/Liquid-Labs/liq-cli/issues/14
+  # https://github.com/liquid-labs/liq-cli/issues/14
 
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     if [[ -n "$PUSH" ]]; then
@@ -752,7 +776,7 @@ work-submit() {
     if [[ "$NOT_CLEAN" != true ]]; then
       requireCleanRepo "${IP}"
     fi
-    # TODO: This is incorrect, we need to check IP; https://github.com/Liquid-Labs/liq-cli/issues/121
+    # TODO: This is incorrect, we need to check IP; https://github.com/liquid-labs/liq-cli/issues/121
     # TODO: might also be redundant with 'requireCleanRepo'...
     if ! work-status --pr-ready; then
       echoerrandexit "Local work branch not in sync with remote work branch. Try:\nliq work save --backup-only"
