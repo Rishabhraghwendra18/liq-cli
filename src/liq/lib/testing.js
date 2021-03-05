@@ -7,7 +7,7 @@ const execOpts = {
 
 export const LIQ = `${shell.pwd()}/dist/liq.sh`
 
-export const selfOriginUrl = 'https://github.com/Liquid-Labs/liq-cli.git'
+export const selfOriginUrl = 'https://github.com/liquid-labs/liq-cli.git'
 
 export const expectedCommandGroupUsage = (group) => new RegExp(`liq .*${group}.* <action>:`)
 
@@ -24,7 +24,7 @@ export const localRepoUrl = `file://${localRepo}`
 export const setupLocalRepos = () => {
   let result = shell.mkdir('-p', localReposDir)
   expect(result.code).toEqual(0)
-  result = shell.exec(`cd ${localReposDir} && git clone https://github.com/Liquid-Labs/lc-entities-model`, execOpts)
+  result = shell.exec(`cd ${localReposDir} && git clone https://github.com/liquid-labs/lc-entities-model`, execOpts)
   expect(result.code).toEqual(0)
 }
 

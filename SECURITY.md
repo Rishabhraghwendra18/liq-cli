@@ -11,10 +11,10 @@ The project is currently under development and there is no fully supported versi
 
 ## Reporting a vulnerability
 
-To report a vulnerability, [open an issue](https://github.com/Liquid-Labs/liq-cli/issues/new) and add the 'security' label. We prioritize these issues, but do not currently have a specific response target.
+To report a vulnerability, [open an issue](https://github.com/liquid-labs/liq-cli/issues/new) and add the 'security' label. We prioritize these issues, but do not currently have a specific response target.
 
 ## Outstanding issues
 
-You can see all outstanding security issues [here](https://github.com/Liquid-Labs/liq-cli/labels/security). In addition, we endeavor to maintain the following overview:
+You can see all outstanding security issues [here](https://github.com/liquid-labs/liq-cli/labels/security). In addition, we endeavor to maintain the following overview:
 
-* [TODO: #250](https://github.com/Liquid-Labs/liq-cli/issues/250): non-critical security enhanment.
+* [TODO: #250](https://github.com/liquid-labs/liq-cli/issues/250): non-critical security enhanment.

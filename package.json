@@ -22,12 +22,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/Liquid-Labs/liq-cli.git"
+    "url": "git+ssh://git@github.com/liquid-labs/liq-cli.git"
   },
   "author": "Zane Rockenbaugh <zane@liquid-labs.com>",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/Liquid-Labs/liq-cli/issues"
+    "url": "https://github.com/liquid-labs/liq-cli/issues"
   },
   "homepage": "https://liquid-labs.github.io/liq-cli/",
   "devDependencies": {
@@ -40,7 +40,7 @@
     }
   },
   "liq": {
-    "orgBase": "git@github.com:Liquid-Labs/Liquid-Labs.git",
+    "orgBase": "git@github.com:liquid-labs/liquid-labs.git",
     "changeControl": {
       "type": "code"
     }
