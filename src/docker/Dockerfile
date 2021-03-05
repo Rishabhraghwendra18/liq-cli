@@ -1,7 +1,10 @@
 ###
 # build image
 ###
-FROM ubuntu AS build
+FROM ubuntu:latest AS build
+
+ENV TZ=Etc/UTC
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # install necessary packages for build
 RUN apt-get update && apt-get install -y \
@@ -10,7 +13,7 @@ RUN apt-get update && apt-get install -y \
   wget \
   && rm -rf /var/lib/apt/lists/*
 
-# build and install bash 5
+# build and install bash 5; needed for 'initial word completion' support to make the shell magic work.
 WORKDIR /tmp
 RUN wget https://ftp.gnu.org/gnu/bash/bash-5.1.tar.gz \
   && tar xf bash-5.1.tar.gz
@@ -24,17 +27,25 @@ RUN ./configure \
 ###
 FROM ubuntu:latest AS distro
 
+ENV TZ=Etc/UTC
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 # install necessary system packages
 RUN apt-get update && apt-get install -y \
   curl \
-  jq \
   git \
+  hub \
+  jq \
   make \
-  npm
-# To get node 12 (instead of 8)
-RUN curl -sL https://deb.nodesource.com/setup_12.x | bash -
+  npm \
+  uuid-runtime
+# To get node 14 (instead of 10)
+# TODO: for production builds, force user to review script and/or compare file hash against list of reviewed hashes
+RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
 RUN apt-get install -y nodejs
 RUN apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+# The yalc install can take awhile, so we stage it here
+RUN npm install -g yalc
 
 # install bash 5.1
 COPY --from=build /tmp/bash-5.1 /root/bash-5.1
@@ -48,7 +59,7 @@ COPY ./liquid-labs-liq-cli-1.0.0-prototype.15.tgz /root/liquid-labs-liq-cli-1.0.
 RUN npm install -g --unsafe-perm ./liquid-labs-liq-cli-1.0.0-prototype.15.tgz
 # RUN npm install @liquid-labs/liq-cli
 
-# we could remove 'make' here...
+# we could remove 'make' here... yes?
 
 # setup liq user
 RUN useradd -ms /bin/bash liq
@@ -64,7 +75,6 @@ FROM distro AS test
 USER root
 RUN apt-get update && apt-get install -y \
   parallel \
-  uuid-runtime \
   && apt-get autoremove -y \
   && rm -rf /var/lib/apt/lists/*
 
@@ -75,7 +85,7 @@ RUN apt-get update && apt-get install -y \
 # nmprc reference: https://docs.npmjs.com/cli/v7/configuring-npm/npmrc
 # SENSITIVE DATA ---------------------------------
 # Note npmrc.tmp is staged by the Makefile prior to the test image build.
-# TODO: https://github.com/Liquid-Labs/liq-cli/issues/250
+# TODO: https://github.com/liquid-labs/liq-cli/issues/250
 
 COPY npmrc.tmp /root/.npmrc
 COPY --chown=liq:liq ./npmrc.tmp /home/liq/.npmrc

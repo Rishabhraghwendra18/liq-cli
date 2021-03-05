@@ -57,6 +57,15 @@ function apt-install() {
   fi
 }
 
+function npm-install() {
+  local PKG="${1}"
+  local INSTALL_TEST="${2}"
+
+  if ! ${INSTALL_TEST}; then
+    npm install -g ${PKG}
+  fi
+}
+
 if [[ $(uname) == 'Darwin' ]]; then
   brewInstall jq 'which -s jq'
   # Without the 'eval', the tick quotes are treated as part of the filename.
@@ -66,15 +75,20 @@ if [[ $(uname) == 'Darwin' ]]; then
     "addLineIfNotPresentInFile ~/.bash_profile 'alias gnu-getopt=\"\$(brew --prefix gnu-getopt)/bin/getopt\"'"
 else
   apt-install jq 'which jq' # '-s' is not supported on linux and a /dev/null redirect doesn't interpret correctly (?)
-  apt-install nodejs 'which nodejs'
+  apt-install node 'which node'
 fi
 
+npm-install yalc 'which yalc'
+
+declare COMPLETION_SEUTP
 for i in /etc/bash_completion.d /usr/local/etc/bash_completion.d; do
   if [[ -e "${i}" ]]; then
     COMPLETION_PATH="${i}"
+    COMPLETION_SETUP=true
     break
   fi
 done
+[[ -n "${COMPLETION_SETUP}" ]] || echowarn "Could not setup completion; did not find expected completion paths."
 cp ./dist/completion.sh "${COMPLETION_PATH}/liq"
 
 COMPLETION_SETUP=false
