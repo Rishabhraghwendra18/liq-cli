@@ -18,22 +18,28 @@ meta-exts-install() {
 
   local PKGS="$@"
   PKGS="${PKGS//@/}"
-  cd "${LIQ_EXTS_DB}"
+  ( # cd in subshell to avoid changing users working dir
+    cd "${LIQ_EXTS_DB}"
 
-  [[ -f 'exts.sh' ]] || touch './exts.sh'
+    [[ -f 'exts.sh' ]] || touch './exts.sh'
 
-  if [[ -n "${LOCAL}" ]]; then
-    npm i "${LIQ_PLAYGROUND}/${PKGS}"
-  else
-    npm i "@${PKGS}"
-  fi
-  local PKG
-  for PKG in ${PKGS//@/}; do
-    local PKG_DIR
-    PKG_DIR="$(npm explore @${PKG} -- pwd)"
-    echo "source '${PKG_DIR}/dist/ext.sh'" >> './exts.sh'
-    echo "source '${PKG_DIR}/dist/comp.sh'" >> './comps.sh'
-  done
+    if [[ -n "${LOCAL}" ]]; then
+      npm i "${LIQ_PLAYGROUND}/${PKGS}"
+    else
+      npm i "@${PKGS}"
+    fi
+    local PKG
+    for PKG in ${PKGS//@/}; do
+      local PKG_DIR
+      PKG_DIR="$(npm explore @${PKG} -- pwd)"
+      [[ "${PKG_DIR}" == *'/.liq/playground/*' ]] \
+        || echoerrandexit "Resolved package dir for '${PKG}' ('${PKG_DIR}') does not appear to be under the '.liq' as expected."
+      # swap out hardcoded home so this will work with the docker image bound dirs
+      PKG_DIR="\${HOME}${PKG_DIR/${HOME}/}"
+      echo "source '${PKG_DIR}/dist/ext.sh'" >> './exts.sh'
+      echo "source '${PKG_DIR}/dist/comp.sh'" >> './comps.sh'
+    done
+  ) # end cd subshell
 }
 
 meta-exts-list() {
