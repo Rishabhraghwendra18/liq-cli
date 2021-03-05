@@ -1607,22 +1607,26 @@ meta-exts-install() {
 
   local PKGS="$@"
   PKGS="${PKGS//@/}"
-  cd "${LIQ_EXTS_DB}"
+  ( # cd in subshell to avoid changing users working dir
+    cd "${LIQ_EXTS_DB}"
 
-  [[ -f 'exts.sh' ]] || touch './exts.sh'
+    [[ -f 'exts.sh' ]] || touch './exts.sh'
 
-  if [[ -n "${LOCAL}" ]]; then
-    npm i "${LIQ_PLAYGROUND}/${PKGS}"
-  else
-    npm i "@${PKGS}"
-  fi
-  local PKG
-  for PKG in ${PKGS//@/}; do
-    local PKG_DIR
-    PKG_DIR="$(npm explore @${PKG} -- pwd)"
-    echo "source '${PKG_DIR}/dist/ext.sh'" >> './exts.sh'
-    echo "source '${PKG_DIR}/dist/comp.sh'" >> './comps.sh'
-  done
+    if [[ -n "${LOCAL}" ]]; then
+      npm i "${LIQ_PLAYGROUND}/${PKGS}"
+    else
+      npm i "@${PKGS}"
+    fi
+    local PKG
+    for PKG in ${PKGS//@/}; do
+      local PKG_DIR
+      PKG_DIR="$(npm explore @${PKG} -- pwd)"
+      [[ "${PKG_DIR}" == *'/.liq/playground/*' ]] \
+        || echoerrandexit "Resolved package dir for '${PKG}' ('${PKG_DIR}') does not appear to be under the '.liq' as expected."
+      echo "source '${PKG_DIR}/dist/ext.sh'" >> './exts.sh'
+      echo "source '${PKG_DIR}/dist/comp.sh'" >> './comps.sh'
+    done
+  ) # end cd subshell
 }
 
 meta-exts-list() {
@@ -2038,7 +2042,7 @@ orgs-lib-process-org-opt() {
   # 'CURR_ORG' is the base org package name; e.g., liquid-labs/liquid-labs TODO: rename to 'CURR_ORG'?
   # 'CURR_ORG_PATH' is the absolute path to the CURR_ORG project
 
-  # TODO: Check if the project 'class' is correct; https://github.com/Liquid-Labs/liq-cli/issues/238
+  # TODO: Check if the project 'class' is correct; https://github.com/liquid-labs/liq-cli/issues/238
   if [[ -z "${ORG:-}" ]] || [[ "${ORG}" == '.' ]]; then
     findBase
     ORG_ID="$(cd "${BASE_DIR}/.."; basename "$PWD")"
@@ -3131,7 +3135,7 @@ projectsLiqCheck() {
 projectsVersionCheck() {
   projectsRequireNpmCheck
   # we are temporarily disabling the config manegement options
-  # see https://github.com/Liquid-Labs/liq-cli/issues/94
+  # see https://github.com/liquid-labs/liq-cli/issues/94
   # IGNORE UNIGNORE:I SHOW_CONFIG:c UPDATE OPTIONS=
   eval "$(setSimpleOptions $_QA_OPTIONS_SPEC IGNORE UNIGNORE:I SHOW_CONFIG:c UPDATE OPTIONS= -- "$@")" \
     || ( help-projects; echoerrandexit "Bad options." )
@@ -3406,6 +3410,28 @@ work-backup() {
   git push workspace HEAD
 }
 
+work-diff() {
+  eval "$(setSimpleOptions MASTER -- "$@")"
+
+  source "${LIQ_WORK_DB}/curr_work"
+
+  local PROJECTS="$INVOLVED_PROJECTS"
+
+  for PROJECT in $PROJECTS; do
+    PROJECT="${PROJECT/@/}"
+    PROJECT=$(workConvertDot "$PROJECT")
+    (
+      cd "${LIQ_PLAYGROUND}/${PROJECT}"
+
+      if [[ -n "${MASTER}" ]]; then
+        git diff $(git merge-base master HEAD)..HEAD
+      else
+        git diff
+      fi
+    )
+  done
+}
+
 work-diff-master() {
   findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
 
@@ -3430,14 +3456,16 @@ work-close() {
     PROJECT=$(workConvertDot "$PROJECT")
     PROJECT="${PROJECT/@/}"
     local CURR_BRANCH
-    cd "${LIQ_PLAYGROUND}/${PROJECT}"
-    CURR_BRANCH=$(workCurrentWorkBranch)
+    (
+      cd "${LIQ_PLAYGROUND}/${PROJECT}"
+      CURR_BRANCH=$(workCurrentWorkBranch)
 
-    if [[ "$CURR_BRANCH" != "$WORK_BRANCH" ]]; then
-      echoerrandexit "Local project '$PROJECT' repo branch does not match expected work branch."
-    fi
+      if [[ "$CURR_BRANCH" != "$WORK_BRANCH" ]]; then
+        echoerrandexit "Local project '$PROJECT' repo branch does not match expected work branch."
+      fi
 
-    requireCleanRepo "$PROJECT"
+      requireCleanRepo "$PROJECT"
+    )
   done
 
   # now actually do the closures
@@ -3626,7 +3654,7 @@ work-list() {
 
 # see liq help work merge
 work-merge() {
-  # TODO: https://github.com/Liquid-Labs/liq-cli/issues/57 support org-level config to default allow unforced merge
+  # TODO: https://github.com/liquid-labs/liq-cli/issues/57 support org-level config to default allow unforced merge
   eval "$(setSimpleOptions FORCE CLOSE PUSH_UPSTREAM -- "$@")"
 
   if [[ "${PUSH_UPSTREAM}" == true ]] && [[ "$FORCE" != true ]]; then
@@ -4017,7 +4045,7 @@ work-start() {
   fi
 
   # TODO: check that current work branch is clean before switching away from it
-  # https://github.com/Liquid-Labs/liq-cli/issues/14
+  # https://github.com/liquid-labs/liq-cli/issues/14
 
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
     if [[ -n "$PUSH" ]]; then
@@ -4142,7 +4170,7 @@ work-submit() {
     if [[ "$NOT_CLEAN" != true ]]; then
       requireCleanRepo "${IP}"
     fi
-    # TODO: This is incorrect, we need to check IP; https://github.com/Liquid-Labs/liq-cli/issues/121
+    # TODO: This is incorrect, we need to check IP; https://github.com/liquid-labs/liq-cli/issues/121
     # TODO: might also be redundant with 'requireCleanRepo'...
     if ! work-status --pr-ready; then
       echoerrandexit "Local work branch not in sync with remote work branch. Try:\nliq work save --backup-only"
@@ -4688,7 +4716,7 @@ work-links-add() {
   done
 
   if [[ -n "${SET_LINKS}" ]]; then
-    eval "${SET_LINKS}=\"${LINKS_MADE}\""
+    eval "${SET_LINKS}=\"${LINKS_MADE:-}\""
   fi
 }
 
