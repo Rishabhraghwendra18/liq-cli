@@ -48,7 +48,7 @@ work-links-add() {
   done
 
   if [[ -n "${SET_LINKS}" ]]; then
-    eval "${SET_LINKS}=\"${LINKS_MADE}\""
+    eval "${SET_LINKS}=\"${LINKS_MADE:-}\""
   fi
 }
 
