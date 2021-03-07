@@ -156,9 +156,12 @@ orgs-import() {
     echo
   fi
   [[ -L "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]] \
-    || ln -s "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}/${PKG_BASENAME}" "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
+    || (
+      cd "${LIQ_ORG_DB}"
+      ln -s "../playground/${PKG_ORG_NAME}/${PKG_BASENAME}" "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
+    )
 
-  if [[ -n "$IMPORT_REFS" ]]; then
+  if [[ -n "${IMPORT_REFS}" ]]; then
     local REF_REPO
     orgs-lib-source-settings "$(dirname "$PKG_NAME")"
     for REF_REPO in ORG_POLICY_REPO ORG_SENSITIVE_REPO ORG_STAFF_REPO; do
