@@ -38,6 +38,9 @@ RUN apt-get update && apt-get install -y \
   jq \
   make \
   npm \
+\
+# bsdmainutils is where we get 'column' \
+  bsdmainutils \
   uuid-runtime
 # To get node 14 (instead of 10)
 # TODO: for production builds, force user to review script and/or compare file hash against list of reviewed hashes
@@ -64,6 +67,7 @@ RUN npm install -g --unsafe-perm ./liquid-labs-liq-cli-1.0.0-prototype.15.tgz
 # setup liq user
 RUN useradd -ms /bin/bash liq
 USER liq
+WORKDIR /home/liq
 
 ENTRYPOINT ["/usr/bin/liq-shell"]
 
