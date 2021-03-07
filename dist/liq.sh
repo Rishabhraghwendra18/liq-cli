@@ -1623,6 +1623,8 @@ meta-exts-install() {
       PKG_DIR="$(npm explore @${PKG} -- pwd)"
       [[ "${PKG_DIR}" == *'/.liq/playground/*' ]] \
         || echoerrandexit "Resolved package dir for '${PKG}' ('${PKG_DIR}') does not appear to be under the '.liq' as expected."
+      # swap out hardcoded home so this will work with the docker image bound dirs
+      PKG_DIR="\${HOME}${PKG_DIR/${HOME}/}"
       echo "source '${PKG_DIR}/dist/ext.sh'" >> './exts.sh'
       echo "source '${PKG_DIR}/dist/comp.sh'" >> './comps.sh'
     done
