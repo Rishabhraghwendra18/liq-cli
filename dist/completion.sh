@@ -40,7 +40,7 @@ _liq() {
     local MATCH="${1}"
 
     if [[ "${CUR}" != */* ]]; then
-      COMPREPLY=( $(compgen -o nospace -W "$(find ~/playground -type d -maxdepth 1 -mindepth 1 -not -name ".*" | awk -F/ '{ print $NF"/" }')" -- ${CUR}) )
+      COMPREPLY=( $(compgen -o nospace -W "$(find "${LIQ_PLAYGROUND}" -maxdepth 1 -mindepth 1 -type d -not -name ".*" | awk -F/ '{ print $NF"/" }')" -- ${CUR}) )
     else
       # TODO: check that 'MATCH' matches /^[a-z0-9-_ *?]$/i
       # TODO: source and use LIQ_PLAYGROUND
@@ -143,7 +143,7 @@ _liq() {
     fi
   }
 
-  local PROJECTS_ACTIONS="build close create edit list publish qa sync test"
+  local PROJECTS_ACTIONS="build close create edit focus list publish qa sync test"
   local PROJECTS_GROUPS=""
   eval "$(comp-func-builder 'projects' 'PROJECTS')"
   comp-liq-projects-create() {
@@ -153,8 +153,14 @@ _liq() {
       COMPREPLY=( $(compgen -W "raw" -- ${CUR}) )
     fi
   }
-  comp-liq-projects-close() {
 
+  comp-liq-projects-close() {
+    if [[ "${COMP_LINE}" != *'/'? ]]; then
+      proj-paths-reply '*'
+    fi
+  }
+
+  comp-liq-projects-focus() {
     if [[ "${COMP_LINE}" != *'/'? ]]; then
       proj-paths-reply '*'
     fi

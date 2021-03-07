@@ -1289,7 +1289,16 @@ defineParameters() {
     fi
   done
 }
+###
 # Global constants.
+###
+###
+# Shared globals
+#
+# These globals are available in both liq and completion.
+###
+
+# Key used in npm 'package.json' data to key into liq specific data.
 LIQ_NPM_KEY="liq"
 LIQ_DB_BASENAME=".${LIQ_NPM_KEY}"
 LIQ_DB="${HOME}/${LIQ_DB_BASENAME}"
@@ -1844,9 +1853,12 @@ orgs-import() {
     echo
   fi
   [[ -L "${LIQ_ORG_DB}/${PKG_ORG_NAME}" ]] \
-    || ln -s "${LIQ_PLAYGROUND}/${PKG_ORG_NAME}/${PKG_BASENAME}" "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
+    || (
+      cd "${LIQ_ORG_DB}"
+      ln -s "../playground/${PKG_ORG_NAME}/${PKG_BASENAME}" "${LIQ_ORG_DB}/${PKG_ORG_NAME}"
+    )
 
-  if [[ -n "$IMPORT_REFS" ]]; then
+  if [[ -n "${IMPORT_REFS}" ]]; then
     local REF_REPO
     orgs-lib-source-settings "$(dirname "$PKG_NAME")"
     for REF_REPO in ORG_POLICY_REPO ORG_SENSITIVE_REPO ORG_STAFF_REPO; do
@@ -2348,6 +2360,20 @@ projects-edit() {
   cd "${BASE_DIR}" && ${EDITOR_CMD}
 }
 
+projects-focus() {
+  local PROJECT_DIR="${1:-}"
+
+  if [[ -z "${PROJECT_DIR:-}" ]]; then
+    [[ "${PWD}" == "${LIQ_PLAYGROUND}/*" ]] \
+      || echoerrandexit "Current working directory does not appear to be a sub-directory of the playground. To reset, try\nliq projects focus <project>"
+    echo "${PWD/${LIQ_PLAYGROUND}\//}"
+  else
+    local DEST_DIR="${LIQ_PLAYGROUND}/${PROJECT_DIR}"
+    [[ -d "${DEST_DIR}" ]] || echoerrandexit "Did not find expected targeted directory '${DEST_DIR}'."
+    cd "${DEST_DIR}"
+  fi
+}
+
 # see: liq help projects import; The '--set-name' and '--set-url' options are for internal use and each take a var name
 # which will be 'eval'-ed to contain the project name and URL.
 projects-import() {
@@ -2437,7 +2463,8 @@ projects-list() {
   OPTIONS="$(pre-options-liq-projects) ORG:= LOCAL ALL_ORGS NAMES_ONLY FILTER="
   eval "$(setSimpleOptions ${OPTIONS} -- "$@")"
   post-options-liq-projects
-  orgs-lib-process-org-opt
+  # DEBUG: testing this deletion...
+  # orgs-lib-process-org-opt
 
   [[ -z "${LOCAL}" ]] || [[ -n "${NAMES_ONLY}" ]] || NAMES_ONLY=true # local implies '--names-only'
   [[ -n "${ORG}" ]] || ALL_ORGS=true # ALL_ORGS is default
@@ -2517,13 +2544,13 @@ projects-list() {
   fi
 
   # finally, issue non-prod warnings if any
-  exec 10< <(echo "$NON_PROD_ORGS") # this craziness is because if we do 'process-cmd | column...' above, then
+  exec 10< <(echo "${NON_PROD_ORGS:-}") # this craziness is because if we do 'process-cmd | column...' above, then
   # 'process-cmd' would get run in a sub-shell and NON_PROD_ORGS updates get trapped. So, we have to rewrite without
   # pipes. BUT that causes 'read -r NP_ORG; do... done<<<${NON_PROD_ORGS}' to fail with a 'cannot create temp file for
   # here document: Interrupted system call'. I *think* the <<< creates the heredoc but the redirect to column still has
   # a handle on STDIN... Really, I'm not clear, but this seems to work.
   local NP_ORG
-  [[ -z "${NON_PROD_ORGS}" ]] || while read -u 10 -r NP_ORG; do
+  [[ -z "${NON_PROD_ORGS:-}" ]] || while read -u 10 -r NP_ORG; do
     echowarn "\nWARNING: Non-production data shown for '${NP_ORG}'."
   done
   exec 10<&-
