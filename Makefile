@@ -6,7 +6,7 @@ BASH_ROLLUP:=$(NPM_BIN)/bash-rollup
 PKG_FILES:=package.json package-lock.json
 LIQ_SRC:=$(shell find src/liq -name "*.sh" -not -name "cli.sh")
 TEST_SRC:=$(shell find src/test -name "*.bats")
-DIST_FILES:=dist/completion.sh dist/install.sh dist/liq.sh dist/liq-shell.sh
+DIST_FILES:=dist/completion.sh dist/install.sh dist/liq.sh dist/liq-shell.sh dist/liq-source.sh
 
 all: $(DIST_FILES)
 
@@ -30,6 +30,10 @@ dist/liq-shell.sh: src/liq-shell/liq-shell.sh src/liq-shell/bash-preexec.sh $(PK
 	$(BASH_ROLLUP) $< $@
 
 dist/liq.sh: src/liq/cli.sh $(LIQ_SRC) $(PKG_FILES)
+	mkdir -p dist
+	$(BASH_ROLLUP) $< $@
+
+dist/liq-source.sh: src/liq/source.sh $(LIQ_SRC) $(PKG_FILES)
 	mkdir -p dist
 	$(BASH_ROLLUP) $< $@
 
