@@ -17,7 +17,7 @@ work-backup() {
 }
 
 work-diff() {
-  eval "$(setSimpleOptions MASTER -- "$@")"
+  eval "$(setSimpleOptions MAIN -- "$@")"
 
   source "${LIQ_WORK_DB}/curr_work"
 
@@ -29,7 +29,7 @@ work-diff() {
     (
       cd "${LIQ_PLAYGROUND}/${PROJECT}"
 
-      if [[ -n "${MASTER}" ]]; then
+      if [[ -n "${MAIN}" ]]; then
         git diff $(git merge-base master HEAD)..HEAD
       else
         git diff
@@ -495,10 +495,14 @@ work-stage() {
 }
 
 work-status() {
-  check-git-access
-
   eval "$(setSimpleOptions PR_READY: NO_FETCH:F LIST_PROJECTS:p LIST_ISSUES:i -- "$@")" \
     || ( contextHelp; echoerrandexit "Bad options." )
+
+  check-git-access --no-exit || \
+    {
+      NO_FETCH=1
+      echowarn "No git access. Results may not be in sync with remote sources. Try:\nliq meta logins ensure"
+    }
 
   local WORK_NAME LOCAL_COMMITS REMOTE_COMMITS
   WORK_NAME="${1:-}"
