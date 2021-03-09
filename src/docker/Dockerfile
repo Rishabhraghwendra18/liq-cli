@@ -47,6 +47,8 @@ RUN apt-get update && apt-get install -y \
 RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
 RUN apt-get install -y nodejs
 RUN apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+# Use NPM to update npm.
+RUN npm install -g npm
 # The yalc install can take awhile, so we stage it here
 RUN npm install -g yalc
 
