@@ -10,6 +10,6 @@ node_modules/
 # the pack file which may be hanging around
 /*.tgz
 # SENSITIVE DATA -------------------------------
-# TODO: https://github.com/Liquid-Labs/liq-cli/issues/250
+# TODO: https://github.com/liquid-labs/liq-cli/issues/250
 /npmrc.tmp
 # END SENSITIVE DATA ---------------------------

@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # TODO: this should be a bash-toolkit provided resource.
 
 # bash strict settings
@@ -5034,9 +5032,3 @@ liq-init-exts() {
     exit 1
   fi
 }
-
-liq-init-exts "$@"
-
-liq-dispatch "$@"
-
-exit 0

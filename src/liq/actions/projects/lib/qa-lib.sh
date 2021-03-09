@@ -43,7 +43,7 @@ projectsLiqCheck() {
 projectsVersionCheck() {
   projectsRequireNpmCheck
   # we are temporarily disabling the config manegement options
-  # see https://github.com/Liquid-Labs/liq-cli/issues/94
+  # see https://github.com/liquid-labs/liq-cli/issues/94
   # IGNORE UNIGNORE:I SHOW_CONFIG:c UPDATE OPTIONS=
   eval "$(setSimpleOptions $_QA_OPTIONS_SPEC IGNORE UNIGNORE:I SHOW_CONFIG:c UPDATE OPTIONS= -- "$@")" \
     || ( help-projects; echoerrandexit "Bad options." )

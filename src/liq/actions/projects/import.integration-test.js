@@ -24,7 +24,7 @@ describe(`Command 'liq projects import'`, () => {
         // TODO: provide a case that's not part of an org
         // ['liq-cli', 'liq-cli'],
         ['@liquid-labs/lc-entities-model', 'liquid-labs/lc-entities-model'],
-        ['https://github.com/Liquid-Labs/lc-entities-model', 'liquid-labs/lc-entities-model'],
+        ['https://github.com/liquid-labs/lc-entities-model', 'liquid-labs/lc-entities-model'],
         [testing.localRepoUrl, 'liquid-labs/lc-entities-model']])
       ("with '--no-fork %s' successfully clone project.", (importSpec, projectName) => {
     const result = shell.exec(`HOME=${testConfig.home} ${testing.LIQ} projects import --no-install --no-fork ${importSpec}`, execOpts)

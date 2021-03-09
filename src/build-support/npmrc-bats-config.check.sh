@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-# Not sure why 'repo' access is needed, but as of the 2021-02-27 github required it
+# Not sure why 'repo' access is needed for the token, but as of the 2021-02-27 github required it in order to download
+# packages.
 [ -f "${HOME}/.npmrc" ] && grep -qE '^@bats-core:registry=https://npm.pkg.github.com/$' ~/.npmrc \
   || { # the \033... bit sets the color to red
     echo -e \

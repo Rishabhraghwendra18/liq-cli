@@ -15,9 +15,11 @@ $(_help-sub-group-list work WORK_GROUPS)
 EOF
 }
 
-help-work-diff-master() {
-  cat <<EOF | _help-func-summary diff-master "[--mine|-m]"
-Shows committed changes since branch from 'master' for all involved repositories.
+help-work-diff() {
+  cat <<EOF | _help-func-summary diff "[--main|-m]"
+By default, diffs each work repository HEAD with uncomitted files.
+
+With '--main', shows committed changes since branch from 'main' for all involved repositories.
 EOF
 }
 

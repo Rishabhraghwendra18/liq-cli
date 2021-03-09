@@ -1,14 +1,11 @@
 # After updating this file, run './install.sh' and open a new terminal for the
 # changes to take effect.
 
+source ../shared/common-globals.sh
+
 # TODO: we could generate this from the help docs... make the spec central!
 _liq() {
   # Most of this fuction is setup for various handler functions. The actual dispatch is at the very end.
-
-  # TODO: include 'global-vars.sh' (and maybe break into 'common' and 'runtime'?) once we build this file.
-  local LIQ_DB_BASENAME=".liq"
-  local LIQ_DB="${HOME}/${LIQ_DB_BASENAME}"
-
   local GLOBAL_ACTIONS="help ?"
   # Using 'GROUPS' was causing errors; set by some magic.
   local ACTION_GROUPS="meta orgs projects work"
@@ -40,11 +37,11 @@ _liq() {
     local MATCH="${1}"
 
     if [[ "${CUR}" != */* ]]; then
-      COMPREPLY=( $(compgen -o nospace -W "$(find ~/playground -type d -maxdepth 1 -mindepth 1 -not -name ".*" | awk -F/ '{ print $NF"/" }')" -- ${CUR}) )
+      COMPREPLY=( $(compgen -o nospace -W "$(find "${LIQ_ORG_DB}" -maxdepth 1 -mindepth 1 -type l -not -name ".*" | awk -F/ '{ print $NF"/" }')" -- ${CUR}) )
     else
       # TODO: check that 'MATCH' matches /^[a-z0-9-_ *?]$/i
       # TODO: source and use LIQ_PLAYGROUND
-      COMPREPLY=( $(compgen -W "$(ls -d "${HOME}/playground/${CUR}"${MATCH} | awk -F/ '{ print $(NF - 1)"/"$NF }')" -- ${CUR}) )
+      COMPREPLY=( $(compgen -W "$(ls -d "${LIQ_PLAYGROUND}/${CUR}"${MATCH} | awk -F/ '{ print $(NF - 1)"/"$NF }')" -- ${CUR}) )
     fi
   }
 
@@ -143,7 +140,7 @@ _liq() {
     fi
   }
 
-  local PROJECTS_ACTIONS="build close create edit list publish qa sync test"
+  local PROJECTS_ACTIONS="build close create edit focus list publish qa sync test"
   local PROJECTS_GROUPS=""
   eval "$(comp-func-builder 'projects' 'PROJECTS')"
   comp-liq-projects-create() {
@@ -153,14 +150,20 @@ _liq() {
       COMPREPLY=( $(compgen -W "raw" -- ${CUR}) )
     fi
   }
-  comp-liq-projects-close() {
 
+  comp-liq-projects-close() {
     if [[ "${COMP_LINE}" != *'/'? ]]; then
       proj-paths-reply '*'
     fi
   }
 
-  local WORK_ACTIONS="diff-master edit ignore-rest involve list merge qa report resume save stage start status stop submit sync"
+  comp-liq-projects-focus() {
+    if [[ "${COMP_LINE}" != *'/'? ]]; then
+      proj-paths-reply '*'
+    fi
+  }
+
+  local WORK_ACTIONS="diff edit ignore-rest involve list merge qa report resume save stage start status stop submit sync"
   local WORK_GROUPS="issues links"
   eval "$(comp-func-builder 'work' 'WORK')"
   comp-liq-work-stage() {
