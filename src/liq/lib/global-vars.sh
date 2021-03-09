@@ -3,7 +3,9 @@
 ###
 source ../../shared/common-globals.sh
 
-LIQ_DIST_DIR="$(dirname "$(real_path "${0}")")"
+### DEPRECATED
+# I don't think this is used anywhere...
+# LIQ_DIST_DIR="$(dirname "$(real_path "${0}")")"
 
 # Really just a constant at this point, but at some point may allow override at org and project levels.
 PRODUCTION_TAG=production
