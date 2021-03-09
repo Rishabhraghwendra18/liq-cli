@@ -229,14 +229,21 @@ projects-focus() {
   local PROJECT_DIR="${1:-}"
 
   if [[ -z "${PROJECT_DIR:-}" ]]; then
-    [[ "${PWD}" == "${LIQ_PLAYGROUND}/*" ]] \
-      || echoerrandexit "Current working directory does not appear to be a sub-directory of the playground. To reset, try\nliq projects focus <project>"
+    # Check if current working directory appears to be in the playground.
+    # TODO: this check is week
+    [[ "${PWD}" == "${LIQ_PLAYGROUND}/"* ]] \
+      || {
+        echoerrandexit "Current working directory does not appear to be a sub-directory of the playground. To reset, try\nliq projects focus <project>"
+        return 1 # This function may be used with 'ECHO_NEVER_EXIT'; the return handles that.
+      }
     echo "${PWD/${LIQ_PLAYGROUND}\//}"
   else
     local DEST_DIR="${LIQ_PLAYGROUND}/${PROJECT_DIR}"
     [[ -d "${DEST_DIR}" ]] || echoerrandexit "Did not find expected targeted directory '${DEST_DIR}'."
-    cd "${DEST_DIR}"
+    cd "${DEST_DIR}" && echofmt --info "Focus: ${PROJECT_DIR}"
   fi
+
+  return 0
 }
 
 # see: liq help projects import; The '--set-name' and '--set-url' options are for internal use and each take a var name
