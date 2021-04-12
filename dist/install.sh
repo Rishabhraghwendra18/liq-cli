@@ -534,7 +534,7 @@ check-git-access() {
   eval "$(setSimpleOptions NO_EXIT -- "$@")"
   # if we don't supress the output, then we get noise even when successful
   ssh -qT git@github.com 2> /dev/null || if [ $? -ne 1 ]; then
-    [[ -z "NO_EXIT" ]] || return 1
+    [[ -z "${NO_EXIT}" ]] || return 1
     echoerrandexit "Could not connect to github; try to add add your GitHub key like:\nssh-add /example/path/to/key"
   fi
 }

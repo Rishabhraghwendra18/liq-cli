@@ -949,7 +949,7 @@ check-git-access() {
   eval "$(setSimpleOptions NO_EXIT -- "$@")"
   # if we don't supress the output, then we get noise even when successful
   ssh -qT git@github.com 2> /dev/null || if [ $? -ne 1 ]; then
-    [[ -z "NO_EXIT" ]] || return 1
+    [[ -z "${NO_EXIT}" ]] || return 1
     echoerrandexit "Could not connect to github; try to add add your GitHub key like:\nssh-add /example/path/to/key"
   fi
 }
@@ -2260,23 +2260,25 @@ projects-create() {
   HOMEPAGE="https://${REPO_FRAG}#readme"
 
   update_pkg() {
-    update_pkg_line ".name = \"@${ORG_NPM_SCOPE}/${PKG_BASENAME}\""
+    # prep vars if not defined
     [[ -n "$VERSION" ]] || VERSION='1.0.0-alpha.0'
-    update_pkg_line ".version = \"${VERSION}\""
     [[ -n "$LICENSE" ]] \
       || { [[ -n "${ORG_DEFAULT_LICENSE:-}" ]] && LICENSE="$ORG_DEFAULT_LICENSE"; } \
       || LICENSE='UNLICENSED'
-    update_pkg_line ".license = \"${LICENSE}\""
-    update_pkg_line ".repository = { type: \"git\", url: \"${REPO_URL}\"}"
-    update_pkg_line ".bugs = { url: \"${BUGS_URL}\"}"
-    update_pkg_line ".homepage = \"${HOMEPAGE}\""
-    if [[ -n "$DESCRIPTION" ]]; then
-      update_pkg_line ".description = \"${DESCRIPTION}\""
-    fi
-  }
 
-  update_pkg_line() {
-    echo "$(cat package.json | jq "${1}")" > package.json
+    # it's true this is probably not the most efficient approach...
+    local UPDATE_EXP=".name |= \"@${ORG_NPM_SCOPE}/${PKG_BASENAME}\""
+    UPDATE_EXP="${UPDATE_EXP} |  .version |= \"${VERSION}\""
+    UPDATE_EXP="${UPDATE_EXP} |  .license |= \"${LICENSE}\""
+    UPDATE_EXP="${UPDATE_EXP} |  .repository |= { type: \"git\", url: \"${REPO_URL}\"}"
+    UPDATE_EXP="${UPDATE_EXP} |  .bugs |= { url: \"${BUGS_URL}\"}"
+    UPDATE_EXP="${UPDATE_EXP} |  .homepage |= \"${HOMEPAGE}\""
+    if [[ -n "$DESCRIPTION" ]]; then
+      UPDATE_EXP="${UPDATE_EXP} |  .description |= \"${DESCRIPTION}\""
+    fi
+
+    cat package.json | jq "${UPDATE_EXP}" > package.json.new
+    mv package.json.new package.json
   }
 
   if [[ -n "$NEW" ]]; then
