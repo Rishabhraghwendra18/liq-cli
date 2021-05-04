@@ -18,6 +18,7 @@ LIQ_WORK_DB="${LIQ_DB}/work"
 LIQ_EXTS_DB="${LIQ_DB}/exts"
 LIQ_ENV_LOGS="${LIQ_DB}/logs"
 LIQ_PLAYGROUND="${LIQ_DB}/playground"
+LIQ_CACHE="${LIQ_DB}/cache"
 
 # TODO: we could generate this from the help docs... make the spec central!
 _liq() {
