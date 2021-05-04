@@ -1317,6 +1317,7 @@ LIQ_WORK_DB="${LIQ_DB}/work"
 LIQ_EXTS_DB="${LIQ_DB}/exts"
 LIQ_ENV_LOGS="${LIQ_DB}/logs"
 LIQ_PLAYGROUND="${LIQ_DB}/playground"
+LIQ_CACHE="${LIQ_DB}/cache"
 
 ### DEPRECATED
 # I don't think this is used anywhere...
@@ -1642,12 +1643,13 @@ meta-exts-install() {
     for PKG in ${PKGS//@/}; do
       local PKG_DIR
       PKG_DIR="$(npm explore @${PKG} -- pwd)"
-      [[ "${PKG_DIR}" == *'/.liq/playground/*' ]] \
+      # TODO: TBH, I'm not sure why this is here. It was erroneously (?) a '==' test, but that doesn't make sense.
+      [[ "${PKG_DIR}" != *'/.liq/playground/*' ]] \
         || echoerrandexit "Resolved package dir for '${PKG}' ('${PKG_DIR}') does not appear to be under the '.liq' as expected."
       # swap out hardcoded home so this will work with the docker image bound dirs
       PKG_DIR="\${HOME}${PKG_DIR/${HOME}/}"
-      echo "source '${PKG_DIR}/dist/ext.sh'" >> './exts.sh'
-      echo "source '${PKG_DIR}/dist/comp.sh'" >> './comps.sh'
+      echo "source \"${PKG_DIR}/dist/ext.sh\"" >> './exts.sh'
+      echo "source \"${PKG_DIR}/dist/comp.sh\"" >> './comps.sh'
     done
   ) # end cd subshell
 }
