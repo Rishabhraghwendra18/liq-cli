@@ -115,31 +115,6 @@ _liq() {
   # will override the 'comp-liq-orgs', but want to generate the 'help' completer
   eval "$(comp-func-builder 'orgs' 'ORGS')"
 
-  # helper funtion for '--org' option values
-  comp-selector-orgs() {
-    COMPREPLY=( $(compgen -W "$(find ~/${LIQ_DB_BASENAME}/orgs -maxdepth 1 -mindepth 1 -type l -exec basename {} \;)" -- ${CUR}) )
-  }
-
-  # Handles generating COMPREPLY when using common orgs parameters. Returns true (0) if COMPREPLY is generated and false
-  # if the caller still needs to generate COMPREPLY. If COMPREPLY is not set, then this function may update 'OPTS',
-  # which should be declared locally before invoking comp-builder-ors-common-params. Thus, the general usage is
-  # something like:
-  # ```
-  # local OPTS="--foo --bar"
-  # comp-builder-orgs-common-params || std-reply
-  # ```
-  comp-builder-orgs-common-params() {
-    if [[ "${PREV}" == "--org" ]]; then
-      comp-selector-orgs
-      return 0 # bash true; meaning "the COMPREPLY has been handled"
-    else
-      if [[ "${COMP_LINE}" != *--org* ]]; then
-        if [[ -z "${OPTS}" ]]; then OPTS="--org"; else OPTS="${OPTS} --org"; fi
-      fi
-      return 1 # bash false; mening "the COMPREPLY has not been handled"
-    fi
-  }
-
   local PROJECTS_ACTIONS="build close create edit focus list publish qa sync test"
   local PROJECTS_GROUPS=""
   eval "$(comp-func-builder 'projects' 'PROJECTS')"
@@ -237,6 +212,35 @@ _liq() {
   # Execute the compeltion function determined above:
   $COMP_FUNC
   return 0
+}
+
+### GLOBAL HELPERS
+# Note these functions are declared outside of the main _liq function because they are used by the liq extensions
+# copmletion funcitons.
+
+# helper funtion for '--org' option values
+comp-selector-orgs() {
+  COMPREPLY=( $(compgen -W "$(find ~/${LIQ_DB_BASENAME}/orgs -maxdepth 1 -mindepth 1 -type l -exec basename {} \;)" -- ${CUR}) )
+}
+
+# Handles generating COMPREPLY when using common orgs parameters. Returns true (0) if COMPREPLY is generated and false
+# if the caller still needs to generate COMPREPLY. If COMPREPLY is not set, then this function may update 'OPTS',
+# which should be declared locally before invoking comp-builder-ors-common-params. Thus, the general usage is
+# something like:
+# ```
+# local OPTS="--foo --bar"
+# comp-builder-orgs-common-params || std-reply
+# ```
+comp-builder-orgs-common-params() {
+  if [[ "${PREV}" == "--org" ]]; then
+    comp-selector-orgs
+    return 0 # bash true; meaning "the COMPREPLY has been handled"
+  else
+    if [[ "${COMP_LINE}" != *--org* ]]; then
+      if [[ -z "${OPTS}" ]]; then OPTS="--org"; else OPTS="${OPTS} --org"; fi
+    fi
+    return 1 # bash false; mening "the COMPREPLY has not been handled"
+  fi
 }
 
 complete -F _liq liq
