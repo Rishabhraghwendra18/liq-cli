@@ -221,19 +221,29 @@ else
 fi
 
 # Usage:
-#   eval "$(setSimpleOptions SHORT LONG= SPECIFY_SHORT:X LONG_SPEC:S= -- "$@")" \
+#   eval "$(setSimpleOptions DEFAULT VALUE= SPECIFY_SHORT:X NO_SHORT: LONG_ONLY:= COMBINED:C= -- "$@")" \
 #     || ( contextHelp; echoerrandexit "Bad options."; )
-#
-# Note the use of the intermediate TMP is important to preserve the exit value
-# setSimpleOptions. E.g., doing 'eval "$(setSimpleOptions ...)"' will work fine,
-# but because the last statement is the eval of the results, and not the function
-# call itself, the return of setSimpleOptions gets lost.
-#
-# Instead, it's generally recommended to be strict, 'set -e', and use the TMP-form.
 setSimpleOptions() {
-  local VAR_SPEC LOCAL_DECLS
+  local SCRIPT SET_COUNT VAR_SPEC LOCAL_DECLS
   local LONG_OPTS=""
   local SHORT_OPTS=""
+
+  # our own, bootstrap option processing
+  while [[ "${1:-}" == '-'* ]]; do
+    local OPT="${1}"; shift
+    case "${OPT}" in
+      --set-count)
+        SET_COUNT="${1}"
+        shift;;
+      --script)
+        SCRIPT=true;;
+      --) # usually we'd find a non-option first, but this is valid; we were called with no options specs to process.
+        break;;
+      *)
+        echoerrandexit "Unknown option: $1";;
+    esac
+  done
+
   # Bash Bug? This looks like a straight up bug in bash, but the left-paren in
   # '--)' was matching the '$(' and causing a syntax error. So we use ']' and
   # replace it later.
@@ -279,6 +289,8 @@ EOF
 
     LONG_OPTS=$( ( test ${#LONG_OPTS} -gt 0 && echo -n "${LONG_OPTS},") || true && echo -n "${LONG_OPT}${OPT_ARG}")
 
+    # Note, we usually want locals, so we actually just blindling build it up and then decide wether to include it at
+    # the last minute.
     LOCAL_DECLS="${LOCAL_DECLS:-}local ${VAR_NAME}='';"
     local CASE_SELECT="-${SHORT_OPT}|--${LONG_OPT}]"
     if [[ "$IS_PASSTHRU" == true ]]; then # handle passthru
@@ -329,15 +341,30 @@ EOF
   # replace the ']'; see 'Bash Bug?' above
   CASE_HANDLER=$(echo "$CASE_HANDLER" | perl -pe 's/\]$/)/')
 
-  echo "$LOCAL_DECLS"
+  # now we actually start the output to be evaled by the caller.
+
+  # In script mode, we skip the local declarations. When used in a function
+  # (i.e., not in scirpt mode), we declare everything local.
+  if [[ -z "${SCRIPT}" ]]; then
+    echo "${LOCAL_DECLS}"
+    cat <<'EOF'
+local _OPTS_COUNT=0
+local _PASSTHRU=""
+local TMP # see https://unix.stackexchange.com/a/88338/84520
+EOF
+  else # even though we don't declare local, we still want to support 'strict'
+    # mode, so we do have to declare, just not local
+    echo "${LOCAL_DECLS}" | sed -E 's/(^|;)[[:space:]]*local /\1/g'
+    cat <<'EOF'
+_OPTS_COUNT=0
+_PASSTHRU=""
+EOF
+  fi
 
   cat <<EOF
-local TMP # see https://unix.stackexchange.com/a/88338/84520
-local _PASSTHRU=""
 TMP=\$(${GNU_GETOPT} -o "${SHORT_OPTS}" -l "${LONG_OPTS}" -- "\$@") \
   || exit \$?
 eval set -- "\$TMP"
-local _OPTS_COUNT=0
 while true; do
   $CASE_HANDLER
 done
@@ -346,6 +373,7 @@ if [[ -n "\$_PASSTHRU" ]]; then
   eval set -- \$(list-quote _PASSTHRU) "\$@"
 fi
 EOF
+  [[ -z "${SET_COUNT}" ]] || echo "${SET_COUNT}=\${_OPTS_COUNT}"
 }
 
 # Formats and echoes the the message.
