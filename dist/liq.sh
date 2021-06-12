@@ -3216,6 +3216,7 @@ projectsLiqCheck() {
 
 projectsVersionCheck() {
   projectsRequireNpmCheck
+  requirePackage
   # we are temporarily disabling the config manegement options
   # see https://github.com/liquid-labs/liq-cli/issues/94
   # IGNORE UNIGNORE:I SHOW_CONFIG:c UPDATE OPTIONS=
@@ -3224,12 +3225,12 @@ projectsVersionCheck() {
 
   local IGNORED_PACKAGES=""
   # the '@sh' breaks '-e'; https://github.com/stedolan/jq/issues/1792
-  if echo "$PACKAGE" | jq -e --raw-output '.catalyst."version-check".ignore' > /dev/null; then
-    IGNORED_PACKAGES=`echo "$PACKAGE" | jq --raw-output '.catalyst."version-check".ignore | @sh' | tr -d "'" | sort`
+  if echo "$PACKAGE" | jq -e --raw-output '.liq.versionCheck.ignore' > /dev/null; then
+    IGNORED_PACKAGES=$(echo "$PACKAGE" | jq --raw-output '.liq.versionCheck.ignore | @sh' | tr -d "'" | sort)
   fi
   local CMD_OPTS="$OPTIONS"
-  if [[ -z "$CMD_OPTS" ]] && echo "$PACKAGE" | jq -e --raw-output '.catalyst."version-check".options' > /dev/null; then
-    CMD_OPTS=`echo "$PACKAGE" | jq --raw-output '.catalyst."version-check".options'`
+  if [[ -z "$CMD_OPTS" ]] && echo "$PACKAGE" | jq -e --raw-output '.liq.versionCheck.options' > /dev/null; then
+    CMD_OPTS=$(echo "$PACKAGE" | jq --raw-output '.liq.versionCheck.options | .[]')
   fi
 
   if [[ -n "$UPDATE" ]] \
@@ -3242,11 +3243,11 @@ projectsVersionCheck() {
 
     projectsVersionCheckManageIgnored
   elif [[ -n "$SHOW_CONFIG" ]]; then
-    projectsVersionCheckShowConfig
+    projectsVersionCheckShowConfig "${CMD_OPTS}"
   elif [[ -n "$OPTIONS_SET" ]] && (( $_OPTS_COUNT == 1 )); then
     projectsVersionCheckSetOptions
   else # actually do the check
-    projectsVersionCheckDo
+    projectsVersionCheckDo "${CMD_OPTS}"
   fi
 }
 
@@ -3284,9 +3285,9 @@ projectsVersionCheckManageIgnored() {
         echoerr "No such package '$IPACKAGE' in dependencies."
       else
         if [[ -z "$IGNORED_PACKAGES" ]]; then
-          PACKAGE=`echo "$PACKAGE" | jq 'setpath(["catalyst","version-check","ignore"]; ["'$IPACKAGE'"])'`
+          PACKAGE=`echo "$PACKAGE" | jq 'setpath(["liq","versionCheck","ignore"]; ["'$IPACKAGE'"])'`
         else
-          PACKAGE=`echo "$PACKAGE" | jq 'setpath(["catalyst","version-check","ignore"]; getpath(["catalyst","version-check","ignore"]) + ["'$IPACKAGE'"])'`
+          PACKAGE=`echo "$PACKAGE" | jq 'setpath(["liq","versionCheck","ignore"]; getpath(["liq","versionCheck","ignore"]) + ["'$IPACKAGE'"])'`
         fi
         IGNORED_PACKAGES="${IGNORED_PACKAGES} ${IPACKAGE}"
       fi
@@ -3311,7 +3312,7 @@ projectsVersionCheckManageIgnored() {
       if ! echo "$IGNORED_PACKAGES" | grep -Eq '(^| +)'$IPACKAGE'( +|$)'; then
         echoerr "Package '$IPACKAGE' is not currently ignored."
       else
-        PACKAGE=`echo "$PACKAGE" | jq 'setpath(["catalyst","version-check","ignore"]; getpath(["catalyst","version-check","ignore"]) | map(select(. != "'$IPACKAGE'")))'`
+        PACKAGE=`echo "$PACKAGE" | jq 'setpath(["liq","versionCheck","ignore"]; getpath(["liq","versionCheck","ignore"]) | map(select(. != "'$IPACKAGE'")))'`
       fi
     done
   fi
@@ -3325,6 +3326,8 @@ projectsVersionCheckManageIgnored() {
 }
 
 projectsVersionCheckShowConfig() {
+  local CMD_OPTS="${1:-}"
+
   if [[ -z "$IGNORED_PACKAGES" ]]; then
     echo "Ignored projects: none"
   else
@@ -3340,14 +3343,16 @@ projectsVersionCheckShowConfig() {
 
 projectsVersionCheckSetOptions() {
   if [[ -n "$OPTIONS" ]]; then
-    PACKAGE=$(echo "$PACKAGE" | jq 'setpath(["catalyst","version-check","options"]; "'$OPTIONS'")')
+    PACKAGE=$(echo "$PACKAGE" | jq 'setpath(["liq","versionCheck","options"]; "'$OPTIONS'")')
   elif [[ -z "$OPTIONS" ]]; then
-    PACKAGE=$(echo "$PACKAGE" | jq 'del(.catalyst."version-check".options)')
+    PACKAGE=$(echo "$PACKAGE" | jq 'del(.liq.versionCheck.options)')
   fi
   echo "$PACKAGE" > "$PACKAGE_FILE"
 }
 
 projectsVersionCheckDo() {
+  local CMD_OPTS="${1:-}"
+
   for IPACKAGE in $IGNORED_PACKAGES; do
     CMD_OPTS="${CMD_OPTS} -i ${IPACKAGE}"
   done
