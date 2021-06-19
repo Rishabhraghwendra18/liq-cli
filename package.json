@@ -32,17 +32,17 @@
   "homepage": "https://liquid-labs.github.io/liq-cli/",
   "devDependencies": {
     "@liquid-labs/bash-rollup": "^1.0.0-alpha.4",
-    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.52"
-  },
-  "catalyst": {
-    "version-check": {
-      "options": "--skip-unused"
-    }
+    "@liquid-labs/bash-toolkit": "^1.0.0-alpha.52",
+    "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.40"
   },
   "liq": {
     "orgBase": "git@github.com:liquid-labs/liquid-labs.git",
+    "packageType": "tools|libary|node",
     "changeControl": {
       "type": "code"
+    },
+    "versionCheck": {
+      "options": "--skip-unused"
     }
   }
 }
