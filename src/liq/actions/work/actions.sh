@@ -185,6 +185,7 @@ work-involve() {
     git push --set-upstream workspace ${BRANCH_NAME}
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
+  work-lib-changelog-add-entry
 
   local OTHER_PROJECTS="${INVOLVED_PROJECTS}" # save this for use in linking later...
   list-add-item INVOLVED_PROJECTS "@${PROJECT_NAME}" # do include the '@' here for display
@@ -629,7 +630,7 @@ work-start() {
     CURR_PROJECT=$(cat "$BASE_DIR/package.json" | jq --raw-output '.name' | tr -d "'")
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
   fi
-
+  # TODO: if no BASE_DIR, shouldn't we error out? Are we trying to support non-liq projects? That seems unecessary.
 
   work-lib-process-issues WORK_ISSUES "$ISSUES" "$BUGS_URL"
 
@@ -680,6 +681,7 @@ work-start() {
   local WORK_DESC="$DESCRIPTION"
   workUpdateWorkDb
 
+  # TODO: see 'TODO: if no BASE_DIR'
   if [[ -n "$CURR_PROJECT" ]]; then
     (
       cd "${LIQ_PLAYGROUND}/${CURR_PROJECT/@/}"

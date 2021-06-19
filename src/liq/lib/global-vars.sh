@@ -3,10 +3,6 @@
 ###
 source ../../shared/common-globals.sh
 
-### DEPRECATED
-# I don't think this is used anywhere...
-# LIQ_DIST_DIR="$(dirname "$(real_path "${0}")")"
-
 # Really just a constant at this point, but at some point may allow override at org and project levels.
 PRODUCTION_TAG=production
 
@@ -48,3 +44,6 @@ AUDITS_COMPLETE_PATH="${AUDITS_PATH}/complete"
 KEYS_PATH="${RECORDS_PATH}/keys"
 KEYS_ACTIVE_PATH="${KEYS_PATH}/active"
 KEYS_EXPIRED_PATH="${KEYS_PATH}/expired"
+
+# This is used as a jumping off point for running node scripts.
+LIQ_DIST_DIR="$(dirname "$(real_path "${0}")")"
