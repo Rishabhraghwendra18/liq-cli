@@ -20,7 +20,7 @@ const determineAction = () => {
 }
 
 const readChangelog = () => {
-  const clPath = process.env.CHANGELOG_FILE
+  const clPath = requireEnv('CHANGELOG_FILE')
 
   const changelogContents = fs.readFileSync(clPath)
   const changelog = JSON.parse(changelogContents)
@@ -32,9 +32,17 @@ const requireEnv = (key) => {
   return process.env[key] || throw new Error(`Did not find required environment parameter: ${key}`)
 }
 
+const saveChangelog = (changelog) => {
+  const clPath = requireEnv('CHANGELOG_FILE')
+
+  const changelogContents = JSON.stringify(changelog, null, 2)
+  fs.writeFileSync(clPath, changelogContents)
+}
+
 export {
   ADD_ENTRY,
   determineAction,
   readChangelog,
-  requireEnv
+  requireEnv,
+  saveChangelog
 }
