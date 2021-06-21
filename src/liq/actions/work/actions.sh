@@ -159,8 +159,9 @@ work-involve() {
     echoerrandexit "There is no active unit of work to involve. Try:\nliq work resume"
   fi
 
+  # check for source repo access
   check-git-access
-
+  # gather necessary information
   if (( $# == 0 )) && [[ -n "$BASE_DIR" ]]; then
     requirePackage
     PROJECT_NAME=$(echo "$PACKAGE" | jq --raw-output '.name | @sh' | tr -d "'")
@@ -176,6 +177,7 @@ work-involve() {
   local BRANCH_NAME=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
   requirePackage # used later if auto-linking
 
+  # setup work branch
   cd "${LIQ_PLAYGROUND}/${PROJECT_NAME}"
   if git branch | grep -qE "^\*? *${BRANCH_NAME}\$"; then
     echowarn "Found existing work branch '${BRANCH_NAME}' in project ${PROJECT_NAME}. We will use it. Please fix manually if this is unexpected."
@@ -185,11 +187,14 @@ work-involve() {
     git push --set-upstream workspace ${BRANCH_NAME}
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
-  work-lib-changelog-add-entry
 
+  # local administrative stuff
   local OTHER_PROJECTS="${INVOLVED_PROJECTS}" # save this for use in linking later...
   list-add-item INVOLVED_PROJECTS "@${PROJECT_NAME}" # do include the '@' here for display
   workUpdateWorkDb
+  
+  # create changelog entry
+  work-lib-changelog-add-entry
 
   # Now, let's see about automatic linking!
   local PRIMARY_PROJECT=$INVOLVED_PROJECTS

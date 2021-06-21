@@ -1347,10 +1347,6 @@ LIQ_ENV_LOGS="${LIQ_DB}/logs"
 LIQ_PLAYGROUND="${LIQ_DB}/playground"
 LIQ_CACHE="${LIQ_DB}/cache"
 
-### DEPRECATED
-# I don't think this is used anywhere...
-# LIQ_DIST_DIR="$(dirname "$(real_path "${0}")")"
-
 # Really just a constant at this point, but at some point may allow override at org and project levels.
 PRODUCTION_TAG=production
 
@@ -1392,6 +1388,9 @@ AUDITS_COMPLETE_PATH="${AUDITS_PATH}/complete"
 KEYS_PATH="${RECORDS_PATH}/keys"
 KEYS_ACTIVE_PATH="${KEYS_PATH}/active"
 KEYS_EXPIRED_PATH="${KEYS_PATH}/expired"
+
+# This is used as a jumping off point for running node scripts.
+LIQ_DIST_DIR="$(dirname "$(real_path "${0}")")"
 CATALYST_COMMAND_GROUPS="help meta meta-exts orgs projects work work-links"
 
 # display help on help
@@ -3664,6 +3663,7 @@ work-involve() {
     git push --set-upstream workspace ${BRANCH_NAME}
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
+  work-lib-changelog-add-entry
 
   local OTHER_PROJECTS="${INVOLVED_PROJECTS}" # save this for use in linking later...
   list-add-item INVOLVED_PROJECTS "@${PROJECT_NAME}" # do include the '@' here for display
@@ -4108,7 +4108,7 @@ work-start() {
     CURR_PROJECT=$(cat "$BASE_DIR/package.json" | jq --raw-output '.name' | tr -d "'")
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
   fi
-
+  # TODO: if no BASE_DIR, shouldn't we error out? Are we trying to support non-liq projects? That seems unecessary.
 
   work-lib-process-issues WORK_ISSUES "$ISSUES" "$BUGS_URL"
 
@@ -4159,6 +4159,7 @@ work-start() {
   local WORK_DESC="$DESCRIPTION"
   workUpdateWorkDb
 
+  # TODO: see 'TODO: if no BASE_DIR'
   if [[ -n "$CURR_PROJECT" ]]; then
     (
       cd "${LIQ_PLAYGROUND}/${CURR_PROJECT/@/}"
@@ -4755,6 +4756,14 @@ work-lib-process-issues() {
       list-replace-by-string ${VAR} $ISSUE "$BUGS_URL/$ISSUE"
     fi
   done
+}
+# work-lib-changelog-add-entry() {
+work-blah() {
+  local CHANGELOG_FILE="./.meta/changelog.json"
+  # ensure there's a changelog
+  [[ -f "${CHANGELOG_FILE}" ]] || { mkdir -p $(dirname "${CHANGELOG_FILE}"); echo "[]" > "${CHANGELOG_FILE}"; }
+
+  CHANGELOG_FILE="${CHANGELOG_FILE}" node "${LIQ_DIST_DIR}/lib-changelog.js"
 }
 
 work-links() {
