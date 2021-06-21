@@ -1,36 +1,14 @@
-import * as fs from 'fs'
-
-// Declare valid actions
-const ADD_ENTRY="add-entry"
-const validActions = [ ADD_ENTRY ]
-
-const determineAction = () => {
-  var args = process.argv.slice(2)
-
-  if (args.length === 0 || args.length > 1) {
-    throw new Error(`Unexpected argument count. Please provide exactly one action argument.`)
-  }
-
-  const action = args[0]
-  if (validActions.indexOf(action) === -1) {
-    throw new Error(`Invalid action: ${action}`)
-  }
-
-  return action
-}
-
-const readChangelog = () => {
-  const clPath = process.env.CHANGELOG_FILE
-
-  const changelogContents = fs.readFileSync(clPath)
-  const changelog = JSON.parse(changelogContents)
-
-  return changelog
-}
+import { ADD_ENTRY, determineAction, readChangelog } from './lib-changelog-core'
+import { addEntry } from './lib-changelog-action-add-entry'
 
 // Main semantic body
 const action = determineAction()
 const changelog = readChangelog()
-// switch 
+switch (action) {
+  case ADD_ENTRY:
+    addEntry(changelog); break
+  default:
+    throw new Error(`Unexpected unknown action snuck through: ${action}`)
+}
 
 console.log(changelog)

@@ -192,7 +192,7 @@ work-involve() {
   local OTHER_PROJECTS="${INVOLVED_PROJECTS}" # save this for use in linking later...
   list-add-item INVOLVED_PROJECTS "@${PROJECT_NAME}" # do include the '@' here for display
   workUpdateWorkDb
-  
+
   # create changelog entry
   work-lib-changelog-add-entry
 
@@ -653,8 +653,8 @@ work-start() {
   fi
 
   WORK_STARTED=$(date "+%Y.%m.%d")
-  WORK_INITIATOR=$(whoami)
-  WORK_BRANCH=`work-lib-branch-name "${DESCRIPTION}"`
+  WORK_INITIATOR=$(git config --get user.email)
+  WORK_BRANCH="$(work-lib-branch-name "${DESCRIPTION}")"
 
   if [[ -f "${LIQ_WORK_DB}/${WORK_BRANCH}" ]]; then
     echoerrandexit "Unit of work '${WORK_BRANCH}' aready exists. Bailing out."
