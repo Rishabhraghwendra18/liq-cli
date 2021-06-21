@@ -7,8 +7,8 @@ CATALYST_SCRIPTS:=$(NPM_BIN)/catalyst-scripts
 PKG_FILES:=package.json package-lock.json
 LIQ_SRC:=$(shell find src/liq -name "*.sh" -not -name "cli.sh")
 TEST_SRC:=$(shell find src/test -name "*.bats")
-LIB_CHANGELOG_SRC:=src/liq/actions/work/lib-changelog.js
-DIST_CHANGELOG_JS:=dist/lib-changelog.js
+LIB_CHANGELOG_SRC:=src/liq/actions/work/changelog/index.js $(shell find src/liq/actions/work/changelog/ -name "*.js" -not -name "index.js")
+DIST_CHANGELOG_JS:=dist/manage-changelog.js
 DIST_FILES:=dist/completion.sh dist/install.sh dist/liq.sh dist/liq-shell.sh dist/liq-source.sh $(DIST_CHANGELOG_JS)
 
 all: $(DIST_FILES)
