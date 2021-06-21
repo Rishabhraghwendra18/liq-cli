@@ -186,13 +186,14 @@ workSubmitChecks() {
 
 workUpdateWorkDb() {
   cat <<EOF > "${LIQ_WORK_DB}/curr_work"
-WORK_DESC='${WORK_DESC//\'/}'
-WORK_STARTED='$WORK_STARTED'
-WORK_INITIATOR='$WORK_INITIATOR'
-WORK_BRANCH='$WORK_BRANCH'
+export WORK_DESC='${WORK_DESC//\'/}'
+export WORK_STARTED='$WORK_STARTED'
+export WORK_INITIATOR='$WORK_INITIATOR'
+export WORK_BRANCH='$WORK_BRANCH'
 EOF
-  echo "INVOLVED_PROJECTS='${INVOLVED_PROJECTS:-}'" >> "${LIQ_WORK_DB}/curr_work"
-  echo "WORK_ISSUES='${WORK_ISSUES:-}'" >> "${LIQ_WORK_DB}/curr_work"
+  # These are handled separate because they can potentially be multi-line (I am guessing)
+  echo "export INVOLVED_PROJECTS='${INVOLVED_PROJECTS:-}'" >> "${LIQ_WORK_DB}/curr_work"
+  echo "export WORK_ISSUES='${WORK_ISSUES:-}'" >> "${LIQ_WORK_DB}/curr_work"
 }
 
 workUserSelectOne() {
