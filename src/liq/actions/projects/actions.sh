@@ -463,6 +463,7 @@ projects-qa() {
   fi
   if [[ -n "$FIX_LIST" ]]; then
     echowarn "To attempt automated fixes, try:\nliq projects qa --update $(list-join FIX_LIST ' ')"
+    return 1
   fi
 }
 

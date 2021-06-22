@@ -3,7 +3,7 @@ requirements-work() {
 }
 
 work-backup() {
-  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+  work-lib-require-unit-of-work
 
   eval "$(setSimpleOptions TEST -- "$@")"
 
@@ -14,6 +14,14 @@ work-backup() {
   fi
   # TODO: retrive and use workbranch name instead
   git push workspace HEAD
+}
+
+work-build() {
+  for PROJECT in $INVOLVED_PROJECTS; do
+    PROJECT="${PROJECT/@/}"
+    cd "${LIQ_PLAYGROUND}/${PROJECT}"
+    projects-build "$@"
+  done
 }
 
 work-diff() {
@@ -39,7 +47,7 @@ work-diff() {
 }
 
 work-diff-master() {
-  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+  work-lib-require-unit-of-work
 
   git diff $(git merge-base master HEAD)..HEAD "$@"
 }
@@ -369,19 +377,23 @@ work-merge() {
   done
 }
 
+work-prepare() {
+  work-qa
+  work-build
+}
+
 work-qa() {
-  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+  work-lib-require-unit-of-work
 
   echo "Checking local repo status..."
   work-report
 
-  source "${LIQ_WORK_DB}/curr_work"
   for PROJECT in $INVOLVED_PROJECTS; do
     PROJECT="${PROJECT/@/}"
     cd "${LIQ_PLAYGROUND}/${PROJECT}"
     projects-qa "$@"
   done
-} # work merge
+}
 
 work-report() {
   findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
