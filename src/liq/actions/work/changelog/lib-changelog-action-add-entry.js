@@ -1,8 +1,8 @@
 import dateFormat from 'dateformat'
 
-import { requireEnv } from './lib-changelog-core'
+import { readChanglog, requireEnv, saveChangelog } from './lib-changelog-core'
 
-const addEntry = (changelog) => {
+const createNewEntry = (changelog) => {
   // get the approx start time according to the local clock
   const startTimestampLocal = dateFormat(new Date(), 'UTC:yyyy-mm-dd-HHMM Z')
   // process the 'work unit' data
@@ -24,4 +24,10 @@ const addEntry = (changelog) => {
   return newEntry
 }
 
-export { addEntry }
+const addEntry = () => {
+  const changelog = readChangelog()
+  creataeNewEntry(changelog)
+  saveChangelog(changelog)
+}
+
+export { addEntry, createNewEntry }

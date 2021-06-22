@@ -34,7 +34,8 @@
     "@liquid-labs/bash-rollup": "^1.0.0-alpha.4",
     "@liquid-labs/bash-toolkit": "^1.0.0-alpha.52",
     "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.42",
-    "dateformat": "^4.5.1"
+    "dateformat": "^4.5.1",
+    "simple-git": "^2.40.0"
   },
   "liq": {
     "orgBase": "git@github.com:liquid-labs/liquid-labs.git",

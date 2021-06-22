@@ -378,8 +378,10 @@ work-merge() {
 }
 
 work-prepare() {
-  work-qa
-  work-build
+  # work-qa
+  # work-build
+
+  work-lib-changellog-finalize-entry
 }
 
 work-qa() {
