@@ -4761,8 +4761,7 @@ work-lib-process-issues() {
   done
 }
 
-# work-lib-changelog-add-entry() {
-work-blah() {
+work-lib-changelog-add-entry() {
   work-lib-require-unit-of-work
 
   local CHANGELOG_FILE="./.meta/changelog.json"
