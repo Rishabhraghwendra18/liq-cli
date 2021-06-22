@@ -4776,7 +4776,8 @@ work-blah() {
   CHANGELOG_FILE="${CHANGELOG_FILE}" \
     CURR_USER="${CURR_USER}" \
     CURR_REPO_VERSION="${CURR_REPO_VERSION}" \
-    node "${LIQ_DIST_DIR}/manage-changelog.js" add-entry
+    node "${LIQ_DIST_DIR}/manage-changelog.js" add-entry \
+    && echofmt --info "Changelog data updated."
 }
 work-lib-require-unit-of-work() {
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
