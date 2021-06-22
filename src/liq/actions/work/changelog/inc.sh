@@ -1,1 +1,1 @@
-source ./bash-bridge.sh
+source ./lib-changelog-bash-bridge.sh
