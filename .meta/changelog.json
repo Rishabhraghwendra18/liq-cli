@@ -6,7 +6,7 @@
     "branch": "2021.06.18-zane-better_change_support",
     "startTimestampLocal": "2021-06-21-2300 UTC",
     "branchFrom": "c8b640806947ce641636566ed27207f100e2ccb4",
-    "description": "Better change support",
+    "description": "First draft automated changelog",
     "workInitiator": "zane@liquid-labs.com",
     "branchInitiator": "zane@liquid-labs.com",
     "involvedProjects": [
