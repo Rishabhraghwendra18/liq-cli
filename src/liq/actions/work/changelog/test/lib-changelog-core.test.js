@@ -1,9 +1,9 @@
-// globals describe expect test
+/* globals afterAll, beforeAll, describe, expect, test */
 import * as fs from 'fs'
 
 import { ADD_ENTRY, determineAction, readChangelog, requireEnv, saveChangelog } from '../lib-changelog-core'
 
-const TEST_CHANGELOG_PATH='./src/liq/actions/work/changelog/test/test-changelog.json'
+const TEST_CHANGELOG_PATH = './src/liq/actions/work/changelog/test/test-changelog.json'
 
 describe('determineAction', () => {
   let origArgv
@@ -11,22 +11,22 @@ describe('determineAction', () => {
   afterAll(() => { process.argv = origArgv })
 
   test("extracts action from 'process.argv'", () => {
-    process.argv = [ 'node', 'script', 'add-entry' ]
+    process.argv = ['node', 'script', 'add-entry']
     expect(determineAction()).toBe(ADD_ENTRY)
   })
 
   test('raises an error when no args provided', () => {
-    process.argv = [ 'node', 'script' ]
+    process.argv = ['node', 'script']
     expect(determineAction).toThrow()
   })
 
   test('raises an error when too many args provided', () => {
-    process.argv = [ 'node', 'script', 'blah', 'foo' ]
+    process.argv = ['node', 'script', 'blah', 'foo']
     expect(determineAction).toThrow()
   })
 
   test('raises error on unkown action and reports it', () => {
-    process.argv = [ 'node', 'script', 'blah' ]
+    process.argv = ['node', 'script', 'blah']
     expect(determineAction).toThrow(/blah/)
   })
 })

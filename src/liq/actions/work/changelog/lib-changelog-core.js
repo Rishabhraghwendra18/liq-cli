@@ -1,14 +1,14 @@
 import * as fs from 'fs'
 
 // Declare valid actions
-const ADD_ENTRY="add-entry"
-const validActions = [ ADD_ENTRY ]
+const ADD_ENTRY = 'add-entry'
+const validActions = [ADD_ENTRY]
 
 const determineAction = () => {
-  var args = process.argv.slice(2)
+  const args = process.argv.slice(2)
 
   if (args.length === 0 || args.length > 1) {
-    throw new Error(`Unexpected argument count. Please provide exactly one action argument.`)
+    throw new Error('Unexpected argument count. Please provide exactly one action argument.')
   }
 
   const action = args[0]
