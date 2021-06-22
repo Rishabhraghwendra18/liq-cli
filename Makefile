@@ -87,8 +87,14 @@ ${HOME}/.npmrc:
 	# END SENSITIVE DATA -------------------------------------
 	touch $@
 
-test: .docker-test-img-marker
+test-shell: .docker-test-img-marker
 	docker run --tty liq-test
+
+test-js:
+	JS_SRC=./src/liq $(CATALYST_SCRIPTS) pretest
+	$(CATALYST_SCRIPTS) test
+
+test: test-js test-shell
 
 DOCKER_DEBUG_CMD_BASE:=docker run --interactive --tty --mount type=bind,source="$${PWD}/docker-tmp",target=/home/liq/docker-tmp --entrypoint /bin/bash
 docker-debug: .docker-test-img-marker

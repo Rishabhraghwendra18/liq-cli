@@ -1,0 +1,1 @@
+These old JS tests are deprecated in favor of the new bats based approached for general CI testing. There are newer JS test which focus on specific functions and such. These older test files have been maintained till all their useful bits can be extracted into bats tests.

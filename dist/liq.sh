@@ -352,7 +352,7 @@ EOF
 
   # In script mode, we skip the local declarations. When used in a function
   # (i.e., not in scirpt mode), we declare everything local.
-  if [[ -z "${SCRIPT}" ]]; then
+  if [[ -z "${SCRIPT:-}" ]]; then
     echo "${LOCAL_DECLS}"
     cat <<'EOF'
 local _OPTS_COUNT=0
@@ -380,7 +380,7 @@ if [[ -n "\$_PASSTHRU" ]]; then
   eval set -- \$(list-quote _PASSTHRU) "\$@"
 fi
 EOF
-  [[ -z "${SET_COUNT}" ]] || echo "${SET_COUNT}=\${_OPTS_COUNT}"
+  [[ -z "${SET_COUNT:-}" ]] || echo "${SET_COUNT}=\${_OPTS_COUNT}"
 }
 
 # Formats and echoes the the message.
