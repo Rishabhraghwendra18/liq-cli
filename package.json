@@ -16,8 +16,8 @@
     "build": "make all",
     "test": "make test",
     "install": "TERM=xterm ./dist/install.sh",
-    "lint": "catalyst-scripts lint",
-    "lint-fix": "catalyst-scripts lint-fix",
+    "lint": "JS_SRC=./src/liq catalyst-scripts lint",
+    "lint-fix": "JS_SRC=./src/liq catalyst-scripts lint-fix",
     "clean": "rm -rf package-lock.json node_modules/ dist/"
   },
   "repository": {
@@ -33,7 +33,7 @@
   "devDependencies": {
     "@liquid-labs/bash-rollup": "^1.0.0-alpha.4",
     "@liquid-labs/bash-toolkit": "^1.0.0-alpha.52",
-    "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.41",
+    "@liquid-labs/catalyst-scripts": "^1.0.0-alpha.42",
     "dateformat": "^4.5.1"
   },
   "liq": {
@@ -43,7 +43,9 @@
       "type": "code"
     },
     "versionCheck": {
-      "options": "--skip-unused"
+      "options": [
+        "--skip-unused"
+      ]
     }
   }
 }
