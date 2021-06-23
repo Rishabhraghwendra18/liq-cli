@@ -4,7 +4,7 @@ import { finalizeChangelog } from './lib-changelog-action-finalize-entry'
 // Setup valid actions
 const ADD_ENTRY = 'add-entry'
 const FINALIZE_ENTRY = 'finalize-entry'
-const validActions = [ ADD_ENTRY, FINALIZE_ENTRY ]
+const validActions = [ADD_ENTRY, FINALIZE_ENTRY]
 
 const determineAction = () => {
   const args = process.argv.slice(2)
@@ -19,12 +19,12 @@ const determineAction = () => {
   }
 
   switch (action) {
-    case ADD_ENTRY:
-      return addEntry
-    case FINALIZE_ENTRY:
-      return finalizeChangelog
-    default:
-      throw new Error(`Cannot process unkown action: ${action}`)
+  case ADD_ENTRY:
+    return addEntry
+  case FINALIZE_ENTRY:
+    return finalizeChangelog
+  default:
+    throw new Error(`Cannot process unkown action: ${action}`)
   }
 }
 

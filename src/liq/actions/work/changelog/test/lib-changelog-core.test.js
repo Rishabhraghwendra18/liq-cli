@@ -1,4 +1,4 @@
-/* globals afterAll, beforeAll, describe, expect, test */
+/* globals beforeAll, describe, expect, test */
 import * as fs from 'fs'
 
 import { readChangelog, requireEnv, saveChangelog } from '../lib-changelog-core'

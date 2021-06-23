@@ -1,6 +1,6 @@
 import dateFormat from 'dateformat'
 
-import { readChanglog, requireEnv, saveChangelog } from './lib-changelog-core'
+import { readChangelog, requireEnv, saveChangelog } from './lib-changelog-core'
 
 const createNewEntry = (changelog) => {
   // get the approx start time according to the local clock
@@ -26,7 +26,7 @@ const createNewEntry = (changelog) => {
 
 const addEntry = () => {
   const changelog = readChangelog()
-  creataeNewEntry(changelog)
+  createNewEntry(changelog)
   saveChangelog(changelog)
 }
 

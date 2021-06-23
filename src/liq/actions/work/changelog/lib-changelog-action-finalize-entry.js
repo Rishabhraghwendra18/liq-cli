@@ -2,7 +2,7 @@ import simpleGit from 'simple-git'
 
 import { readChangelog, requireEnv, saveChangelog } from './lib-changelog-core'
 
-const finalizeCurrentEntry = async (changelog) => {
+const finalizeCurrentEntry = async(changelog) => {
   const currentEntry = changelog[changelog.length - 1] // changelog.at(-1)
 
   // update the involved projects
@@ -11,14 +11,14 @@ const finalizeCurrentEntry = async (changelog) => {
 
   const branchFrom = currentEntry.branchFrom
   const gitOptions = {
-    baseDir: process.cwd(),
-    binary: 'git',
-    maxConcurrentProcesses: 6
+    baseDir                : process.cwd(),
+    binary                 : 'git',
+    maxConcurrentProcesses : 6
   }
   const git = simpleGit(gitOptions)
   const results = await git.raw('shortlog', '--summary', '--email', `${branchFrom}...HEAD`)
   const contributors = results
-    .split("\n")
+    .split('\n')
     .map((l) => l.replace(/^[\s\d]+\s+/, ''))
     .filter((l) => l.length > 0)
   currentEntry.contributors = contributors
@@ -33,7 +33,7 @@ const finalizeCurrentEntry = async (changelog) => {
   return currentEntry
 }
 
-const finalizeChangelog = async () => {
+const finalizeChangelog = async() => {
   const changelog = readChangelog()
   await finalizeCurrentEntry(changelog)
   saveChangelog(changelog)
