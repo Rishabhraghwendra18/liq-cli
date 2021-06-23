@@ -3,10 +3,13 @@
 STAGING:=.build
 NPM_BIN:=$(shell npm bin)
 BASH_ROLLUP:=$(NPM_BIN)/bash-rollup
+CATALYST_SCRIPTS:=$(NPM_BIN)/catalyst-scripts
 PKG_FILES:=package.json package-lock.json
 LIQ_SRC:=$(shell find src/liq -name "*.sh" -not -name "cli.sh")
 TEST_SRC:=$(shell find src/test -name "*.bats")
-DIST_FILES:=dist/completion.sh dist/install.sh dist/liq.sh dist/liq-shell.sh dist/liq-source.sh
+LIB_CHANGELOG_SRC:=src/liq/actions/work/changelog/index.js $(shell find src/liq/actions/work/changelog/ -name "*.js" -not -name "index.js")
+DIST_CHANGELOG_JS:=dist/manage-changelog.js
+DIST_FILES:=dist/completion.sh dist/install.sh dist/liq.sh dist/liq-shell.sh dist/liq-source.sh $(DIST_CHANGELOG_JS)
 
 all: $(DIST_FILES)
 
@@ -36,6 +39,9 @@ dist/liq.sh: src/liq/cli.sh $(LIQ_SRC) $(PKG_FILES)
 dist/liq-source.sh: src/liq/source.sh $(LIQ_SRC) $(PKG_FILES)
 	mkdir -p dist
 	$(BASH_ROLLUP) $< $@
+
+$(DIST_CHANGELOG_JS): $(LIB_CHANGELOG_SRC)
+	JS_FILE="$<" JS_OUT="$@" $(CATALYST_SCRIPTS) build
 
 .ver-cache: package.json
 	cat $< | jq -r .version > $@
@@ -81,9 +87,14 @@ ${HOME}/.npmrc:
 	# END SENSITIVE DATA -------------------------------------
 	touch $@
 
-test: .docker-test-img-marker
+test-shell: .docker-test-img-marker
 	docker run --tty liq-test
 
+test-js:
+	JS_SRC=./src/liq $(CATALYST_SCRIPTS) pretest
+	$(CATALYST_SCRIPTS) test
+
+test: test-js test-shell
 
 DOCKER_DEBUG_CMD_BASE:=docker run --interactive --tty --mount type=bind,source="$${PWD}/docker-tmp",target=/home/liq/docker-tmp --entrypoint /bin/bash
 docker-debug: .docker-test-img-marker

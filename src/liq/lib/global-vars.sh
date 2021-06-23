@@ -3,17 +3,8 @@
 ###
 source ../../shared/common-globals.sh
 
-### DEPRECATED
-# I don't think this is used anywhere...
-# LIQ_DIST_DIR="$(dirname "$(real_path "${0}")")"
-
 # Really just a constant at this point, but at some point may allow override at org and project levels.
-PRODUCTION_TAG=production
-
-_PROJECT_CONFIG='.catalyst-project' #TODO: current file '.catalyst' and the code doesn't make reference to this constant; convert that to 'catalyst-project'
-_PROJECT_PUB_CONFIG='.catalyst-pub'
-_ORG_ID_URL='https://console.cloud.google.com/iam-admin/settings'
-_BILLING_ACCT_URL='https://console.cloud.google.com/billing?folder=&organizationId='
+export PRODUCTION_TAG=production
 
 # Global context variables.
 CURR_ENV_FILE='' # set by 'requireEnvironment'
@@ -41,10 +32,13 @@ STD_IFACE_CLASSES=http$'\n'html$'\n'rest$'\n'sql
 STD_PLATFORM_TYPES=local$'\n'gcp$'\n'aws
 
 # Standard locations, relative to org repo.
-RECORDS_PATH="records"
-AUDITS_PATH="${RECORDS_PATH}/audits"
-AUDITS_ACTIVE_PATH="${AUDITS_PATH}/active"
-AUDITS_COMPLETE_PATH="${AUDITS_PATH}/complete"
-KEYS_PATH="${RECORDS_PATH}/keys"
-KEYS_ACTIVE_PATH="${KEYS_PATH}/active"
-KEYS_EXPIRED_PATH="${KEYS_PATH}/expired"
+export RECORDS_PATH="records"
+export AUDITS_PATH="${RECORDS_PATH}/audits"
+export AUDITS_ACTIVE_PATH="${AUDITS_PATH}/active"
+export AUDITS_COMPLETE_PATH="${AUDITS_PATH}/complete"
+export KEYS_PATH="${RECORDS_PATH}/keys"
+export KEYS_ACTIVE_PATH="${KEYS_PATH}/active"
+export KEYS_EXPIRED_PATH="${KEYS_PATH}/expired"
+
+# This is used as a jumping off point for running node scripts.
+export LIQ_DIST_DIR="$(dirname "$(real_path "${0}")")"

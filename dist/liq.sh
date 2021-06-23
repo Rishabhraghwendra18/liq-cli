@@ -352,7 +352,7 @@ EOF
 
   # In script mode, we skip the local declarations. When used in a function
   # (i.e., not in scirpt mode), we declare everything local.
-  if [[ -z "${SCRIPT}" ]]; then
+  if [[ -z "${SCRIPT:-}" ]]; then
     echo "${LOCAL_DECLS}"
     cat <<'EOF'
 local _OPTS_COUNT=0
@@ -380,7 +380,7 @@ if [[ -n "\$_PASSTHRU" ]]; then
   eval set -- \$(list-quote _PASSTHRU) "\$@"
 fi
 EOF
-  [[ -z "${SET_COUNT}" ]] || echo "${SET_COUNT}=\${_OPTS_COUNT}"
+  [[ -z "${SET_COUNT:-}" ]] || echo "${SET_COUNT}=\${_OPTS_COUNT}"
 }
 
 # Formats and echoes the the message.
@@ -1337,29 +1337,20 @@ defineParameters() {
 ###
 
 # Key used in npm 'package.json' data to key into liq specific data.
-LIQ_NPM_KEY="liq"
-LIQ_DB_BASENAME=".${LIQ_NPM_KEY}"
-LIQ_DB="${HOME}/${LIQ_DB_BASENAME}"
-LIQ_SETTINGS="${LIQ_DB}/settings.sh"
-LIQ_ENV_DB="${LIQ_DB}/environments"
-LIQ_ORG_DB="${LIQ_DB}/orgs"
-LIQ_WORK_DB="${LIQ_DB}/work"
-LIQ_EXTS_DB="${LIQ_DB}/exts"
-LIQ_ENV_LOGS="${LIQ_DB}/logs"
-LIQ_PLAYGROUND="${LIQ_DB}/playground"
-LIQ_CACHE="${LIQ_DB}/cache"
-
-### DEPRECATED
-# I don't think this is used anywhere...
-# LIQ_DIST_DIR="$(dirname "$(real_path "${0}")")"
+export LIQ_NPM_KEY="liq"
+export LIQ_DB_BASENAME=".${LIQ_NPM_KEY}"
+export LIQ_DB="${HOME}/${LIQ_DB_BASENAME}"
+export LIQ_SETTINGS="${LIQ_DB}/settings.sh"
+export LIQ_ENV_DB="${LIQ_DB}/environments"
+export LIQ_ORG_DB="${LIQ_DB}/orgs"
+export LIQ_WORK_DB="${LIQ_DB}/work"
+export LIQ_EXTS_DB="${LIQ_DB}/exts"
+export LIQ_ENV_LOGS="${LIQ_DB}/logs"
+export LIQ_PLAYGROUND="${LIQ_DB}/playground"
+export LIQ_CACHE="${LIQ_DB}/cache"
 
 # Really just a constant at this point, but at some point may allow override at org and project levels.
-PRODUCTION_TAG=production
-
-_PROJECT_CONFIG='.catalyst-project' #TODO: current file '.catalyst' and the code doesn't make reference to this constant; convert that to 'catalyst-project'
-_PROJECT_PUB_CONFIG='.catalyst-pub'
-_ORG_ID_URL='https://console.cloud.google.com/iam-admin/settings'
-_BILLING_ACCT_URL='https://console.cloud.google.com/billing?folder=&organizationId='
+export PRODUCTION_TAG=production
 
 # Global context variables.
 CURR_ENV_FILE='' # set by 'requireEnvironment'
@@ -1387,13 +1378,16 @@ STD_IFACE_CLASSES=http$'\n'html$'\n'rest$'\n'sql
 STD_PLATFORM_TYPES=local$'\n'gcp$'\n'aws
 
 # Standard locations, relative to org repo.
-RECORDS_PATH="records"
-AUDITS_PATH="${RECORDS_PATH}/audits"
-AUDITS_ACTIVE_PATH="${AUDITS_PATH}/active"
-AUDITS_COMPLETE_PATH="${AUDITS_PATH}/complete"
-KEYS_PATH="${RECORDS_PATH}/keys"
-KEYS_ACTIVE_PATH="${KEYS_PATH}/active"
-KEYS_EXPIRED_PATH="${KEYS_PATH}/expired"
+export RECORDS_PATH="records"
+export AUDITS_PATH="${RECORDS_PATH}/audits"
+export AUDITS_ACTIVE_PATH="${AUDITS_PATH}/active"
+export AUDITS_COMPLETE_PATH="${AUDITS_PATH}/complete"
+export KEYS_PATH="${RECORDS_PATH}/keys"
+export KEYS_ACTIVE_PATH="${KEYS_PATH}/active"
+export KEYS_EXPIRED_PATH="${KEYS_PATH}/expired"
+
+# This is used as a jumping off point for running node scripts.
+export LIQ_DIST_DIR="$(dirname "$(real_path "${0}")")"
 CATALYST_COMMAND_GROUPS="help meta meta-exts orgs projects work work-links"
 
 # display help on help
@@ -2642,6 +2636,7 @@ projects-qa() {
   fi
   if [[ -n "$FIX_LIST" ]]; then
     echowarn "To attempt automated fixes, try:\nliq projects qa --update $(list-join FIX_LIST ' ')"
+    return 1
   fi
 }
 
@@ -3484,7 +3479,7 @@ requirements-work() {
 }
 
 work-backup() {
-  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+  work-lib-require-unit-of-work
 
   eval "$(setSimpleOptions TEST -- "$@")"
 
@@ -3495,6 +3490,14 @@ work-backup() {
   fi
   # TODO: retrive and use workbranch name instead
   git push workspace HEAD
+}
+
+work-build() {
+  for PROJECT in $INVOLVED_PROJECTS; do
+    PROJECT="${PROJECT/@/}"
+    cd "${LIQ_PLAYGROUND}/${PROJECT}"
+    projects-build "$@"
+  done
 }
 
 work-diff() {
@@ -3520,7 +3523,7 @@ work-diff() {
 }
 
 work-diff-master() {
-  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+  work-lib-require-unit-of-work
 
   git diff $(git merge-base master HEAD)..HEAD "$@"
 }
@@ -3640,8 +3643,9 @@ work-involve() {
     echoerrandexit "There is no active unit of work to involve. Try:\nliq work resume"
   fi
 
+  # check for source repo access
   check-git-access
-
+  # gather necessary information
   if (( $# == 0 )) && [[ -n "$BASE_DIR" ]]; then
     requirePackage
     PROJECT_NAME=$(echo "$PACKAGE" | jq --raw-output '.name | @sh' | tr -d "'")
@@ -3657,6 +3661,7 @@ work-involve() {
   local BRANCH_NAME=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
   requirePackage # used later if auto-linking
 
+  # setup work branch
   cd "${LIQ_PLAYGROUND}/${PROJECT_NAME}"
   if git branch | grep -qE "^\*? *${BRANCH_NAME}\$"; then
     echowarn "Found existing work branch '${BRANCH_NAME}' in project ${PROJECT_NAME}. We will use it. Please fix manually if this is unexpected."
@@ -3667,9 +3672,13 @@ work-involve() {
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
 
+  # local administrative stuff
   local OTHER_PROJECTS="${INVOLVED_PROJECTS}" # save this for use in linking later...
   list-add-item INVOLVED_PROJECTS "@${PROJECT_NAME}" # do include the '@' here for display
   workUpdateWorkDb
+
+  # create changelog entry
+  work-lib-changelog-add-entry
 
   # Now, let's see about automatic linking!
   local PRIMARY_PROJECT=$INVOLVED_PROJECTS
@@ -3844,19 +3853,25 @@ work-merge() {
   done
 }
 
+work-prepare() {
+  # work-qa
+  # work-build
+
+  work-lib-changellog-finalize-entry
+}
+
 work-qa() {
-  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+  work-lib-require-unit-of-work
 
   echo "Checking local repo status..."
   work-report
 
-  source "${LIQ_WORK_DB}/curr_work"
   for PROJECT in $INVOLVED_PROJECTS; do
     PROJECT="${PROJECT/@/}"
     cd "${LIQ_PLAYGROUND}/${PROJECT}"
     projects-qa "$@"
   done
-} # work merge
+}
 
 work-report() {
   findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
@@ -4110,7 +4125,7 @@ work-start() {
     CURR_PROJECT=$(cat "$BASE_DIR/package.json" | jq --raw-output '.name' | tr -d "'")
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
   fi
-
+  # TODO: if no BASE_DIR, shouldn't we error out? Are we trying to support non-liq projects? That seems unecessary.
 
   work-lib-process-issues WORK_ISSUES "$ISSUES" "$BUGS_URL"
 
@@ -4128,8 +4143,8 @@ work-start() {
   fi
 
   WORK_STARTED=$(date "+%Y.%m.%d")
-  WORK_INITIATOR=$(whoami)
-  WORK_BRANCH=`work-lib-branch-name "${DESCRIPTION}"`
+  WORK_INITIATOR=$(git config --get user.email)
+  WORK_BRANCH="$(work-lib-branch-name "${DESCRIPTION}")"
 
   if [[ -f "${LIQ_WORK_DB}/${WORK_BRANCH}" ]]; then
     echoerrandexit "Unit of work '${WORK_BRANCH}' aready exists. Bailing out."
@@ -4161,6 +4176,7 @@ work-start() {
   local WORK_DESC="$DESCRIPTION"
   workUpdateWorkDb
 
+  # TODO: see 'TODO: if no BASE_DIR'
   if [[ -n "$CURR_PROJECT" ]]; then
     (
       cd "${LIQ_PLAYGROUND}/${CURR_PROJECT/@/}"
@@ -4653,13 +4669,14 @@ workSubmitChecks() {
 
 workUpdateWorkDb() {
   cat <<EOF > "${LIQ_WORK_DB}/curr_work"
-WORK_DESC='${WORK_DESC//\'/}'
-WORK_STARTED='$WORK_STARTED'
-WORK_INITIATOR='$WORK_INITIATOR'
-WORK_BRANCH='$WORK_BRANCH'
+export WORK_DESC='${WORK_DESC//\'/}'
+export WORK_STARTED='$WORK_STARTED'
+export WORK_INITIATOR='$WORK_INITIATOR'
+export WORK_BRANCH='$WORK_BRANCH'
 EOF
-  echo "INVOLVED_PROJECTS='${INVOLVED_PROJECTS:-}'" >> "${LIQ_WORK_DB}/curr_work"
-  echo "WORK_ISSUES='${WORK_ISSUES:-}'" >> "${LIQ_WORK_DB}/curr_work"
+  # These are handled separate because they can potentially be multi-line (I am guessing)
+  echo "export INVOLVED_PROJECTS='${INVOLVED_PROJECTS:-}'" >> "${LIQ_WORK_DB}/curr_work"
+  echo "export WORK_ISSUES='${WORK_ISSUES:-}'" >> "${LIQ_WORK_DB}/curr_work"
 }
 
 workUserSelectOne() {
@@ -4759,6 +4776,42 @@ work-lib-process-issues() {
   done
 }
 
+work-lib-changelog-add-entry() {
+  work-lib-require-unit-of-work
+
+  local CHANGELOG_FILE="./.meta/changelog.json" # TODO: move this to global var
+  # ensure there's a changelog
+  [[ -f "${CHANGELOG_FILE}" ]] || { mkdir -p $(dirname "${CHANGELOG_FILE}"); echo "[]" > "${CHANGELOG_FILE}"; }
+  # Grab some useful data from git
+  local CURR_USER CURR_REPO_VERSION
+  CURR_USER="$(git config --get user.email)"
+  CURR_REPO_VERSION="$(git rev-parse HEAD)"
+
+  CHANGELOG_FILE="${CHANGELOG_FILE}" \
+    CURR_USER="${CURR_USER}" \
+    CURR_REPO_VERSION="${CURR_REPO_VERSION}" \
+    node "${LIQ_DIST_DIR}/manage-changelog.js" add-entry \
+    && echofmt --info "Changelog data updated."
+}
+
+work-lib-changellog-finalize-entry() {
+  work-lib-require-unit-of-work
+
+  local CHANGELOG_FILE="./.meta/changelog.json" # TODO: move this to global var
+  # ensure there's a changelog
+  [[ -f "${CHANGELOG_FILE}" ]] || echoerrandexit "Did not find expected changelog at: ${CHANGELOG_FILE}"
+
+  CHANGELOG_FILE="${CHANGELOG_FILE}" \
+    node "${LIQ_DIST_DIR}/manage-changelog.js" finalize-entry \
+    && echofmt --info "Changelog data updated."
+}
+work-lib-require-unit-of-work() {
+  if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
+    echoerrandexit "An active/current unit of work is requried. Try:\nliq work select"
+  fi
+
+  source "${LIQ_WORK_DB}/curr_work"
+}
 work-links() {
   local ACTION="${1}"; shift
 

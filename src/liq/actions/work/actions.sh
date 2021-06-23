@@ -3,7 +3,7 @@ requirements-work() {
 }
 
 work-backup() {
-  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+  work-lib-require-unit-of-work
 
   eval "$(setSimpleOptions TEST -- "$@")"
 
@@ -14,6 +14,14 @@ work-backup() {
   fi
   # TODO: retrive and use workbranch name instead
   git push workspace HEAD
+}
+
+work-build() {
+  for PROJECT in $INVOLVED_PROJECTS; do
+    PROJECT="${PROJECT/@/}"
+    cd "${LIQ_PLAYGROUND}/${PROJECT}"
+    projects-build "$@"
+  done
 }
 
 work-diff() {
@@ -39,7 +47,7 @@ work-diff() {
 }
 
 work-diff-master() {
-  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+  work-lib-require-unit-of-work
 
   git diff $(git merge-base master HEAD)..HEAD "$@"
 }
@@ -159,8 +167,9 @@ work-involve() {
     echoerrandexit "There is no active unit of work to involve. Try:\nliq work resume"
   fi
 
+  # check for source repo access
   check-git-access
-
+  # gather necessary information
   if (( $# == 0 )) && [[ -n "$BASE_DIR" ]]; then
     requirePackage
     PROJECT_NAME=$(echo "$PACKAGE" | jq --raw-output '.name | @sh' | tr -d "'")
@@ -176,6 +185,7 @@ work-involve() {
   local BRANCH_NAME=$(basename $(readlink "${LIQ_WORK_DB}/curr_work"))
   requirePackage # used later if auto-linking
 
+  # setup work branch
   cd "${LIQ_PLAYGROUND}/${PROJECT_NAME}"
   if git branch | grep -qE "^\*? *${BRANCH_NAME}\$"; then
     echowarn "Found existing work branch '${BRANCH_NAME}' in project ${PROJECT_NAME}. We will use it. Please fix manually if this is unexpected."
@@ -186,9 +196,13 @@ work-involve() {
     echo "Created work branch '${BRANCH_NAME}' for project '${PROJECT_NAME}'."
   fi
 
+  # local administrative stuff
   local OTHER_PROJECTS="${INVOLVED_PROJECTS}" # save this for use in linking later...
   list-add-item INVOLVED_PROJECTS "@${PROJECT_NAME}" # do include the '@' here for display
   workUpdateWorkDb
+
+  # create changelog entry
+  work-lib-changelog-add-entry
 
   # Now, let's see about automatic linking!
   local PRIMARY_PROJECT=$INVOLVED_PROJECTS
@@ -363,19 +377,25 @@ work-merge() {
   done
 }
 
+work-prepare() {
+  # work-qa
+  # work-build
+
+  work-lib-changellog-finalize-entry
+}
+
 work-qa() {
-  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+  work-lib-require-unit-of-work
 
   echo "Checking local repo status..."
   work-report
 
-  source "${LIQ_WORK_DB}/curr_work"
   for PROJECT in $INVOLVED_PROJECTS; do
     PROJECT="${PROJECT/@/}"
     cd "${LIQ_PLAYGROUND}/${PROJECT}"
     projects-qa "$@"
   done
-} # work merge
+}
 
 work-report() {
   findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
@@ -629,7 +649,7 @@ work-start() {
     CURR_PROJECT=$(cat "$BASE_DIR/package.json" | jq --raw-output '.name' | tr -d "'")
     BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
   fi
-
+  # TODO: if no BASE_DIR, shouldn't we error out? Are we trying to support non-liq projects? That seems unecessary.
 
   work-lib-process-issues WORK_ISSUES "$ISSUES" "$BUGS_URL"
 
@@ -647,8 +667,8 @@ work-start() {
   fi
 
   WORK_STARTED=$(date "+%Y.%m.%d")
-  WORK_INITIATOR=$(whoami)
-  WORK_BRANCH=`work-lib-branch-name "${DESCRIPTION}"`
+  WORK_INITIATOR=$(git config --get user.email)
+  WORK_BRANCH="$(work-lib-branch-name "${DESCRIPTION}")"
 
   if [[ -f "${LIQ_WORK_DB}/${WORK_BRANCH}" ]]; then
     echoerrandexit "Unit of work '${WORK_BRANCH}' aready exists. Bailing out."
@@ -680,6 +700,7 @@ work-start() {
   local WORK_DESC="$DESCRIPTION"
   workUpdateWorkDb
 
+  # TODO: see 'TODO: if no BASE_DIR'
   if [[ -n "$CURR_PROJECT" ]]; then
     (
       cd "${LIQ_PLAYGROUND}/${CURR_PROJECT/@/}"
