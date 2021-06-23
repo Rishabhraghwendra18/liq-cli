@@ -3949,7 +3949,7 @@ work-resume() {
 work-join() { work-resume "$@"; }
 
 work-save() {
-  findBase # TODO: basically, we use this to imply that we're in a repo. It's not quite the right quetsion.
+  work-lib-require-unit-of-work
 
   eval "$(setSimpleOptions ALL MESSAGE= DESCRIPTION= NO_BACKUP:B BACKUP_ONLY -- "$@")"
 
@@ -3961,17 +3961,30 @@ work-save() {
     echoerrandexit "Must specify '--message|-m' (summary) for save."
   fi
 
-  if [[ "$BACKUP_ONLY" != true ]]; then
-    local OPTIONS="-m '"${MESSAGE//\'/\'\"\'\"\'}"' "
-    if [[ $ALL == true ]]; then OPTIONS="${OPTIONS}--all "; fi
-    if [[ $DESCRIPTION == true ]]; then OPTIONS="${OPTIONS}-m '"${DESCRIPTION/'//\'/\'\"\'\"\'}"' "; fi
-    # I have no idea why, but without the eval (even when "$@" dropped), this
-    # produced 'fatal: Paths with -a does not make sense.' What' path?
-    eval git commit ${OPTIONS} "$@"
+  local TO_SAVE="$@"
+  if [[ -z "${TO_SAVE:-}" ]]; then
+    TO_SAVE="$INVOLVED_PROJECTS"
   fi
-  if [[ "$NO_BACKUP" != true ]]; then
-    work-backup
-  fi
+
+  local IP
+  for IP in ${TO_SAVE}; do
+    IP=$(workConvertDot "$IP")
+    IP="${IP/@/}"
+    (
+      cd "${LIQ_PLAYGROUND}/$IP"
+      if [[ "$BACKUP_ONLY" != true ]]; then
+        local OPTIONS="-m '"${MESSAGE//\'/\'\"\'\"\'}"' "
+        if [[ $ALL == true ]]; then OPTIONS="${OPTIONS}--all "; fi
+        if [[ $DESCRIPTION == true ]]; then OPTIONS="${OPTIONS}-m '"${DESCRIPTION/'//\'/\'\"\'\"\'}"' "; fi
+        # I have no idea why, but without the eval (even when "$@" dropped), this
+        # produced 'fatal: Paths with -a does not make sense.' What' path?
+        eval git commit ${OPTIONS} # "$@" TODO: support this with '--' to pass args to git
+      fi
+      if [[ "$NO_BACKUP" != true ]]; then
+        work-backup
+      fi
+    )
+  done
 }
 
 work-stage() {
