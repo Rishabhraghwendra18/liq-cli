@@ -17,7 +17,7 @@
     "test": "make test",
     "install": "TERM=xterm ./dist/install.sh",
     "lint": "JS_SRC=./src/liq catalyst-scripts lint",
-    "lint-fix": "JS_SRC=./src/liq catalyst-scripts lint-fix",
+    "lint:fix": "JS_SRC=./src/liq catalyst-scripts lint-fix",
     "clean": "rm -rf package-lock.json node_modules/ dist/",
     "preversion": "npm test && npm run lint",
     "version": "npm run build && git add -fA dist",
