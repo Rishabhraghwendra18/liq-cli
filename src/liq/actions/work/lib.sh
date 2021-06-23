@@ -282,7 +282,7 @@ work-lib-process-issues() {
   local CSV_ISSUES="${2}"
   local BUGS_URL="${3}"
   local ISSUES ISSUE
-  list-from-csv "${VAR}" "$CSV_ISSUES"
+  list-from-csv "${VAR}" "${CSV_ISSUES}"
   for ISSUE in ${!VAR}; do
     if [[ "$ISSUE" =~ ^[0-9]+$ ]]; then
       if [[ -z "$BUGS_URL" ]]; then

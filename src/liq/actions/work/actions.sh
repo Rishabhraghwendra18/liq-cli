@@ -645,13 +645,16 @@ work-start() {
   eval "$(setSimpleOptions ISSUES= PUSH DESCRIPTION= -- "$@")"
 
   local CURR_PROJECT ISSUES_URL BUGS_URL WORK_ISSUES
-  if [[ -n "$BASE_DIR" ]]; then
-    CURR_PROJECT=$(cat "$BASE_DIR/package.json" | jq --raw-output '.name' | tr -d "'")
-    BUGS_URL=$(cat "$BASE_DIR/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
+  if [[ -n "${BASE_DIR}" ]]; then
+    CURR_PROJECT=$(cat "${BASE_DIR}/package.json" | jq --raw-output '.name' | tr -d "'")
+    BUGS_URL=$(cat "${BASE_DIR}/package.json" | jq --raw-output '.bugs.url' | tr -d "'")
+    [[ -n "${BUGS_URL}" ]] && [[ "${BUGS_URL}" != 'null' ]] \
+      || echoerrandexit "The '.bugs.url' is not defined in '${BASE_DIR}/package.json'"
+  else
+    echoerrandexit "Could not determine project base directory."
   fi
-  # TODO: if no BASE_DIR, shouldn't we error out? Are we trying to support non-liq projects? That seems unecessary.
 
-  work-lib-process-issues WORK_ISSUES "$ISSUES" "$BUGS_URL"
+  work-lib-process-issues WORK_ISSUES "${ISSUES}" "${BUGS_URL}"
 
   if [[ -z "$WORK_ISSUES" ]]; then
     echoerrandexit "Must specify at least 1 issue when starting a new unit of work."
