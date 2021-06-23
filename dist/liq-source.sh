@@ -3949,6 +3949,7 @@ work-resume() {
 work-join() { work-resume "$@"; }
 
 work-save() {
+  findBase
   work-lib-require-unit-of-work
 
   eval "$(setSimpleOptions ALL MESSAGE= DESCRIPTION= NO_BACKUP:B BACKUP_ONLY -- "$@")"
@@ -3961,9 +3962,11 @@ work-save() {
     echoerrandexit "Must specify '--message|-m' (summary) for save."
   fi
 
+  local SAVE_ALL=false
   local TO_SAVE="$@"
   if [[ -z "${TO_SAVE:-}" ]]; then
     TO_SAVE="$INVOLVED_PROJECTS"
+    SAVE_ALL=true
   fi
 
   local IP
@@ -3972,16 +3975,18 @@ work-save() {
     IP="${IP/@/}"
     (
       cd "${LIQ_PLAYGROUND}/$IP"
-      if [[ "$BACKUP_ONLY" != true ]]; then
-        local OPTIONS="-m '"${MESSAGE//\'/\'\"\'\"\'}"' "
-        if [[ $ALL == true ]]; then OPTIONS="${OPTIONS}--all "; fi
-        if [[ $DESCRIPTION == true ]]; then OPTIONS="${OPTIONS}-m '"${DESCRIPTION/'//\'/\'\"\'\"\'}"' "; fi
-        # I have no idea why, but without the eval (even when "$@" dropped), this
-        # produced 'fatal: Paths with -a does not make sense.' What' path?
-        eval git commit ${OPTIONS} # "$@" TODO: support this with '--' to pass args to git
-      fi
-      if [[ "$NO_BACKUP" != true ]]; then
-        work-backup
+      if [[ "${SAVE_ALL}" != true ]] || ! git diff-index --quiet HEAD --; then
+        if [[ "${BACKUP_ONLY}" != true ]]; then
+          local OPTIONS="-m '"${MESSAGE//\'/\'\"\'\"\'}"' "
+          if [[ $ALL == true ]]; then OPTIONS="${OPTIONS}--all "; fi
+          if [[ $DESCRIPTION == true ]]; then OPTIONS="${OPTIONS}-m '"${DESCRIPTION/'//\'/\'\"\'\"\'}"' "; fi
+          # I have no idea why, but without the eval (even when "$@" dropped), this
+          # produced 'fatal: Paths with -a does not make sense.' What' path?
+          eval git commit ${OPTIONS} # "$@" TODO: support this with '--' to pass args to git
+        fi
+        if [[ "$NO_BACKUP" != true ]]; then
+          work-backup
+        fi
       fi
     )
   done
