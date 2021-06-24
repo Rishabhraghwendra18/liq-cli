@@ -381,7 +381,7 @@ work-prepare() {
   # work-qa
   # work-build
 
-  work-lib-changellog-finalize-entry
+  work-lib-changelog-finalize-entry
 }
 
 work-qa() {

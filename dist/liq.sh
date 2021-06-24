@@ -3857,7 +3857,7 @@ work-prepare() {
   # work-qa
   # work-build
 
-  work-lib-changellog-finalize-entry
+  work-lib-changelog-finalize-entry
 }
 
 work-qa() {
@@ -4815,7 +4815,7 @@ work-lib-changelog-add-entry() {
     && echofmt --info "Changelog data updated."
 }
 
-work-lib-changellog-finalize-entry() {
+work-lib-changelog-finalize-entry() {
   work-lib-require-unit-of-work
 
   local CHANGELOG_FILE="./.meta/changelog.json" # TODO: move this to global var
