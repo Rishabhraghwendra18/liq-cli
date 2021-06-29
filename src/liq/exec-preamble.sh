@@ -1,4 +1,4 @@
-source ./strict.sh
+import strict
 
 import colors
 import echoerr

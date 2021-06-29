@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 
-# TODO: this should be a bash-toolkit provided resource.
-
 # bash strict settings
-set -o errexit # exit on errors
+set -o errexit # exit on errors; set -e
 set -o nounset # exit on use of uninitialized variable
-set -o pipefail
+set -o pipefail # exit if any part of a pipeline fails (rather than just on failure of final piece)
 
 # http://linuxcommand.org/lc3_adv_tput.php
 red=`tput setaf 1`
