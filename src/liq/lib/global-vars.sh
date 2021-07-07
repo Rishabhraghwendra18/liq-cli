@@ -24,6 +24,9 @@ ACTION=''
 
 INVOLVED_PROJECTS='' # defined in the $LIQ_WORK_DB files
 
+LOG_STYLE=${LOG_MODE_USER_DEBUG} # used by 'traps'
+LOG_MULTILINE_COMMAND="" # used by 'traps'
+
 # Configurable globals.
 ORIGIN_URL='' # can be set externally to avoid interactive questions on 'project init'
 
