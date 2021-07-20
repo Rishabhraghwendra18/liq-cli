@@ -23,7 +23,7 @@ Liquid Labs, LLC offers bounties on certain issues. The amount of the bounty wil
 * Request assignment to the a task. Task will remain assigned for a specified Lock-In Period and the Assignee shall have exclusive rights to complete the task and receive the bounty payment.
 * Complete work and submit a PR.
 * Address any feedback.
-* After PR is accepted, get paid via Venmo, Zelle, PayPal, or via ACH direct deposit.
+* After PR is accepted, get paid via Venmo.
 
 ## Terms and Conditions
 
@@ -64,7 +64,7 @@ Liquid Labs, LLC offers bounties on certain issues. The amount of the bounty wil
 
 * Clear and obvious typos or bounty payments which are far out of bounds for the work described and the historical amount offered for similar work shall be deemed invalid. Each party shall have an obligation to note and seek correction of any such "outsized bounties" immediately.
 * Once an issue is accepted, Liquid Labs shall request the Assignee to provide instructions for receiving payment.
-* Liquid Labs supports payment via Venmo, Zelle, PayPal, and via ACH direct deposit.
+* Payments are only distributed via Venmo at this time and the Assignee must have a Venmo account to recieve payment.
 * All payments will be sent as "commercial/business" payments.
 * At least one "fee-less" option will be provided, and any fees associated with the Assignees chosen option will be the responsibility and may be deducted from the "base" pay such that the gross payment is equivalent to the bounty amount.
 * Payment instructions will be received either through an issue comment or via email. If email is preferred, the Assignee must provide an email via either their public github profile or in the task comments.
