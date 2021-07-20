@@ -3416,7 +3416,9 @@ projects-lib-setup-labels-sync() {
   if [[ -z "${PROJECT_LABELS:-}" ]]; then
     echo "  No project labels defined; using default label set..."
     PROJECT_LABELS=$(cat <<EOF
+assigned:This task has been assigned/claimed.:fbca04
 bounty:This task offers a bounty:209020
+breaking:Breaks compatibility with previous major version.:d93f0b
 bug:Something is broken:d73a4a
 enhancement:New feature or request:a2eeef
 good first issue:Good for newcomers:7050ff
