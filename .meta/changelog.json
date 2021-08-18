@@ -12,5 +12,20 @@
     "involvedProjects": [
       "@liquid-labs/liq-cli"
     ]
+  },
+  {
+    "issues": [
+      "https://github.com/Liquid-Labs/liq-ext-projects-releases/issues/1"
+    ],
+    "branch": "2021.08.18-zane@liquid-labs.com-enable_release_prep",
+    "startTimestampLocal": "2021-08-18-2321 UTC",
+    "branchFrom": "4b69fc8f65a17df72e968a554701a3cd7682bec1",
+    "description": "Update changelog format to better support release notes.",
+    "workInitiator": "zane@liquid-labs.com",
+    "branchInitiator": "zane@liquid-labs.com",
+    "involvedProjects": [
+      "@liquid-labs/liq-ext-projects-releases",
+      "@liquid-labs/liq-cli"
+    ]
   }
 ]
