@@ -1,9 +1,10 @@
 /* globals beforeAll, describe, expect, test */
 import * as fs from 'fs'
+import YAML from 'yaml'
 
 import { readChangelog, requireEnv, saveChangelog } from '../lib-changelog-core'
 
-const TEST_CHANGELOG_PATH = './src/liq/actions/work/changelog/test/test-changelog.json'
+const TEST_CHANGELOG_PATH = './src/liq/actions/work/changelog/test/test-changelog.yaml'
 
 describe('requireEnv', () => {
   test('returns the value of an environment variable', () => {
@@ -19,7 +20,7 @@ describe('requireEnv', () => {
 describe('IO functions', () => {
   let testChangelog
   beforeAll(() => {
-    testChangelog = JSON.parse(fs.readFileSync(TEST_CHANGELOG_PATH))
+    testChangelog = YAML.parse(fs.readFileSync(TEST_CHANGELOG_PATH, 'utf8'))
   })
 
   describe('readChangelog', () => {

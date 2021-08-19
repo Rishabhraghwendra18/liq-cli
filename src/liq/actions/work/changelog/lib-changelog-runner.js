@@ -1,10 +1,14 @@
 import { addEntry } from './lib-changelog-action-add-entry'
 import { finalizeChangelog } from './lib-changelog-action-finalize-entry'
+import { printEntries } from './lib-changelog-action-print-entries'
+import { updateFileFormat } from './lib-changelog-action-update-format'
 
 // Setup valid actions
 const ADD_ENTRY = 'add-entry'
 const FINALIZE_ENTRY = 'finalize-entry'
-const validActions = [ADD_ENTRY, FINALIZE_ENTRY]
+const PRINT_ENTRIES = 'print-entries'
+const UPDATE_FORMAT= 'update-format'
+const validActions = [ADD_ENTRY, FINALIZE_ENTRY, PRINT_ENTRIES, UPDATE_FORMAT]
 
 const determineAction = () => {
   const args = process.argv.slice(2)
@@ -23,6 +27,10 @@ const determineAction = () => {
     return addEntry
   case FINALIZE_ENTRY:
     return finalizeChangelog
+  case PRINT_ENTRIES:
+    return printEntries
+  case UPDATE_FORMAT:
+    return updateFileFormat
   default:
     throw new Error(`Cannot process unkown action: ${action}`)
   }

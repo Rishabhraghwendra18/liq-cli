@@ -687,9 +687,7 @@ work-start() {
       || echoerrandexit "Error trying to extract issue description from: ${BUGS_URL}/${PRIMARY_ISSUE}\nThe primary issues must be part of the current project."
   fi
 
-  WORK_STARTED=$(date "+%Y.%m.%d")
-  WORK_INITIATOR=$(git config --get user.email)
-  WORK_BRANCH="$(work-lib-branch-name "${DESCRIPTION}")"
+  WORK_BRANCH="$(work-lib-branch-name "${DESCRIPTION}")" # TODO: change name; alse sets default values for WORK_STARTED and WORK_INITIATOR
 
   if [[ -f "${LIQ_WORK_DB}/${WORK_BRANCH}" ]]; then
     echoerrandexit "Unit of work '${WORK_BRANCH}' aready exists. Bailing out."
@@ -795,6 +793,8 @@ work-submit() {
 
   findBase
   check-git-access
+
+  work-prepare # TODO: I'm just kinda jabbing this in here because I don't want to not use the work we did in prepare, but the manual tie in is too much. It needs to happen more automatically.
 
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "No current unit of work. Try:\nliq work select."
