@@ -903,3 +903,25 @@ ${MESSAGE}
 projects-update-changelog-format() {
   liq-work-lib-changelog-update-format
 }
+
+# TODO: move to projects... improve interface? support print to stdin, release only changelog, etc.
+projects-print-changelog() {
+  requirePackage
+  local CURR_VER LAST_RELEASE PROJECT NEXT_VER
+  CURR_VER=$( echo "${PACKAGE}" | jq -r '.version' )
+  LAST_RELEASE="v${CURR_VER}"
+  PROJECT=$( echo "${PACKAGE}" | jq -r '.name' )
+  echo semver --increment prerelease "${CURR_VER}"
+  NEXT_VER="$(semver --increment prerelease "${CURR_VER}")"
+
+  local CHANGELOG_MD='CHANGELOG.md'
+  git cat-file -e ${LAST_RELEASE}:"${CHANGELOG_MD}" 2>/dev/null \
+    && git cat-file ${LAST_RELEASE}:"${CHANGELOG_MD}" \
+    || {
+      echowarn "Did not find existing '${CHANGELOG_MD}'. Initializing..."
+      echo -e "# ${PROJECT} changelog"
+    }
+  echo -e "\n## Release ${NEXT_VER}\n"
+
+  liq-work-lib-changelog-print-entries-since "${LAST_RELEASE}"
+}

@@ -40,13 +40,23 @@ liq-work-lib-changelog-print-entries-since() {
   if git cat-file -e ${SINCE_VERSION}:"${LIQ_WORK_CHANGELOG_FILE}" 2>/dev/null; then
     ORIG_LC=$(git show ${SINCE_VERSION}:"${LIQ_WORK_CHANGELOG_FILE}" | wc -l)
   fi
+  # Only look at 1-parent commits (this indicates a hotfix directly on the main branch)
+  local HOTFIXES
+  HOTFIXES=$(git log \
+    --first-parent \
+    --exclude=* --tags \
+    --max-parents=1 \
+    --pretty=format:'{%n  "commit": "%H",%n  "author": {%n    "name": "%aN",%n     "email": "%aE"%n  },%n  "date": "%ad",%n  "message": "%s"%n},' \
+    ${SINCE_VERSION}^..HEAD\
+    | perl -pe 'BEGIN{print "["}; END{print "]\n"}' | \
+    perl -pe 's/},]/}]/')
   tail +${ORIG_LC} "${LIQ_WORK_CHANGELOG_FILE}" | \
-    CHANGELOG_FILE="-" \
-    node "${LIQ_DIST_DIR}/manage-changelog.js" print-entries
+    CHANGELOG_FILE="-" node "${LIQ_DIST_DIR}/manage-changelog.js" print-entries "${HOTFIXES}"
 }
 
 liq-work-lib-changelog-update-format() {
-  liq-work-lib-ensure-changelog-exists
+  local OLD_CHANGELOG="${LIQ_WORK_CHANGELOG_FILE:0:$(( ${#LIQ_WORK_CHANGELOG_FILE} - 5))}.json"
+  [[ -f "${OLD_CHANGELOG}" ]] || echoerrandexit "Did not find old changelog file '${OLD_CHANGELOG}'."
 
   CHANGELOG_FILE="${LIQ_WORK_CHANGELOG_FILE}" \
     node "${LIQ_DIST_DIR}/manage-changelog.js" update-format \

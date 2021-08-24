@@ -13,7 +13,7 @@ const validActions = [ADD_ENTRY, FINALIZE_ENTRY, PRINT_ENTRIES, UPDATE_FORMAT]
 const determineAction = () => {
   const args = process.argv.slice(2)
 
-  if (args.length === 0 || args.length > 1) {
+  if (args.length === 0) { // || args.length > 1) { TODO: we do need args for 'print-changelog'...
     throw new Error('Unexpected argument count. Please provide exactly one action argument.')
   }
 
@@ -28,7 +28,7 @@ const determineAction = () => {
   case FINALIZE_ENTRY:
     return finalizeChangelog
   case PRINT_ENTRIES:
-    return printEntries
+    return () => printEntries(JSON.parse(args[1]))
   case UPDATE_FORMAT:
     return updateFileFormat
   default:

@@ -3,20 +3,22 @@ import YAML from 'yaml'
 
 import { readChangelog, requireEnv, saveChangelog } from './lib-changelog-core'
 
-const printEntries = () => {
+const printEntries = (hotfixes) => {
   const changelog = readChangelog()
 
   // TODO: this is a bit of a limitation requiring the script pwd to be the package root.
   const packageContents = fs.readFileSync('package.json')
   const packageData = JSON.parse(packageContents)
 
-  let changeNotes = []
+  const changeEntries = changelog.map(r => ({ time: new Date(r.startTimestamp), notes: r.changeNotes, author:r.workInitiator }))
+    .concat(hotfixes.map(r => ({ time: new Date(r.date), notes: [r.message.replace(/^\s*hotfix\s*:?\s*/i, '')], author: r.author.email, isHotfix: true })))
+  changeEntries.sort((a, b) => a.time < b.time ? -1 : a.time == b.time ? 0 : 1)
+
   let securityNotes = []
   let drpBcpNotes = []
   let backoutNotes = []
 
   for (const entry of changelog) {
-    changeNotes = changeNotes.concat(entry.changeNotes)
     if (entry.securityNotes !== undefined) {
       securityNotes = securityNotes.concat(entry.securityNotes)
     }
@@ -28,7 +30,18 @@ const printEntries = () => {
     }
   }
 
-  console.log(`* ${changeNotes.join("\n* ")}`)
+  const attrib = (entry) => `_(${entry.author}; ${entry.time.toISOString()})_`
+
+  for (const entry of changeEntries) {
+    if (entry.isHotfix) {
+      console.log(`* _**hotfix**_: ${entry.notes[0]} ${attrib(entry)}`)
+    }
+    else {
+      for (const note of entry.notes) {
+        console.log(`* ${note} ${attrib(entry)}`)
+      }
+    }
+  }
   if (packageData?.liq?.contracts?.secure || securityNotes.length > 0) {
     console.log("\n### Security notes\n\n")
     console.log(`${securityNotes.length === 0 ? '_none_' : `* ${securityNotes.join("\n* ")}`}`)
