@@ -898,3 +898,8 @@ ${MESSAGE}
     }
   done # TO_SUBMIT processing loop
 }
+
+# TODO: temporary until all existing (internal to LL) changelogs are updated. Yes, it's a project command here in work, but it's temporary.
+projects-update-changelog-format() {
+  liq-work-lib-changelog-update-format
+}
