@@ -4325,6 +4325,8 @@ work-submit() {
   findBase
   check-git-access
 
+  work-prepare # TODO: I'm just kinda jabbing this in here because I don't want to not use the work we did in prepare, but the manual tie in is too much. It needs to happen more automatically.
+
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "No current unit of work. Try:\nliq work select."
   fi
@@ -4426,6 +4428,33 @@ ${MESSAGE}
       echoerrandexit "Submission failed. If you see an error mentioning 'Invalid value for \"head\"', check to see if your forked working repository has become detached. If this is the case, you can delete the working repo on GitHub, refork from the source, and then 'liq work save --backup-only' from your local checkout. This will update the new forked repo with your workbranch changes and you should be able to submit after that."
     }
   done # TO_SUBMIT processing loop
+}
+
+# TODO: temporary until all existing (internal to LL) changelogs are updated. Yes, it's a project command here in work, but it's temporary.
+projects-update-changelog-format() {
+  liq-work-lib-changelog-update-format
+}
+
+# TODO: move to projects... improve interface? support print to stdin, release only changelog, etc.
+projects-print-changelog() {
+  requirePackage
+  local CURR_VER LAST_RELEASE PROJECT NEXT_VER
+  CURR_VER=$( echo "${PACKAGE}" | jq -r '.version' )
+  LAST_RELEASE="v${CURR_VER}"
+  PROJECT=$( echo "${PACKAGE}" | jq -r '.name' )
+  echo semver --increment prerelease "${CURR_VER}"
+  NEXT_VER="$(semver --increment prerelease "${CURR_VER}")"
+
+  local CHANGELOG_MD='CHANGELOG.md'
+  git cat-file -e ${LAST_RELEASE}:"${CHANGELOG_MD}" 2>/dev/null \
+    && git cat-file ${LAST_RELEASE}:"${CHANGELOG_MD}" \
+    || {
+      echowarn "Did not find existing '${CHANGELOG_MD}'. Initializing..."
+      echo -e "# ${PROJECT} changelog"
+    }
+  echo -e "\n## Release ${NEXT_VER}\n"
+
+  liq-work-lib-changelog-print-entries-since "${LAST_RELEASE}"
 }
 WORK_GROUPS="links"
 
@@ -4914,13 +4943,23 @@ liq-work-lib-changelog-print-entries-since() {
   if git cat-file -e ${SINCE_VERSION}:"${LIQ_WORK_CHANGELOG_FILE}" 2>/dev/null; then
     ORIG_LC=$(git show ${SINCE_VERSION}:"${LIQ_WORK_CHANGELOG_FILE}" | wc -l)
   fi
+  # Only look at 1-parent commits (this indicates a hotfix directly on the main branch)
+  local HOTFIXES
+  HOTFIXES=$(git log \
+    --first-parent \
+    --exclude=* --tags \
+    --max-parents=1 \
+    --pretty=format:'{%n  "commit": "%H",%n  "author": {%n    "name": "%aN",%n     "email": "%aE"%n  },%n  "date": "%ad",%n  "message": "%s"%n},' \
+    ${SINCE_VERSION}^..HEAD\
+    | perl -pe 'BEGIN{print "["}; END{print "]\n"}' | \
+    perl -pe 's/},]/}]/')
   tail +${ORIG_LC} "${LIQ_WORK_CHANGELOG_FILE}" | \
-    CHANGELOG_FILE="-" \
-    node "${LIQ_DIST_DIR}/manage-changelog.js" print-entries
+    CHANGELOG_FILE="-" node "${LIQ_DIST_DIR}/manage-changelog.js" print-entries "${HOTFIXES}"
 }
 
 liq-work-lib-changelog-update-format() {
-  liq-work-lib-ensure-changelog-exists
+  local OLD_CHANGELOG="${LIQ_WORK_CHANGELOG_FILE:0:$(( ${#LIQ_WORK_CHANGELOG_FILE} - 5))}.json"
+  [[ -f "${OLD_CHANGELOG}" ]] || echoerrandexit "Did not find old changelog file '${OLD_CHANGELOG}'."
 
   CHANGELOG_FILE="${LIQ_WORK_CHANGELOG_FILE}" \
     node "${LIQ_DIST_DIR}/manage-changelog.js" update-format \
