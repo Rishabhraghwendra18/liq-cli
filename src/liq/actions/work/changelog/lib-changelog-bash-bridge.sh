@@ -22,6 +22,7 @@ liq-work-lib-ensure-changelog-exists() {
     || echoerrandexit "Did not find expected changelog at: ${LIQ_WORK_CHANGELOG_FILE}"
 }
 
+# TODO: this is really a work-involved project function...
 work-lib-changelog-finalize-entry() {
   work-lib-require-unit-of-work
   liq-work-lib-ensure-changelog-exists
