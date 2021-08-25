@@ -282,7 +282,7 @@ work-merge() {
   fi
 
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
-    echoerrandexit "'merge' can only be perfomred on the current unit of work. Try:\nliq work select"
+    echoerrandexit "'merge' can only be perfomred on the current unit of work. Try:\nliq work resume"
   fi
 
   local WORK_DESC WORK_STARTED WORK_INITIATOR INVOLVED_PROJECTS
@@ -815,7 +815,7 @@ work-submit() {
   check-git-access
 
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
-    echoerrandexit "No current unit of work. Try:\nliq work select."
+    echoerrandexit "No current unit of work. Try:\nliq work resume."
   fi
 
   source "${LIQ_WORK_DB}/curr_work"
