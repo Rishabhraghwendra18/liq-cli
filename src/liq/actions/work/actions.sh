@@ -378,23 +378,27 @@ work-merge() {
 }
 
 work-prepare() {
-  for PROJECT in ${INVOLVED_PROJECTS}; do
+  local TO_PROCESS="$@"
+  if [[ -z "${TO_PROCESS}" ]]; then
+    TO_PROCESS="${INVOLVED_PROJECTS}"
+  fi
+
+  for PROJECT in ${TO_PROCESS}; do
     requireCleanRepo "${IP}"
   done
   # TODO: pass option to skip clean check
   # work-qa
   # work-build
 
-  for PROJECT in ${INVOLVED_PROJECTS}; do
+  for PROJECT in ${TO_PROCESS}; do
     PROJECT="${PROJECT/@/}"
     (
       cd "${LIQ_PLAYGROUND}/${PROJECT}"
       work-lib-changelog-finalize-entry
+      git add . # this is considered safe becaues we checked the repo was clean
+      git commit -m "changelog finalization (by liq)"
     )
   done
-
-  git add . # this is considered safe becaues we checked the repo was clean
-  git commit -m "changelog finalization (by liq)"
 }
 
 work-qa() {
@@ -808,13 +812,13 @@ work-submit() {
   findBase
   check-git-access
 
-  work-prepare # TODO: I'm just kinda jabbing this in here because I don't want to not use the work we did in prepare, but the manual tie in is too much. It needs to happen more automatically.
-
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "No current unit of work. Try:\nliq work select."
   fi
 
   source "${LIQ_WORK_DB}/curr_work"
+
+  work-prepare # TODO: I'm just kinda jabbing this in here because I want to use the work we did in prepare, but the manual tie in is too much. It needs to happen more automatically.
 
   if [[ -z "$MESSAGE" ]]; then
     MESSAGE="$WORK_DESC" # sourced from current work
