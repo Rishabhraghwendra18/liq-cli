@@ -3917,6 +3917,7 @@ work-prepare() {
   fi
 
   for PROJECT in ${TO_PROCESS}; do
+    PROJECT=$(workConvertDot "${PROJECT}")
     requireCleanRepo "${PROJECT}"
   done
   # TODO: pass option to skip clean check
@@ -3924,6 +3925,7 @@ work-prepare() {
   # work-build
 
   for PROJECT in ${TO_PROCESS}; do
+    PROJECT=$(workConvertDot "${PROJECT}")
     PROJECT="${PROJECT/@/}"
     (
       cd "${LIQ_PLAYGROUND}/${PROJECT}"
@@ -4351,7 +4353,7 @@ work-submit() {
 
   source "${LIQ_WORK_DB}/curr_work"
 
-  work-prepare # TODO: I'm just kinda jabbing this in here because I want to use the work we did in prepare, but the manual tie in is too much. It needs to happen more automatically.
+  work-prepare "$@" # TODO: I'm just kinda jabbing this in here because I want to use the work we did in prepare, but the manual tie in is too much. It needs to happen more automatically.
 
   if [[ -z "$MESSAGE" ]]; then
     MESSAGE="$WORK_DESC" # sourced from current work
