@@ -398,7 +398,7 @@ work-prepare() {
       cd "${LIQ_PLAYGROUND}/${PROJECT}"
       work-lib-changelog-finalize-entry
       git add . # this is considered safe becaues we checked the repo was clean
-      git commit -m "changelog finalization (by liq)"
+      work-save -m "changelog finalization (by liq)"
     )
   done
 }
