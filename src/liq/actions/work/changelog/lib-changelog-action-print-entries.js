@@ -1,7 +1,6 @@
 import * as fs from 'fs'
-import YAML from 'yaml'
 
-import { readChangelog, requireEnv, saveChangelog } from './lib-changelog-core'
+import { readChangelog } from './lib-changelog-core'
 
 const printEntries = (hotfixes, lastReleaseDate) => {
   const changelog = readChangelog()
@@ -10,16 +9,18 @@ const printEntries = (hotfixes, lastReleaseDate) => {
   const packageContents = fs.readFileSync('package.json')
   const packageData = JSON.parse(packageContents)
 
-  const changeEntries = changelog.map(r => ({ time: new Date(r.startTimestamp), notes: r.changeNotes, author:r.workInitiator }))
+  const changeEntries = changelog.map(r => ({ time : new Date(r.startTimestamp), notes : r.changeNotes, author : r.workInitiator }))
     .concat(hotfixes.map(r => (
       {
-        time: new Date(r.date),
-        notes: [r.message.replace(/^\s*hotfix\s*:?\s*/i, '')],
-        author: r.author.email,
-        isHotfix: true }
-  )))
-  .filter(r => r.time >= lastReleaseDate)
-  changeEntries.sort((a, b) => a.time < b.time ? -1 : a.time == b.time ? 0 : 1)
+        time     : new Date(r.date),
+        notes    : [r.message.replace(/^\s*hotfix\s*:?\s*/i, '')],
+        author   : r.author.email,
+        isHotfix : true
+      }
+    )))
+    .filter(r => r.time >= lastReleaseDate)
+  // with Dates, we really want '==', not '==='
+  changeEntries.sort((a, b) => a.time < b.time ? -1 : a.time == b.time ? 0 : 1) // eslint-disable-line eqeqeq
 
   let securityNotes = []
   let drpBcpNotes = []
@@ -50,16 +51,16 @@ const printEntries = (hotfixes, lastReleaseDate) => {
     }
   }
   if (packageData?.liq?.contracts?.secure || securityNotes.length > 0) {
-    console.log("\n### Security notes\n\n")
-    console.log(`${securityNotes.length === 0 ? '_none_' : `* ${securityNotes.join("\n* ")}`}`)
+    console.log('\n### Security notes\n\n')
+    console.log(`${securityNotes.length === 0 ? '_none_' : `* ${securityNotes.join('\n* ')}`}`)
   }
-  if (/* TODO: an org setting org.settings?.['maintains DRP/BCP'] ||*/ drpBcpNotes.length > 0) {
-    console.log("\n### DRP/BCP notes\n\n")
-    console.log(`${drpBcpNotes.length === 0 ? '_none_' : `* ${drpBcpNotes.join("\n* ")}`}`)
+  if (/* TODO: an org setting org.settings?.['maintains DRP/BCP'] || */ drpBcpNotes.length > 0) {
+    console.log('\n### DRP/BCP notes\n\n')
+    console.log(`${drpBcpNotes.length === 0 ? '_none_' : `* ${drpBcpNotes.join('\n* ')}`}`)
   }
   if (packageData?.liq?.contracts?.['high availability'] || backoutNotes.length > 0) {
-    console.log("\n### Backout notes\n\n")
-    console.log(`${backoutNotes.length === 0 ? '_none_' : `* ${backoutNotes.join("\n* ")}`}`)
+    console.log('\n### Backout notes\n\n')
+    console.log(`${backoutNotes.length === 0 ? '_none_' : `* ${backoutNotes.join('\n* ')}`}`)
   }
 }
 

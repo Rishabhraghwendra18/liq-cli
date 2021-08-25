@@ -19,7 +19,7 @@ const convertFormat = (changelog) => {
     const newStart = new Date()
     newStart.setTime(0)
     // old format: UTC:yyyy-mm-dd-HHMM Z
-    const [ year, month, date, time ] = entry.startTimestampLocal.split(' ')[0].split('-')
+    const [year, month, date, time] = entry.startTimestampLocal.split(' ')[0].split('-')
     const hour = time.substring(0, 1)
     const minutes = time.substring(2)
 
@@ -34,7 +34,7 @@ const convertFormat = (changelog) => {
 
     entry.startEpochMillis = newStart.getTime()
 
-    entry.changeNotes = [ entry.description ]
+    entry.changeNotes = [entry.description]
     delete entry.description
 
     entry.securityNotes = []

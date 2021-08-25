@@ -20,7 +20,7 @@ const createNewEntry = (changelog) => {
     workInitiator   : requireEnv('WORK_INITIATOR'),
     branchInitiator : requireEnv('CURR_USER'),
     involvedProjects,
-    changeNotes     : [ requireEnv('WORK_DESC') ],
+    changeNotes     : [requireEnv('WORK_DESC')],
     securityNotes   : [],
     drpBcpNotes     : [],
     backoutNotes    : []

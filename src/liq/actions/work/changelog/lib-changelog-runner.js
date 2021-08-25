@@ -7,7 +7,7 @@ import { updateFileFormat } from './lib-changelog-action-update-format'
 const ADD_ENTRY = 'add-entry'
 const FINALIZE_ENTRY = 'finalize-entry'
 const PRINT_ENTRIES = 'print-entries'
-const UPDATE_FORMAT= 'update-format'
+const UPDATE_FORMAT = 'update-format'
 const validActions = [ADD_ENTRY, FINALIZE_ENTRY, PRINT_ENTRIES, UPDATE_FORMAT]
 
 const determineAction = () => {
