@@ -28,7 +28,7 @@ const determineAction = () => {
   case FINALIZE_ENTRY:
     return finalizeChangelog
   case PRINT_ENTRIES:
-    return () => printEntries(JSON.parse(args[1]))
+    return () => printEntries(JSON.parse(args[1]), new Date(args[2]))
   case UPDATE_FORMAT:
     return updateFileFormat
   default:

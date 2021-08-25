@@ -3,7 +3,7 @@ import YAML from 'yaml'
 
 import { readChangelog, requireEnv, saveChangelog } from './lib-changelog-core'
 
-const printEntries = (hotfixes) => {
+const printEntries = (hotfixes, lastReleaseDate) => {
   const changelog = readChangelog()
 
   // TODO: this is a bit of a limitation requiring the script pwd to be the package root.
@@ -11,7 +11,14 @@ const printEntries = (hotfixes) => {
   const packageData = JSON.parse(packageContents)
 
   const changeEntries = changelog.map(r => ({ time: new Date(r.startTimestamp), notes: r.changeNotes, author:r.workInitiator }))
-    .concat(hotfixes.map(r => ({ time: new Date(r.date), notes: [r.message.replace(/^\s*hotfix\s*:?\s*/i, '')], author: r.author.email, isHotfix: true })))
+    .concat(hotfixes.map(r => (
+      {
+        time: new Date(r.date),
+        notes: [r.message.replace(/^\s*hotfix\s*:?\s*/i, '')],
+        author: r.author.email,
+        isHotfix: true }
+  )))
+  .filter(r => r.time >= lastReleaseDate)
   changeEntries.sort((a, b) => a.time < b.time ? -1 : a.time == b.time ? 0 : 1)
 
   let securityNotes = []

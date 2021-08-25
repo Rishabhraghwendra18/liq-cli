@@ -4977,8 +4977,10 @@ liq-work-lib-changelog-print-entries-since() {
     -- . ':!.meta/*' \
     | perl -pe 'BEGIN{print "["}; END{print "]\n"}' | \
     perl -pe 's/},]/}]/')
+  local SINCE_DATE
+  SINCE_DATE=$(git log -1 --format=%ci ${SINCE_VERSION})
   tail +${ORIG_LC} "${LIQ_WORK_CHANGELOG_FILE}" | \
-    CHANGELOG_FILE="-" node "${LIQ_DIST_DIR}/manage-changelog.js" print-entries "${HOTFIXES}"
+    CHANGELOG_FILE="-" node "${LIQ_DIST_DIR}/manage-changelog.js" print-entries "${HOTFIXES}" "${SINCE_DATE}"
 }
 
 liq-work-lib-changelog-update-format() {
