@@ -481,7 +481,7 @@ work-resume() {
     echoerrandexit "No previous unit of work found."
   fi
 
-  workSwitchBranches "$WORK_NAME"
+  workSwitchBranches --dirty-ok "$WORK_NAME"
   (
     cd "${LIQ_WORK_DB}"
     rm -f curr_work

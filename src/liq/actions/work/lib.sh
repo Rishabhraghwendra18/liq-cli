@@ -253,10 +253,11 @@ workUserSelectOne() {
 }
 
 workSwitchBranches() {
+  eval "$(setSimpleOptions DIRTY_OK: -- "$@")"
   local _BRANCH_NAME="$1"
 
   if [[ -L "${LIQ_WORK_DB}/curr_work" ]]; then
-    requireCleanRepos
+    [[ -n "${DIRTY_OK}" ]] || requireCleanRepos
     source "${LIQ_WORK_DB}/curr_work"
     echo "Resetting current work unit repos to 'master'..."
     local IP
@@ -267,7 +268,7 @@ workSwitchBranches() {
   fi
 
   if [[ "$_BRANCH_NAME" != "master" ]]; then
-    requireCleanRepos "${_BRANCH_NAME}"
+    [[ -n "${DIRTY_OK}" ]] || requireCleanRepos
     ( # we don't want overwrite the sourced vars
       source "${LIQ_WORK_DB}/${_BRANCH_NAME}"
 
