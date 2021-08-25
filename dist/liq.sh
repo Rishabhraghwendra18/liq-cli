@@ -3034,6 +3034,29 @@ pre-options-liq-projects() {
 post-options-liq-projects() {
   post-options-liq
 }
+
+liq-projects-options-specify-project() {
+  echo "PROJECT="
+}
+
+liq-projects-options-process-project() {
+  # check call requirements
+  local VAR_NAME # TODO: move this to bash-toolkit
+  for VAR_NAME in PROJECT_PATH; do
+    declare -p ${VAR_NAME} >/dev/null \
+      || echoerrandexit "'${VAR_NAME}' not declared as expected."
+  done
+
+  if [[ -z "${PROJECT}" ]]; then # let's infer it
+    [[ -n "${PACKAGE_NAME}" ]] || requirePackage
+    PROJECT="${PACKAGE_NAME}"
+  fi
+  PROJECT="${PROJECT/@/}" # normalise project name
+
+  PROJECT_PATH="${LIQ_PLAYGROUND}/${PROJECT}"
+  [[ -d "${PROJECT_PATH}" ]] \
+    || echoerrandexit "Did not find project at '${PROJECT_PATH}'"
+}
 projectCheckIfInPlayground() {
   local PROJ_NAME="${1/@/}"
   if [[ -d "${LIQ_PLAYGROUND}/${PROJ_NAME}" ]]; then
@@ -3888,10 +3911,29 @@ work-merge() {
 }
 
 work-prepare() {
+  local TO_PROCESS="$@"
+  if [[ -z "${TO_PROCESS}" ]]; then
+    TO_PROCESS="${INVOLVED_PROJECTS}"
+  fi
+
+  for PROJECT in ${TO_PROCESS}; do
+    PROJECT=$(workConvertDot "${PROJECT}")
+    requireCleanRepo "${PROJECT}"
+  done
+  # TODO: pass option to skip clean check
   # work-qa
   # work-build
 
-  work-lib-changelog-finalize-entry
+  for PROJECT in ${TO_PROCESS}; do
+    PROJECT=$(workConvertDot "${PROJECT}")
+    PROJECT="${PROJECT/@/}"
+    (
+      cd "${LIQ_PLAYGROUND}/${PROJECT}"
+      work-lib-changelog-finalize-entry
+      git add . # this is considered safe becaues we checked the repo was clean
+      work-save -m "changelog finalization (by liq)"
+    )
+  done
 }
 
 work-qa() {
@@ -3902,6 +3944,7 @@ work-qa() {
 
   for PROJECT in $INVOLVED_PROJECTS; do
     PROJECT="${PROJECT/@/}"
+    # TODO: shouldn't this be done in a subshell?
     cd "${LIQ_PLAYGROUND}/${PROJECT}"
     projects-qa "$@"
   done
@@ -4197,9 +4240,7 @@ work-start() {
       || echoerrandexit "Error trying to extract issue description from: ${BUGS_URL}/${PRIMARY_ISSUE}\nThe primary issues must be part of the current project."
   fi
 
-  WORK_STARTED=$(date "+%Y.%m.%d")
-  WORK_INITIATOR=$(git config --get user.email)
-  WORK_BRANCH="$(work-lib-branch-name "${DESCRIPTION}")"
+  WORK_BRANCH="$(work-lib-branch-name "${DESCRIPTION}")" # TODO: change name; alse sets default values for WORK_STARTED and WORK_INITIATOR
 
   if [[ -f "${LIQ_WORK_DB}/${WORK_BRANCH}" ]]; then
     echoerrandexit "Unit of work '${WORK_BRANCH}' aready exists. Bailing out."
@@ -4312,6 +4353,8 @@ work-submit() {
 
   source "${LIQ_WORK_DB}/curr_work"
 
+  work-prepare "$@" # TODO: I'm just kinda jabbing this in here because I want to use the work we did in prepare, but the manual tie in is too much. It needs to happen more automatically.
+
   if [[ -z "$MESSAGE" ]]; then
     MESSAGE="$WORK_DESC" # sourced from current work
   fi
@@ -4407,6 +4450,33 @@ ${MESSAGE}
       echoerrandexit "Submission failed. If you see an error mentioning 'Invalid value for \"head\"', check to see if your forked working repository has become detached. If this is the case, you can delete the working repo on GitHub, refork from the source, and then 'liq work save --backup-only' from your local checkout. This will update the new forked repo with your workbranch changes and you should be able to submit after that."
     }
   done # TO_SUBMIT processing loop
+}
+
+# TODO: temporary until all existing (internal to LL) changelogs are updated. Yes, it's a project command here in work, but it's temporary.
+projects-update-changelog-format() {
+  liq-work-lib-changelog-update-format
+}
+
+# TODO: move to projects... improve interface? support print to stdin, release only changelog, etc.
+projects-print-changelog() {
+  requirePackage
+  local CURR_VER LAST_RELEASE PROJECT NEXT_VER
+  CURR_VER=$( echo "${PACKAGE}" | jq -r '.version' )
+  LAST_RELEASE="v${CURR_VER}"
+  PROJECT=$( echo "${PACKAGE}" | jq -r '.name' )
+  echo semver --increment prerelease "${CURR_VER}"
+  NEXT_VER="$(semver --increment prerelease "${CURR_VER}")"
+
+  local CHANGELOG_MD='CHANGELOG.md'
+  git cat-file -e ${LAST_RELEASE}:"${CHANGELOG_MD}" 2>/dev/null \
+    && git cat-file ${LAST_RELEASE}:"${CHANGELOG_MD}" \
+    || {
+      echowarn "Did not find existing '${CHANGELOG_MD}'. Initializing..."
+      echo -e "# ${PROJECT} changelog"
+    }
+  echo -e "\n## Release ${NEXT_VER}\n"
+
+  liq-work-lib-changelog-print-entries-since "${LAST_RELEASE}"
 }
 WORK_GROUPS="links"
 
@@ -4536,12 +4606,34 @@ help-work-test() {
 Runs tests for each involved project in the current unit of work. See 'project test' for details on options for the 'test' action.
 EOF
 }
+# Works out the proper name of a work (or release) branch. The '--release' option will add a '-release-' indicator to
+# the branch name and also use the 'WORK_DESC' without transformation. Otherwise, 'WORK_DESC' is treated as an
+# arbitrary user string and transformed to be branch name friendl.
 work-lib-branch-name() {
+  eval "$(setSimpleOptions RELEASE: -- "$@")"
+
   local WORK_DESC="${1:-}"
-  requireArgs "$WORK_DESC" || exit $?
-  requireArgs "$WORK_STARTED" || exit $?
-  requireArgs "$WORK_INITIATOR" || exit $?
-  echo "${WORK_STARTED}-${WORK_INITIATOR}-$(work-lib-safe-desc "$WORK_DESC")"
+  requireArgs "${WORK_DESC}" || exit $?
+  [[ -n "${WORK_STARTED}" ]] || {
+    declare -p WORK_STARTED >/dev/null || echoerrandexit "Variable 'WORK_STARTED' neither set nor declared."
+    # else, let's fall back to a default
+    WORK_STARTED=$(date "+%Y.%m.%d")
+  }
+  [[ -n "${WORK_INITIATOR}" ]] || {
+    declare -p WORK_INITIATOR >/dev/null || echoerrandexit "Variable 'WORK_INITIATOR' neither set nor declared."
+    WORK_INITIATOR=$(git config --get user.email)
+  }
+
+  local RELEASE_TAG=""
+  [[ -z "${RELEASE}" ]] || RELEASE_TAG="release-"
+
+  local BRANCH_NAME="${WORK_STARTED}-${WORK_INITIATOR}-${RELEASE_TAG}"
+  if [[ -n "${RELEASE}" ]]; then # use literal WORK_DESK
+    BRANCH_NAME="${BRANCH_NAME}${WORK_DESC}"
+  else # safe-ify WORK_DESC
+    BRANCH_NAME="${BRANCH_NAME}$(work-lib-safe-desc "$WORK_DESC")"
+  fi
+  echo "${BRANCH_NAME}"
 }
 
 workConvertDot() {
@@ -4831,34 +4923,71 @@ work-lib-process-issues() {
   done
 }
 
+LIQ_WORK_CHANGELOG_FILE="./.meta/changelog.yaml"
+
 work-lib-changelog-add-entry() {
   work-lib-require-unit-of-work
 
-  local CHANGELOG_FILE="./.meta/changelog.json" # TODO: move this to global var
   # ensure there's a changelog
-  [[ -f "${CHANGELOG_FILE}" ]] || { mkdir -p $(dirname "${CHANGELOG_FILE}"); echo "[]" > "${CHANGELOG_FILE}"; }
+  [[ -f "${LIQ_WORK_CHANGELOG_FILE}" ]] || { mkdir -p $(dirname "${LIQ_WORK_CHANGELOG_FILE}"); echo "[]" > "${LIQ_WORK_CHANGELOG_FILE}"; }
   # Grab some useful data from git
   local CURR_USER CURR_REPO_VERSION
   CURR_USER="$(git config --get user.email)"
   CURR_REPO_VERSION="$(git rev-parse HEAD)"
 
-  CHANGELOG_FILE="${CHANGELOG_FILE}" \
+  CHANGELOG_FILE="${LIQ_WORK_CHANGELOG_FILE}" \
     CURR_USER="${CURR_USER}" \
     CURR_REPO_VERSION="${CURR_REPO_VERSION}" \
     node "${LIQ_DIST_DIR}/manage-changelog.js" add-entry \
     && echofmt --info "Changelog data updated."
 }
 
+liq-work-lib-ensure-changelog-exists() {
+  [[ -f "${LIQ_WORK_CHANGELOG_FILE}" ]] \
+    || echoerrandexit "Did not find expected changelog at: ${LIQ_WORK_CHANGELOG_FILE}"
+}
+
+# TODO: this is really a work-involved project function...
 work-lib-changelog-finalize-entry() {
   work-lib-require-unit-of-work
+  liq-work-lib-ensure-changelog-exists
 
-  local CHANGELOG_FILE="./.meta/changelog.json" # TODO: move this to global var
-  # ensure there's a changelog
-  [[ -f "${CHANGELOG_FILE}" ]] || echoerrandexit "Did not find expected changelog at: ${CHANGELOG_FILE}"
-
-  CHANGELOG_FILE="${CHANGELOG_FILE}" \
+  CHANGELOG_FILE="${LIQ_WORK_CHANGELOG_FILE}" \
     node "${LIQ_DIST_DIR}/manage-changelog.js" finalize-entry \
     && echofmt --info "Changelog data updated."
+}
+
+liq-work-lib-changelog-print-entries-since() {
+  local SINCE_VERSION="${1}"
+  liq-work-lib-ensure-changelog-exists
+
+  # setting the file to '-' causes us to read from STDIN
+  local ORIG_LC=0
+  if git cat-file -e ${SINCE_VERSION}:"${LIQ_WORK_CHANGELOG_FILE}" 2>/dev/null; then
+    ORIG_LC=$(git show ${SINCE_VERSION}:"${LIQ_WORK_CHANGELOG_FILE}" | wc -l)
+  fi
+  # Only look at 1-parent commits (this indicates a hotfix directly on the main branch)
+  local HOTFIXES
+  HOTFIXES=$(git log \
+    --first-parent \
+    --exclude=* --tags \
+    --max-parents=1 \
+    --pretty=format:'{%n  "commit": "%H",%n  "author": {%n    "name": "%aN",%n     "email": "%aE"%n  },%n  "date": "%ad",%n  "message": "%s"%n},' \
+    ${SINCE_VERSION}^..HEAD \
+    -- . ':!.meta/*' \
+    | perl -pe 'BEGIN{print "["}; END{print "]\n"}' | \
+    perl -pe 's/},]/}]/')
+  tail +${ORIG_LC} "${LIQ_WORK_CHANGELOG_FILE}" | \
+    CHANGELOG_FILE="-" node "${LIQ_DIST_DIR}/manage-changelog.js" print-entries "${HOTFIXES}"
+}
+
+liq-work-lib-changelog-update-format() {
+  local OLD_CHANGELOG="${LIQ_WORK_CHANGELOG_FILE:0:$(( ${#LIQ_WORK_CHANGELOG_FILE} - 5))}.json"
+  [[ -f "${OLD_CHANGELOG}" ]] || echoerrandexit "Did not find old changelog file '${OLD_CHANGELOG}'."
+
+  CHANGELOG_FILE="${LIQ_WORK_CHANGELOG_FILE}" \
+    node "${LIQ_DIST_DIR}/manage-changelog.js" update-format \
+    && echofmt --info "Changelog format updated."
 }
 work-lib-require-unit-of-work() {
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then

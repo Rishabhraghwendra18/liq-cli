@@ -3,7 +3,7 @@ import simpleGit from 'simple-git'
 import { readChangelog, requireEnv, saveChangelog } from './lib-changelog-core'
 
 const finalizeCurrentEntry = async(changelog) => {
-  const currentEntry = changelog[changelog.length - 1] // changelog.at(-1)
+  const currentEntry = changelog[0]
 
   // update the involved projects
   const involvedProjects = requireEnv('INVOLVED_PROJECTS').split('\n')

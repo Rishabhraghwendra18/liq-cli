@@ -378,10 +378,29 @@ work-merge() {
 }
 
 work-prepare() {
+  local TO_PROCESS="$@"
+  if [[ -z "${TO_PROCESS}" ]]; then
+    TO_PROCESS="${INVOLVED_PROJECTS}"
+  fi
+
+  for PROJECT in ${TO_PROCESS}; do
+    PROJECT=$(workConvertDot "${PROJECT}")
+    requireCleanRepo "${PROJECT}"
+  done
+  # TODO: pass option to skip clean check
   # work-qa
   # work-build
 
-  work-lib-changelog-finalize-entry
+  for PROJECT in ${TO_PROCESS}; do
+    PROJECT=$(workConvertDot "${PROJECT}")
+    PROJECT="${PROJECT/@/}"
+    (
+      cd "${LIQ_PLAYGROUND}/${PROJECT}"
+      work-lib-changelog-finalize-entry
+      git add . # this is considered safe becaues we checked the repo was clean
+      work-save -m "changelog finalization (by liq)"
+    )
+  done
 }
 
 work-qa() {
@@ -392,6 +411,7 @@ work-qa() {
 
   for PROJECT in $INVOLVED_PROJECTS; do
     PROJECT="${PROJECT/@/}"
+    # TODO: shouldn't this be done in a subshell?
     cd "${LIQ_PLAYGROUND}/${PROJECT}"
     projects-qa "$@"
   done
@@ -687,9 +707,7 @@ work-start() {
       || echoerrandexit "Error trying to extract issue description from: ${BUGS_URL}/${PRIMARY_ISSUE}\nThe primary issues must be part of the current project."
   fi
 
-  WORK_STARTED=$(date "+%Y.%m.%d")
-  WORK_INITIATOR=$(git config --get user.email)
-  WORK_BRANCH="$(work-lib-branch-name "${DESCRIPTION}")"
+  WORK_BRANCH="$(work-lib-branch-name "${DESCRIPTION}")" # TODO: change name; alse sets default values for WORK_STARTED and WORK_INITIATOR
 
   if [[ -f "${LIQ_WORK_DB}/${WORK_BRANCH}" ]]; then
     echoerrandexit "Unit of work '${WORK_BRANCH}' aready exists. Bailing out."
@@ -802,6 +820,8 @@ work-submit() {
 
   source "${LIQ_WORK_DB}/curr_work"
 
+  work-prepare "$@" # TODO: I'm just kinda jabbing this in here because I want to use the work we did in prepare, but the manual tie in is too much. It needs to happen more automatically.
+
   if [[ -z "$MESSAGE" ]]; then
     MESSAGE="$WORK_DESC" # sourced from current work
   fi
@@ -897,4 +917,31 @@ ${MESSAGE}
       echoerrandexit "Submission failed. If you see an error mentioning 'Invalid value for \"head\"', check to see if your forked working repository has become detached. If this is the case, you can delete the working repo on GitHub, refork from the source, and then 'liq work save --backup-only' from your local checkout. This will update the new forked repo with your workbranch changes and you should be able to submit after that."
     }
   done # TO_SUBMIT processing loop
+}
+
+# TODO: temporary until all existing (internal to LL) changelogs are updated. Yes, it's a project command here in work, but it's temporary.
+projects-update-changelog-format() {
+  liq-work-lib-changelog-update-format
+}
+
+# TODO: move to projects... improve interface? support print to stdin, release only changelog, etc.
+projects-print-changelog() {
+  requirePackage
+  local CURR_VER LAST_RELEASE PROJECT NEXT_VER
+  CURR_VER=$( echo "${PACKAGE}" | jq -r '.version' )
+  LAST_RELEASE="v${CURR_VER}"
+  PROJECT=$( echo "${PACKAGE}" | jq -r '.name' )
+  echo semver --increment prerelease "${CURR_VER}"
+  NEXT_VER="$(semver --increment prerelease "${CURR_VER}")"
+
+  local CHANGELOG_MD='CHANGELOG.md'
+  git cat-file -e ${LAST_RELEASE}:"${CHANGELOG_MD}" 2>/dev/null \
+    && git cat-file ${LAST_RELEASE}:"${CHANGELOG_MD}" \
+    || {
+      echowarn "Did not find existing '${CHANGELOG_MD}'. Initializing..."
+      echo -e "# ${PROJECT} changelog"
+    }
+  echo -e "\n## Release ${NEXT_VER}\n"
+
+  liq-work-lib-changelog-print-entries-since "${LAST_RELEASE}"
 }

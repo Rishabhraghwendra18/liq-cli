@@ -1,9 +1,31 @@
+# Works out the proper name of a work (or release) branch. The '--release' option will add a '-release-' indicator to
+# the branch name and also use the 'WORK_DESC' without transformation. Otherwise, 'WORK_DESC' is treated as an
+# arbitrary user string and transformed to be branch name friendl.
 work-lib-branch-name() {
+  eval "$(setSimpleOptions RELEASE: -- "$@")"
+
   local WORK_DESC="${1:-}"
-  requireArgs "$WORK_DESC" || exit $?
-  requireArgs "$WORK_STARTED" || exit $?
-  requireArgs "$WORK_INITIATOR" || exit $?
-  echo "${WORK_STARTED}-${WORK_INITIATOR}-$(work-lib-safe-desc "$WORK_DESC")"
+  requireArgs "${WORK_DESC}" || exit $?
+  [[ -n "${WORK_STARTED}" ]] || {
+    declare -p WORK_STARTED >/dev/null || echoerrandexit "Variable 'WORK_STARTED' neither set nor declared."
+    # else, let's fall back to a default
+    WORK_STARTED=$(date "+%Y.%m.%d")
+  }
+  [[ -n "${WORK_INITIATOR}" ]] || {
+    declare -p WORK_INITIATOR >/dev/null || echoerrandexit "Variable 'WORK_INITIATOR' neither set nor declared."
+    WORK_INITIATOR=$(git config --get user.email)
+  }
+
+  local RELEASE_TAG=""
+  [[ -z "${RELEASE}" ]] || RELEASE_TAG="release-"
+
+  local BRANCH_NAME="${WORK_STARTED}-${WORK_INITIATOR}-${RELEASE_TAG}"
+  if [[ -n "${RELEASE}" ]]; then # use literal WORK_DESK
+    BRANCH_NAME="${BRANCH_NAME}${WORK_DESC}"
+  else # safe-ify WORK_DESC
+    BRANCH_NAME="${BRANCH_NAME}$(work-lib-safe-desc "$WORK_DESC")"
+  fi
+  echo "${BRANCH_NAME}"
 }
 
 workConvertDot() {

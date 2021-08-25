@@ -1,10 +1,12 @@
 import * as fs from 'fs'
+import YAML from 'yaml'
 
 const readChangelog = () => {
-  const clPath = requireEnv('CHANGELOG_FILE')
+  const clPathish = requireEnv('CHANGELOG_FILE')
+  const clPath = clPathish === '-' ? 0 : clPathish
 
-  const changelogContents = fs.readFileSync(clPath)
-  const changelog = JSON.parse(changelogContents)
+  const changelogContents = fs.readFileSync(clPath, 'utf8') // include encoding to get 'string' result
+  const changelog = YAML.parse(changelogContents)
 
   return changelog
 }
@@ -16,7 +18,7 @@ const requireEnv = (key) => {
 const saveChangelog = (changelog) => {
   const clPath = requireEnv('CHANGELOG_FILE')
 
-  const changelogContents = JSON.stringify(changelog, null, 2)
+  const changelogContents = YAML.stringify(changelog)
   fs.writeFileSync(clPath, changelogContents)
 }
 
