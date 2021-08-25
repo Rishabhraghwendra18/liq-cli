@@ -14,6 +14,8 @@
   securityNotes: []
   drpBcpNotes: []
   backoutNotes: []
+  contributors:
+    - Zane Rockenbaugh <zane@liquid-labs.com>
 - issues:
     - https://github.com/liquid-labs/liq-cli/issues/258
   branch: 2021.06.18-zane-better_change_support
