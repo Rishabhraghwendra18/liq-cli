@@ -4952,7 +4952,8 @@ liq-work-lib-changelog-print-entries-since() {
     --exclude=* --tags \
     --max-parents=1 \
     --pretty=format:'{%n  "commit": "%H",%n  "author": {%n    "name": "%aN",%n     "email": "%aE"%n  },%n  "date": "%ad",%n  "message": "%s"%n},' \
-    ${SINCE_VERSION}^..HEAD\
+    ${SINCE_VERSION}^..HEAD \
+    -- . ':!.meta/*' \
     | perl -pe 'BEGIN{print "["}; END{print "]\n"}' | \
     perl -pe 's/},]/}]/')
   tail +${ORIG_LC} "${LIQ_WORK_CHANGELOG_FILE}" | \
