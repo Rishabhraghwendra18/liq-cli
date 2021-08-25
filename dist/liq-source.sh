@@ -3915,7 +3915,7 @@ work-prepare() {
   fi
 
   for PROJECT in ${TO_PROCESS}; do
-    requireCleanRepo "${IP}"
+    requireCleanRepo "${PROJECT}"
   done
   # TODO: pass option to skip clean check
   # work-qa
