@@ -3911,10 +3911,23 @@ work-merge() {
 }
 
 work-prepare() {
+  for PROJECT in ${INVOLVED_PROJECTS}; do
+    requireCleanRepo "${IP}"
+  done
+  # TODO: pass option to skip clean check
   # work-qa
   # work-build
 
-  work-lib-changelog-finalize-entry
+  for PROJECT in ${INVOLVED_PROJECTS}; do
+    PROJECT="${PROJECT/@/}"
+    (
+      cd "${LIQ_PLAYGROUND}/${PROJECT}"
+      work-lib-changelog-finalize-entry
+    )
+  done
+
+  git add . # this is considered safe becaues we checked the repo was clean
+  git commit -m "changelog finalization (by liq)"
 }
 
 work-qa() {
@@ -3925,6 +3938,7 @@ work-qa() {
 
   for PROJECT in $INVOLVED_PROJECTS; do
     PROJECT="${PROJECT/@/}"
+    # TODO: shouldn't this be done in a subshell?
     cd "${LIQ_PLAYGROUND}/${PROJECT}"
     projects-qa "$@"
   done
@@ -4927,6 +4941,7 @@ liq-work-lib-ensure-changelog-exists() {
     || echoerrandexit "Did not find expected changelog at: ${LIQ_WORK_CHANGELOG_FILE}"
 }
 
+# TODO: this is really a work-involved project function...
 work-lib-changelog-finalize-entry() {
   work-lib-require-unit-of-work
   liq-work-lib-ensure-changelog-exists
