@@ -20,7 +20,7 @@ const convertFormat = (changelog) => {
     newStart.setTime(0)
     // old format: UTC:yyyy-mm-dd-HHMM Z
     const [year, month, date, time] = entry.startTimestampLocal.split(' ')[0].split('-')
-    const hour = time.substring(0, 1)
+    const hour = time.substring(0, 2)
     const minutes = time.substring(2)
 
     newStart.setUTCFullYear(year)
