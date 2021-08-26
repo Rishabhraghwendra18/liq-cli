@@ -6,7 +6,7 @@ const createNewEntry = (changelog) => {
   // get the approx start time according to the local clock
   const now = new Date()
   const startTimestamp = dateFormat(now, 'UTC:yyyy-mm-dd-HHMM.ss Z')
-  const startEpochMillis = now.now()
+  const startEpochMillis = now.getTime()
   // process the 'work unit' data
   const issues = requireEnv('WORK_ISSUES').split('\n')
   const involvedProjects = requireEnv('INVOLVED_PROJECTS').split('\n')
