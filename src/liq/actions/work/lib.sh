@@ -1,18 +1,20 @@
 # Works out the proper name of a work (or release) branch. The '--release' option will add a '-release-' indicator to
 # the branch name and also use the 'WORK_DESC' without transformation. Otherwise, 'WORK_DESC' is treated as an
-# arbitrary user string and transformed to be branch name friendl.
+# arbitrary user string and transformed to be branch name friendly.
+#
+# DEPRECATED-ish: for workb ranch naming, use work-lib-workbranch-name. This is still used for release branches, but (TODO) should be replaced at some point.
 work-lib-branch-name() {
   eval "$(setSimpleOptions RELEASE: -- "$@")"
 
   local WORK_DESC="${1:-}"
   requireArgs "${WORK_DESC}" || exit $?
-  [[ -n "${WORK_STARTED}" ]] || {
-    declare -p WORK_STARTED >/dev/null || echoerrandexit "Variable 'WORK_STARTED' neither set nor declared."
+  [[ -n "${WORK_STARTED:-}" ]] || {
+    declare -p WORK_STARTED >/dev/null || echoerrandexit "Variable 'WORK_STARTED' (which receives the start date) neither set nor declared."
     # else, let's fall back to a default
     WORK_STARTED=$(date "+%Y.%m.%d")
   }
-  [[ -n "${WORK_INITIATOR}" ]] || {
-    declare -p WORK_INITIATOR >/dev/null || echoerrandexit "Variable 'WORK_INITIATOR' neither set nor declared."
+  [[ -n "${WORK_INITIATOR:-}" ]] || {
+    declare -p WORK_INITIATOR >/dev/null || echoerrandexit "Variable 'WORK_INITIATOR' (which receives the email of the initiator) neither set nor declared."
     WORK_INITIATOR=$(git config --get user.email)
   }
 
@@ -26,6 +28,24 @@ work-lib-branch-name() {
     BRANCH_NAME="${BRANCH_NAME}$(work-lib-safe-desc "$WORK_DESC")"
   fi
   echo "${BRANCH_NAME}"
+}
+
+# Works out the proper name of a work branch. Sets 'WORK_DESC', 'WORK_STARTED', 'WORK_INITIATOR', and 'WORK_BRANCH'
+work-lib-work-branch-name() {
+  local WORK_DESC="${1:-}"
+  requireArgs "${WORK_DESC}" || exit $?
+  [[ -n "${WORK_STARTED:-}" ]] || {
+    declare -p WORK_STARTED >/dev/null || echoerrandexit "Variable 'WORK_STARTED' (which receives the start date) neither set nor declared."
+    # else, let's fall back to a default
+    WORK_STARTED=$(date "+%Y.%m.%d")
+  }
+  [[ -n "${WORK_INITIATOR:-}" ]] || {
+    declare -p WORK_INITIATOR >/dev/null || echoerrandexit "Variable 'WORK_INITIATOR' (which receives the email of the initiator) neither set nor declared."
+    WORK_INITIATOR=$(git config --get user.email)
+  }
+  declare -p WORK_BRANCH >/dev/null || echoerrandexit "Variable 'WORK_BRANCH' is not declared as expected."
+
+  WORK_BRANCH="${WORK_STARTED}-${WORK_INITIATOR}-$(work-lib-safe-desc "${WORK_DESC}")"
 }
 
 workConvertDot() {

@@ -3692,7 +3692,8 @@ work-ignore-rest() {
 work-involve() {
   findBase # this will be optional once we support '--project'
 
-  eval "$(setSimpleOptions NO_LINK:L -- "$@")"
+  eval "$(setSimpleOptions NO_LINK:L WORK_STARTED:= WORK_INITIATOR:= -- "$@")"
+
   local PROJECT_NAME WORK_DESC WORK_STARTED WORK_INITIATOR INVOLVED_PROJECTS
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "There is no active unit of work to involve. Try:\nliq work resume"
@@ -4238,7 +4239,8 @@ work-start() {
       || echoerrandexit "Error trying to extract issue description from: ${BUGS_URL}/${PRIMARY_ISSUE}\nThe primary issues must be part of the current project."
   fi
 
-  WORK_BRANCH="$(work-lib-branch-name "${DESCRIPTION}")" # TODO: change name; alse sets default values for WORK_STARTED and WORK_INITIATOR
+  local WORK_STARTED WORK_INITIATOR WORK_BRANCH # set by work-lib-workbranch-name
+  work-lib-work-branch-name "${DESCRIPTION}"
 
   if [[ -f "${LIQ_WORK_DB}/${WORK_BRANCH}" ]]; then
     echoerrandexit "Unit of work '${WORK_BRANCH}' aready exists. Bailing out."
@@ -4606,19 +4608,21 @@ EOF
 }
 # Works out the proper name of a work (or release) branch. The '--release' option will add a '-release-' indicator to
 # the branch name and also use the 'WORK_DESC' without transformation. Otherwise, 'WORK_DESC' is treated as an
-# arbitrary user string and transformed to be branch name friendl.
+# arbitrary user string and transformed to be branch name friendly.
+#
+# DEPRECATED-ish: for workb ranch naming, use work-lib-workbranch-name. This is still used for release branches, but (TODO) should be replaced at some point.
 work-lib-branch-name() {
   eval "$(setSimpleOptions RELEASE: -- "$@")"
 
   local WORK_DESC="${1:-}"
   requireArgs "${WORK_DESC}" || exit $?
-  [[ -n "${WORK_STARTED}" ]] || {
-    declare -p WORK_STARTED >/dev/null || echoerrandexit "Variable 'WORK_STARTED' neither set nor declared."
+  [[ -n "${WORK_STARTED:-}" ]] || {
+    declare -p WORK_STARTED >/dev/null || echoerrandexit "Variable 'WORK_STARTED' (which receives the start date) neither set nor declared."
     # else, let's fall back to a default
     WORK_STARTED=$(date "+%Y.%m.%d")
   }
-  [[ -n "${WORK_INITIATOR}" ]] || {
-    declare -p WORK_INITIATOR >/dev/null || echoerrandexit "Variable 'WORK_INITIATOR' neither set nor declared."
+  [[ -n "${WORK_INITIATOR:-}" ]] || {
+    declare -p WORK_INITIATOR >/dev/null || echoerrandexit "Variable 'WORK_INITIATOR' (which receives the email of the initiator) neither set nor declared."
     WORK_INITIATOR=$(git config --get user.email)
   }
 
@@ -4632,6 +4636,24 @@ work-lib-branch-name() {
     BRANCH_NAME="${BRANCH_NAME}$(work-lib-safe-desc "$WORK_DESC")"
   fi
   echo "${BRANCH_NAME}"
+}
+
+# Works out the proper name of a work branch. Sets 'WORK_DESC', 'WORK_STARTED', 'WORK_INITIATOR', and 'WORK_BRANCH'
+work-lib-work-branch-name() {
+  local WORK_DESC="${1:-}"
+  requireArgs "${WORK_DESC}" || exit $?
+  [[ -n "${WORK_STARTED:-}" ]] || {
+    declare -p WORK_STARTED >/dev/null || echoerrandexit "Variable 'WORK_STARTED' (which receives the start date) neither set nor declared."
+    # else, let's fall back to a default
+    WORK_STARTED=$(date "+%Y.%m.%d")
+  }
+  [[ -n "${WORK_INITIATOR:-}" ]] || {
+    declare -p WORK_INITIATOR >/dev/null || echoerrandexit "Variable 'WORK_INITIATOR' (which receives the email of the initiator) neither set nor declared."
+    WORK_INITIATOR=$(git config --get user.email)
+  }
+  declare -p WORK_BRANCH >/dev/null || echoerrandexit "Variable 'WORK_BRANCH' is not declared as expected."
+
+  WORK_BRANCH="${WORK_STARTED}-${WORK_INITIATOR}-$(work-lib-safe-desc "${WORK_DESC}")"
 }
 
 workConvertDot() {

@@ -161,7 +161,8 @@ work-ignore-rest() {
 work-involve() {
   findBase # this will be optional once we support '--project'
 
-  eval "$(setSimpleOptions NO_LINK:L -- "$@")"
+  eval "$(setSimpleOptions NO_LINK:L WORK_STARTED:= WORK_INITIATOR:= -- "$@")"
+
   local PROJECT_NAME WORK_DESC WORK_STARTED WORK_INITIATOR INVOLVED_PROJECTS
   if [[ ! -L "${LIQ_WORK_DB}/curr_work" ]]; then
     echoerrandexit "There is no active unit of work to involve. Try:\nliq work resume"
@@ -707,7 +708,8 @@ work-start() {
       || echoerrandexit "Error trying to extract issue description from: ${BUGS_URL}/${PRIMARY_ISSUE}\nThe primary issues must be part of the current project."
   fi
 
-  WORK_BRANCH="$(work-lib-branch-name "${DESCRIPTION}")" # TODO: change name; alse sets default values for WORK_STARTED and WORK_INITIATOR
+  local WORK_STARTED WORK_INITIATOR WORK_BRANCH # set by work-lib-workbranch-name
+  work-lib-work-branch-name "${DESCRIPTION}"
 
   if [[ -f "${LIQ_WORK_DB}/${WORK_BRANCH}" ]]; then
     echoerrandexit "Unit of work '${WORK_BRANCH}' aready exists. Bailing out."
