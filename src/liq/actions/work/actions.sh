@@ -398,8 +398,11 @@ work-prepare() {
     (
       cd "${LIQ_PLAYGROUND}/${PROJECT}"
       work-lib-changelog-finalize-entry
-      git add . # this is considered safe becaues we checked the repo was clean
-      work-save -m "changelog finalization (by liq)"
+      # it's possible the changes have already been made...
+      if (( $(git status --porcelain | wc -l) != 0)); then
+        git add .meta # this is considered safe becaues we checked the repo was clean
+        work-save -m "changelog finalization (by liq)" "${PROJECT}"
+      fi
     )
   done
 }
