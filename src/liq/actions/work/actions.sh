@@ -940,8 +940,9 @@ projects-print-changelog() {
   NEXT_VER="$(semver --increment prerelease "${CURR_VER}")"
 
   local CHANGELOG_MD='CHANGELOG.md'
+  echo git cat-file -e ${LAST_RELEASE}:"${CHANGELOG_MD}" > log.tmp
   git cat-file -e ${LAST_RELEASE}:"${CHANGELOG_MD}" 2>/dev/null \
-    && git cat-file ${LAST_RELEASE}:"${CHANGELOG_MD}" \
+    && git cat-file blob ${LAST_RELEASE}:"${CHANGELOG_MD}" \
     || {
       echowarn "Did not find existing '${CHANGELOG_MD}'. Initializing..."
       echo -e "# ${PROJECT} changelog"

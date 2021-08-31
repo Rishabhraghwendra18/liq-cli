@@ -36,11 +36,6 @@ liq-work-lib-changelog-print-entries-since() {
   local SINCE_VERSION="${1}"
   liq-work-lib-ensure-changelog-exists
 
-  # setting the file to '-' causes us to read from STDIN
-  local ORIG_LC=0
-  if git cat-file -e ${SINCE_VERSION}:"${LIQ_WORK_CHANGELOG_FILE}" 2>/dev/null; then
-    ORIG_LC=$(git show ${SINCE_VERSION}:"${LIQ_WORK_CHANGELOG_FILE}" | wc -l)
-  fi
   # Only look at 1-parent commits (this indicates a hotfix directly on the main branch)
   local HOTFIXES
   HOTFIXES=$(git log \
@@ -54,8 +49,7 @@ liq-work-lib-changelog-print-entries-since() {
     perl -pe 's/},]/}]/')
   local SINCE_DATE
   SINCE_DATE=$(git log -1 --format=%ci ${SINCE_VERSION})
-  tail +${ORIG_LC} "${LIQ_WORK_CHANGELOG_FILE}" | \
-    CHANGELOG_FILE="-" node "${LIQ_DIST_DIR}/manage-changelog.js" print-entries "${HOTFIXES}" "${SINCE_DATE}"
+  CHANGELOG_FILE="${LIQ_WORK_CHANGELOG_FILE}" node "${LIQ_DIST_DIR}/manage-changelog.js" print-entries "${HOTFIXES}" "${SINCE_DATE}"
 }
 
 liq-work-lib-changelog-update-format() {
