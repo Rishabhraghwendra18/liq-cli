@@ -31,3 +31,18 @@
   securityNotes: []
   drpBcpNotes: []
   backoutNotes: []
+- startTimestamp: 2021-09-15T18:11:37.234Z
+  startEpochMillis: 1631729497234
+  issues:
+    - https://github.com/liquid-labs/liq-cli/issues/267
+  branch: 2021.09.15-zane@liquid-labs.com-update_the_projectsjson_creation
+  branchFrom: 7c5310442bf71e4ba0117e636ecbe3683b354e0c
+  workInitiator: zane@liquid-labs.com
+  branchInitiator: zane@liquid-labs.com
+  involvedProjects:
+    - "@liquid-labs/liq-cli"
+  changeNotes:
+    - Update the projects.json creation
+  securityNotes: []
+  drpBcpNotes: []
+  backoutNotes: []
