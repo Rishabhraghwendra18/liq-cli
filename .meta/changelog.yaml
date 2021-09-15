@@ -5,7 +5,6 @@
   workInitiator: zane@liquid-labs.com
   branchInitiator: zane@liquid-labs.com
   involvedProjects:
-    - "@liquid-labs/liq-ext-projects-releases"
     - "@liquid-labs/liq-cli"
   startTimestamp: 2021-08-18T02:21:00.000Z
   startEpochMillis: 1629253260000
